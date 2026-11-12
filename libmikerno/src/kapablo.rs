@@ -1,7 +1,7 @@
 //! Finpunktoj, permesoj kaj kapabloj.
 //!
-//! La aranĝo spegulas `mikerno::kerno::ipc`; la migrado al ĉi tiu crate okazos
-//! kune kun la Ring 3-sistemvokoj.
+//! La mesaĝo (`Mesago`) jam venas el ĉi tiu crate; la kapabloj kaj permesoj
+//! ankoraŭ spegulas `mikerno::kerno::ipc` kaj migros en M13.
 
 /// Bitara aro de permesoj por finpunkto.
 #[derive(Clone, Copy, PartialEq, Eq)]

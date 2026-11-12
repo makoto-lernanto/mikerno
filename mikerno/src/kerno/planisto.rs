@@ -251,6 +251,19 @@ pub fn veki(id: FadenoId) {
     planisto().veki(id);
 }
 
+/// Finu la nunan fadenon; la voko neniam revenas.
+///
+/// Vokata de `SYS_FINI`. La ripoza kunteksto ne havas fadenan vivciklon, do
+/// voko de tie haltigas la sistemon anstataŭ ŝajnigi sukceson.
+pub fn morti() -> ! {
+    let id = nuna_id();
+    if id == RIPAZA_ID {
+        crate::skribu!("[planisto] FINI sen fadeno; haltas\n");
+        crate::arkitekturo::halti()
+    }
+    planisto().morti(id)
+}
+
 pub fn nuna_id() -> FadenoId {
     planisto().nuna_id()
 }

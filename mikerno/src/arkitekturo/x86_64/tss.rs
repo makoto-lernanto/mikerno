@@ -44,6 +44,9 @@ struct Kernostako(#[allow(dead_code)] [u8; KERNOSTAKO_GRANDE]);
 
 static mut KERNOSTAKO: Kernostako = Kernostako([0; KERNOSTAKO_GRANDE]);
 
+// TODO(M12): ĉiu uzanta fadeno bezonas propran kernan stakon;
+// ĝisdatigi TSS.RSP0 dum kuntekstŝanĝo. Ĝis tiam: nur unu uzanta fadeno.
+
 /// La 16-bajta longreĝima TSS-priskribo por la GDT.
 pub fn priskribo() -> [u64; 2] {
     let bazo = &raw const TASKA_STATO as u64;

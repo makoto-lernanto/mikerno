@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+libmikerno = { path = "../libmikerno" }
 
 [lints]
 workspace = true

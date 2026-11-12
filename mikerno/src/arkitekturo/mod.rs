@@ -79,6 +79,11 @@ pub fn temporizilaj_tikoj() -> u64 {
     malantaŭo::temporizilo::tikoj()
 }
 
+/// Dispetĉu sistemvokon el la interrompa kadro.
+pub fn sistemvoka_dispetĉo(kadro: &mut crate::interrompo::InterrompaKadro) {
+    malantaŭo::sistemvoko::sistemvoka_dispetĉo(kadro);
+}
+
 pub fn prepari_kuntekston(konteksto: &mut Kunteksto, stako_pinto: u64) {
     malantaŭo::planado::prepari_kuntekston(konteksto, stako_pinto);
 }

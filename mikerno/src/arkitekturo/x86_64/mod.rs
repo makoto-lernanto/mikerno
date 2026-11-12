@@ -8,6 +8,7 @@ pub mod planado;
 pub mod procesoro;
 pub mod pvh;
 pub mod seria;
+pub mod sistemvoko;
 pub mod temporizilo;
 pub mod tss;
 

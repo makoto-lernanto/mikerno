@@ -101,7 +101,10 @@ pub extern "C" fn interrompa_dispetcho(kadro: *mut InterrompaKadro) {
     }
 }
 
-/// Nur la lokaj APIC-vektoroj postulas EOI; `int 0x80` kaj `int3` ne.
+/// Nur aparataj lokaj APIC-vektoroj (`0x20..0x80`) postulas EOI.
+///
+/// `int 0x80` estas programa interrompo: la APIC-ISR ne havas ĝian biton, do
+/// EOI estus mislokita. Ankaŭ `int3` kaj la spuria `0xFF` restas ekstere.
 fn estas_apic_vektoro(vektoro: usize) -> bool {
     (0x20..0x80).contains(&vektoro)
 }

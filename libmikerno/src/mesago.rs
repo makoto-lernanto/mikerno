@@ -5,9 +5,9 @@ pub const MAKSA_MESAGA_LONGO: usize = 64;
 
 /// Enlinia mesaĝo inter du finpunktoj.
 ///
-/// `sendinto` kaj `ricevonto` estas objektaj identigiloj. La nuna kerno ankoraŭ
-/// konservas la sendinton flanke (`Ero::fonto`); dum la migrado ĝi transprenos
-/// ĉi tiun aranĝon. La datumaro estas kopiata, do la sendanto rajtas reuzi sian
+/// `sendinto` kaj `ricevonto` estas fadenaj identigiloj, kiujn la kerno
+/// plenigas dum la sendo; la mesaĝujo ankoraŭ konservas la fonton flanke por
+/// filtrado. La datumaro estas kopiata, do la sendanto rajtas reuzi sian
 /// bufron tuj post la voko.
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Eq)]

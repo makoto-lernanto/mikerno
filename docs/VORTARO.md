@@ -42,6 +42,9 @@ kaj protokolaj nomoj sekvu ĝin.
 | `sistemvoko` | system call | 系统调用 | `SYS_*` restas kiel ABI-prefikso. |
 | `sistemvoka vektoro` | syscall vector | 系统调用向量 | `0x80`. |
 | `sistemvoka numero` | system call number | 系统调用号 | `rax` ĉe la voko. |
+| `sistemvoka dispetĉo` | system call dispatch | 系统调用分发 | `sistemvoka_dispetĉo`. |
+| `uzanta montrilo` | user pointer | 用户指针 | Kontrolata antaŭ ĉiu aliro. |
+| `anoncita regiono` | declared region | 已声明区域 | La bildo kaj la uzanta stako. |
 | `uzanta kodo` | user code | 用户代码段 | DPL3. |
 | `uzantaj datumoj` | user data | 用户数据段 | DPL3. |
 | `kerna stako` | kernel stack | 内核栈 | `RSP0`. |

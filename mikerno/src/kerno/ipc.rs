@@ -10,11 +10,20 @@ use crate::kunhavigita::Kunhavigita;
 use super::objekto::FadenoId;
 use super::planisto::{self, MAKSAJ_FADENOJ};
 
-const MAKSAJ_MESAGOJ: usize = 16;
+/// La mesaĝa aranĝo venas el `libmikerno`, do la kerno kaj Ring 3 uzas la
+/// saman `#[repr(C)]`-strukturon sen konverto.
+pub use libmikerno::MAKSA_MESAGA_LONGO;
+pub use libmikerno::Mesago;
 
-/// Mesaĝa datumaro estas kopiata en la mesaĝon, do la sendanto rajtas reuzi
-/// sian bufron tuj post la voko.
-pub const MAKSA_MESAGA_LONGO: usize = 64;
+/// La kongruo kun la komuna ABI estas fiksita je kompila tempo.
+const _: () = {
+    assert!(core::mem::size_of::<Mesago>() == 96);
+    assert!(core::mem::offset_of!(Mesago, tipo) == 0);
+    assert!(core::mem::offset_of!(Mesago, sendinto) == 8);
+    assert!(core::mem::offset_of!(Mesago, ricevonto) == 16);
+};
+
+const MAKSAJ_MESAGOJ: usize = 16;
 
 #[derive(Clone, Copy)]
 pub struct Permesoj(u8);
@@ -52,47 +61,6 @@ impl FinaPunkto {
 pub struct Kapablo {
     pub objekto_id: u64,
     pub permesoj: Permesoj,
-}
-
-#[derive(Clone, Copy)]
-pub struct Mesago {
-    pub tipo: u64,
-    longo: usize,
-    datumo: [u8; MAKSA_MESAGA_LONGO],
-}
-
-impl Mesago {
-    /// # Paniko
-    /// Se `datumoj` superas `MAKSA_MESAGA_LONGO`.
-    pub const fn nova(tipo: u64, datumoj: &[u8]) -> Self {
-        assert!(
-            datumoj.len() <= MAKSA_MESAGA_LONGO,
-            "mesaĝo superas MAKSA_MESAGA_LONGO"
-        );
-        let mut bufro = [0u8; MAKSA_MESAGA_LONGO];
-        let mut indekso = 0;
-        while indekso < datumoj.len() {
-            bufro[indekso] = datumoj[indekso];
-            indekso += 1;
-        }
-        Self {
-            tipo,
-            longo: datumoj.len(),
-            datumo: bufro,
-        }
-    }
-
-    pub const fn malplena() -> Self {
-        Self {
-            tipo: 0,
-            longo: 0,
-            datumo: [0; MAKSA_MESAGA_LONGO],
-        }
-    }
-
-    pub fn enhavo(&self) -> &[u8] {
-        &self.datumo[..self.longo]
-    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -151,6 +119,9 @@ fn mesagujo(id: FadenoId) -> &'static mut Mesagujo {
 
 /// Sendu mesaĝon al fadeno; la fonto estas la nuna fadeno.
 ///
+/// La mesaĝo estas kopiata, kaj `sendinto`/`ricevonto` estas fiksitaj de la
+/// kerno: la uzanto ne povas mensogi pri ili.
+///
 /// # Eraroj
 /// `NevalidaCelloko` se la destino ne estas fadena identigilo; `MesagujoPlena`
 /// se la vico de la celo jam enhavas `MAKSAJ_MESAGOJ` mesaĝojn.
@@ -159,9 +130,13 @@ pub fn sendi_mesagon(destinacio: FadenoId, mesago: &Mesago) -> Result<(), IpcEra
     if destinacio as usize > MAKSAJ_FADENOJ {
         return Err(IpcEraro::NevalidaCelloko);
     }
+    let nuna = planisto::nuna_id();
+    let mut mesago = *mesago;
+    mesago.sendinto = nuna;
+    mesago.ricevonto = destinacio;
     mesagujo(destinacio).pusxi(Ero {
-        fonto: planisto::nuna_id(),
-        mesago: *mesago,
+        fonto: nuna,
+        mesago,
     })?;
     planisto::veki(destinacio);
     Ok(())
@@ -201,11 +176,8 @@ mod kani_proofs {
     fn iu_mesago(tipo: u64) -> Mesago {
         let longo: usize = kani::any();
         kani::assume(longo <= MAKSA_MESAGA_LONGO);
-        Mesago {
-            tipo,
-            longo,
-            datumo: kani::any(),
-        }
+        let datumo: [u8; MAKSA_MESAGA_LONGO] = kani::any();
+        Mesago::nova(tipo, kani::any(), kani::any(), &datumo[..longo])
     }
 
     fn iu_ero(tipo: u64) -> Ero {
@@ -219,8 +191,8 @@ mod kani_proofs {
     #[kani::proof]
     fn mesaĝa_enhavo_en_limoj() {
         let mesago = iu_mesago(kani::any());
-        assert_eq!(mesago.enhavo().len(), mesago.longo);
-        assert!(mesago.longo <= MAKSA_MESAGA_LONGO);
+        assert_eq!(mesago.enhavo().len(), mesago.longo());
+        assert!(mesago.longo() <= MAKSA_MESAGA_LONGO);
     }
 
     /// Plena mesaĝujo rifuzas pliajn mesaĝojn sen ŝanĝi `nombro`.
@@ -267,11 +239,11 @@ mod kani_proofs {
 
         let ricevita = ujo.preni_de(fonto).unwrap();
         assert_eq!(ricevita.tipo, 1);
-        assert_eq!(ricevita.longo, unua.longo);
+        assert_eq!(ricevita.longo(), unua.longo());
 
         let ricevita = ujo.preni_de(fonto).unwrap();
         assert_eq!(ricevita.tipo, 2);
-        assert_eq!(ricevita.longo, dua.longo);
+        assert_eq!(ricevita.longo(), dua.longo());
 
         assert_eq!(ujo.nombro, 0);
         assert!(ujo.preni_de(fonto).is_none());

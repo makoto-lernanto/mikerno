@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-12 · Versio de la workspace: 0.1.1
+> Stato: 2026-11-12 · Versio de la workspace: 0.1.2
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -23,7 +23,7 @@
 | M8 | Mesaĝa IPC kun kapabloj | Plenumita | mesaĝoj liveritaj, fadeno 3 vekita |
 | M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 11 pruvoj verkitaj, Kani ne instalita |
 | M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Parte | ABI difinita; Ring 3 ne efektivigita |
-| M11 | Ring 3 kaj sistemvokoj | Parte | GDT/TSS (0.1.0), `int 0x80`-pordego (0.1.1) |
+| M11 | Ring 3 kaj sistemvokoj | Parte | GDT/TSS (0.1.0), `int 0x80` (0.1.1), dispetĉo kaj kvin vokoj (0.1.2) |
 | M12 | Per-procesaj adresspacoj | Venonta | — |
 | M13 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Venonta | — |
 | M14 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
@@ -413,25 +413,28 @@ Elĉerpaĵo:
    kernaj datumoj `0x10`, uzantaj datumoj DPL3 `0x18`, uzanta kodo DPL3
    `0x20`, TSS `0x28`/`0x30` (16 bajtoj). `iretq` do uzas `CS=0x23` kaj
    `SS=0x1B`; la aranĝo ankaŭ taŭgas por estonta `syscall`/`sysret`.
-2. Enŝovi `horizonto` en la kernan bildon aŭ liveri ĝin kiel Multiboot2-modulon
-   (tipo 3) aŭ per la PVH-modlisto, kun la enirpunkto el la ELF-kapo.
-3. Krei uzantan adresospacon: mapi la bildon super 4 GiB (bazo
-   `0x1_0000_0000`), alokigi 64 KiB da uzanta stako je bazo + 16 MiB, kaj
-   propagi la biton `U` tra la paĝtabeloj.
-4. Instali `int 0x80`-pordon kun DPL3 (interrompa pordego `0xEE`); la traktilo
-   legu `rax`/`rdi`/`rsi`/`rdx`/`r10` el ŝanĝebla `InterrompaKadro`,
-   dispetĉu al la kerna efektivigo kaj skribu la rezulton en `rax`. EOI nur por
-   vektoroj `0x20..0x80`.
-5. Efektivigi `SENDI`, `RICEVI`, `SKRIBI`, `FINI`, `CEDI` kun validigo de
-   uzantaj montriloj kaj per-fadena kerna stako (`TSS.RSP0`).
-6. Transiri per `iretq` kun `CS=0x23`, `SS=0x1B`, `RFLAGS.IF=1`.
+2. Instali `int 0x80`-pordon kun DPL3 (interrompa pordego `0xEE`), igi la
+   interrompan kadron ŝanĝebla kaj limigi EOI al la vektoroj `0x20..0x80`.
+3. Efektivigi la sistemvokan dispetĉon kaj la kvin vokojn `SENDI`, `RICEVI`,
+   `SKRIBI`, `FINI`, `CEDI`: unueca `Mesago` el `libmikerno`, montrila kontrolo
+   de uzantaj bufroj, rezulto skribata en `rax`, `SYS_FINI` neniam revenas.
+   Unu `RSP0`-kernostako sufiĉas por la sola Ring 3-fadeno.
+4. Liveri `horizonto` kiel Multiboot2-modulon (tipo 3) aŭ per la PVH-modlisto,
+   ŝargi la ELF64 `PT_LOAD`-segmentojn super 4 GiB (bazo `0x1_0000_0000`),
+   alokigi 64 KiB da uzanta stako je bazo + 16 MiB, kaj propagi la biton `U`
+   tra ĉiuj paĝtabelaj niveloj.
+5. Transiri per `iretq` kun `CS=0x23`, `SS=0x1B`, `RFLAGS.IF=1`; per-fadena
+   `TSS.RSP0` restas M12-tasko.
+6. Verifi ambaŭ praŝarĝajn vojojn (PVH kaj Limine/ISO) kaj la negativajn
+   kazojn (malbona montrilo, nekonata voko, paĝa eraro mankas).
 
 **Progreso.**
 
 | Dato | Tasko | Versio | Pruvo |
 | --- | --- | --- | --- |
 | 2026-11-12 | 1. GDT/TSS-aranĝo, `VORTARO.md` | 0.1.0 | QEMU PVH: `TR ŝargita`, neniuj esceptoj |
-| 2026-11-12 | 2. DPL3-pordego, ŝanĝebla kadro, EOI-limigo, dispetĉa skeleto | 0.1.1 | Ring 0-memtesto: konata `-38`, nekonata `-22` |
+| 2026-11-12 | 2. DPL3-pordego, ŝanĝebla kadro, EOI-limigo | 0.1.1 | Ring 0-memtesto: konata `-38`, nekonata `-22` |
+| 2026-11-12 | 3. Dispetĉo, kvin sistemvokoj, unueca `Mesago`, montrila kontrolo | 0.1.2 | Ring 0-memtesto: `skribo=0`, `nekonata=-2`, `nula=-1`, `troa=-1`, `cedo=0`; fina stato `3 mortintaj` |
 
 **Akceptkriterioj.**
 

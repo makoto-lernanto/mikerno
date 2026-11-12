@@ -14,9 +14,8 @@ pub mod sistemvoko;
 static ALOKILO: Kunhavigita<KadraAlokilo> = Kunhavigita::nova(KadraAlokilo::nova());
 
 pub fn ĉefa(informo: EniraInformo) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.1.1!\n");
+    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.1.2!\n");
     sistemvoko::pravalorizi();
-    sistemvoko::testi_pordegon();
     crate::skribu!(
         "[kerno] memoro: {} regionoj, {} MiB uzeblaj\n",
         informo.memora_mapo.regionoj().len(),
@@ -90,7 +89,7 @@ pub fn ĉefa(informo: EniraInformo) {
 
     let kapablo = ipc::FinaPunkto::nova(2, ipc::Permesoj::ĈIUJ).kapablo();
     if kapablo.permesoj.posedas(ipc::Permesoj::SENDI) {
-        let mesago = ipc::Mesago::nova(1, "saluton el la praŝarĝo".as_bytes());
+        let mesago = ipc::Mesago::nova(1, 0, 2, "saluton el la praŝarĝo".as_bytes());
         match ipc::sendi_mesagon(kapablo.objekto_id, &mesago) {
             Ok(()) => crate::skribu!("[kerno] IPC: mesaĝo sendita al fadeno 2\n"),
             Err(eraro) => crate::skribu!("[kerno] IPC: sendado malsukcesis: {:?}\n", eraro),
@@ -148,7 +147,9 @@ fn krei_testajn_fadenojn() -> Result<(), planisto::PlanistaEraro> {
 }
 
 fn testa_fadeno(id: u64) {
-    if id == 2 {
+    if id == 1 {
+        sistemvoko::testi_ring0();
+    } else if id == 2 {
         let mesago = ipc::ricevi_mesagon(0);
         crate::skribu!(
             "[fadeno 2] ricevis mesaĝon: tipo {}, \"{}\"\n",
@@ -166,7 +167,10 @@ fn testa_fadeno(id: u64) {
             core::hint::black_box(n);
         }
         if id == 1 && fojo == 3 {
-            match ipc::sendi_mesagon(3, &ipc::Mesago::nova(2, "vekiĝu, fadeno 3".as_bytes())) {
+            match ipc::sendi_mesagon(
+                3,
+                &ipc::Mesago::nova(2, 1, 3, "vekiĝu, fadeno 3".as_bytes()),
+            ) {
                 Ok(()) => crate::skribu!("[fadeno 1] sendis mesaĝon al fadeno 3\n"),
                 Err(eraro) => crate::skribu!("[fadeno 1] IPC: {:?}\n", eraro),
             }

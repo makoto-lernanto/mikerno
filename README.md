@@ -10,7 +10,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj la antaŭpreparo por Ring 3.
 
-- **Versio:** 0.1.1 (workspace)
+- **Versio:** 0.1.2 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.85`
@@ -50,6 +50,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj la antaŭpreparo por Ring 3.
 | 4-nivela paĝado (PML4 → PDPT → PD → PT), NX, PCD | Funkcias | `arkitekturo/x86_64/pagxado.rs` |
 | GDT, 256-vektora IDT, escepta raportado | Funkcias | `gdt.rs`, `idt.rs`, `interrompo/mod.rs` |
 | Uzantaj DPL3-segmentoj kaj `int 0x80`-pordego (interrompa, `0xEE`) | Funkcias | `gdt.rs`, `idt.rs`, `kerno/sistemvoko.rs` |
+| Kvin sistemvokoj (`SENDI`/`RICEVI`/`SKRIBI`/`FINI`/`CEDI`), unueca `Mesago`, montrila kontrolo | Funkcias (Ring 0) | `kerno/sistemvoko.rs`, `arkitekturo/x86_64/sistemvoko.rs` |
 | TSS kun `RSP0` por Ring 3 → Ring 0 | Funkcias (preta) | `tss.rs` |
 | xAPIC (MMIO), malŝalto de 8259-PIC, spuria vektoro `0xFF` | Funkcias | `apic.rs` |
 | 100 Hz perioda temporizilo, kalibrita kontraŭ la PIT | Funkcias | `temporizilo.rs` |
@@ -61,8 +62,9 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj la antaŭpreparo por Ring 3.
 | 11 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ipc.rs` |
 
 > La Ring 3-transiro mem ankoraŭ ne estas efektivigita: la GDT havas la
-> uzantajn DPL3-segmentojn kaj la IDT havas la DPL3-pordon por `int 0x80`, sed
-> la kerno ankoraŭ ne enŝovas `horizonto` nek transiras per `iretq`.
+> uzantajn DPL3-segmentojn, la IDT havas la DPL3-pordon por `int 0x80`, kaj la
+> kvin sistemvokoj funkcias el Ring 0, sed la kerno ankoraŭ ne enŝovas
+> `horizonto` nek transiras per `iretq`.
 
 ---
 
@@ -333,9 +335,18 @@ ekzistas aparta kapablotabelo, rajtorevoko aŭ tempolimoj.
 
 `horizonto` estas la unua uzanta bildo (`horizonto_start`), ligita je 4 MiB
 super la kerna bildo. Ĝi ankoraŭ **ne estas enŝovita** en la kernan bildon nek
-lanĉebla memstare: `tools/run-qemu.sh` ĝentile rifuzas ĝin. La GDT kaj la IDT
-jam estas pretaj por Ring 3; la kerna dispetĉilo ankoraŭ redonas `-ENOSYS`
-(`-38`) por la kvin konataj vokoj kaj `-EINVAL` (`-22`) por nekonata numero.
+lanĉebla memstare: `tools/run-qemu.sh` ĝentile rifuzas ĝin.
+
+La kerna dispetĉilo (`arkitekturo/x86_64/sistemvoko.rs`) legas
+`rax`/`rdi`/`rsi`/`rdx`/`r10` el la interrompa kadro, plenumas la vokon kaj
+skribas la rezulton reen en `kadro.rax`. La mesaĝa aranĝo venas el
+`libmikerno::Mesago`, do la kerno kaj Ring 3 kopias la saman `#[repr(C)]`
+strukturon; la kongruo estas fiksita per kompila-tempaj asertoj.
+`kerno/sistemvoko.rs` efektivigas `SENDI`, `RICEVI`, `SKRIBI`, `FINI` kaj
+`CEDI`: Ring 3-bufroj estas ne-nulaj, limigitaj kaj ene de la anoncitaj bilda
+kaj stakaj regionoj; `SYS_FINI` vokas `planisto::morti()` kaj neniam revenas.
+Ring 0-memtesto pruvas la vojon per `int 0x80` en la unua fadeno (`SYS_CEDI`
+tie vere cedas la procesoron).
 
 ---
 
@@ -370,9 +381,8 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.1.1!
+[MiKerno] Saluton, mi estas MiKerno v0.1.2!
 [sistemvoko] pordego 0x80 (DPL3) instalita
-[sistemvoko] memtesto: konata=-38, nekonata=-22
 [kerno] memoro: 7 regionoj, 255 MiB uzeblaj
 [kerno] framebuffer 1280x800, 32 bpp        (nur ISO)
 [tss] TR ŝargita; kernostako pinto 0x...
@@ -380,6 +390,8 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 [kerno] APIC 0 kaj paĝado pretaj; temporizilo 100 Hz
 [kerno] IPC: mesaĝo sendita al fadeno 2
 [kerno] planisto ekas: 3 fadenoj, antaŭokupo ĉiu 10 ms
+saluton el Ring 0 tra int 0x80
+[sistemvoko] Ring 0-memtesto: skribo=0, nekonata=-2, nula=-1, troa=-1, cedo=0
 ...
 [kerno] fina stato: 3 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
 ```
@@ -467,8 +479,9 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 
 ## Limigoj kaj sekva laboro
 
-- **Neniu Ring 3**: mankas enŝovo de `horizonto`, uzanta adresospaco kun bito
-  `U`, la `iretq`-transiro kaj la efektivigo de la kvin sistemvokoj.
+- **Neniu Ring 3**: mankas enŝovo de `horizonto`, la uzanta adresospaco kun
+  bito `U` kaj la `iretq`-transiro. La kvin sistemvokoj jam funkcias el Ring 0
+  kaj estas pretaj por la Ring 3-vojo.
 - **Neniu liberigo de kadroj**: la alokilo estas monotona; `KadraAlokilo` ne
   havas publikan `liberigi`.
 - **Identeca mapo RWX**: oportunas por la prototipo, sed malobservas W^X;
