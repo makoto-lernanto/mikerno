@@ -2,6 +2,8 @@
 
 use crate::memoro::virtuala::VirtuaAdreso;
 
+use super::procezo::ProcezaId;
+
 pub type FadenoId = u64;
 pub type FadenoEnirpunkto = fn(FadenoId);
 
@@ -67,6 +69,8 @@ impl Kunteksto {
 #[derive(Clone, Copy)]
 pub struct Fadeno {
     pub id: FadenoId,
+    /// La procezo, al kiu la fadeno apartenas; `0` estas la nukleo mem.
+    pub procezo: ProcezaId,
     pub stako_pinto: VirtuaAdreso,
     pub stato: FadenoStato,
     pub konteksto: Kunteksto,
@@ -76,11 +80,13 @@ pub struct Fadeno {
 impl Fadeno {
     pub const fn nova(
         id: FadenoId,
+        procezo: ProcezaId,
         stako_pinto: VirtuaAdreso,
         enirpunkto: FadenoEnirpunkto,
     ) -> Self {
         Self {
             id,
+            procezo,
             stako_pinto,
             stato: FadenoStato::Preta,
             konteksto: Kunteksto::nova(),
@@ -92,6 +98,7 @@ impl Fadeno {
     pub const fn ripoza() -> Self {
         Self {
             id: 0,
+            procezo: 0,
             stako_pinto: VirtuaAdreso::nova(0),
             stato: FadenoStato::Kuranta,
             konteksto: Kunteksto::nova(),

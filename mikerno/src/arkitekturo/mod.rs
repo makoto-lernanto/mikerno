@@ -35,11 +35,13 @@ pub fn analizi_eniron(starta_informo: *const u8, magio: u32) -> Result<EniraInfo
     }
 }
 
-/// Kreu freŝan adresan spacon por la nukleo.
-pub fn krei_adresan_spacon(
-    alokilo: &mut KadraAlokilo,
-) -> Result<impl AdresaSpaco + use<>, PaĝaEraro> {
-    <malantaŭo::pagxado::X86AdresaSpaco as AdresaSpaco>::krei(alokilo)
+/// Konkreta adresa spaco de la aktiva platformo. La nukleo bezonas nomon por
+/// konservi unu spacon por ĉiu procezo; la cetera kodo uzas la trait-on.
+pub type Spaco = malantaŭo::pagxado::X86AdresaSpaco;
+
+/// Kreu freŝan, malplenan adresan spacon por la nukleo mem.
+pub fn krei_adresan_spacon(alokilo: &mut KadraAlokilo) -> Result<Spaco, PaĝaEraro> {
+    <Spaco as AdresaSpaco>::krei(alokilo)
 }
 
 pub use malantaŭo::procesoro::{

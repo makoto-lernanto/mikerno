@@ -10,7 +10,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.2.0 (workspace)
+- **Versio:** 0.2.1 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.85`
@@ -49,6 +49,8 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 | Modula liverado: Multiboot2 tipo 3 kaj PVH-modlisto (`horizonto`) | Funkcias | `mb2.rs`, `pvh.rs`, `memoro/mod.rs` |
 | Bitmapa kadro-alokilo por la unuaj 4 GiB, kun `liberigi` kaj rekuzo | Funkcias | `memoro/kadro.rs` |
 | Kaskada forigo de adresa spaco (`detruu`) kun liberigo de paĝtabeloj | Funkcias | `arkitekturo/x86_64/pagxado.rs` |
+| Per-procesa adresa spaco: privata PML4, kunhavataj kernaj mapoj (`krei_kunhavantan`) | Funkcias (fundamento) | `kerno/procezo.rs`, `pagxado.rs` |
+| Strikta uzanta mapado (`mapi_uzantan`): fenestra limkontrolo kaj devigata bito `U` | Funkcias | `memoro/virtuala.rs`, `kerno/uzantspaco.rs` |
 | 4-nivela paĝado (PML4 → PDPT → PD → PT), NX, PCD | Funkcias | `arkitekturo/x86_64/pagxado.rs` |
 | GDT, 256-vektora IDT, escepta raportado | Funkcias | `gdt.rs`, `idt.rs`, `interrompo/mod.rs` |
 | Uzantaj DPL3-segmentoj kaj `int 0x80`-pordego (interrompa, `0xEE`) | Funkcias | `gdt.rs`, `idt.rs`, `kerno/sistemvoko.rs` |
@@ -63,13 +65,14 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 | Uzanta fenestro super 4 GiB, ELF64-ŝargo kun bito `U`, 64 KiB stako | Funkcias | `kerno/uzantspaco.rs`, `memoro/virtuala.rs` |
 | Ring 3-transiro per `iretq` (`CS=0x23`, `SS=0x1B`, `IF=1`) | Funkcias | `arkitekturo/x86_64/uzanta.rs` |
 | Unua uzanta procezo `horizonto`: `SKRIBI` + `FINI` el Ring 3 | Funkcias | `horizonto/`, `kerno/sistemvoko.rs` |
-| 11 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ipc.rs` |
+| 12 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ipc.rs` |
 
 > `horizonto` estas liverata kiel praŝarĝa modulo, muntata super 4 GiB kun la
 > bito `U` tra ĉiuj paĝtabelaj niveloj, kaj ekzekutas en Ring 3 per `iretq`.
 > Ĝi skribas sian saluton per `int 0x80` kaj eliras per `fini(0)`; la planisto
-> tiam revenas al la ripoza kunteksto. Per-procesaj adresspacoj kaj per-fadena
-> `TSS.RSP0` ankoraŭ mankas (M12).
+> tiam revenas al la ripoza kunteksto. La proceza adresa spaco jam ekzistas
+> (privata PML4 kun kunhavataj kernaj mapoj), sed `CR3` ankoraŭ ne ŝanĝiĝas dum
+> kuntekstŝanĝo kaj `TSS.RSP0` restas komuna (M12-fazoj 3–5).
 
 ---
 
@@ -176,7 +179,8 @@ kerno::ĉefa                          kerno/mod.rs
   · nova PML4 (4 KiB paĝoj), identeca mapo, framebuffer (PCD)
   · modulaj regionoj identece mapitaj, CR3 ŝalto, konzolo, TSS/RSP0
   · APIC + temporizilo (100 Hz), 3 testaj fadenoj
-  · uzantspaco: ELF64-segmentoj + stako super 4 GiB, bito `U`
+  · uzantspaco: ELF64-segmentoj + stako super 4 GiB, bito `U` (`mapi_uzantan`)
+  · procezo 4: privata PML4, kernaj mapoj kunhavataj, fenestro malplena
   · `horizonto` en Ring 3 per `iretq`; `FINI` revenigas la planiston
   · IPC-testo, planisto, 10 s da observado, halto
 ```
@@ -246,6 +250,17 @@ komparas la nombrojn de liberaj kadroj.
 nealiniiĝintajn adresojn kaj jam mapitajn foliojn (`Konflikto`); `traduki`
 komprenas ankaŭ 2 MiB grandegajn paĝojn. La identeca mapo estas RWX, kio estas
 oportuna sed ne sekura longtempe (vidu [Limigoj](#limigoj-kaj-sekva-laboro)).
+
+`krei_kunhavantan(&self, …)` konstruas procezan spacon super ekzistanta kerna
+spaco. Por ĉiu ĉeesta PML4-ero ĝi kontrolas la suban PDPT-on: se ĝi enhavas
+iun ajn eron kun `U=1`, aŭ se la ero enhavas parton de la uzanta fenestro, oni
+alokas **privatan** PDPT-on kaj kopias nur la `U=0`-erojn; alie la PDPT-kadro
+estas kunhavata laŭvorte. Ĉar la fenestro kuŝas sub `PML4[0]`, tiu ero neniam
+estas kunhavata — alie novaj uzantaj mapoj aperus ankaŭ en la fonta spaco. La
+PML4-eroj estas kopiitaj kiel krudaj `u64`-valoroj (fizika adreso + flagoj),
+neniam dereferencitaj. `mapi_uzantan` kaj `mapi_uzantan_regionon` devigas la
+intervalon `[UZANTA_BAZO, UZANTA_FINO)`, kontrolas `checked_add` kontraŭ
+ciferpremo kaj ŝaltas `U` ĉe la folio kaj ĉiuj gepatraj niveloj.
 
 ---
 
@@ -398,6 +413,26 @@ intervalo kaj adreso ekster la fenestro devas esti rifuzitaj laŭ la bito `U`.
 `limine.conf`, aŭ la PVH-modlisto el `-initrd` (``just run`` aldonas ĝin
 aŭtomate).
 
+### Proceza adresa spaco
+
+`kerno/procezo.rs` donas la abstrakton `Procezo`: identigilo, privata `Spaco`,
+estonta kerna stakpinto (`kerna_stako_pinto`, muntos ĝin Fazo 3) kaj stato
+(`Preta`, `Kuranta`, `Mortinta`). La nukleo estas procezo `0` sen ero en la
+tabelo; la tabelo tenas ĝis 8 procezojn. `Fadeno` nun portas `procezo`-idon,
+kaj la planisto spegulas `Kuranta`/`Preta`/`Mortinta` en la proceza stato.
+
+Ĉe starto la nukleo, post la ŝargo de `horizonto`, kreas procezon `4` per
+`krei_kunhavantan`. La konzolo konfirmas ĝin per:
+
+```text
+[procezo] 4: Preta, kerna stako 0x0, kerna mapo kunhavata, uzanta fenestro privata
+```
+
+La kontrolo legas `traduki(0x1000)` (kerna mapo ĉeestas) kaj
+`traduki(UZANTA_BAZO)` (neniu uzanta folio kopiiĝis). `CR3` ankoraŭ ne
+ŝanĝiĝas dum planado; tion kaj la per-procesan `TSS.RSP0` alportos la sekvaj
+fazoj de M12.
+
 ### Transiro al Ring 3
 
 Post la testaj fadenoj la praŝarĝa kunteksto aldonas la uzantan fadenon (id 4)
@@ -471,10 +506,10 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.2.0!
+[MiKerno] Saluton, mi estas MiKerno v0.2.1!
 [sistemvoko] pordego 0x80 (DPL3) instalita
 [kerno] memoro: 7 regionoj, 255 MiB uzeblaj
-[memoro] liberigo (bone): 65148 kadroj antaŭ, 65148 post
+[memoro] liberigo (bone): 65146 kadroj antaŭ, 65146 post
 [kerno] framebuffer 1280x800, 32 bpp        (nur ISO)
 [tss] TR ŝargita; kernostako pinto 0x...
 [temporizilo] kalibrado: ... kalkuloj/s, komenca ...
@@ -482,6 +517,7 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 [uzanto] stako 0x100ff0000..0x101000000 (64 KiB), pinto 0x101000000
 [uzanto] kontrolo (bone): skriba=true lega=true nurlega_skribo=false kerna=false nemapita=false translima=false eksterfenestra=false enirpunkta=true
 [uzanto] memoro: marko 0x4d694b65726e6f21, legita 0x4d694b65726e6f21
+[procezo] 4: Preta, kerna stako 0x0, kerna mapo kunhavata, uzanta fenestro privata
 [kerno] APIC 0 kaj paĝado pretaj; temporizilo 100 Hz
 [kerno] IPC: mesaĝo sendita al fadeno 2
 [kerno] planisto ekas: 3 fadenoj, antaŭokupo ĉiu 10 ms
@@ -564,6 +600,7 @@ horizonto: la unua procezo vekis en Ring 3.
 │       ├── kerno/
 │       │   ├── mod.rs          # ĉefa sekvenco, testaj fadenoj
 │       │   ├── objekto.rs      # Fadeno, Kunteksto, stato
+│       │   ├── procezo.rs      # Procezo, proceza stato, privata spaco
 │       │   ├── planisto.rs    # rondiga planisto
 │       │   ├── sistemvoko.rs   # SENDI/RICEVI/SKRIBI/FINI/CEDI
 │       │   ├── uzantspaco.rs   # ELF64-ŝargo, stako, U-kontrolo
@@ -592,10 +629,9 @@ horizonto: la unua procezo vekis en Ring 3.
 
 ## Limigoj kaj sekva laboro
 
-- **Ring 3 unuprocesa**: `horizonto` ekzekutas en Ring 3 kaj vokas `int 0x80`,
-  sed ĉiuj procezoj kunhavas unu `PML4` (neniu izolado), `TSS.RSP0` estas
-  komuna kaj ne ekzistas reveno al uzanto krom nova `iretq`; mankas ankaŭ
-  per-fadena kernostako.
+- **Ring 3 unuprocesa**: ĉiu procezo jam havas privatan `PML4` kun propra
+  fenestro, sed la planisto ankoraŭ ne ŝaltas `CR3`, do `horizonto` plenumas en
+  la kerna spaco; `TSS.RSP0` estas komuna kaj mankas per-fadena kernostako.
 - **Neniu aŭtomata liberigo**: `KadraAlokilo::liberigi` kaj `detruu` ekzistas,
   sed ĝis M12-fazoj 3–5 neniu proceza eliro vokas ilin; la alokilo do restas
   preskaŭ monotona dum la vivo de la sistemo.
@@ -610,7 +646,7 @@ horizonto: la unua procezo vekis en Ring 3.
   demando-paĝado.
 - **Framebuffer**: nur 32 bpp, kvar fiksaj strekoj (8×16 … 32×64), 111 glifoj
   (95 ASCII + Esperanto + citiloj), malplenigo anstataŭ rulumo.
-- **Pruvoj**: 11 Kani-pruvoj spegulas la bitan logikon sur 64 kadroj; la produkta
+- **Pruvoj**: 12 Kani-pruvoj spegulas la bitan logikon sur 64 kadroj; la produkta
   kodo mem ne estas pruvita. `just verify` postulas apartan Kani-instalon.
 - **Neniu CI nek testoharness**: la kontrolo estas `build` + `clippy` + `fmt` +
   QEMU-smoka testo.

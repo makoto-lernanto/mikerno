@@ -8,6 +8,11 @@ kaj protokolaj nomoj sekvu ĝin.
 | `procesoro` | processor / CPU | 处理器 | Neniam uzu `cpu` en identigiloj. |
 | `memoro` | memory | 内存 | Neniam uzu `memory` aŭ `ram`. |
 | `fadeno` | thread | 线程 | Neniam uzu `thread`. |
+| `procezo` | process | 进程 | `Procezo`; neniam uzu `process`. |
+| `proceza identigilo` | process id | 进程标识 | `ProcezaId`; `0` estas la nukleo. |
+| `proceza stato` | process state | 进程状态 | `ProcezaEstado`: `Preta`, `Kuranta`, `Mortinta`. |
+| `privata` | private | 私有 | Proceza fenestro, kiun aliaj procezoj ne vidas. |
+| `kunhavigi` | share | 共享 | Kernaj mapoj restas komunaj inter procezoj. |
 | `planisto` | scheduler | 调度器 | Neniam uzu `scheduler`. |
 | `pagxo`, `paĝo` | page | 页 | Identigiloj uzas `pagx` aŭ `paĝ`. |
 | `pagxado` | paging | 分页 | Modula nomo. |

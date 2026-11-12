@@ -6,19 +6,20 @@ use crate::memoro::EniraInformo;
 use crate::memoro::KADRA_GRANDO;
 use crate::memoro::kadro::KadraAlokilo;
 use crate::memoro::virtuala::{
-    AdresaSpaco, PaĝaPermesoj, UZANTA_BAZO, UZANTA_STAKO_SUPRO, VirtuaAdreso,
+    AdresaSpaco, PaĝaPermesoj, PaĝaTablo, UZANTA_BAZO, UZANTA_STAKO_SUPRO, VirtuaAdreso,
 };
 
 pub mod ipc;
 pub mod objekto;
 pub mod planisto;
+pub mod procezo;
 pub mod sistemvoko;
 pub mod uzantspaco;
 
 static ALOKILO: Kunhavigita<KadraAlokilo> = Kunhavigita::nova(KadraAlokilo::nova());
 
 pub fn ĉefa(informo: EniraInformo) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.2.0!\n");
+    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.2.1!\n");
     sistemvoko::pravalorizi();
     crate::skribu!(
         "[kerno] memoro: {} regionoj, {} MiB uzeblaj\n",
@@ -105,6 +106,27 @@ pub fn ĉefa(informo: EniraInformo) {
             if let Err(eraro) = uzantspaco::pravalorizi(&mut spaco, alokilo, modulo) {
                 crate::skribu!("[uzanto] ŝargo malsukcesis: {}\n", eraro);
                 return;
+            }
+            match procezo::krei(UZANTA_FADENO_ID, &spaco, alokilo) {
+                Ok(id) => match procezo::akiri(id) {
+                    Some(procezo) => {
+                        let spaco_proceza = procezo.spaco();
+                        let kerna = spaco_proceza.traduki(VirtuaAdreso::nova(0x1000)).is_some();
+                        let fenestra = spaco_proceza
+                            .traduki(VirtuaAdreso::nova(UZANTA_BAZO))
+                            .is_none();
+                        crate::skribu!(
+                            "[procezo] {}: {:?}, kerna stako 0x{:x}, kerna mapo {}, uzanta fenestro {}\n",
+                            procezo.id(),
+                            procezo.stato(),
+                            procezo.kerna_stako_pinto(),
+                            if kerna { "kunhavata" } else { "MANKANTA" },
+                            if fenestra { "privata" } else { "KUNHAVATA" }
+                        );
+                    }
+                    None => crate::skribu!("[procezo] {}: registro mankas\n", id),
+                },
+                Err(eraro) => crate::skribu!("[procezo] kreado malsukcesis: {}\n", eraro),
             }
         }
         None => crate::skribu!("[uzanto] horizonto ne liverita (mankas modulo)\n"),
@@ -215,6 +237,7 @@ fn krei_testajn_fadenojn() -> Result<(), planisto::PlanistaEraro> {
         let pinto = &raw const STAKOJ as u64 + id * STAKA_GRANDE as u64;
         planisto::aldoni_fadenon(planisto::pretigi_fadenon(
             id,
+            0,
             VirtuaAdreso::nova(pinto),
             testa_fadeno,
         ))?;
@@ -227,6 +250,7 @@ fn krei_testajn_fadenojn() -> Result<(), planisto::PlanistaEraro> {
 fn lanĉi_horizonton(enirpunkto: u64) -> Result<(), planisto::PlanistaEraro> {
     let pinto = &raw const UZANTA_FADENA_STAKO as u64 + STAKA_GRANDE as u64;
     planisto::aldoni_fadenon(planisto::pretigi_fadenon(
+        UZANTA_FADENO_ID,
         UZANTA_FADENO_ID,
         VirtuaAdreso::nova(pinto),
         uzanta_fadeno,

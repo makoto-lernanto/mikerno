@@ -72,6 +72,15 @@ impl AdresaSpaco for X86AdresaSpaco {
         Self::nova(alokilo)
     }
 
+    fn krei_kunhavantan(&self, alokilo: &mut KadraAlokilo) -> Result<Self, PaĝaEraro> {
+        let nova = Self::nova(alokilo)?;
+        if let Err(eraro) = kopii_kernajn(self.radiko(), nova.radiko(), alokilo) {
+            forigi_kopion(nova.radiko(), self.radiko(), alokilo);
+            return Err(eraro);
+        }
+        Ok(nova)
+    }
+
     fn ŝalti(&self) {
         // PAE, LME kaj CR0.PG jam estas ŝaltitaj de la praŝarĝa ŝelko.
         unsafe {
@@ -188,9 +197,86 @@ fn agordi_eron(tabelo: FizikaAdreso, indekso: usize, valoro: u64) {
 }
 
 fn nuligi(kadro: Kadro) {
+    // SAFETY: la kadro venas de la bitaro kaj kuŝas en la unuaj 4 GiB, kiuj
+    // estas identece mapitaj; la kadro estas okupata de ni, do ni rajtas
+    // nuligi ĝian tutan enhavon.
     unsafe {
         ptr::write_bytes(kadro.adreso() as *mut u8, 0, KADRA_GRANDO as usize);
     }
+}
+
+/// Kopiu la kernajn mapojn de `fonto` en freŝan `celon`.
+///
+/// Puraj kernaj subtableoj restas kunhavataj (la sama fizika kadro). PML4-ero
+/// kun uzantaj eroj — aŭ kiu enhavas parton de la uzanta fenestro — ricevas
+/// privatan PDPT-on, en kiu nur la `U=0`-eroj estas kopiitaj. Tiel la nova
+/// spaco heredas la tutan kernan mapon sed neniun uzantan folion.
+fn kopii_kernajn(
+    fonto: FizikaAdreso,
+    celo: FizikaAdreso,
+    alokilo: &mut KadraAlokilo,
+) -> Result<(), PaĝaEraro> {
+    for indekso in 0..512 {
+        let valoro = ero(fonto, indekso);
+        if valoro & PREZENTA == 0 {
+            continue;
+        }
+        if valoro & GRANDA != 0 {
+            // PML4-ero ne rajtas esti folio; rifuzi anstataŭ diveni.
+            return Err(PaĝaEraro::Konflikto);
+        }
+        let pdpt = FizikaAdreso::nova(valoro & ADRESO_MASKO);
+        if !ĉu_uzanta_tabelo(pdpt) && !fenestra_indekso(indekso) {
+            // Pura kerna subtableo: kunhavigu la saman fizikan kadron.
+            agordi_eron(celo, indekso, valoro);
+            continue;
+        }
+
+        let kadro = alokilo.aloki().ok_or(PaĝaEraro::Elĉerpita)?;
+        nuligi(kadro);
+        let privata = FizikaAdreso::nova(kadro.adreso());
+        for subindekso in 0..512 {
+            let sub = ero(pdpt, subindekso);
+            if sub & PREZENTA != 0 && sub & UZANTA == 0 {
+                agordi_eron(privata, subindekso, sub);
+            }
+        }
+        // La flagoj de la PML4-ero (inkluzive `U`, kiu malfermas la fenestron)
+        // restas; nur la adreso montras al la privata PDPT.
+        agordi_eron(celo, indekso, (valoro & !ADRESO_MASKO) | kadro.adreso());
+    }
+    Ok(())
+}
+
+/// Liberigu la privatajn PDPT-kadrojn, kiujn `kopii_kernajn` jam kreis, kaj
+/// la freŝan radikon. Kunhavataj eroj restas netuŝitaj.
+fn forigi_kopion(celo: FizikaAdreso, fonto: FizikaAdreso, alokilo: &mut KadraAlokilo) {
+    for indekso in 0..512 {
+        let valoro = ero(celo, indekso);
+        if valoro & PREZENTA == 0 {
+            continue;
+        }
+        let fonta = ero(fonto, indekso);
+        if (valoro & ADRESO_MASKO) == (fonta & ADRESO_MASKO) {
+            continue;
+        }
+        alokilo.liberigi(Kadro::el_adreso(valoro & ADRESO_MASKO));
+        agordi_eron(celo, indekso, 0);
+    }
+    alokilo.liberigi(Kadro::el_adreso(celo.adreso()));
+}
+
+/// Ĉu iu ero de la tabelo estas atingebla de Ring 3?
+fn ĉu_uzanta_tabelo(tabelo: FizikaAdreso) -> bool {
+    (0..512).any(|indekso| ero(tabelo, indekso) & (PREZENTA | UZANTA) == (PREZENTA | UZANTA))
+}
+
+/// Ĉu la PML4-ero `indekso` enhavas parton de la uzanta fenestro? Tia ero
+/// neniam estas kunhavata: novaj uzantaj mapoj aperus ankaŭ en la fonta spaco.
+fn fenestra_indekso(indekso: usize) -> bool {
+    let bazo = indekso as u64 * nivela_amplekso(3);
+    let fino = bazo + nivela_amplekso(3);
+    bazo < UZANTA_FINO && fino > UZANTA_BAZO
 }
 
 /// Liberigu ĉiujn foliojn en `[komenco, fino)` kaj la paĝtabelojn, kiuj restas

@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-12 · Versio de la workspace: 0.2.0
+> Stato: 2026-11-12 · Versio de la workspace: 0.2.1
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -24,7 +24,7 @@
 | M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 12 pruvoj verkitaj, Kani ne instalita |
 | M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Plenumita | ABI difinita; `horizonto` plenumiĝas en Ring 3 |
 | M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj (0.1.5) |
-| M12 | Per-procesaj adresspacoj | Daŭranta | Fazo 1: `liberigi`, kaskada `detruu`, provo ĉe starto (0.2.0) |
+| M12 | Per-procesaj adresspacoj | Daŭranta | Fazo 2: proceza abstrakto kaj privata PML4 (0.2.1) |
 | M13 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Venonta | — |
 | M14 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
 | M15 | Konservado, dosiersistemo, ŝelo | Venonta | — |
@@ -430,7 +430,7 @@ horizonto: la unua procezo vekis en Ring 3.
    ripetiĝi; la `justfile` devus eventuale fari la version videbla aŭ la
    kontrolo devus ĉiam rekonstrui.
 2. **Versio hardkodita.** `kerno/mod.rs`, `mikerno/boot/limine.conf` kaj
-   `Cargo.toml` enhavas `0.2.0` sendepende. Oni devus derivi ĝin per
+   `Cargo.toml` enhavas `0.2.1` sendepende. Oni devus derivi ĝin per
    `env!("CARGO_PKG_VERSION")` kaj `build.rs`.
 3. **Kani mankas.** La formala pordego ne estas plenumebla en ĉi tiu medio;
    `just verify` malsukcesos ĝis `cargo kani` estos instalita.
@@ -463,6 +463,7 @@ procezo ne haltigas la kernon; la kadro-alokilo reuzas liberigitajn kadrojn.
 | Dato | Fazo | Versio | Pruvo |
 | --- | --- | --- | --- |
 | 2026-11-12 | 1. `liberigi`, kaskada `detruu`, provo ĉe starto | 0.2.0 | PVH: `[memoro] liberigo (bone): 65148 kadroj antaŭ, 65148 post`; 0 esceptoj |
+| 2026-11-12 | 2. proceza abstrakto, `krei_kunhavantan`, `mapi_uzantan` | 0.2.1 | PVH/ISO: `[procezo] 4: Preta, kerna stako 0x0, kerna mapo kunhavata, uzanta fenestro privata`; 0 esceptoj |
 
 **Fazo 1 (0.2.0).** `KadraAlokilo::liberigi` malmarkas la biton, nuligas la
 kadron kaj retreatigas `sekva`; duobla liberigo estas senefika. `detruu`
@@ -474,6 +475,28 @@ forigus ankaŭ la kernajn mapojn. Tabeloj kun kernaj eroj restas, ĉar ili ne
 malpleniĝas. Grandega folio en la fenestro kaŭzas `Konflikto` anstataŭ
 danĝeran liberigon. Ĉe starto la nukleo kreas provizan spacon, mapas unu paĝon,
 detruas ĝin kaj komparas la nombrojn de liberaj kadroj.
+
+**Fazo 2 (0.2.1).** `Procezo` (`kerno/procezo.rs`) kunigas identigilon,
+privatan `Spaco`-on, estontan kernan stakpinton kaj staton (`Preta`,
+`Kuranta`, `Mortinta`); la tabelo tenas 8 procezojn kaj la nukleo restas
+procezo `0`. `Fadeno` portas `procezo`-idon, kaj la planisto spegulas la
+statojn. `X86AdresaSpaco::krei_kunhavantan` alokas freŝan PML4-on kaj, por
+ĉiu ĉeesta ero, inspektas la suban PDPT-on: eroj kun `U=1` — aŭ eroj, kiuj
+kovras parton de la uzanta fenestro — ricevas privatan PDPT-on kun nur la
+`U=0`-eroj; la ceteraj PDPT-kadroj estas kunhavataj. Tio kongruas kun la
+regulo «dinamike kontroli la biton `U`», sed ne eblas kunhavigi `PML4[0]`:
+en MiKerno la fenestro kuŝas sub ĝi, do novaj uzantaj mapoj poluus la fontan
+spacon. La protokolo ne uzas `PML4[511]`-rekursion. `mapi_uzantan` kaj
+`mapi_uzantan_regionon` (trait `PaĝaTablo`) kontrolas `[UZANTA_BAZO,
+UZANTA_FINO)` per `checked_add` kaj devigas `U=1`; la ELF-ŝargilo kaj la
+stako nun uzas ilin.
+
+**Decido (starta vojo).** `krei()` restas «freŝa, malplena radiko» por la
+nukleo: ĝi estas vokata antaŭ ol ekzistas kerna spaco, dum `CR3` ankoraŭ
+montras la praŝarĝilan tabularon kun 2 MiB paĝoj. La kunhava konstruilo do
+estas aparta metodo, `krei_kunhavantan(&self, …)`: ĝi ekzakte plenumas la
+taskon 2.2 (dinamika identigo de kernaj PDPT-eroj) sen antaŭtempe kunhavigi
+la praŝarĝajn tabelojn aŭ perdi la 4 KiB-identecan mapon de la kerno.
 
 ---
 

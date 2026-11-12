@@ -10,6 +10,7 @@ use crate::kunhavigita::Kunhavigita;
 use crate::memoro::virtuala::VirtuaAdreso;
 
 use super::objekto::{Fadeno, FadenoEnirpunkto, FadenoId, FadenoStato, Kunteksto};
+use super::procezo::{ProcezaEstado, ProcezaId, marki};
 
 pub const MAKSAJ_FADENOJ: usize = 8;
 const RIPAZA_ID: FadenoId = 0;
@@ -98,6 +99,21 @@ impl Planisto {
             fadeno.stato = FadenoStato::Kuranta;
         }
         self.nuna_fadeno = Some(id);
+        self.stato_procezan(id, ProcezaEstado::Kuranta);
+    }
+
+    /// Spegulu la fadenan staton en la proceza tabelo; fadenoj de la nukleo
+    /// (`procezo == 0`) ne havas procezan eron.
+    fn stato_procezan(&self, id: FadenoId, stato: ProcezaEstado) {
+        let Some(procezo) = self.fadenoj[id as usize]
+            .as_ref()
+            .map(|fadeno| fadeno.procezo)
+        else {
+            return;
+        };
+        if procezo != 0 {
+            marki(procezo, stato);
+        }
     }
 
     /// Vokata el la temporizila interrompo: rotaciu la nunan fadenon aŭ,
@@ -122,6 +138,7 @@ impl Planisto {
 
         fadeno.stato = FadenoStato::Preta;
         self.preta_vico.pusxi(nuna);
+        self.stato_procezan(nuna, ProcezaEstado::Preta);
 
         let sekva = self.elekti_proksiman().unwrap_or(nuna);
         if sekva == nuna {
@@ -136,6 +153,8 @@ impl Planisto {
         if let Some(fadeno) = self.fadenoj[id as usize].as_mut() {
             fadeno.stato = FadenoStato::Blokitaj;
         }
+        // Procezo sen kuranta fadeno ne plu estas "kuranta".
+        self.stato_procezan(id, ProcezaEstado::Preta);
         let sekva = self.elekti_proksiman().unwrap_or(RIPAZA_ID);
         self.kurigu(sekva);
         unsafe { self.switch(id, sekva) };
@@ -158,6 +177,7 @@ impl Planisto {
             fadeno.stato = FadenoStato::Mortinta;
         }
         crate::skribu!("[planisto] fadeno {} finiĝis\n", id);
+        self.stato_procezan(id, ProcezaEstado::Mortinta);
 
         let sekva = self.elekti_proksiman().unwrap_or(RIPAZA_ID);
         self.kurigu(sekva);
@@ -214,10 +234,11 @@ fn planisto() -> &'static mut Planisto {
 
 pub fn pretigi_fadenon(
     id: FadenoId,
+    proceza_id: ProcezaId,
     stako_pinto: VirtuaAdreso,
     enirpunkto: FadenoEnirpunkto,
 ) -> Fadeno {
-    let mut fadeno = Fadeno::nova(id, stako_pinto, enirpunkto);
+    let mut fadeno = Fadeno::nova(id, proceza_id, stako_pinto, enirpunkto);
     arkitekturo::prepari_kuntekston(&mut fadeno.konteksto, fadeno.stako_pinto.adreso());
     // La trampolino transdonas `rax` al Rust kiel la unuan argumenton.
     fadeno.konteksto.rax = id;

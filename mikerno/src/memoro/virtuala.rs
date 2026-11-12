@@ -136,10 +136,92 @@ pub trait PaĝaTablo {
     /// Ĉu ĉiu paĝo de `[adreso, adreso + longo)` estas atingebla de Ring 3
     /// (bitoj `U` ĉe ĉiuj niveloj) kaj, se `skriba`, ankaŭ skribebla?
     fn kontroli_uzantan(&self, adreso: u64, longo: usize, skriba: bool) -> bool;
+
+    /// Mapu unu uzantan folion. La virtuala adreso devas kuŝi en la uzanta
+    /// fenestro, kaj la bito `U` estas devigata sendepende de `permesoj`.
+    fn mapi_uzantan(
+        &mut self,
+        virtuala: VirtuaAdreso,
+        fizika: FizikaAdreso,
+        permesoj: PaĝaPermesoj,
+        alokilo: &mut KadraAlokilo,
+    ) -> Result<(), PaĝaEraro> {
+        kontroli_fenestron(virtuala.adreso(), KADRA_GRANDO as usize)?;
+        let permesoj = PaĝaPermesoj {
+            uzanta: true,
+            ..permesoj
+        };
+        self.mapigi(virtuala, fizika, permesoj, alokilo)
+    }
+
+    /// Mapu freŝajn, nuligitajn kadrojn por la uzanta intervalo `[komenco,
+    /// komenco + longo)`. La limoj estas kontrolitaj antaŭ la unua aloko.
+    fn mapi_uzantan_regionon(
+        &mut self,
+        komenco: VirtuaAdreso,
+        longo: usize,
+        permesoj: PaĝaPermesoj,
+        alokilo: &mut KadraAlokilo,
+    ) -> Result<(), PaĝaEraro> {
+        kontroli_fenestron(komenco.adreso(), longo)?;
+        if komenco.adreso() % KADRA_GRANDO != 0 {
+            return Err(PaĝaEraro::NevalidaAdreso);
+        }
+        let paĝoj = longo.div_ceil(KADRA_GRANDO as usize);
+        for indekso in 0..paĝoj {
+            let virtuala = VirtuaAdreso::nova(komenco.adreso() + indekso as u64 * KADRA_GRANDO);
+            if self.traduki(virtuala).is_some() {
+                return Err(PaĝaEraro::Konflikto);
+            }
+        }
+
+        for indekso in 0..paĝoj {
+            let kadro = alokilo.aloki().ok_or(PaĝaEraro::Elĉerpita)?;
+            // SAFETY: la alokilo liveras kadron en la unuaj 4 GiB, kiuj estas
+            // identece mapitaj; la kadro estas freŝe alokita, do ĝia enhavo
+            // apartenas al ĉi tiu mapado.
+            unsafe {
+                core::ptr::write_bytes(kadro.adreso() as *mut u8, 0, KADRA_GRANDO as usize);
+            }
+            self.mapi_uzantan(
+                VirtuaAdreso::nova(komenco.adreso() + indekso as u64 * KADRA_GRANDO),
+                FizikaAdreso::nova(kadro.adreso()),
+                permesoj,
+                alokilo,
+            )?;
+        }
+        Ok(())
+    }
+}
+
+/// Kontrolu, ke `[adreso, adreso + longo)` kuŝas tute en la uzanta fenestro
+/// sen ciferpremo. `longo == 0` estas ĉiam valida.
+fn kontroli_fenestron(adreso: u64, longo: usize) -> Result<(), PaĝaEraro> {
+    if longo == 0 {
+        return Ok(());
+    }
+    let fino = adreso
+        .checked_add(longo as u64)
+        .ok_or(PaĝaEraro::NevalidaAdreso)?;
+    if adreso < UZANTA_BAZO || fino > UZANTA_FINO {
+        return Err(PaĝaEraro::NevalidaAdreso);
+    }
+    Ok(())
 }
 
 pub trait AdresaSpaco: PaĝaTablo {
+    /// Kreu freŝan, malplenan adresan spacon: nur la radika tabelo ekzistas.
     fn krei(alokilo: &mut KadraAlokilo) -> Result<Self, PaĝaEraro>
+    where
+        Self: Sized;
+
+    /// Kreu novan adresan spacon, kiu kunhavas la kernajn mapojn de `self`
+    /// (erojn sen la bito `U`) kaj posedas propran, malplenan uzantan
+    /// fenestron.
+    ///
+    /// Eroj, kiuj enhavas uzantajn mapojn aŭ kiuj enhavas parton de la uzanta
+    /// fenestro, ricevas privatan subtableon; nur `U=0`-eroj estas kopiitaj.
+    fn krei_kunhavantan(&self, alokilo: &mut KadraAlokilo) -> Result<Self, PaĝaEraro>
     where
         Self: Sized;
 

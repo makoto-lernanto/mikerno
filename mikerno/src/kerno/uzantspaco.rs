@@ -113,7 +113,7 @@ fn prepari_stakon(
     alokilo: &mut KadraAlokilo,
 ) -> Result<(), PaĝaEraro> {
     let komenco = UZANTA_STAKO_SUPRO - UZANTA_STAKO_GRANDE as u64;
-    spaco.mapigi_freŝan_regionon(
+    spaco.mapi_uzantan_regionon(
         VirtuaAdreso::nova(komenco),
         UZANTA_STAKO_GRANDE,
         PaĝaPermesoj::UZANTA_DATUMOJ,
@@ -290,7 +290,7 @@ fn mapigi_bildon(
             }
         }
 
-        spaco.mapigi(
+        spaco.mapi_uzantan(
             virtuala_paĝo,
             FizikaAdreso::nova(kadro.adreso()),
             permesoj_el(skribebla, plenumebla),
