@@ -13,4 +13,7 @@ pub mod syscall;
 
 pub use kapablo::{FinaPunkto, Kapablo, Permesoj};
 pub use mesago::{MAKSA_MESAGA_LONGO, Mesago};
-pub use starto::{REĜIMO_FINI, REĜIMO_KRUI};
+pub use starto::{
+    MAGIA_NUMERO, REĜIMO_SEKRETO, REĜIMO_SPIONO, SEKRETA_ADRESO, SEKRETA_DUA_ADRESO,
+    SEKRETA_ID_DEŜOVO,
+};

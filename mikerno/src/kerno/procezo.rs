@@ -1,11 +1,16 @@
-//! Proceza abstrakto: identigilo, privata adresa spaco, kerna stako kaj stato.
+//! Proceza abstrakto: identigilo, privata adresa spaco, kerna stako, stato kaj
+//! la geometrio de la muntita uzanta bildo.
 //!
 //! La nukleo mem estas la procezo `0`; ĝi ne havas eron en la tabelo. Ĉiu
 //! procezo posedas propran radikan paĝtabelon, kiu kunhavas la kernajn mapojn
 //! sed havas privatan, malplenan uzantan fenestron, plus propran 16 KiB-an
-//! kernan stakon por transiroj Ring 3 → Ring 0.
+//! kernan stakon por transiroj Ring 3 → Ring 0. La bildaj limoj, la enirpunkto
+//! kaj la sekreta paĝo loĝas en la proceza ero, do sistemvokoj kaj la Ring
+//! 3-eniro ĉiam legas la nunan procezon.
 
 use core::fmt;
+
+use libmikerno::starto::SEKRETA_ADRESO;
 
 use crate::arkitekturo;
 use crate::arkitekturo::Spaco;
@@ -75,6 +80,10 @@ pub struct Procezo {
     adresa_spaco: Spaco,
     kerna_stako_pinto: u64,
     estado: ProcezaEstado,
+    bilda_komenco: u64,
+    bilda_fino: u64,
+    enirpunkto: u64,
+    sekreta_adreso: u64,
 }
 
 impl Procezo {
@@ -89,11 +98,43 @@ impl Procezo {
             adresa_spaco: kerna_spaco.krei_kunhavantan(alokilo)?,
             kerna_stako_pinto: kerna_stako_pinto(id),
             estado: ProcezaEstado::Preta,
+            bilda_komenco: 0,
+            bilda_fino: 0,
+            enirpunkto: 0,
+            sekreta_adreso: SEKRETA_ADRESO,
         })
     }
 
     pub fn spaco(&mut self) -> &mut Spaco {
         &mut self.adresa_spaco
+    }
+
+    /// Registru la efektive muntitan bildon; `pravalorizi` redonas ĝin el la
+    /// ŝargilo, do ĉiu procezo portas siajn proprajn limojn kaj enirpunkton.
+    pub fn agordi_bildon(&mut self, komenco: u64, fino: u64, enirpunkto: u64) {
+        self.bilda_komenco = komenco;
+        self.bilda_fino = fino;
+        self.enirpunkto = enirpunkto;
+    }
+
+    /// La mapita bilda intervalo `(komenco, fino)` de ĉi tiu procezo.
+    pub fn bildaj_limoj(&self) -> (u64, u64) {
+        (self.bilda_komenco, self.bilda_fino)
+    }
+
+    /// La ELF-enirpunkto de la procezo, se ĝia bildo jam estas muntita.
+    pub fn enirpunkto(&self) -> Option<u64> {
+        (self.enirpunkto != 0).then_some(self.enirpunkto)
+    }
+
+    /// Registru la virtualan adreson, je kiu la procezo vidas sian sekretan
+    /// paĝon.
+    pub fn agordi_sekretan(&mut self, adreso: u64) {
+        self.sekreta_adreso = adreso;
+    }
+
+    pub fn sekreta_adreso(&self) -> u64 {
+        self.sekreta_adreso
     }
 
     pub fn kerna_stako_pinto(&self) -> u64 {

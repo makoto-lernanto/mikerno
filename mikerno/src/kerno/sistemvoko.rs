@@ -124,9 +124,14 @@ fn kontroli_mesagon(montrilo: u64, el_ring3: bool) -> bool {
     !el_ring3 || en_uzanta_regiono(montrilo, fino)
 }
 
-/// La anoncitaj uzantaj regionoj: la efektive ŝarĝita bildo kaj la stako.
+/// La anoncitaj uzantaj regionoj de la nuna procezo: la efektive ŝarĝita bildo
+/// kaj la stako. Ĉiu procezo havas propran bildon, do la limoj venas el la
+/// proceza ero, ne el tutmonda stato.
 fn en_uzanta_regiono(komenco: u64, fino: u64) -> bool {
-    let (bilda_komenco, bilda_fino) = super::uzantspaco::bildaj_limoj();
+    let Some(procezo) = super::procezo::akiri(super::planisto::nuna_procezo()) else {
+        return false;
+    };
+    let (bilda_komenco, bilda_fino) = procezo.bildaj_limoj();
     let en_bildo = bilda_fino > bilda_komenco && komenco >= bilda_komenco && fino <= bilda_fino;
     let staka_komenco = UZANTA_STAKO_SUPRO - UZANTA_STAKO_GRANDE as u64;
     let en_stako = komenco >= staka_komenco && fino <= UZANTA_STAKO_SUPRO;

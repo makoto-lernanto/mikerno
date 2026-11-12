@@ -10,7 +10,7 @@ use crate::memoro::kadro::KadraAlokilo;
 use crate::memoro::virtuala::{
     AdresaSpaco, PaĝaPermesoj, PaĝaTablo, UZANTA_BAZO, UZANTA_STAKO_SUPRO, VirtuaAdreso,
 };
-use libmikerno::starto::{REĜIMO_FINI, REĜIMO_KRUI};
+use libmikerno::starto::{REĜIMO_SEKRETO, REĜIMO_SPIONO};
 
 pub mod ipc;
 pub mod objekto;
@@ -28,7 +28,7 @@ pub fn kadra_alokilo() -> &'static mut KadraAlokilo {
 }
 
 pub fn ĉefa(informo: EniraInformo) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.2.3!\n");
+    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.2.4!\n");
     sistemvoko::pravalorizi();
     crate::skribu!(
         "[kerno] memoro: {} regionoj, {} MiB uzeblaj\n",
@@ -143,13 +143,33 @@ pub fn ĉefa(informo: EniraInformo) {
     crate::skribu!("[kerno] planisto ekas: 3 fadenoj, antaŭokupo ĉiu 10 ms\n");
     planisto::lanĉi();
 
-    // La testaj fadenoj finiĝis; nun la du `horizonto`-procezoj ekas en Ring 3,
-    // ĉiu en sia propra adresa spaco. Ili plenumas sinsekve: la unua finiĝas
-    // per `SYS_FINI`, la dua per intenca paĝa eraro. Ambaŭ vojoj detruas la
-    // procezan spacon antaŭ ol la planisto revenas al la ripoza kunteksto.
+    // La du `horizonto`-procezoj estas registritaj kune; unu `lanĉi()` lasas la
+    // planiston interplekti ilin kaj ŝalti `CR3` inter iliaj fadenoj. La
+    // spionprocezo legas paĝon, kiu ekzistas nur en la viktima spaco: la `#PF`
+    // mortigas nur ĝin, kaj la viktimo pluvivas ĝis `SYS_FINI`.
     if let Some(modulo) = modulo {
-        let _ = lanĉi_uzantan_procezon(&spaco, modulo, UZANTA_FADENO_ID);
-        let _ = lanĉi_uzantan_procezon(&spaco, modulo, KRUA_FADENO_ID);
+        let antaŭ = {
+            let alokilo = kadra_alokilo();
+            alokilo.liberaj()
+        };
+        let viktimo = prepari_uzantan_procezon(&spaco, modulo, UZANTA_FADENO_ID);
+        let spiono = prepari_uzantan_procezon(&spaco, modulo, SPIONA_FADENO_ID);
+        if viktimo && spiono {
+            crate::skribu!("[kerno] du procezoj pretaj; unu planista voko\n");
+            planisto::lanĉi();
+            let post = {
+                let alokilo = kadra_alokilo();
+                alokilo.liberaj()
+            };
+            crate::skribu!(
+                "[memoro] izolado ({}): {} kadroj antaŭ, {} post\n",
+                if post == antaŭ { "bone" } else { "MALBONE" },
+                antaŭ,
+                post
+            );
+        } else {
+            crate::skribu!("[kerno] uzantaj procezoj ne pretiĝis; scenaro ne ekas\n");
+        }
     }
 
     crate::arkitekturo::malebligi_interrompojn();
@@ -179,21 +199,22 @@ pub fn ĉefa(informo: EniraInformo) {
 
 const STAKA_GRANDE: usize = 16 * 1024;
 const TESTAJ_FADENOJ: usize = 3;
-/// La fadeno — kaj samnoma procezo — de la unua `horizonto`.
+/// La fadeno — kaj samnoma procezo — de la viktima `horizonto`.
 const UZANTA_FADENO_ID: u64 = TESTAJ_FADENOJ as u64 + 1;
-/// La dua `horizonto`, kiu intence kaŭzas paĝan eraron.
-const KRUA_FADENO_ID: u64 = UZANTA_FADENO_ID + 1;
+/// La spionprocezo: ĝi legas la duan sekretan paĝon, kiu ekzistas nur en la
+/// viktima spaco.
+const SPIONA_FADENO_ID: u64 = UZANTA_FADENO_ID + 1;
 /// Ripeta ciklo de la reuzoprovo; libera identigilo, ne fadeno.
 const PROVA_PROCEZA_ID: u64 = 6;
 const REUZOJ: usize = 10;
 
-/// La scenaro, kiun `horizonto` plenumas: normala `SYS_FINI` aŭ intenca
-/// paĝa eraro por pruvi la kapton de Ring 3-esceptoj.
+/// La scenaro, kiun `horizonto` plenumas: kontrolo de la propra sekreta paĝo
+/// aŭ spionado de la viktima dua paĝo.
 fn komenca_reĝimo(fadeno: u64) -> u64 {
-    if fadeno == KRUA_FADENO_ID {
-        REĜIMO_KRUI
+    if fadeno == SPIONA_FADENO_ID {
+        REĜIMO_SPIONO
     } else {
-        REĜIMO_FINI
+        REĜIMO_SEKRETO
     }
 }
 
@@ -304,75 +325,122 @@ fn testi_procezan_reuzon(kerna: &Spaco, modulo: &Modulo) {
     }
 }
 
-/// Kreu la procezon, ŝarĝu la bildon en ĝian privatan spacon kaj planu ĝian
-/// fadenon. La voko revenas, kiam la procezo mortis — per `SYS_FINI` aŭ per
-/// mortiga escepto — kaj la planisto denove elektis la ripozan kuntekston.
-fn lanĉi_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> bool {
-    let enirpunkto = {
+/// Kreu la procezon, ŝarĝu la bildon, mapu la sekretajn paĝojn kaj registru
+/// ĝian fadenon. La procezo restas `Preta`; la alvokanto lanĉas ĉiujn uzantajn
+/// procezojn per unu `planisto::lanĉi()`, por ke la planisto interplektu ilin.
+fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> bool {
+    let id = match procezo::krei(proceza_id, kerna, kadra_alokilo()) {
+        Ok(id) => id,
+        Err(eraro) => {
+            crate::skribu!("[procezo] {} kreado malsukcesis: {}\n", proceza_id, eraro);
+            return false;
+        }
+    };
+
+    let muntado = {
         let alokilo = kadra_alokilo();
-        let id = match procezo::krei(proceza_id, kerna, alokilo) {
-            Ok(id) => id,
-            Err(eraro) => {
-                crate::skribu!("[procezo] {} kreado malsukcesis: {}\n", proceza_id, eraro);
-                return false;
-            }
-        };
         let Some(procezo) = procezo::akiri(id) else {
             crate::skribu!("[procezo] {}: registro mankas\n", id);
             return false;
         };
-        let stato = procezo.stato();
-        let kerna_pinto = procezo.kerna_stako_pinto();
-        let radiko = procezo.radika_adreso();
-        let proceza_spaco = procezo.spaco();
-        if let Err(eraro) = uzantspaco::pravalorizi(proceza_spaco, alokilo, modulo) {
+        uzantspaco::pravalorizi(procezo.spaco(), alokilo, modulo)
+    };
+    let bildo = match muntado {
+        Ok(bildo) => bildo,
+        Err(eraro) => {
             crate::skribu!("[uzanto] ŝargo malsukcesis: {}\n", eraro);
-            let _ = procezo::detrui(id, alokilo);
+            let _ = procezo::detrui(id, kadra_alokilo());
             return false;
         }
-        let (bilda_komenco, _) = uzantspaco::bildaj_limoj();
-        let kerna_mapo = proceza_spaco.traduki(VirtuaAdreso::nova(0x1000)).is_some();
-        let privata = kerna.traduki(VirtuaAdreso::nova(bilda_komenco)).is_none();
-        crate::skribu!(
-            "[procezo] {}: {:?}, kerna stako 0x{:x}, PML4 0x{:x}, kerna mapo {}, bildo nur en la proceza spaco {}\n",
-            id,
-            stato,
-            kerna_pinto,
-            radiko.adreso(),
-            if kerna_mapo { "kunhavata" } else { "MANKANTA" },
-            if privata { "jes" } else { "NE" }
-        );
-        let Some(enirpunkto) = uzantspaco::enirpunkto() else {
-            crate::skribu!("[uzanto] enirpunkto mankas; Ring 3 ne ekas\n");
-            let _ = procezo::detrui(id, alokilo);
-            return false;
-        };
-        let fadeno =
-            planisto::pretigi_fadenon(id, id, VirtuaAdreso::nova(kerna_pinto), uzanta_fadeno);
-        if let Err(eraro) = planisto::aldoni_fadenon(fadeno) {
-            crate::skribu!("[procezo] {} fadena kreado malsukcesis: {:?}\n", id, eraro);
-            let _ = procezo::detrui(id, alokilo);
-            return false;
-        }
-        enirpunkto
     };
 
+    let sekreta = {
+        let alokilo = kadra_alokilo();
+        let Some(procezo) = procezo::akiri(id) else {
+            crate::skribu!("[procezo] {}: registro mankas\n", id);
+            return false;
+        };
+        procezo.agordi_bildon(bildo.komenco, bildo.fino, bildo.enirpunkto);
+        let dua = proceza_id == UZANTA_FADENO_ID;
+        match uzantspaco::mapi_sekreton(procezo.spaco(), alokilo, id, dua) {
+            Ok(adreso) => {
+                procezo.agordi_sekretan(adreso);
+                Ok(adreso)
+            }
+            Err(eraro) => Err(eraro),
+        }
+    };
+    if let Err(eraro) = sekreta {
+        crate::skribu!("[procezo] {} sekreta paĝo malsukcesis: {}\n", id, eraro);
+        let _ = procezo::detrui(id, kadra_alokilo());
+        return false;
+    }
+
+    let (stato, kerna_pinto, radiko, enirpunkto, kerna_mapo, privata, sekreta) = {
+        let Some(procezo) = procezo::akiri(id) else {
+            crate::skribu!("[procezo] {}: registro mankas\n", id);
+            return false;
+        };
+        let kerna_mapo = procezo
+            .spaco()
+            .traduki(VirtuaAdreso::nova(0x1000))
+            .is_some();
+        let privata = kerna.traduki(VirtuaAdreso::nova(bildo.komenco)).is_none();
+        (
+            procezo.stato(),
+            procezo.kerna_stako_pinto(),
+            procezo.radika_adreso(),
+            procezo.enirpunkto(),
+            kerna_mapo,
+            privata,
+            procezo.sekreta_adreso(),
+        )
+    };
+    let Some(enirpunkto) = enirpunkto else {
+        crate::skribu!("[uzanto] enirpunkto mankas; Ring 3 ne ekas\n");
+        let _ = procezo::detrui(id, kadra_alokilo());
+        return false;
+    };
     crate::skribu!(
-        "[kerno] horizonto ekas en Ring 3: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x{:x}\n",
+        "[procezo] {}: {:?}, kerna stako 0x{:x}, PML4 0x{:x}, kerna mapo {}, bildo nur en la proceza spaco {}, sekreta paĝo 0x{:x}\n",
+        id,
+        stato,
+        kerna_pinto,
+        radiko.adreso(),
+        if kerna_mapo { "kunhavata" } else { "MANKANTA" },
+        if privata { "jes" } else { "NE" },
+        sekreta
+    );
+
+    let fadeno = planisto::pretigi_fadenon(id, id, VirtuaAdreso::nova(kerna_pinto), uzanta_fadeno);
+    if let Err(eraro) = planisto::aldoni_fadenon(fadeno) {
+        crate::skribu!("[procezo] {} fadena kreado malsukcesis: {:?}\n", id, eraro);
+        let _ = procezo::detrui(id, kadra_alokilo());
+        return false;
+    }
+    crate::skribu!(
+        "[kerno] horizonto {} pretas: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x{:x}\n",
+        id,
         enirpunkto
     );
-    planisto::lanĉi();
     true
 }
 
 fn uzanta_fadeno(id: u64) {
-    let Some(enirpunkto) = uzantspaco::enirpunkto() else {
+    let enirpunkto = {
+        let Some(procezo) = procezo::akiri(id) else {
+            planisto::morti();
+        };
+        procezo.enirpunkto()
+    };
+    let Some(enirpunkto) = enirpunkto else {
         planisto::morti();
     };
     let reĝimo = komenca_reĝimo(id);
-    // SAFETY: `uzantspaco::pravalorizi` muntis la bildon kun bito `U` kaj
-    // kontrolis la enirpunkton; la stako estas la mapita 64 KiB-a regiono.
-    unsafe { crate::arkitekturo::transiri_al_ring3(enirpunkto, UZANTA_STAKO_SUPRO, reĝimo) }
+    // SAFETY: `pravalorizi` muntis la bildon kun bito `U` kaj registris ĝian
+    // enirpunkton en la proceza ero; la stako estas la mapita 64 KiB-a regiono,
+    // kaj `id` estas la proceza identigilo skribita en la sekretan paĝon.
+    unsafe { crate::arkitekturo::transiri_al_ring3(enirpunkto, UZANTA_STAKO_SUPRO, reĝimo, id) }
 }
 
 fn testa_fadeno(id: u64) {

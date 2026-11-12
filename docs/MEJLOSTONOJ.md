@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-12 · Versio de la workspace: 0.2.3
+> Stato: 2026-11-12 · Versio de la workspace: 0.2.4
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -24,7 +24,7 @@
 | M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 12 pruvoj verkitaj, Kani ne instalita |
 | M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Plenumita | ABI difinita; `horizonto` plenumiĝas en Ring 3 |
 | M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj (0.1.5) |
-| M12 | Per-procesaj adresspacoj | Daŭranta | Fazo 4: preciza liberigo de privataj `PDPT`-oj, proceza detruo ĉe `FINI`/`#PF` (0.2.3) |
+| M12 | Per-procesaj adresspacoj | Plenumita | Fazo 5: samtempaj procezoj `4`/`5`, sama sekreta adreso `0x200000000`, spiono `#PF` ĉe `0x200001000`, viktimo pluvivas; kadroj egalaj (0.2.4) |
 | M13 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Venonta | — |
 | M14 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
 | M15 | Konservado, dosiersistemo, ŝelo | Venonta | — |
@@ -325,139 +325,15 @@ tempolimoj, sendblokado aŭ apartaj kernaj objektoj.
 
 ---
 
-## 3. Partaj mejloŝtonoj
-
-### M9 — Kvalita pordego
-**Celo.** Ĉiu ŝanĝo estu pruvebla per ripeteblaj komandoj.
-
-**Havigita.**
-
-- `cargo fmt --all -- --check` — pura.
-- `cargo clippy --workspace --release` — sen avertoj.
-- `cargo build --workspace --release` — sukcesa.
-- 11 Kani-pruvoj: 5 en `memoro/kadro.rs`, 6 en `kerno/ipc.rs`.
-- `just verify` difinas la formalan pordegon.
-
-**Mankanta.**
-
-- `cargo kani` ne estas instalita en la kontrolmedio (`error: no such command:
-  kani`), do la pruvoj ne estis maŝine plenumitaj.
-- La pruvoj spegulas la logikon per 64-kadra modelo anstataŭ pruvi la
-  produktan `KadraAlokilo`.
-- Neniu unuopa/bitnivela testo, neniu CI, neniu `miri` aŭ `loom`.
-
-**Sekva paŝo.** Instali Kani en CI, aldivi la pruvojn al la produkta kodo per
-etaj abstraktaĵoj, kaj aldoni testojn por la arkitekture sendependaj partoj
-(`MemoraMapo`, `Mesagujo`, `PretaVico`, `VirtuaAdreso`).
-
----
-
-## 4. Pruvprotokolo de 2026-11-12
-
-Medio: Windows, Rust 1.99.1, QEMU 256 MiB, Git Bash.
-
-### 4.1 Statika kontrolo
-
-| Komando | Rezulto |
-| --- | --- |
-| `cargo build --workspace --release` | Sukceso, 5,20 s, sen avertoj |
-| `cargo clippy --workspace --release` | Sukceso, sen avertoj |
-| `cargo fmt --all -- --check` | Sen diferencoj |
-| `cargo kani --version` | `error: no such command: kani` |
-| `just iso` | ISO kreita, 2 184 sektoroj |
-
-### 4.2 PVH-starto
-
-Komando (senkapa QEMU, 25 s):
-
-```sh
-qemu-system-x86_64 -kernel target/x86_64-unknown-none/release/mikerno \
-  -initrd target/x86_64-unknown-none/release/horizonto \
-  -m 256M -serial stdio -display none -no-reboot -no-shutdown
-```
-
-Elĉerpaĵo:
-
-```text
-[MiKerno] Saluton, mi estas MiKerno v0.1.5!
-[kerno] memoro: 7 regionoj, 255 MiB uzeblaj
-[kerno] framebuffer ne havebla; nur COM1
-[tss] TR ŝargita; kernostako pinto 0x...
-[temporizilo] kalibrado: ... kalkuloj/s, komenca ...
-[uzanto] horizonto: bildo 0x100000000..0x100001082, enirpunkto 0x1000000d0
-...
-[kerno] planisto ekas: 3 fadenoj, antaŭokupo ĉiu 10 ms
-...
-[kerno] horizonto ekas en Ring 3: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x1000000d0
-horizonto: la unua procezo vekis en Ring 3.
-[ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1
-[planisto] fadeno 4 finiĝis
-[kerno] horizonto finiĝis; planisto revenis
-[kerno] planisto revenis al la ripoza fadeno
-...
-[kerno] fina stato: 4 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
-```
-
-### 4.3 ISO-starto
-
-Komando:
-
-```sh
-qemu-system-x86_64 -cdrom mikerno.iso -m 256M -serial stdio \
-  -display none -no-reboot -no-shutdown
-```
-
-Elĉerpaĵo:
-
-```text
-[MiKerno] Saluton, mi estas MiKerno v0.1.5!
-[kerno] memoro: 7 regionoj, 255 MiB uzeblaj
-[kerno] framebuffer 1280x800, 32 bpp
-...
-[kerno] horizonto ekas en Ring 3: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x1000000d0
-horizonto: la unua procezo vekis en Ring 3.
-[ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1
-...
-[kerno] fina stato: 4 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
-```
-
-### 4.4 Trovaĵoj de la kontrolo
-
-1. **Malaktuala ISO (grava).** La unua ISO-starto printis
-   `MiKerno v0.1.1`, dum la fonto enhavas `v0.1.0`: `iso_root/` kaj
-   `mikerno.iso` estis malnovaj. Post `just iso` la ISO printis `v0.1.0` kaj
-   plenumis la tutan scenaron. Ĉar ambaŭ estas git-ignoritaj, ĉi tio povas
-   ripetiĝi; la `justfile` devus eventuale fari la version videbla aŭ la
-   kontrolo devus ĉiam rekonstrui.
-2. **Versio hardkodita.** `kerno/mod.rs`, `mikerno/boot/limine.conf` kaj
-   `Cargo.toml` enhavas la nunan version (`0.2.3`) sendepende. Oni devus derivi
-   ĝin per
-   `env!("CARGO_PKG_VERSION")` kaj `build.rs`.
-3. **Kani mankas.** La formala pordego ne estas plenumebla en ĉi tiu medio;
-   `just verify` malsukcesos ĝis `cargo kani` estos instalita.
-4. **Piksela kontrolo nur per `screendump`.** La framebuffer estis vidita per
-   QEMU `screendump` (2026-11-12): la titolo, la ĉapelitaj literoj kaj la
-   citiloj desegniĝas ĝuste. La alta distingivo (16×32/32×64) ne estis provita
-   en QEMU; ĝi dependas nur de la sama elekta funkcio, sed meritas apartan
-   starton kun pli granda framebuffer. La aspekto sur reala aparato ankoraŭ
-   ne estas kontrolita.
-5. **`just run-iso` malfermas SDL-fenestron**; por senkapa kontrolo oni voku
-   QEMU rekte aŭ uzu `QEMU_DISPLAY=none`.
-
----
-
-## 5. Venontaj mejloŝtonoj
-
 ### M12 — Per-procesaj adresspacoj
 
-**Celo.** Izoli uzantajn procezojn.
+**Celo.** Izoli uzantajn procezojn: ĉiu procezo havu privatan `PML4`-on, la
+kerno restu kunhavata, kaj neniu procezo povu legi la bildon aŭ la datumojn de
+alia.
 
 **Taskoj.** Nova `PML4` por ĉiu procezo; kopii la kernan duonon; mapi uzantajn
 foliojn nur en la propra spaco; ŝalti `CR3` dum kuntekstŝanĝo; validigi
 uzantajn montrilojn; malmapi kaj liberigi kadrojn ĉe eliro.
-
-**Akceptkriterioj.** Du procezoj ne povas legi unu la alian; paĝa eraro en unu
-procezo ne haltigas la kernon; la kadro-alokilo reuzas liberigitajn kadrojn.
 
 **Progreso.**
 
@@ -467,6 +343,15 @@ procezo ne haltigas la kernon; la kadro-alokilo reuzas liberigitajn kadrojn.
 | 2026-11-12 | 2. proceza abstrakto, `krei_kunhavantan`, `mapi_uzantan` | 0.2.1 | PVH/ISO: `[procezo] 4: Preta, kerna stako 0x0, kerna mapo kunhavata, uzanta fenestro privata`; 0 esceptoj |
 | 2026-11-12 | 3. `CR3`-ŝalto, per-procesa `RSP0`, bildo en la proceza spaco | 0.2.2 | PVH: `kerna stako 0x161d60, PML4 0x204000, kerna mapo kunhavata, bildo nur en la proceza spaco jes`; ISO: PML4 `0x209000`; 0 esceptoj, 1000 tikoj |
 | 2026-11-12 | 4. privataj `PDPT`-oj, detruo ĉe `FINI`/`#PF`, reuzoprovo kaj du procezoj | 0.2.3 | PVH: `reuzo (bone): 10 cikloj, 64984 kadroj antaŭ, 64984 post`; `[procezo] 4 detruita: 1 privataj PDPT-oj … 27 kadroj liberigitaj`; `[eraro] procezo 5: paĝa eraro … CR2=0xdeadbeef`; ISO: sama, 64982 kadroj; `fina stato: 5 mortintaj` |
+| 2026-11-12 | 5. samtempeco, sekreta paĝo, interproceza izolado | 0.2.4 | PVH: `du procezoj pretaj; unu planista voko`; sama adreso `0x200000000`, id `4`/`5`; `erarkodo=0x4, CR2=0x200001000`; `pluvivas post la spiono`; `izolado (bone): 64980 kadroj antaŭ, 64980 post`; ISO: 64978 egalaj |
+
+**Akceptkriterioj — pruvitaj.**
+
+| Kriterio | Stato | Pruvo |
+| --- | --- | --- |
+| Du procezoj ne povas legi unu la alian | **Pruvita** | Procezoj `4` kaj `5` kuradas samtempe. Ĉiu mapas sekretan paĝon ĉe la sama virtuala adreso `0x2_0000_0000` sed en malsama kadro: `[ring3] procezo 4 … id 4` kaj `[ring3] procezo 5 … id 5`. La viktimo mapas duan paĝon `0x2_0000_1000`; la spiono legas ĝin kaj ricevas `#PF` (`erarkodo=0x4`, `CR2=0x200001000`). |
+| Paĝa eraro en unu procezo ne haltigas la kernon | Pruvita | `[eraro] procezo 5: paĝa eraro …`; la procezo estas mortigata kaj detruata, procezo `4` daŭrigas tra la rondoj `2`–`6`, finiĝas per `SYS_FINI`, kaj la sistemo atingas 1000 tikojn. |
+| La kadro-alokilo reuzas liberigitajn kadrojn | Pruvita | `[memoro] reuzo (bone): 10 cikloj, 64980 kadroj antaŭ, 64980 post`; post la scenaro `[memoro] izolado (bone): 64980 kadroj antaŭ, 64980 post` (ISO `64978`). Ĉiu detruo raportas `1 privataj PDPT-oj … 32/33 kadroj liberigitaj`. |
 
 **Fazo 1 (0.2.0).** `KadraAlokilo::liberigi` malmarkas la biton, nuligas la
 kadron kaj retreatigas `sekva`; duobla liberigo estas senefika. `detruu`
@@ -545,16 +430,189 @@ kaj ĉiuj aliaj esceptoj restas fatalaj kaj haltigas la sistemon.
 
 Por pruvi la vojon la praŝarĝo rulas `testi_procezan_reuzon`: dek fojojn
 `krei` + `munti` + `detrui` de proceza spaco kun la reala `horizonto`-bildo,
-kaj komparas `liberaj()` antaŭ/post (PVH `64984`, ISO `64982` — egalaj). Poste
-ĝi lanĉas procezon `4` kun `REĜIMO_FINI` (eliro per `SYS_FINI`) kaj procezon
-`5` kun `REĜIMO_KRUI` (intenca legado de `0xdeadbeef`). La reĝimo vojaĝas en
-`RDI` tra `iretq` al `horizonto_start(reĝimo)`. Ĉiu detruo raportas
-`[procezo] N detruita: 1 privataj PDPT-oj, PML4 0x…, 27 kadroj liberigitaj`;
-la dua procezo montras la kapton
-`[eraro] procezo 5: paĝa eraro ĉe rip=…, erarkodo=0x4, CR2=0xdeadbeef`, kaj la
-sistemo daŭras ĝis `fina stato: 5 mortintaj`.
+kaj komparas `liberaj()` antaŭ/post (PVH `64980`, ISO `64978` — egalaj).
+
+**Fazo 5 (0.2.4).** La lasta akceptkriterio fermiĝis per du samtempaj procezoj:
+
+1. `UzantaBildo` — la bildaj limoj kaj la enirpunkto — apartenas al `Procezo`
+   (`agordi_bildon`, `bildaj_limoj`, `enirpunkto`), ne al tutmonda stato. La
+   sistemvoka montrila kontrolo kaj la Ring 3-eniro legas la nunan procezon.
+2. La proceza identigilo estas dua `iretq`-argumento (`RSI`), do `horizonto`
+   ricevas `(reĝimo, identigilo)`; la kerno transdonas `REĜIMO_SEKRETO` aŭ
+   `REĜIMO_SPIONO` en `RDI`.
+3. `uzantspaco::mapi_sekreton` alokas freŝan nuligitan kadron, mapas ĝin kiel
+   `U=1`-folion ĉe `SEKRETA_ADRESO = 0x2_0000_0000` en ĉiu procezo, kaj skribas
+   la magian numeron `0x4D69_4B65_726E_6F21` plus la procezan id-on per la
+   identeca mapo. La virtuala adreso samas, la kadroj malsamas — la spiono legas
+   sian propran id-on, ne la viktiman.
+4. La viktimo krome mapas `SEKRETA_DUA_ADRESO = 0x2_0000_1000`; la spiono ne.
+   La legado de la spiono trafas `#PF` (`erarkodo=0x4`, `CR2=0x200001000`).
+5. La praŝarĝo preparas ambaŭ procezojn kun interrompoj malŝaltitaj kaj vokas
+   `planisto::lanĉi()` unufoje; `horizonto` mem cedas (`SYS_CEDI`), do la
+   protokolo interplektiĝas anstataŭ ruli sinsekve. La viktimo printas la
+   rondojn `1`–`6`, pluvivas la spionon kaj finiĝas per `SYS_FINI`.
+6. Ĉiu elformata linio en Ring 3 uziĝas per unu `SYS_SKRIBI` (256-bajta bufro
+   en `horizonto/src/biblioteko.rs`), do linioj ne dispecetiĝas inter la
+   procezoj.
+7. `[memoro] izolado (bone)` komparas la liberajn kadrojn antaŭ/post la
+   scenaro: PVH `64980 = 64980`, ISO `64978 = 64978`; ambaŭ privataj `PDPT`-oj
+   kaj ĉiuj folioj revenas al la alokilo.
 
 ---
+
+## 3. Partaj mejloŝtonoj
+
+### M9 — Kvalita pordego
+**Celo.** Ĉiu ŝanĝo estu pruvebla per ripeteblaj komandoj.
+
+**Havigita.**
+
+- `cargo fmt --all -- --check` — pura.
+- `cargo clippy --workspace --release` — sen avertoj.
+- `cargo build --workspace --release` — sukcesa.
+- 12 Kani-pruvoj: 6 en `memoro/kadro.rs`, 6 en `kerno/ipc.rs`.
+- `just verify` difinas la formalan pordegon.
+
+**Mankanta.**
+
+- `cargo kani` ne estas instalita en la kontrolmedio (`error: no such command:
+  kani`), do la pruvoj ne estis maŝine plenumitaj.
+- La pruvoj spegulas la logikon per 64-kadra modelo anstataŭ pruvi la
+  produktan `KadraAlokilo`.
+- Neniu unuopa/bitnivela testo, neniu CI, neniu `miri` aŭ `loom`.
+
+**Sekva paŝo.** Instali Kani en CI, aldivi la pruvojn al la produkta kodo per
+etaj abstraktaĵoj, kaj aldoni testojn por la arkitekture sendependaj partoj
+(`MemoraMapo`, `Mesagujo`, `PretaVico`, `VirtuaAdreso`).
+
+---
+
+## 4. Pruvprotokolo de 2026-11-12
+
+Medio: Windows, Rust 1.99.1, QEMU 256 MiB, Git Bash.
+
+### 4.1 Statika kontrolo
+
+| Komando | Rezulto |
+| --- | --- |
+| `cargo build --workspace --release` | Sukceso, sen avertoj |
+| `cargo clippy --workspace --release` | Sukceso, sen avertoj |
+| `cargo fmt --all -- --check` | Sen diferencoj |
+| `cargo kani --version` | `error: no such command: kani` |
+| `just iso` | ISO kreita kaj startita |
+
+### 4.2 PVH-starto
+
+Komando (senkapa QEMU, 25 s):
+
+```sh
+qemu-system-x86_64 -kernel target/x86_64-unknown-none/release/mikerno \
+  -initrd target/x86_64-unknown-none/release/horizonto \
+  -m 256M -serial stdio -display none -no-reboot -no-shutdown
+```
+
+Elĉerpaĵo:
+
+```text
+[MiKerno] Saluton, mi estas MiKerno v0.2.4!
+[kerno] memoro: 7 regionoj, 255 MiB uzeblaj
+[kerno] framebuffer ne havebla; nur COM1
+[tss] TR ŝargita; kernostako pinto 0x176b70
+[temporizilo] kalibrado: 62561224 kalkuloj/s, komenca 625612
+[memoro] reuzo (bone): 10 cikloj, 64980 kadroj antaŭ, 64980 post
+...
+[procezo] 4: Preta, kerna stako 0x164d10, PML4 0x206000, kerna mapo kunhavata, bildo nur en la proceza spaco jes, sekreta paĝo 0x200000000
+[kerno] horizonto 4 pretas: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x100001840
+[procezo] 5: Preta, kerna stako 0x168d10, PML4 0x227000, kerna mapo kunhavata, bildo nur en la proceza spaco jes, sekreta paĝo 0x200000000
+[kerno] horizonto 5 pretas: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x100001840
+[kerno] du procezoj pretaj; unu planista voko
+horizonto: procezo vekis en Ring 3.
+[ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1
+[ring3] procezo 5: sekreta paĝo kongruas (magio 0x4d694b65726e6f21, id 5)
+[ring3] procezo 5: spionas la viktimon
+horizonto: procezo vekis en Ring 3.
+[ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1
+[ring3] procezo 4: sekreta paĝo kongruas (magio 0x4d694b65726e6f21, id 4)
+[ring3] procezo 4: laboras (fojo 1)
+[ring3] procezo 5: legas la duan sekretan paĝon ĉe 0x200001000
+
+[eraro] procezo 5: paĝa eraro ĉe rip=0x00000001000014de, erarkodo=0x4, CR2=0x0000000200001000; la procezo estas mortigata
+[procezo] 5 detruita: 1 privataj PDPT-oj, PML4 0x227000, 32 kadroj liberigitaj
+[ring3] procezo 4: laboras (fojo 2)
+...
+[ring3] procezo 4: laboras (fojo 6)
+[ring3] procezo 4: pluvivas post la spiono; finas per SYS_FINI
+[procezo] 4 detruita: 1 privataj PDPT-oj, PML4 0x206000, 33 kadroj liberigitaj
+[memoro] izolado (bone): 64980 kadroj antaŭ, 64980 post
+[kerno] planisto revenis al la ripoza fadeno
+...
+[kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+```
+
+### 4.3 ISO-starto
+
+Komando:
+
+```sh
+qemu-system-x86_64 -cdrom mikerno.iso -m 256M -serial stdio \
+  -display none -no-reboot -no-shutdown
+```
+
+Elĉerpaĵo:
+
+```text
+[MiKerno] Saluton, mi estas MiKerno v0.2.4!
+[kerno] memoro: 7 regionoj, 255 MiB uzeblaj
+[kerno] framebuffer 1280x800, 32 bpp
+[memoro] reuzo (bone): 10 cikloj, 64978 kadroj antaŭ, 64978 post
+...
+[procezo] 4: Preta, kerna stako 0x164d10, PML4 0x20e000, … sekreta paĝo 0x200000000
+[procezo] 5: Preta, kerna stako 0x168d10, PML4 0x22f000, … sekreta paĝo 0x200000000
+[kerno] du procezoj pretaj; unu planista voko
+...
+[ring3] procezo 4: sekreta paĝo kongruas (magio 0x4d694b65726e6f21, id 4)
+[ring3] procezo 5: sekreta paĝo kongruas (magio 0x4d694b65726e6f21, id 5)
+[ring3] procezo 5: legas la duan sekretan paĝon ĉe 0x200001000
+[eraro] procezo 5: paĝa eraro ĉe rip=0x00000001000014de, erarkodo=0x4, CR2=0x0000000200001000; la procezo estas mortigata
+[procezo] 5 detruita: 1 privataj PDPT-oj, PML4 0x22f000, 32 kadroj liberigitaj
+...
+[ring3] procezo 4: pluvivas post la spiono; finas per SYS_FINI
+[procezo] 4 detruita: 1 privataj PDPT-oj, PML4 0x20e000, 33 kadroj liberigitaj
+[memoro] izolado (bone): 64978 kadroj antaŭ, 64978 post
+[kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+```
+
+### 4.4 Trovaĵoj de la kontrolo
+
+1. **Dispecetigaj linioj (riparebla).** La unua PVH-starto de 0.2.4 montris
+   `[ring3] procezo horizonto: procezo vekis…` — `format_args!` eligis unu
+   `SYS_SKRIBI` po fragmento, kaj la alia procezo kuris inter ili. La riparo
+   estas 256-bajta bufro en `horizonto/src/biblioteko.rs`, kiu kunigas la tutan
+   linion antaŭ unu voko; poste ĉiu linio restas aparta.
+2. **Ordo de la scenaro (riparebla).** En la unua versio la viktimo finiĝis
+   antaŭ ol la spiono eraris, do la protokolo ne montris ĝian pluvivon. La
+   viktimo nun havas ses rondojn kun `SYS_CEDI` kaj la spiono unu antenaŭ la
+   fremda legado; la spiono mortas post la dua rondo de la viktimo.
+3. **Malaktuala ISO (grava).** Historia trovaĵo de 0.1.x: `iso_root/` kaj
+   `mikerno.iso` estas git-ignoritaj, do malnova ISO povas montri malnovan
+   version. Oni ĉiam rulu `just iso` post kerna aŭ dokumenta ŝanĝo.
+4. **Versio hardkodita.** `kerno/mod.rs`, `mikerno/boot/limine.conf` kaj
+   `Cargo.toml` enhavas la nunan version (`0.2.4`) sendepende. Oni devus derivi
+   ĝin per `env!("CARGO_PKG_VERSION")` kaj `build.rs`.
+5. **Kani mankas.** La formala pordego ne estas plenumebla en ĉi tiu medio;
+   `just verify` malsukcesos ĝis `cargo kani` estos instalita.
+6. **Piksela kontrolo nur per `screendump`.** La framebuffer estis vidita per
+   QEMU `screendump` (2026-11-12): la titolo, la ĉapelitaj literoj kaj la
+   citiloj desegniĝas ĝuste. La alta distingivo (16×32/32×64) ne estis provita
+   en QEMU; ĝi dependas nur de la sama elekta funkcio, sed meritas apartan
+   starton kun pli granda framebuffer. La aspekto sur reala aparato ankoraŭ
+   ne estas kontrolita.
+7. **`just run-iso` malfermas SDL-fenestron**; por senkapa kontrolo oni voku
+   QEMU rekte aŭ uzu `QEMU_DISPLAY=none`.
+
+---
+
+## 5. Venontaj mejloŝtonoj
 
 ### M13 — IPC-firmigo
 
@@ -620,6 +678,8 @@ QEMU-smokan teston; la ISO estas artefakto de CI, ne permana dosiero.
 | PIT-kalibrado de la APIC | Busfrekvenco ne estas arkitekture legebla | 50 ms da starta prokrasto |
 | 4 GiB fizika limo | Bitara indekso kaj identeca mapo | Ne subtenas pli da RAM |
 | Kopiataj mesaĝoj | Sendanto povas tuj reuzi sian bufron | 64-bajta limo |
+| Sama virtuala adreso por la sekreta paĝo | La pruvo montras fizikan izoladon, ne nur malsamajn adresojn | Nur unu paĝo por procezo; la dua paĝo restas viktima provo |
+| Unu `planisto::lanĉi()` por ambaŭ procezoj | La du procezoj vere interplektiĝas; neniu dua starta vojo | La praŝarĝo devas decidi la tutan aron antaŭe |
 | Kani-speguloj | Traktebla stato-spaco | La produkta kodo ne estas pruvita |
 
 ---
@@ -628,13 +688,14 @@ QEMU-smokan teston; la ISO estas artefakto de CI, ne permana dosiero.
 
 | Prioritate | Ŝuldo | Efiko | Rimedo |
 | --- | --- | --- | --- |
-| Alta | Sekvencaj uzantaj procezoj; neniu `fork`/`exec` | Ne eblas samtempa multprocezeco aŭ dinamika lanĉo | M15 |
+| Alta | Neniu `fork`/`exec`; procezoj estas preparitaj de la praŝarĝo | Ne eblas dinamika lanĉo el Ring 3 | M15 (`fork`/`exec`) |
 | Alta | Ring 3-esceptoj krom `#PF`/`#GP` haltigas la sistemon | Ne rekaptebla eraro (ekz. `#UD`) | M12/M16 |
 | Alta | Identeca mapo RWX | Malobservo de W^X | M12/M16 |
 | Alta | Neniu CI nek testoj | Regresoj nerimarkeblaj | M16 |
 | Alta | Malaktuala ISO | Konfuzaj testrezultoj | CI + versio |
 | Meza | Versio hardkodita en 3 lokoj | Malkongruaj eldonoj | `env!` + `build.rs` |
 | Meza | IPC finpunkto = fadeno | Ne eblas sendependaj objektoj | M13 |
+| Meza | Sekreta paĝo estas unu fiksa mapado por procezo | Neniu ĝenerala `mmap`/`brk` por uzantaj datumoj | M15 |
 | Meza | Framebuffer sen rulumo | Malbona uzsperto | M6-poste |
 | Malalta | `Kunhavigita::akiri` prenas `&self` | Facila misuzo | revizio |
 | Malalta | Kani-modelo ≠ produkta kodo | Pruvoj ne rekte aplikeblas | M9 |

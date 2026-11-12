@@ -1,8 +1,10 @@
-//! Horizonto: la unua uzanta procezo (Ring 3).
+//! Horizonto: uzanta procezo (Ring 3).
 //!
 //! La kerno liveras ĉi tiun bildon kiel praŝarĝan modulon, muntas ĝin super
 //! 4 GiB kaj transiras al `horizonto_start` per `iretq`. La vokprotokolo estas
-//! `int 0x80` kun la registra aranĝo el `libmikerno`.
+//! `int 0x80` kun la registra aranĝo el `libmikerno`. La sama bildo plenumas
+//! du rolojn: la viktimo kontrolas sian sekretan paĝon kaj finas normale, dum
+//! la spiono legas la duan paĝon, kiun nur la viktimo mapis.
 
 #![no_std]
 #![no_main]
@@ -11,22 +13,103 @@ mod biblioteko;
 
 use core::panic::PanicInfo;
 
-use libmikerno::starto::REĜIMO_KRUI;
+use libmikerno::starto::{
+    MAGIA_NUMERO, REĜIMO_SEKRETO, REĜIMO_SPIONO, SEKRETA_ADRESO, SEKRETA_DUA_ADRESO,
+    SEKRETA_ID_DEŜOVO,
+};
 use libmikerno::syscall::{SYS_SKRIBI, invoki};
 
-const SALUTO: &str = "horizonto: la unua procezo vekis en Ring 3.\n";
+const SALUTO: &str = "horizonto: procezo vekis en Ring 3.\n";
 
-/// Enirpunkto de la unua uzanta procezo. `reĝimo` venas en `rdi` el la kerna
-/// `iretq`-transiro.
+/// Enirpunkto de uzanta procezo. `reĝimo` venas en `rdi` kaj `identigilo` en
+/// `rsi` el la kerna `iretq`-transiro.
 #[unsafe(no_mangle)]
-pub extern "C" fn horizonto_start(reĝimo: u64) -> ! {
+pub extern "C" fn horizonto_start(reĝimo: u64, identigilo: u64) -> ! {
     biblioteko::skribi(SALUTO);
     testi_negativajn();
-    if reĝimo == REĜIMO_KRUI {
-        provoki_paĝan_eraron();
+    match reĝimo {
+        REĜIMO_SEKRETO => sekreta_provo(identigilo),
+        REĜIMO_SPIONO => spioni(identigilo),
+        _ => biblioteko::fini(0),
     }
-    // Ĉi tie la estonteco inicialigos la uzantajn servojn.
+}
+
+/// Legu la propran sekretan paĝon kaj kontrolu la magian numeron kaj la
+/// procezan identigilon. Ĉiu procezo vidas la saman virtualan adreson, do
+/// kongruo pruvas, ke la paĝo tradukiĝas al propra fizika kadro.
+fn kontroli_sekretan(identigilo: u64) -> bool {
+    // SAFETY: la kerno mapis la sekretan paĝon je `SEKRETA_ADRESO` en la
+    // proceza spaco antaŭ `iretq`, kaj la legado estas unuobla kaj nurlega.
+    let (magio, konservita) = unsafe {
+        (
+            core::ptr::read_volatile(SEKRETA_ADRESO as *const u64),
+            core::ptr::read_volatile((SEKRETA_ADRESO + SEKRETA_ID_DEŜOVO) as *const u64),
+        )
+    };
+    if magio == MAGIA_NUMERO && konservita == identigilo {
+        biblioteko::skribi_formaton(format_args!(
+            "[ring3] procezo {}: sekreta paĝo kongruas (magio 0x{:x}, id {})\n",
+            identigilo, magio, konservita
+        ));
+        true
+    } else {
+        biblioteko::skribi_formaton(format_args!(
+            "[ring3] procezo {}: sekreta paĝo MALBONE (magio 0x{:x}, id {})\n",
+            identigilo, magio, konservita
+        ));
+        false
+    }
+}
+
+/// La viktimo: kontrolu sian paĝon, cedu plurfoje (por ke la spiono ruliĝu
+/// intere) kaj finu per `SYS_FINI`.
+fn sekreta_provo(identigilo: u64) -> ! {
+    if !kontroli_sekretan(identigilo) {
+        biblioteko::fini(1)
+    }
+    for fojo in 1..=6 {
+        biblioteko::skribi_formaton(format_args!(
+            "[ring3] procezo {}: laboras (fojo {})\n",
+            identigilo, fojo
+        ));
+        biblioteko::cedi();
+        for n in 0..100_000u64 {
+            core::hint::black_box(n);
+        }
+        biblioteko::cedi();
+    }
+    biblioteko::skribi_formaton(format_args!(
+        "[ring3] procezo {}: pluvivas post la spiono; finas per SYS_FINI\n",
+        identigilo
+    ));
     biblioteko::fini(0)
+}
+
+/// La spiono: kontrolu sian paĝon, poste legu la duan paĝon de la viktimo.
+/// Tiu adreso mankas en la spaca paĝtabelo, do la legado kaŭzas `#PF`.
+fn spioni(identigilo: u64) -> ! {
+    if !kontroli_sekretan(identigilo) {
+        biblioteko::fini(1)
+    }
+    biblioteko::skribi_formaton(format_args!(
+        "[ring3] procezo {}: spionas la viktimon\n",
+        identigilo
+    ));
+    biblioteko::cedi();
+    for n in 0..100_000u64 {
+        core::hint::black_box(n);
+    }
+    biblioteko::cedi();
+    biblioteko::skribi_formaton(format_args!(
+        "[ring3] procezo {}: legas la duan sekretan paĝon ĉe 0x{:x}\n",
+        identigilo, SEKRETA_DUA_ADRESO
+    ));
+    // SAFETY: la adreso intence mankas en la spaco de la spiono; la legado
+    // devas kaŭzi Ring 3 `#PF`, kiun la kerno kaptas kaj mortigas la procezon.
+    let fremda = unsafe { core::ptr::read_volatile(SEKRETA_DUA_ADRESO as *const u64) };
+    core::hint::black_box(fremda);
+    biblioteko::skribi("[ring3] ERARO: la fremda legado sukcesis; izolado mankas\n");
+    biblioteko::fini(1)
 }
 
 /// Kontrolu, ke la kerno rifuzas malvalidajn Ring 3-argumentojn anstataŭ
@@ -47,27 +130,6 @@ fn testi_negativajn() {
     } else {
         biblioteko::skribi("[ring3] negativaj: MALBONE\n");
     }
-}
-
-/// Legu intence nemapitan adreson. La kerna `#PF`-traktilo rekonas Ring 3,
-/// mortigas la procezon kaj daŭrigas; la voko do normale ne revenas.
-fn provoki_paĝan_eraron() -> ! {
-    const NEMAPITA: u64 = 0xDEAD_BEEF;
-    biblioteko::skribi("[ring3] provokas paĝan eraron ĉe 0xdeadbeef\n");
-    let valoro: u64;
-    // SAFETY: la adreso estas intence nemapita; la celo estas kaŭzi `#PF` el
-    // Ring 3, kiun la kerno kaptas kaj mortigas la procezon.
-    unsafe {
-        core::arch::asm!(
-            "mov {}, [{}]",
-            out(reg) valoro,
-            in(reg) NEMAPITA,
-            options(nostack, preserves_flags, readonly),
-        );
-    }
-    core::hint::black_box(valoro);
-    biblioteko::skribi("[ring3] eraro: la legado ne kaŭzis paĝan eraron\n");
-    biblioteko::fini(1)
 }
 
 #[panic_handler]

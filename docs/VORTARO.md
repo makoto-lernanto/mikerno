@@ -9,7 +9,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `memoro` | memory | 内存 | Neniam uzu `memory` aŭ `ram`. |
 | `fadeno` | thread | 线程 | Neniam uzu `thread`. |
 | `procezo` | process | 进程 | `Procezo`; neniam uzu `process`. |
-| `proceza identigilo` | process id | 进程标识 | `ProcezaId`; `0` estas la nukleo. |
+| `proceza identigilo` | process id | 进程标识 | `ProcezaId`; `0` estas la nukleo; en `RSI` ĉe la Ring 3-eniro. |
 | `proceza stato` | process state | 进程状态 | `ProcezaEstado`: `Preta`, `Kuranta`, `Mortinta`. |
 | `privata` | private | 私有 | Proceza fenestro, kiun aliaj procezoj ne vidas. |
 | `kunhavigi` | share | 共享 | Kernaj mapoj restas komunaj inter procezoj. |
@@ -99,7 +99,17 @@ kaj protokolaj nomoj sekvu ĝin.
 | `privata PDPT` | private PDPT | 私有 PDPT | `privataj_pdptoj`: la `PML4`-eroj, kiujn `krei_kunhavantan` privatigis. |
 | `reuzo` | reuse | 复用 | `testi_procezan_reuzon`; la alokilo reuzas liberigitajn kadrojn. |
 | `ciklo` | cycle | 循环 | Unu krea-detrua ripeto en la reuzoprovo. |
-| `komenca reĝimo` | start mode | 启动模式 | `REĜIMO_FINI`, `REĜIMO_KRUI`; transdonata en `RDI`. |
+| `komenca reĝimo` | start mode | 启动模式 | `REĜIMO_SEKRETO`, `REĜIMO_SPIONO`; transdonata en `RDI`. |
+| `sekreta paĝo` | secret page | 秘密页 | `SEKRETA_ADRESO`; sama virtuala adreso, malsama kadro por procezo. |
+| `dua sekreta paĝo` | second secret page | 第二秘密页 | `SEKRETA_DUA_ADRESO`; nur en la viktima spaco. |
+| `magia numero` | magic number | 魔数 | `MAGIA_NUMERO = 0x4D69_4B65_726E_6F21`. |
+| `viktimo` | victim | 受害者 | Procezo `4`; mapas la duan paĝon kaj pluvivas. |
+| `spiono` | spy | 间谍 | Procezo `5`; legas fremdan paĝon kaj ricevas `#PF`. |
+| `spioni` | spy on | 窥探 | `spioni(id)` en `horizonto`. |
+| `izolado` | isolation | 隔离 | `[memoro] izolado (bone)` komparas liberajn kadrojn. |
+| `samtempeco` | concurrency | 并发 | Ambaŭ procezoj pretaj antaŭ unu `planisto::lanĉi()`. |
+| `interplektiĝi` | interleave | 交错 | La du procezoj alterne plenumiĝas. |
+| `elformata linio` | formatted line | 格式化行 | Unu `SYS_SKRIBI` por linio, por eviti dispecetigon. |
 | `malmapi` | unmap | 解除映射 | Forigu eron el la paĝa tabelo. |
 | `proviza` | scratch | 临时 | Proviza spaco por memtesto. |
 | `kopii` | copy | 复制 | |

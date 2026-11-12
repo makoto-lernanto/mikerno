@@ -1,5 +1,5 @@
 //! Uzantspaca aranĝo de `horizonto`: la ELF-bildo super 4 GiB, la 64 KiB-a
-//! stako kaj la memtesto de la bito `U`.
+//! stako, la sekreta paĝo kaj la memtesto de la bito `U`.
 //!
 //! La bildo venas kiel praŝarĝa modulo (Multiboot2 tipo 3 aŭ PVH-modlisto) kaj
 //! estas mapita en la fenestron `[UZANTA_BAZO, UZANTA_FINO)`. La fenestro kuŝas
@@ -10,8 +10,9 @@ use core::fmt;
 use core::ptr;
 use core::slice;
 
+use libmikerno::starto::{MAGIA_NUMERO, SEKRETA_ADRESO, SEKRETA_DUA_ADRESO, SEKRETA_ID_DEŜOVO};
+
 use crate::interrompo::InterrompaGardo;
-use crate::kunhavigita::Kunhavigita;
 use crate::memoro::kadro::KadraAlokilo;
 use crate::memoro::virtuala::{
     AdresaSpaco, FizikaAdreso, PaĝaEraro, PaĝaPermesoj, UZANTA_BAZO, UZANTA_FINO,
@@ -32,20 +33,6 @@ const MAKSAJ_SEGMENTOJ: usize = 16;
 
 /// La provaj paĝoj de la memtesto, fore de la bildo kaj de la stako.
 const PROVA_BAZO: u64 = UZANTA_FINO - 16 * 1024 * 1024;
-
-static BILDA_LIMOJ: Kunhavigita<(u64, u64)> = Kunhavigita::nova((UZANTA_BAZO, UZANTA_BAZO));
-static BILDA_ENIRPUNKTO: Kunhavigita<u64> = Kunhavigita::nova(0);
-
-/// La mapita bilda intervalo `(komenco, fino)`, se `horizonto` jam ŝarĝis.
-pub fn bildaj_limoj() -> (u64, u64) {
-    *BILDA_LIMOJ.akiri()
-}
-
-/// La ELF-enirpunkto de la ŝargita bildo, se ĝi jam estas muntita.
-pub fn enirpunkto() -> Option<u64> {
-    let enirpunkto = *BILDA_ENIRPUNKTO.akiri();
-    (enirpunkto != 0).then_some(enirpunkto)
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ŜargaEraro {
@@ -88,18 +75,17 @@ pub fn munti(
     modulo: &Modulo,
 ) -> Result<UzantaBildo, ŜargaEraro> {
     let bildo = ŝargi_bildon(modulo, spaco, alokilo)?;
-    *BILDA_LIMOJ.akiri() = (bildo.komenco, bildo.fino);
-    *BILDA_ENIRPUNKTO.akiri() = bildo.enirpunkto;
     prepari_stakon(spaco, alokilo)?;
     Ok(bildo)
 }
 
-/// Ŝarĝu la bildon, pretigu la stakon kaj rulu la memteston.
+/// Ŝarĝu la bildon, pretigu la stakon, rulu la memteston kaj redonu la bildan
+/// geometrion al la proceza ero.
 pub fn pravalorizi(
     spaco: &mut impl AdresaSpaco,
     alokilo: &mut KadraAlokilo,
     modulo: &Modulo,
-) -> Result<(), ŜargaEraro> {
+) -> Result<UzantaBildo, ŜargaEraro> {
     let bildo = munti(spaco, alokilo, modulo)?;
     crate::skribu!(
         "[uzanto] horizonto: bildo 0x{:x}..0x{:x}, enirpunkto 0x{:x}\n",
@@ -116,6 +102,52 @@ pub fn pravalorizi(
         UZANTA_STAKO_SUPRO
     );
     testi_kontrolon(spaco, alokilo, &bildo)?;
+    Ok(bildo)
+}
+
+/// Mapu la sekretan paĝon de la procezo je la komuna adreso `SEKRETA_ADRESO`
+/// kaj, se `dua`, ankaŭ la duan paĝon, kiun nur la viktimo posedas.
+///
+/// Ĉiu procezo vidas la unuan paĝon je la sama virtuala adreso, sed ĝi
+/// tradukiĝas al propra freŝa kadro, kiun la kerno plenigas per la magia
+/// numero kaj la proceza identigilo. La dua paĝo restas nura en la viktima
+/// spaco: spionprocezo, kiu legas ĝian adreson, devas ricevi `#PF`.
+pub fn mapi_sekreton(
+    spaco: &mut impl AdresaSpaco,
+    alokilo: &mut KadraAlokilo,
+    identigilo: u64,
+    dua: bool,
+) -> Result<u64, ŜargaEraro> {
+    mapi_sekretan_paĝon(spaco, alokilo, SEKRETA_ADRESO, identigilo)?;
+    if dua {
+        mapi_sekretan_paĝon(spaco, alokilo, SEKRETA_DUA_ADRESO, identigilo)?;
+    }
+    Ok(SEKRETA_ADRESO)
+}
+
+fn mapi_sekretan_paĝon(
+    spaco: &mut impl AdresaSpaco,
+    alokilo: &mut KadraAlokilo,
+    adreso: u64,
+    identigilo: u64,
+) -> Result<(), PaĝaEraro> {
+    spaco.mapi_uzantan_regionon(
+        VirtuaAdreso::nova(adreso),
+        KADRA_GRANDO as usize,
+        PaĝaPermesoj::UZANTA_DATUMOJ,
+        alokilo,
+    )?;
+    let Some(kadro) = spaco.traduki(VirtuaAdreso::nova(adreso)) else {
+        return Err(PaĝaEraro::NevalidaAdreso);
+    };
+    // SAFETY: `mapi_uzantan_regionon` ĵus alokis la kadron, nuligis ĝin kaj
+    // mapis ĝin en ĉi tiun spacon; la kadro kuŝas en la identeca mapo de la
+    // unuaj 4 GiB, do la nukleo rajtas skribi la magian numeron kaj la
+    // identigilon tra kruda montrilo.
+    unsafe {
+        ptr::write_volatile(kadro.adreso() as *mut u64, MAGIA_NUMERO);
+        ptr::write_volatile((kadro.adreso() + SEKRETA_ID_DEŜOVO) as *mut u64, identigilo);
+    }
     Ok(())
 }
 
