@@ -10,7 +10,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.1.5 (workspace)
+- **Versio:** 0.2.0 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.85`
@@ -47,7 +47,8 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 | 32-bita → PAE → longa reĝimo, propraj praŝarĝaj paĝtabeloj | Funkcias | `eniro.rs`, `mikerno/boot/linker.ld` |
 | Memora mapo el la praŝarĝilo, rezervitaj regionoj | Funkcias | `mb2.rs`, `pvh.rs`, `memoro/mod.rs` |
 | Modula liverado: Multiboot2 tipo 3 kaj PVH-modlisto (`horizonto`) | Funkcias | `mb2.rs`, `pvh.rs`, `memoro/mod.rs` |
-| Bitmapa kadro-alokilo por la unuaj 4 GiB | Funkcias | `memoro/kadro.rs` |
+| Bitmapa kadro-alokilo por la unuaj 4 GiB, kun `liberigi` kaj rekuzo | Funkcias | `memoro/kadro.rs` |
+| Kaskada forigo de adresa spaco (`detruu`) kun liberigo de paĝtabeloj | Funkcias | `arkitekturo/x86_64/pagxado.rs` |
 | 4-nivela paĝado (PML4 → PDPT → PD → PT), NX, PCD | Funkcias | `arkitekturo/x86_64/pagxado.rs` |
 | GDT, 256-vektora IDT, escepta raportado | Funkcias | `gdt.rs`, `idt.rs`, `interrompo/mod.rs` |
 | Uzantaj DPL3-segmentoj kaj `int 0x80`-pordego (interrompa, `0xEE`) | Funkcias | `gdt.rs`, `idt.rs`, `kerno/sistemvoko.rs` |
@@ -171,6 +172,7 @@ kerna_eniro                          main.rs
         ▼
 kerno::ĉefa                          kerno/mod.rs
   · kadro-alokilo ← memora mapo + rezervoj (inkl. praŝarĝaj moduloj)
+  · provo de liberigo: proviza PML4 → mapo → `detruu`, kadroj reakiritaj
   · nova PML4 (4 KiB paĝoj), identeca mapo, framebuffer (PCD)
   · modulaj regionoj identece mapitaj, CR3 ŝalto, konzolo, TSS/RSP0
   · APIC + temporizilo (100 Hz), 3 testaj fadenoj
@@ -218,8 +220,17 @@ t.e. 128 KiB da bitaro en `.bss`. La alokilo:
    (`__kerna_komenco..__kerna_fino`) kaj la regionojn el la praŝarĝilo
    (Multiboot2-informo, PVH-memmapo, RSDP).
 
-`aloki()` skanas de `sekva` antaŭen; ĝi estas monotona kaj ne havas publikan
-liberigon. Tio estas konscia limigo por la nuna fazo.
+`aloki()` skanas de `sekva` antaŭen. `liberigi(kadro)` malmarkas la biton,
+nuligas la enhavon (por ke sekva procezo ne vidu malnovajn datumojn) kaj
+retreatigas `sekva`, do la kadro estas reuzata tuj; duobla liberigo estas
+senefika. `liberaj()` raportas la nombron de liberaj kadroj.
+
+`X86AdresaSpaco::detruu` (tra `AdresaSpaco`) malmapas la tutan uzantan
+fenestron, liberigas la foliajn kadrojn kaj ĉiujn paĝtabelojn, kiuj restas
+malplenaj, plus la radikan kadron. Tabeloj kun kernaj mapoj restas netuŝitaj,
+ĉar la intervalo estas limigita al la uzanta fenestro. Ĉe starto la nukleo
+plenumas provon: ĝi kreas provizan spacon, mapas unu paĝon, detruas ĝin kaj
+komparas la nombrojn de liberaj kadroj.
 
 ### Paĝado
 
@@ -452,7 +463,7 @@ Ambaŭ praŝarĝaj vojoj estis praktike testitaj per QEMU 256 MiB:
 | Limine/Multiboot2 (ISO) | framebuffer `1280x800, 32 bpp`, bildo `0x100000000..0x100001082`, 8/8 kontroloj, `horizonto` kaj negativaj kazoj en Ring 3, 1000 tikoj, 4 fadenoj mortintaj |
 
 `just verify` ne estis rulita en ĉi tiu medio, ĉar `cargo kani` ne estas
-instalita. La 11 pruvoj (5 pri la kadro-alokilo, 6 pri la mesaĝujo) estas
+instalita. La 12 pruvoj (6 pri la kadro-alokilo, 6 pri la mesaĝujo) estas
 verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 
 ### Kion vi devus vidi
@@ -460,9 +471,10 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.1.5!
+[MiKerno] Saluton, mi estas MiKerno v0.2.0!
 [sistemvoko] pordego 0x80 (DPL3) instalita
 [kerno] memoro: 7 regionoj, 255 MiB uzeblaj
+[memoro] liberigo (bone): 65148 kadroj antaŭ, 65148 post
 [kerno] framebuffer 1280x800, 32 bpp        (nur ISO)
 [tss] TR ŝargita; kernostako pinto 0x...
 [temporizilo] kalibrado: ... kalkuloj/s, komenca ...
@@ -584,8 +596,9 @@ horizonto: la unua procezo vekis en Ring 3.
   sed ĉiuj procezoj kunhavas unu `PML4` (neniu izolado), `TSS.RSP0` estas
   komuna kaj ne ekzistas reveno al uzanto krom nova `iretq`; mankas ankaŭ
   per-fadena kernostako.
-- **Neniu liberigo de kadroj**: la alokilo estas monotona; `KadraAlokilo` ne
-  havas publikan `liberigi`.
+- **Neniu aŭtomata liberigo**: `KadraAlokilo::liberigi` kaj `detruu` ekzistas,
+  sed ĝis M12-fazoj 3–5 neniu proceza eliro vokas ilin; la alokilo do restas
+  preskaŭ monotona dum la vivo de la sistemo.
 - **Identeca mapo RWX**: oportunas por la prototipo, sed malobservas W^X;
   SMEP/SMAP, KASLR kaj APIC/IOMMU-izolado mankas.
 - **Unuprocesora**: neniu SMP, afineco, prioritatoj aŭ dormantaj temporiziloj.

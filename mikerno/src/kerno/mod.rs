@@ -3,8 +3,11 @@
 
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::EniraInformo;
+use crate::memoro::KADRA_GRANDO;
 use crate::memoro::kadro::KadraAlokilo;
-use crate::memoro::virtuala::{AdresaSpaco, PaĝaPermesoj, UZANTA_STAKO_SUPRO, VirtuaAdreso};
+use crate::memoro::virtuala::{
+    AdresaSpaco, PaĝaPermesoj, UZANTA_BAZO, UZANTA_STAKO_SUPRO, VirtuaAdreso,
+};
 
 pub mod ipc;
 pub mod objekto;
@@ -15,7 +18,7 @@ pub mod uzantspaco;
 static ALOKILO: Kunhavigita<KadraAlokilo> = Kunhavigita::nova(KadraAlokilo::nova());
 
 pub fn ĉefa(informo: EniraInformo) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.1.5!\n");
+    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.2.0!\n");
     sistemvoko::pravalorizi();
     crate::skribu!(
         "[kerno] memoro: {} regionoj, {} MiB uzeblaj\n",
@@ -25,6 +28,7 @@ pub fn ĉefa(informo: EniraInformo) {
 
     let alokilo = ALOKILO.akiri();
     alokilo.pravalorizi(informo.memora_mapo, informo.rezervindaj);
+    testi_liberigon(alokilo);
 
     let mut spaco = match crate::arkitekturo::krei_adresan_spacon(alokilo) {
         Ok(spaco) => spaco,
@@ -160,6 +164,40 @@ pub fn ĉefa(informo: EniraInformo) {
 const STAKA_GRANDE: usize = 16 * 1024;
 const TESTAJ_FADENOJ: usize = 3;
 const UZANTA_FADENO_ID: u64 = TESTAJ_FADENOJ as u64 + 1;
+
+/// Pruvu la liberigan vojon per proviza adresa spaco: kreu ĝin, mapu unu
+/// uzantan paĝon, detruu ĝin kaj komparu la nombron de liberaj kadroj.
+fn testi_liberigon(alokilo: &mut KadraAlokilo) {
+    let antaŭ = alokilo.liberaj();
+    let mut spaco = match crate::arkitekturo::krei_adresan_spacon(alokilo) {
+        Ok(spaco) => spaco,
+        Err(eraro) => {
+            crate::skribu!("[memoro] liberiga provo malsukcesis: {}\n", eraro);
+            return;
+        }
+    };
+    let mapado = spaco.mapigi_freŝan_regionon(
+        VirtuaAdreso::nova(UZANTA_BAZO),
+        KADRA_GRANDO as usize,
+        PaĝaPermesoj::UZANTA_DATUMOJ,
+        alokilo,
+    );
+    let detruo = spaco.detruu(alokilo);
+    let post = alokilo.liberaj();
+    match mapado.and(detruo) {
+        Ok(()) if post == antaŭ => crate::skribu!(
+            "[memoro] liberigo (bone): {} kadroj antaŭ, {} post\n",
+            antaŭ,
+            post
+        ),
+        Ok(()) => crate::skribu!(
+            "[memoro] liberigo (MALBONE): {} kadroj antaŭ, {} post\n",
+            antaŭ,
+            post
+        ),
+        Err(eraro) => crate::skribu!("[memoro] liberigo malsukcesis: {}\n", eraro),
+    }
+}
 
 #[repr(align(16))]
 struct FadenaStako(#[allow(dead_code)] [u8; STAKA_GRANDE]);

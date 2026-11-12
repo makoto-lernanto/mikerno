@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-12 · Versio de la workspace: 0.1.5
+> Stato: 2026-11-12 · Versio de la workspace: 0.2.0
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -21,10 +21,10 @@
 | M6 | Framebuffer-konzolo kaj COM1 | Plenumita | `1280x800, 32 bpp` (ISO) |
 | M7 | Antaŭokupa planisto kaj kuntekstŝanĝo | Plenumita | 3 fadenoj interplektitaj kaj finitaj |
 | M8 | Mesaĝa IPC kun kapabloj | Plenumita | mesaĝoj liveritaj, fadeno 3 vekita |
-| M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 11 pruvoj verkitaj, Kani ne instalita |
+| M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 12 pruvoj verkitaj, Kani ne instalita |
 | M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Plenumita | ABI difinita; `horizonto` plenumiĝas en Ring 3 |
 | M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj (0.1.5) |
-| M12 | Per-procesaj adresspacoj | Venonta | — |
+| M12 | Per-procesaj adresspacoj | Daŭranta | Fazo 1: `liberigi`, kaskada `detruu`, provo ĉe starto (0.2.0) |
 | M13 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Venonta | — |
 | M14 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
 | M15 | Konservado, dosiersistemo, ŝelo | Venonta | — |
@@ -430,7 +430,7 @@ horizonto: la unua procezo vekis en Ring 3.
    ripetiĝi; la `justfile` devus eventuale fari la version videbla aŭ la
    kontrolo devus ĉiam rekonstrui.
 2. **Versio hardkodita.** `kerno/mod.rs`, `mikerno/boot/limine.conf` kaj
-   `Cargo.toml` enhavas `0.1.5` sendepende. Oni devus derivi ĝin per
+   `Cargo.toml` enhavas `0.2.0` sendepende. Oni devus derivi ĝin per
    `env!("CARGO_PKG_VERSION")` kaj `build.rs`.
 3. **Kani mankas.** La formala pordego ne estas plenumebla en ĉi tiu medio;
    `just verify` malsukcesos ĝis `cargo kani` estos instalita.
@@ -458,7 +458,22 @@ uzantajn montrilojn; malmapi kaj liberigi kadrojn ĉe eliro.
 **Akceptkriterioj.** Du procezoj ne povas legi unu la alian; paĝa eraro en unu
 procezo ne haltigas la kernon; la kadro-alokilo reuzas liberigitajn kadrojn.
 
-**Antaŭkondiĉo.** Publika `liberigi` en `KadraAlokilo` kaj liberigo de paĝtabeloj.
+**Progreso.**
+
+| Dato | Fazo | Versio | Pruvo |
+| --- | --- | --- | --- |
+| 2026-11-12 | 1. `liberigi`, kaskada `detruu`, provo ĉe starto | 0.2.0 | PVH: `[memoro] liberigo (bone): 65148 kadroj antaŭ, 65148 post`; 0 esceptoj |
+
+**Fazo 1 (0.2.0).** `KadraAlokilo::liberigi` malmarkas la biton, nuligas la
+kadron kaj retreatigas `sekva`; duobla liberigo estas senefika. `detruu`
+malmapas la uzantan fenestron, liberigas la foliojn kaj la paĝtabelojn, kiuj
+restas malplenaj, plus la radikan kadron. La forigo estas limigita al
+`UZANTA_BAZO..UZANTA_FINO`, ne al la malaltaj 256 PML4-eroj: la identeca mapo
+de la unuaj 4 GiB kuŝas en PML4[0], do laŭvorta «nur malaltaj 256 eroj»
+forigus ankaŭ la kernajn mapojn. Tabeloj kun kernaj eroj restas, ĉar ili ne
+malpleniĝas. Grandega folio en la fenestro kaŭzas `Konflikto` anstataŭ
+danĝeran liberigon. Ĉe starto la nukleo kreas provizan spacon, mapas unu paĝon,
+detruas ĝin kaj komparas la nombrojn de liberaj kadroj.
 
 ---
 
@@ -535,7 +550,7 @@ QEMU-smokan teston; la ISO estas artefakto de CI, ne permana dosiero.
 | Prioritate | Ŝuldo | Efiko | Rimedo |
 | --- | --- | --- | --- |
 | Alta | Neniu uzanta izolado (komuna `PML4`, komuna kern-stako `RSP0`) | Procezoj vidas unu la alian | M12 |
-| Alta | Neniu liberigo de kadroj | Memoro elĉerpiĝas post longa uzo | M12 |
+| Alta | Liberigo nur permana (`liberigi`/`detruu`), sen elira vojo | Memoro elĉerpiĝas post multaj procezoj | M12 |
 | Alta | Identeca mapo RWX | Malobservo de W^X | M12/M16 |
 | Alta | Neniu CI nek testoj | Regresoj nerimarkeblaj | M16 |
 | Alta | Malaktuala ISO | Konfuzaj testrezultoj | CI + versio |

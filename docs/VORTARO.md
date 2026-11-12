@@ -86,6 +86,10 @@ kaj protokolaj nomoj sekvu ĝin.
 | `limo` | limit | 界限 | |
 | `bazo` | base | 基址 | |
 | `nuligi` | zero / clear | 清零 | |
+| `liberigi` | free / release | 释放 | Redoni kadron al la alokilo; duobla liberigo estas senefika. |
+| `detruu` | destroy | 销毁 | Malmapu kaj liberigu la tutan adresan spacon. |
+| `malmapi` | unmap | 解除映射 | Forigu eron el la paĝa tabelo. |
+| `proviza` | scratch | 临时 | Proviza spaco por memtesto. |
 | `kopii` | copy | 复制 | |
 | `validigi` | validate | 校验 | |
 | `eraro` | error | 错误 | |

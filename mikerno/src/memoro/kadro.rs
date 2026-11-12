@@ -18,6 +18,15 @@ impl Kadro {
     pub const fn adreso(&self) -> u64 {
         self.0 * KADRA_GRANDO
     }
+
+    pub const fn indekso(&self) -> usize {
+        self.0 as usize
+    }
+
+    /// La kadro, kiu enhavas la donitan fizikan adreson.
+    pub const fn el_adreso(adreso: u64) -> Self {
+        Self(adreso / KADRA_GRANDO)
+    }
 }
 
 pub struct KadraAlokilo {
@@ -64,6 +73,36 @@ impl KadraAlokilo {
             }
         }
         None
+    }
+
+    /// Redonu la kadron al la bitaro.
+    ///
+    /// Se la kadro jam estas libera, la voko estas senefika: duobla liberigo
+    /// ne malfermas du kadrojn. La enhavo estas nuligata, por ke la sekva
+    /// posedanto ne vidu malnovajn datumojn de alia procezo.
+    pub fn liberigi(&mut self, kadro: Kadro) {
+        let indekso = kadro.indekso();
+        if indekso >= MAKSA_KADROJ || !self.kadro_uzata(indekso) {
+            return;
+        }
+        // SAFETY: la kadro venas de la bitaro kaj kuŝas en la unuaj 4 GiB, kiuj
+        // estas identece mapitaj; ĝi estas uzata, do ĝia enhavo estas nia.
+        unsafe {
+            core::ptr::write_bytes(kadro.adreso() as *mut u8, 0, KADRA_GRANDO as usize);
+        }
+        self.marki(indekso, false);
+        // La skanilo nur antaŭeniras; retreatigu ĝin, por ke la kadro estu
+        // reuzata antaŭ ol la tuta bitaro estos denove traserĉata.
+        if indekso < self.sekva {
+            self.sekva = indekso;
+        }
+    }
+
+    /// Kiom da kadroj restas liberaj.
+    pub fn liberaj(&self) -> usize {
+        (0..MAKSA_KADROJ)
+            .filter(|indekso| !self.kadro_uzata(*indekso))
+            .count()
     }
 
     fn kadro_uzata(&self, indekso: usize) -> bool {
@@ -143,10 +182,16 @@ mod kani_proofs {
             None
         }
 
-        /// La produkta alokilo ne havas apartan publikan liberigon; liberigo
-        /// okazas per `marki(indekso, false)` aŭ `agordi_intervalon(..., false)`.
+        /// Spegulo de la produkta `liberigi`: ignoras neokupatajn kadrojn kaj
+        /// retreatigas `sekva`, por ke la kadro estu reuzata.
         fn liberigi(&mut self, indekso: usize) {
+            if indekso >= PROVAJ_KADROJ || !self.kadro_uzata(indekso) {
+                return;
+            }
             self.marki(indekso, false);
+            if indekso < self.sekva {
+                self.sekva = indekso;
+            }
         }
 
         fn agordi_intervalon(&mut self, komenco: u64, fino: u64, uzata: bool) {
@@ -227,7 +272,8 @@ mod kani_proofs {
         assert_eq!(modelo.sekva, PROVAJ_KADROJ);
     }
 
-    /// Liberigo malmarkas nur la donitan kadron, kaj `aloki` povas reuzi ĝin.
+    /// Liberigo malmarkas nur la donitan kadron, retreatigas `sekva` kaj
+    /// permesas al `aloki` tuj reuzi ĝin.
     #[kani::proof]
     #[kani::unwind(70)]
     fn liberigo_lasas_la_kadron_reuzebla() {
@@ -238,10 +284,28 @@ mod kani_proofs {
         assert!(modelo.kadro_uzata(indekso));
         modelo.liberigi(indekso);
         assert!(!modelo.kadro_uzata(indekso));
+        assert_eq!(modelo.sekva, indekso);
 
-        modelo.sekva = indekso;
         assert_eq!(modelo.aloki(), Some(indekso));
         assert!(modelo.kadro_uzata(indekso));
+    }
+
+    /// Duobla liberigo estas senefika: la dua voko ne ŝanĝas la bitaron kaj
+    /// ne malfermas plian kadron.
+    #[kani::proof]
+    #[kani::unwind(70)]
+    fn duobla_liberigo_estas_senefika() {
+        let indekso: usize = kani::any();
+        kani::assume(indekso < PROVAJ_KADROJ);
+        let mut modelo = Modelo::kun_uzataj(PROVAJ_KADROJ);
+
+        modelo.liberigi(indekso);
+        let bitmapo = modelo.bitmapo;
+        let sekva = modelo.sekva;
+        modelo.liberigi(indekso);
+
+        assert_eq!(modelo.bitmapo, bitmapo);
+        assert_eq!(modelo.sekva, sekva);
     }
 
     /// `marki` kaj ĝia malo sekurigas la biton sen eliri la bitaron.

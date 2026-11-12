@@ -9,7 +9,8 @@ use core::ptr;
 use crate::memoro::KADRA_GRANDO;
 use crate::memoro::kadro::{KadraAlokilo, Kadro};
 use crate::memoro::virtuala::{
-    AdresaSpaco, FizikaAdreso, PaĝaEraro, PaĝaPermesoj, PaĝaTablo, UZANTA_FINO, VirtuaAdreso,
+    AdresaSpaco, FizikaAdreso, PaĝaEraro, PaĝaPermesoj, PaĝaTablo, UZANTA_BAZO, UZANTA_FINO,
+    VirtuaAdreso,
 };
 
 const PREZENTA: u64 = 1 << 0;
@@ -51,16 +52,18 @@ pub fn pravalorizi() {
 
 /// Adresa spaco de la nukleo: posedas la radikan paĝan tabelon.
 pub struct X86AdresaSpaco {
-    radiko: FizikaAdreso,
+    radiko: Kadro,
 }
 
 impl X86AdresaSpaco {
     fn nova(alokilo: &mut KadraAlokilo) -> Result<Self, PaĝaEraro> {
         let kadro = alokilo.aloki().ok_or(PaĝaEraro::Elĉerpita)?;
         nuligi(kadro);
-        Ok(Self {
-            radiko: FizikaAdreso::nova(kadro.adreso()),
-        })
+        Ok(Self { radiko: kadro })
+    }
+
+    fn radiko(&self) -> FizikaAdreso {
+        FizikaAdreso::nova(self.radiko.adreso())
     }
 }
 
@@ -74,10 +77,16 @@ impl AdresaSpaco for X86AdresaSpaco {
         unsafe {
             asm!(
                 "mov cr3, {}",
-                in(reg) self.radiko.adreso(),
+                in(reg) self.radiko().adreso(),
                 options(nostack, preserves_flags),
             );
         }
+    }
+
+    fn detruu(self, alokilo: &mut KadraAlokilo) -> Result<(), PaĝaEraro> {
+        liberigi_intervalon(self.radiko(), UZANTA_BAZO, UZANTA_FINO, alokilo)?;
+        alokilo.liberigi(self.radiko);
+        Ok(())
     }
 }
 
@@ -93,7 +102,7 @@ impl PaĝaTablo for X86AdresaSpaco {
             return Err(PaĝaEraro::NevalidaAdreso);
         }
 
-        let pdpt = suba_tabelo(self.radiko, indico(virtuala, 3), permesoj.uzanta, alokilo)?;
+        let pdpt = suba_tabelo(self.radiko(), indico(virtuala, 3), permesoj.uzanta, alokilo)?;
         let pd = suba_tabelo(pdpt, indico(virtuala, 2), permesoj.uzanta, alokilo)?;
         let pt = suba_tabelo(pd, indico(virtuala, 1), permesoj.uzanta, alokilo)?;
 
@@ -123,7 +132,7 @@ impl PaĝaTablo for X86AdresaSpaco {
 
         let mut paĝo = adreso & !(KADRA_GRANDO - 1);
         loop {
-            if !folio_uzanta(self.radiko, paĝo, skriba) {
+            if !folio_uzanta(self.radiko(), paĝo, skriba) {
                 return false;
             }
             let sekva = paĝo + KADRA_GRANDO;
@@ -135,7 +144,7 @@ impl PaĝaTablo for X86AdresaSpaco {
     }
 
     fn traduki(&self, virtuala: VirtuaAdreso) -> Option<FizikaAdreso> {
-        let pdpt = ero(self.radiko, indico(virtuala, 3));
+        let pdpt = ero(self.radiko(), indico(virtuala, 3));
         if pdpt & PREZENTA == 0 {
             return None;
         }
@@ -182,6 +191,73 @@ fn nuligi(kadro: Kadro) {
     unsafe {
         ptr::write_bytes(kadro.adreso() as *mut u8, 0, KADRA_GRANDO as usize);
     }
+}
+
+/// Liberigu ĉiujn foliojn en `[komenco, fino)` kaj la paĝtabelojn, kiuj restas
+/// malplenaj poste. Nur la donita intervalo estas tuŝata, do kernaj mapoj en
+/// la sama radika tabelo restas sendifektaj.
+fn liberigi_intervalon(
+    radiko: FizikaAdreso,
+    komenco: u64,
+    fino: u64,
+    alokilo: &mut KadraAlokilo,
+) -> Result<(), PaĝaEraro> {
+    if fino <= komenco {
+        return Ok(());
+    }
+    liberigi_nivelon(radiko, 3, 0, komenco, fino, alokilo)
+}
+
+/// Amplekso de unu ero en la donita nivelo (0 = PT, 3 = PML4).
+const fn nivela_amplekso(nivelo: u32) -> u64 {
+    1u64 << (12 + nivelo * 9)
+}
+
+fn liberigi_nivelon(
+    tabelo: FizikaAdreso,
+    nivelo: u32,
+    bazo: u64,
+    komenco: u64,
+    fino: u64,
+    alokilo: &mut KadraAlokilo,
+) -> Result<(), PaĝaEraro> {
+    let amplekso = nivela_amplekso(nivelo);
+    for indekso in 0..512 {
+        let ero_bazo = bazo + indekso as u64 * amplekso;
+        let ero_fino = ero_bazo + amplekso;
+        if ero_fino <= komenco || ero_bazo >= fino {
+            continue;
+        }
+        let valoro = ero(tabelo, indekso);
+        if valoro & PREZENTA == 0 {
+            continue;
+        }
+        let suba = FizikaAdreso::nova(valoro & ADRESO_MASKO);
+
+        if nivelo == 0 {
+            agordi_eron(tabelo, indekso, 0);
+            alokilo.liberigi(Kadro::el_adreso(suba.adreso()));
+            continue;
+        }
+        if valoro & GRANDA != 0 {
+            // Grandegaj folioj ne aperas en la uzanta fenestro; liberigi ilin
+            // kiel unuopajn kadrojn estus danĝera.
+            return Err(PaĝaEraro::Konflikto);
+        }
+
+        liberigi_nivelon(suba, nivelo - 1, ero_bazo, komenco, fino, alokilo)?;
+        // Forigu la suban tabelon nur se ĝi ne plu enhavas ion ajn: tabeloj
+        // kun kernaj mapoj restas, eĉ kiam ili parte kuŝas en la intervalo.
+        if ĉu_malplena(suba) {
+            agordi_eron(tabelo, indekso, 0);
+            alokilo.liberigi(Kadro::el_adreso(suba.adreso()));
+        }
+    }
+    Ok(())
+}
+
+fn ĉu_malplena(tabelo: FizikaAdreso) -> bool {
+    (0..512).all(|indekso| ero(tabelo, indekso) & PREZENTA == 0)
 }
 
 fn flushi(virtuala: VirtuaAdreso) {

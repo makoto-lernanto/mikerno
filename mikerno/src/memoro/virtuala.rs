@@ -145,6 +145,15 @@ pub trait AdresaSpaco: PaĝaTablo {
 
     fn ŝalti(&self);
 
+    /// Malmapu la uzantajn paĝojn, liberigu la paĝtabelojn, kiuj restas
+    /// malplenaj, kaj la radikan kadron.
+    ///
+    /// # Antaŭkondiĉo
+    /// La spaco ne rajtas esti la aktiva en `CR3`: ĝiaj mapoj malaperos.
+    fn detruu(self, alokilo: &mut KadraAlokilo) -> Result<(), PaĝaEraro>
+    where
+        Self: Sized;
+
     /// Mapu la intervalon `[komenco, fino)` al la samaj fizikaj adresoj.
     fn mapigi_intervalon(
         &mut self,
