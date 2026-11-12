@@ -55,6 +55,40 @@ pub struct X86AdresaSpaco {
     radiko: Kadro,
 }
 
+/// La fizika radiko, kiun `CR3` nun montras.
+pub fn aktiva_radiko() -> FizikaAdreso {
+    let cr3: u64;
+    // SAFETY: legado de `CR3` ne havas kromefikojn.
+    unsafe {
+        asm!(
+            "mov {}, cr3",
+            out(reg) cr3,
+            options(nomem, nostack, preserves_flags),
+        );
+    }
+    FizikaAdreso::nova(cr3 & ADRESO_MASKO)
+}
+
+/// Ŝaltu `CR3` al la donita radika paĝtabelo.
+///
+/// # Sekureco
+/// `radiko` devas esti fizika adreso de viva `PML4`, kies mapoj inkluzivas la
+/// nunan kodon kaj la nunan stakon. La kernaj mapoj estas kunhavataj de ĉiuj
+/// procezaj spacoj (`krei_kunhavantan`), do la ŝalto estas sekura ankaŭ meze
+/// de kerna funkcio; tamen vokenda kun interrompoj malŝaltitaj, por ke neniu
+/// traktilo uzu duonvalidan staton.
+pub unsafe fn ŝalti_radikon(radiko: FizikaAdreso) {
+    // SAFETY: la alvokanto garantias vivan `PML4` kun atingeblaj kernaj mapoj;
+    // `mov cr3` estas la sola necesa operacio (MiKerno ne uzas PCID).
+    unsafe {
+        asm!(
+            "mov cr3, {}",
+            in(reg) radiko.adreso(),
+            options(nostack, preserves_flags),
+        );
+    }
+}
+
 impl X86AdresaSpaco {
     fn nova(alokilo: &mut KadraAlokilo) -> Result<Self, PaĝaEraro> {
         let kadro = alokilo.aloki().ok_or(PaĝaEraro::Elĉerpita)?;
@@ -81,15 +115,15 @@ impl AdresaSpaco for X86AdresaSpaco {
         Ok(nova)
     }
 
+    fn radika_adreso(&self) -> FizikaAdreso {
+        self.radiko()
+    }
+
     fn ŝalti(&self) {
         // PAE, LME kaj CR0.PG jam estas ŝaltitaj de la praŝarĝa ŝelko.
-        unsafe {
-            asm!(
-                "mov cr3, {}",
-                in(reg) self.radiko().adreso(),
-                options(nostack, preserves_flags),
-            );
-        }
+        // SAFETY: la radika kadro apartenas al ĉi tiu viva spaco, kiu enhavas
+        // la nunajn kernajn mapojn.
+        unsafe { ŝalti_radikon(self.radiko()) };
     }
 
     fn detruu(self, alokilo: &mut KadraAlokilo) -> Result<(), PaĝaEraro> {

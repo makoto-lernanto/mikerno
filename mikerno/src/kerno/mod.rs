@@ -19,7 +19,7 @@ pub mod uzantspaco;
 static ALOKILO: Kunhavigita<KadraAlokilo> = Kunhavigita::nova(KadraAlokilo::nova());
 
 pub fn ĉefa(informo: EniraInformo) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.2.1!\n");
+    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.2.2!\n");
     sistemvoko::pravalorizi();
     crate::skribu!(
         "[kerno] memoro: {} regionoj, {} MiB uzeblaj\n",
@@ -74,6 +74,7 @@ pub fn ĉefa(informo: EniraInformo) {
         None => None,
     };
     spaco.ŝalti();
+    procezo::agordi_kernan_spacon(spaco.radika_adreso());
 
     match framebuffer {
         Some(fb) if crate::ekrano::pravalorizi(fb) => crate::skribu!(
@@ -101,34 +102,43 @@ pub fn ĉefa(informo: EniraInformo) {
         apic_id
     );
 
+    // La bildo estas ŝargata rekte en la privatan spacon de la procezo, ne en
+    // la kernan: `CR3` ŝanĝiĝos al tiu spaco antaŭ ol `horizonto` ekas.
+    let mut uzanta_preta = false;
     match informo.moduloj.first() {
-        Some(modulo) => {
-            if let Err(eraro) = uzantspaco::pravalorizi(&mut spaco, alokilo, modulo) {
-                crate::skribu!("[uzanto] ŝargo malsukcesis: {}\n", eraro);
-                return;
-            }
-            match procezo::krei(UZANTA_FADENO_ID, &spaco, alokilo) {
-                Ok(id) => match procezo::akiri(id) {
-                    Some(procezo) => {
-                        let spaco_proceza = procezo.spaco();
-                        let kerna = spaco_proceza.traduki(VirtuaAdreso::nova(0x1000)).is_some();
-                        let fenestra = spaco_proceza
-                            .traduki(VirtuaAdreso::nova(UZANTA_BAZO))
-                            .is_none();
-                        crate::skribu!(
-                            "[procezo] {}: {:?}, kerna stako 0x{:x}, kerna mapo {}, uzanta fenestro {}\n",
-                            procezo.id(),
-                            procezo.stato(),
-                            procezo.kerna_stako_pinto(),
-                            if kerna { "kunhavata" } else { "MANKANTA" },
-                            if fenestra { "privata" } else { "KUNHAVATA" }
-                        );
+        Some(modulo) => match procezo::krei(UZANTA_FADENO_ID, &spaco, alokilo) {
+            Ok(id) => match procezo::akiri(id) {
+                Some(procezo) => {
+                    let stato = procezo.stato();
+                    let kerna_pinto = procezo.kerna_stako_pinto();
+                    let radiko = procezo.radika_adreso();
+                    let spaco_proceza = procezo.spaco();
+                    match uzantspaco::pravalorizi(spaco_proceza, alokilo, modulo) {
+                        Ok(()) => {
+                            let (bilda_komenco, _) = uzantspaco::bildaj_limoj();
+                            let kerna = spaco_proceza.traduki(VirtuaAdreso::nova(0x1000)).is_some();
+                            let privata =
+                                spaco.traduki(VirtuaAdreso::nova(bilda_komenco)).is_none();
+                            crate::skribu!(
+                                "[procezo] {}: {:?}, kerna stako 0x{:x}, PML4 0x{:x}, kerna mapo {}, bildo nur en la proceza spaco {}\n",
+                                procezo.id(),
+                                stato,
+                                kerna_pinto,
+                                radiko.adreso(),
+                                if kerna { "kunhavata" } else { "MANKANTA" },
+                                if privata { "jes" } else { "NE" }
+                            );
+                            uzanta_preta = true;
+                        }
+                        Err(eraro) => {
+                            crate::skribu!("[uzanto] ŝargo malsukcesis: {}\n", eraro);
+                        }
                     }
-                    None => crate::skribu!("[procezo] {}: registro mankas\n", id),
-                },
-                Err(eraro) => crate::skribu!("[procezo] kreado malsukcesis: {}\n", eraro),
-            }
-        }
+                }
+                None => crate::skribu!("[procezo] {}: registro mankas\n", id),
+            },
+            Err(eraro) => crate::skribu!("[procezo] kreado malsukcesis: {}\n", eraro),
+        },
         None => crate::skribu!("[uzanto] horizonto ne liverita (mankas modulo)\n"),
     }
 
@@ -149,13 +159,16 @@ pub fn ĉefa(informo: EniraInformo) {
     crate::skribu!("[kerno] planisto ekas: 3 fadenoj, antaŭokupo ĉiu 10 ms\n");
     planisto::lanĉi();
 
-    // La testaj fadenoj finiĝis; nun `horizonto` ekas en Ring 3.
-    match uzantspaco::enirpunkto() {
-        Some(enirpunkto) => match lanĉi_horizonton(enirpunkto) {
-            Ok(()) => crate::skribu!("[kerno] horizonto finiĝis; planisto revenis\n"),
-            Err(eraro) => crate::skribu!("[uzanto] fadena kreado malsukcesis: {:?}\n", eraro),
-        },
-        None => crate::skribu!("[uzanto] horizonto ne ŝargita; Ring 3 ne ekas\n"),
+    // La testaj fadenoj finiĝis; nun `horizonto` ekas en Ring 3, en la propra
+    // adresa spaco de la procezo.
+    if uzanta_preta {
+        match uzantspaco::enirpunkto() {
+            Some(enirpunkto) => match lanĉi_horizonton(enirpunkto) {
+                Ok(()) => crate::skribu!("[kerno] horizonto finiĝis; planisto revenis\n"),
+                Err(eraro) => crate::skribu!("[uzanto] fadena kreado malsukcesis: {:?}\n", eraro),
+            },
+            None => crate::skribu!("[uzanto] enirpunkto mankas; Ring 3 ne ekas\n"),
+        }
     }
 
     crate::arkitekturo::malebligi_interrompojn();
@@ -227,10 +240,6 @@ struct FadenaStako(#[allow(dead_code)] [u8; STAKA_GRANDE]);
 static mut STAKOJ: [FadenaStako; TESTAJ_FADENOJ] =
     [const { FadenaStako([0; STAKA_GRANDE]) }; TESTAJ_FADENOJ];
 
-/// La fadena stako de `horizonto`; post `iretq` la fadeno uzas la uzantan
-/// stakon, sed la eniro kaj la eventuala reveno bezonas ĉi tiun.
-static mut UZANTA_FADENA_STAKO: FadenaStako = FadenaStako([0; STAKA_GRANDE]);
-
 fn krei_testajn_fadenojn() -> Result<(), planisto::PlanistaEraro> {
     for indekso in 0..TESTAJ_FADENOJ {
         let id = indekso as u64 + 1;
@@ -245,10 +254,15 @@ fn krei_testajn_fadenojn() -> Result<(), planisto::PlanistaEraro> {
     Ok(())
 }
 
-/// Aldonu la uzantan fadenon kaj planu ĝin. La voko revenas, kiam `fini`
-/// mortigas ĝin kaj la planisto elektas la ripozan kuntekston.
+/// Aldonu la uzantan fadenon kaj planu ĝin. La fadeno uzas la kernan stakon
+/// de sia procezo; post `iretq` ĝi plenumas sur la uzanta stako. La voko
+/// revenas, kiam `fini` mortigas ĝin kaj la planisto elektas la ripozan
+/// kuntekston.
 fn lanĉi_horizonton(enirpunkto: u64) -> Result<(), planisto::PlanistaEraro> {
-    let pinto = &raw const UZANTA_FADENA_STAKO as u64 + STAKA_GRANDE as u64;
+    let Some(procezo) = procezo::akiri(UZANTA_FADENO_ID) else {
+        return Err(planisto::PlanistaEraro::NevalidaIdentigilo);
+    };
+    let pinto = procezo.kerna_stako_pinto();
     planisto::aldoni_fadenon(planisto::pretigi_fadenon(
         UZANTA_FADENO_ID,
         UZANTA_FADENO_ID,

@@ -21,6 +21,8 @@ kaj protokolaj nomoj sekvu ĝin.
 | `virtuala adreso` | virtual address | 虚拟地址 | |
 | `fizika adreso` | physical address | 物理地址 | |
 | `adresa spaco` | address space | 地址空间 | `AdresaSpaco`. |
+| `radika adreso` | root address | 根地址 | Fizika adreso de `PML4`, ŝargata en `CR3`. |
+| `aktivigi` | activate | 激活 | Ŝalti la procezan `CR3` kaj `TSS.RSP0` antaŭ kuntekstŝanĝo. |
 | `paĝa tabelo` | page table | 页表 | `PaĝaTablo`. |
 | `paĝa eraro` | page fault (#PF) | 缺页异常 | |
 | `ĝenerala protekta eraro` | general protection fault (#GP) | 通用保护异常 | |
@@ -56,7 +58,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `programa kaplinio` | program header | 程序头 | ELF64 `Elf64_Phdr`. |
 | `uzanta kodo` | user code | 用户代码段 | DPL3. |
 | `uzantaj datumoj` | user data | 用户数据段 | DPL3. |
-| `kerna stako` | kernel stack | 内核栈 | `RSP0`. |
+| `kerna stako` | kernel stack | 内核栈 | Po procezo, 16 KiB; `RSP0` montras al ĝia pinto. |
 | `uzanta stako` | user stack | 用户栈 | |
 | `uzanta fadeno` | user thread | 用户线程 | Plenumas en Ring 3 post `iretq`. |
 | `kunteksto` | context | 上下文 | `Kunteksto`. |

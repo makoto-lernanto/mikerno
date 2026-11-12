@@ -44,8 +44,23 @@ struct Kernostako(#[allow(dead_code)] [u8; KERNOSTAKO_GRANDE]);
 
 static mut KERNOSTAKO: Kernostako = Kernostako([0; KERNOSTAKO_GRANDE]);
 
-// TODO(M12): ĉiu uzanta fadeno bezonas propran kernan stakon;
-// ĝisdatigi TSS.RSP0 dum kuntekstŝanĝo. Ĝis tiam: nur unu uzanta fadeno.
+/// La defaŭlta kerna stakpinto por la nukleo (procezo `0`).
+pub fn defaŭlta_pinto() -> u64 {
+    &raw const KERNOSTAKO as u64 + KERNOSTAKO_GRANDE as u64
+}
+
+/// Agordu `RSP0` al la kerna stako de la nuna procezo.
+///
+/// `pinto` devas esti 16-bajte aliniiĝinta kaj mapita en la kerna identeca
+/// mapo; alie la unua Ring 3 → Ring 0-transiro malsukcesus.
+pub fn agordi_kernostakon(pinto: u64) {
+    // SAFETY: `TASKA_STATO` estas la sola TSS; ĉi tiu skribo tuŝas unu 64-bitan
+    // kampon kaj nur Ring 0 plenumas ĝin.
+    unsafe {
+        let tss = &mut *core::ptr::addr_of_mut!(TASKA_STATO);
+        tss.kernostako_pinto = pinto;
+    }
+}
 
 /// La 16-bajta longreĝima TSS-priskribo por la GDT.
 pub fn priskribo() -> [u64; 2] {
@@ -60,12 +75,13 @@ pub fn priskribo() -> [u64; 2] {
     [malalta, bazo >> 32]
 }
 
-/// Agordu `RSP0` al la kerna stako kaj ŝargu la taskan registron.
+/// Agordu la defaŭltan `RSP0` kaj ŝargu la taskan registron.
 pub fn inicialigi_kernostakon() {
-    let pinto = &raw const KERNOSTAKO as u64 + KERNOSTAKO_GRANDE as u64;
+    let pinto = defaŭlta_pinto();
+    agordi_kernostakon(pinto);
+    // SAFETY: `SELEKTILO` montras al la priskribo, kiun `gdt` jam muntis; `ltr`
+    // estas la sola maniero ŝargi la TSS kaj okazas unufoje ĉe starto.
     unsafe {
-        let tss = &mut *core::ptr::addr_of_mut!(TASKA_STATO);
-        tss.kernostako_pinto = pinto;
         asm!(
             "ltr ax",
             in("ax") SELEKTILO,

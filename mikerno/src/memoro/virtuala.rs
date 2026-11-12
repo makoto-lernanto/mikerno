@@ -225,6 +225,10 @@ pub trait AdresaSpaco: PaĝaTablo {
     where
         Self: Sized;
 
+    /// La fizika adreso de la radika paĝtabelo, uzata por `CR3`.
+    fn radika_adreso(&self) -> FizikaAdreso;
+
+    /// Ŝaltu la procesoran `CR3` al ĉi tiu spaco.
     fn ŝalti(&self);
 
     /// Malmapu la uzantajn paĝojn, liberigu la paĝtabelojn, kiuj restas

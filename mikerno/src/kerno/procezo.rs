@@ -2,18 +2,42 @@
 //!
 //! La nukleo mem estas la procezo `0`; ĝi ne havas eron en la tabelo. Ĉiu
 //! procezo posedas propran radikan paĝtabelon, kiu kunhavas la kernajn mapojn
-//! sed havas privatan, malplenan uzantan fenestron.
+//! sed havas privatan, malplenan uzantan fenestron, plus propran 16 KiB-an
+//! kernan stakon por transiroj Ring 3 → Ring 0.
 
 use core::fmt;
 
+use crate::arkitekturo;
 use crate::arkitekturo::Spaco;
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::kadro::KadraAlokilo;
-use crate::memoro::virtuala::{AdresaSpaco, PaĝaEraro};
+use crate::memoro::virtuala::{AdresaSpaco, FizikaAdreso, PaĝaEraro};
 
 pub type ProcezaId = u64;
 
 const MAKSAJ_PROCEZOJ: usize = 8;
+const KERNA_STAKO_GRANDE: usize = 16 * 1024;
+
+#[repr(align(16))]
+struct KernaStako(#[allow(dead_code)] [u8; KERNA_STAKO_GRANDE]);
+
+// La grando estas multoblo de 16, do ankaŭ la pinto restas 16-bajte
+// aliniiĝinta, kion postulas la x86-64-ABI kaj la interrompa kadro.
+const _: () = assert!(KERNA_STAKO_GRANDE % 16 == 0);
+
+/// La kernaj stakoj apartenas al la procezaj fenestroj de la tabelo: ili vivas
+/// en `.bss` de la kerna bildo, kiun ĉiu proceza spaco kunhavas.
+static mut KERNAJ_STAKOJ: [KernaStako; MAKSAJ_PROCEZOJ] =
+    [const { KernaStako([0; KERNA_STAKO_GRANDE]) }; MAKSAJ_PROCEZOJ];
+
+/// La pinto de la kerna stako de proceza fenestro. `id` jam validiĝis en
+/// `krei`, do la indekso restas ene de la tabelo.
+fn kerna_stako_pinto(id: ProcezaId) -> u64 {
+    // SAFETY: la indekso estas ene de `KERNAJ_STAKOJ`; ni nur prenas la adreson
+    // de la ero, sen krei referencon al la `static mut`.
+    let bazo = unsafe { core::ptr::addr_of!(KERNAJ_STAKOJ[id as usize]) as u64 };
+    bazo + KERNA_STAKO_GRANDE as u64
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ProcezaEstado {
@@ -63,9 +87,7 @@ impl Procezo {
         Ok(Self {
             id,
             adresa_spaco: kerna_spaco.krei_kunhavantan(alokilo)?,
-            // La pinton de la kerna stako muntos la transiro Ring 3 → Ring 0
-            // (`TSS.RSP0`) en Fazo 3.
-            kerna_stako_pinto: 0,
+            kerna_stako_pinto: kerna_stako_pinto(id),
             estado: ProcezaEstado::Preta,
         })
     }
@@ -82,9 +104,54 @@ impl Procezo {
         self.kerna_stako_pinto
     }
 
+    pub fn radika_adreso(&self) -> FizikaAdreso {
+        self.adresa_spaco.radika_adreso()
+    }
+
     pub fn stato(&self) -> ProcezaEstado {
         self.estado
     }
+}
+
+static KERNA_RADIKO: Kunhavigita<u64> = Kunhavigita::nova(0);
+
+/// Registru la radikan `PML4`-on de la nukleo (procezo `0`) post la unua
+/// `CR3`-ŝalto. Antaŭ tio la nukleo uzas la praŝarĝilan tabularon.
+pub fn agordi_kernan_spacon(radiko: FizikaAdreso) {
+    *KERNA_RADIKO.akiri() = radiko.adreso();
+}
+
+fn kerna_radiko() -> Option<FizikaAdreso> {
+    let radiko = *KERNA_RADIKO.akiri();
+    (radiko != 0).then_some(FizikaAdreso::nova(radiko))
+}
+
+/// Aktivigu la adresan spacon kaj la kernan stakon de la donita procezo.
+/// `0` estas la nukleo mem, kiu revenas al la kerna radiko kaj al la defaŭlta
+/// `RSP0`.
+///
+/// # Sekureco
+/// Vokenda en Ring 0 kun interrompoj malŝaltitaj. La proceza spaco devas esti
+/// vivanta kaj devas kunhavigi la kernajn mapojn de la aktiva spaco; tion
+/// garantiis `krei_kunhavantan`.
+pub unsafe fn aktivigi(id: ProcezaId) {
+    let mut pinto = arkitekturo::defaŭlta_kernostako();
+    let radiko = if id == 0 {
+        kerna_radiko()
+    } else {
+        akiri(id).map(|procezo| {
+            pinto = procezo.kerna_stako_pinto;
+            procezo.radika_adreso()
+        })
+    };
+    if let Some(radiko) = radiko {
+        if arkitekturo::aktiva_adreso_spaco() != radiko.adreso() {
+            // SAFETY: la alvokanto garantias Ring 0 kun interrompoj malŝaltitaj;
+            // la celo estas viva kerna aŭ proceza `PML4` kun kunhavataj mapoj.
+            unsafe { arkitekturo::ŝalti_adresan_spacon(radiko.adreso()) };
+        }
+    }
+    arkitekturo::agordi_kernostakon(pinto);
 }
 
 static PROCEZOJ: Kunhavigita<[Option<Procezo>; MAKSAJ_PROCEZOJ]> =

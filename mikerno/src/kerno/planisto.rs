@@ -219,6 +219,15 @@ impl Planisto {
     }
 
     unsafe fn switch(&mut self, malnova: FadenoId, nova: FadenoId) {
+        let proceza = self.fadenoj[nova as usize]
+            .as_ref()
+            .map_or(0, |fadeno| fadeno.procezo);
+        // La fadenaj kontekstoj vivas en la kerna bildo, kiun ĉiu proceza
+        // spaco kunhavas, do la ŝalto povas okazi antaŭ la registra konservo.
+        // SAFETY: `switch` estas vokata nur kun interrompoj malŝaltitaj, kaj
+        // la celo estas viva fadeno kun viva proceza aŭ kerna spaco.
+        unsafe { super::procezo::aktivigi(proceza) };
+
         let malnova =
             &mut self.fadenoj[malnova as usize].as_mut().unwrap().konteksto as *mut Kunteksto;
         let nova = &self.fadenoj[nova as usize].as_ref().unwrap().konteksto as *const Kunteksto;

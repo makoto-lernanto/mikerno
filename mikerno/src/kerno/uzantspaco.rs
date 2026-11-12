@@ -10,6 +10,7 @@ use core::fmt;
 use core::ptr;
 use core::slice;
 
+use crate::interrompo::InterrompaGardo;
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::kadro::KadraAlokilo;
 use crate::memoro::virtuala::{
@@ -320,7 +321,9 @@ fn permesoj_el(skribebla: bool, plenumebla: bool) -> PaĝaPermesoj {
 ///
 /// Oni mapas du provajn paĝojn — unu skribeblan kaj unu nurlegan — kaj
 /// kontrolas pozitivajn kaj negativajn kazojn, inkluzive de la enirpunkta
-/// paĝo de la bildo. Fine oni skribas markon tra la uzanta virtuala adreso.
+/// paĝo de la bildo. Fine oni skribas markon tra la uzanta virtuala adreso;
+/// ĉar la spaco estas la proceza, ne la aktiva kerna, la provo ŝaltas `CR3`
+/// provizore kaj poste restarigas la antaŭan radikon.
 fn testi_kontrolon(
     spaco: &mut impl AdresaSpaco,
     alokilo: &mut KadraAlokilo,
@@ -371,12 +374,22 @@ fn testi_kontrolon(
     );
 
     let marko: u64 = 0x4D69_4B65_726E_6F21;
-    // SAFETY: `PROVA_BAZO` estas paĝ-aliniiĝinta uzanta paĝo, kiun la nukleo
-    // ĵus mapis skribebla; Ring 0 rajtas legi kaj skribi ĝin.
+    // La bildo loĝas en la proceza spaco, ne en la aktiva kerna spaco. Ŝaltu
+    // la procezan `CR3` provizore, skribu kaj legu tra la uzanta virtuala
+    // adreso, poste restarigu la antaŭan radikon.
+    let antaŭa = crate::arkitekturo::aktiva_adreso_spaco();
+    let _gardo = InterrompaGardo::nova();
+    spaco.ŝalti();
+    // SAFETY: `PROVA_BAZO` estas paĝ-aliniiĝinta uzanta paĝo, kiun ni ĵus
+    // mapis skribebla en `spaco`; dum ĉi tiu bloko `spaco` estas aktiva, do la
+    // virtuala adreso tradukiĝas al la freŝa kadro.
     let legita = unsafe {
         ptr::write_volatile(PROVA_BAZO as *mut u64, marko);
         ptr::read_volatile(PROVA_BAZO as *const u64)
     };
+    // SAFETY: `antaŭa` estis la radiko de la aktiva spaco antaŭ la provo; la
+    // kerna radiko kaj ĝiaj mapoj restas vivaj, do la reveno estas sekura.
+    unsafe { crate::arkitekturo::ŝalti_adresan_spacon(antaŭa) };
     crate::skribu!(
         "[uzanto] memoro: marko 0x{:x}, legita 0x{:x}\n",
         marko,

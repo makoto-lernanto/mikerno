@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-12 · Versio de la workspace: 0.2.1
+> Stato: 2026-11-12 · Versio de la workspace: 0.2.2
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -24,7 +24,7 @@
 | M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 12 pruvoj verkitaj, Kani ne instalita |
 | M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Plenumita | ABI difinita; `horizonto` plenumiĝas en Ring 3 |
 | M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj (0.1.5) |
-| M12 | Per-procesaj adresspacoj | Daŭranta | Fazo 2: proceza abstrakto kaj privata PML4 (0.2.1) |
+| M12 | Per-procesaj adresspacoj | Daŭranta | Fazo 3: `CR3`-ŝalto en la planisto, per-procesa `RSP0`, bildo en la proceza spaco (0.2.2) |
 | M13 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Venonta | — |
 | M14 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
 | M15 | Konservado, dosiersistemo, ŝelo | Venonta | — |
@@ -299,7 +299,7 @@ tempolimoj, sendblokado aŭ apartaj kernaj objektoj.
    `0x1_0000_0000`), kun 64 KiB da uzanta stako je bazo + 16 MiB kaj la bito
    `U` tra ĉiuj paĝtabelaj niveloj.
 5. Transiro per `iretq` (`CS=0x23`, `SS=0x1B`, `RFLAGS=0x202`); per-fadena
-   `TSS.RSP0` restas M12-tasko.
+   `TSS.RSP0` restis M12-tasko (plenumita en 0.2.2).
 6. Ambaŭ praŝarĝaj vojoj kaj la negativaj kazoj el Ring 3 verifitaj.
 
 **Progreso.**
@@ -430,7 +430,7 @@ horizonto: la unua procezo vekis en Ring 3.
    ripetiĝi; la `justfile` devus eventuale fari la version videbla aŭ la
    kontrolo devus ĉiam rekonstrui.
 2. **Versio hardkodita.** `kerno/mod.rs`, `mikerno/boot/limine.conf` kaj
-   `Cargo.toml` enhavas `0.2.1` sendepende. Oni devus derivi ĝin per
+   `Cargo.toml` enhavas `0.2.2` sendepende. Oni devus derivi ĝin per
    `env!("CARGO_PKG_VERSION")` kaj `build.rs`.
 3. **Kani mankas.** La formala pordego ne estas plenumebla en ĉi tiu medio;
    `just verify` malsukcesos ĝis `cargo kani` estos instalita.
@@ -464,6 +464,7 @@ procezo ne haltigas la kernon; la kadro-alokilo reuzas liberigitajn kadrojn.
 | --- | --- | --- | --- |
 | 2026-11-12 | 1. `liberigi`, kaskada `detruu`, provo ĉe starto | 0.2.0 | PVH: `[memoro] liberigo (bone): 65148 kadroj antaŭ, 65148 post`; 0 esceptoj |
 | 2026-11-12 | 2. proceza abstrakto, `krei_kunhavantan`, `mapi_uzantan` | 0.2.1 | PVH/ISO: `[procezo] 4: Preta, kerna stako 0x0, kerna mapo kunhavata, uzanta fenestro privata`; 0 esceptoj |
+| 2026-11-12 | 3. `CR3`-ŝalto, per-procesa `RSP0`, bildo en la proceza spaco | 0.2.2 | PVH: `kerna stako 0x161d60, PML4 0x204000, kerna mapo kunhavata, bildo nur en la proceza spaco jes`; ISO: PML4 `0x209000`; 0 esceptoj, 1000 tikoj |
 
 **Fazo 1 (0.2.0).** `KadraAlokilo::liberigi` malmarkas la biton, nuligas la
 kadron kaj retreatigas `sekva`; duobla liberigo estas senefika. `detruu`
@@ -497,6 +498,28 @@ montras la praŝarĝilan tabularon kun 2 MiB paĝoj. La kunhava konstruilo do
 estas aparta metodo, `krei_kunhavantan(&self, …)`: ĝi ekzakte plenumas la
 taskon 2.2 (dinamika identigo de kernaj PDPT-eroj) sen antaŭtempe kunhavigi
 la praŝarĝajn tabelojn aŭ perdi la 4 KiB-identecan mapon de la kerno.
+
+**Fazo 3 (0.2.2).** La planisto nun ŝaltas la adresan spacon de la celata
+fadeno. `procezo::kerna_stako_pinto` donas al ĉiu procezo propran 16 KiB
+kernostakon el statika tabelo `KERNAJ_STAKOJ` en `.bss` (`repr(align(16))`,
+pinto = bazo + 16384, 16-bajte aliniiĝinta sed ne paĝe aliniiĝinta); la tabelo
+evitas novan kontiguan alokan primitivon kaj la alokilon entute, do ĝi ankaŭ
+ne influas la Kani-modelon. La malnova `UZANTA_FADENA_STAKO` forfalis: la uzanta
+fadeno ekas sur la proceza kernostako, kies pinton `RSP0` poste reuzas — la
+kernaj kadroj estas mortaj post `iretq`. `kerno/mod.rs` registras la kernan
+radikon per `procezo::agordi_kernan_spacon`; `procezo::aktivigi(id)` komparas
+`arkitekturo::aktiva_adreso_spaco()` kun la celata `radika_adreso()` kaj faras
+`mov cr3` nur se ili diferencas, poste `agordi_kernostakon(pinto)` (procezo `0`
+revenas al la defaŭlta TSS-stako). `planisto::switch` vokas `aktivigi` antaŭ
+`ŝalti_kuntekston`; tio estas sekura ĉar ĉiuj fadenaj `Kunteksto`-j, la
+planista stato, la kerna bildo kaj la kernostakoj kuŝas en la kerna mapo, kiun
+ĉiu proceza spaco kunhavas, kaj `switch` ĉiam estas vokata kun `IF=0`.
+`uzantspaco::pravalorizi` nun ŝarĝas la ELF-on rekte en la procezan spacon, do
+la kerno ne plu gastigas kopion de la bildo; la memtesto de la marko portempe
+ŝaltas la procezan `CR3` sub `InterrompaGardo` kaj restarigas la antaŭan
+radikon. La starta raporto pruvas la izoladon: la kerna spaco ne havas mapon ĉe
+`bilda_komenco`, la proceza havas la kernan mapon kaj la bildon, kaj la nombro
+de liberaj kadroj restas egala antaŭ/post la memtesto.
 
 ---
 
@@ -572,8 +595,8 @@ QEMU-smokan teston; la ISO estas artefakto de CI, ne permana dosiero.
 
 | Prioritate | Ŝuldo | Efiko | Rimedo |
 | --- | --- | --- | --- |
-| Alta | Neniu uzanta izolado (komuna `PML4`, komuna kern-stako `RSP0`) | Procezoj vidas unu la alian | M12 |
-| Alta | Liberigo nur permana (`liberigi`/`detruu`), sen elira vojo | Memoro elĉerpiĝas post multaj procezoj | M12 |
+| Alta | Unu uzanta procezo; neniu proceza forigo | Bildo, privata `PDPT` kaj kadroj restas okupitaj ĝis haltigo | M12-fazoj 4–5 |
+| Alta | Liberigo nur permana (`liberigi`/`detruu`), sen elira vojo | Memoro elĉerpiĝas post multaj procezoj | M12-fazoj 4–5 |
 | Alta | Identeca mapo RWX | Malobservo de W^X | M12/M16 |
 | Alta | Neniu CI nek testoj | Regresoj nerimarkeblaj | M16 |
 | Alta | Malaktuala ISO | Konfuzaj testrezultoj | CI + versio |

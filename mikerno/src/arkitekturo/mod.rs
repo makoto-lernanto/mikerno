@@ -4,7 +4,7 @@ use core::fmt;
 
 use crate::kerno::objekto::Kunteksto;
 use crate::memoro::kadro::KadraAlokilo;
-use crate::memoro::virtuala::{AdresaSpaco, PaĝaEraro};
+use crate::memoro::virtuala::{AdresaSpaco, FizikaAdreso, PaĝaEraro};
 use crate::memoro::{EniraEraro, EniraInformo};
 
 #[cfg(target_arch = "x86_64")]
@@ -72,9 +72,35 @@ pub fn pravalorizi_temporizilon() {
     malantaŭo::temporizilo::pravalorizi();
 }
 
+/// La fizika radiko, kiun `CR3` nun montras.
+pub fn aktiva_adreso_spaco() -> u64 {
+    malantaŭo::pagxado::aktiva_radiko().adreso()
+}
+
+/// Ŝaltu `CR3` al la donita radika paĝtabelo.
+///
+/// # Sekureco
+/// Vidu `pagxado::ŝalti_radikon`.
+pub unsafe fn ŝalti_adresan_spacon(radiko: u64) {
+    unsafe { malantaŭo::pagxado::ŝalti_radikon(FizikaAdreso::nova(radiko)) }
+}
+
 /// Pretigu la kernan stakon por transiroj Ring 3 → Ring 0.
 pub fn inicialigi_kernostakon() {
     malantaŭo::tss::inicialigi_kernostakon();
+}
+
+/// Agordu `TSS.RSP0` al la kerna stako de la nuna procezo.
+///
+/// `pinto` devas esti 16-bajte aliniiĝinta kaj mapita en la kerna identeca
+/// mapo; la CPU uzos ĝin ĉe la sekva transiro Ring 3 → Ring 0.
+pub fn agordi_kernostakon(pinto: u64) {
+    malantaŭo::tss::agordi_kernostakon(pinto);
+}
+
+/// La defaŭlta kerna stakpinto de la nukleo (procezo `0`).
+pub fn defaŭlta_kernostako() -> u64 {
+    malantaŭo::tss::defaŭlta_pinto()
 }
 
 /// Transiru al Ring 3 per `iretq`; la voko neniam revenas.
