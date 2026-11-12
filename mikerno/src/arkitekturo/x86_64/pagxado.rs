@@ -50,9 +50,14 @@ pub fn pravalorizi() {
     }
 }
 
+/// Po unu bito por ĉiu PML4-ero: `1` se la suba PDPT estis alokita nur por
+/// ĉi tiu spaco kaj do rajtas esti liberigita dum `detruu`.
+const PRIVATAJ_VORTOJ: usize = 512 / 64;
+
 /// Adresa spaco de la nukleo: posedas la radikan paĝan tabelon.
 pub struct X86AdresaSpaco {
     radiko: Kadro,
+    privataj_pdptoj: [u64; PRIVATAJ_VORTOJ],
 }
 
 /// La fizika radiko, kiun `CR3` nun montras.
@@ -93,11 +98,18 @@ impl X86AdresaSpaco {
     fn nova(alokilo: &mut KadraAlokilo) -> Result<Self, PaĝaEraro> {
         let kadro = alokilo.aloki().ok_or(PaĝaEraro::Elĉerpita)?;
         nuligi(kadro);
-        Ok(Self { radiko: kadro })
+        Ok(Self {
+            radiko: kadro,
+            privataj_pdptoj: [0; PRIVATAJ_VORTOJ],
+        })
     }
 
     fn radiko(&self) -> FizikaAdreso {
         FizikaAdreso::nova(self.radiko.adreso())
+    }
+
+    fn ĉu_privata(&self, indekso: usize) -> bool {
+        self.privataj_pdptoj[indekso / 64] & (1 << (indekso % 64)) != 0
     }
 }
 
@@ -107,8 +119,13 @@ impl AdresaSpaco for X86AdresaSpaco {
     }
 
     fn krei_kunhavantan(&self, alokilo: &mut KadraAlokilo) -> Result<Self, PaĝaEraro> {
-        let nova = Self::nova(alokilo)?;
-        if let Err(eraro) = kopii_kernajn(self.radiko(), nova.radiko(), alokilo) {
+        let mut nova = Self::nova(alokilo)?;
+        if let Err(eraro) = kopii_kernajn(
+            self.radiko(),
+            nova.radiko(),
+            &mut nova.privataj_pdptoj,
+            alokilo,
+        ) {
             forigi_kopion(nova.radiko(), self.radiko(), alokilo);
             return Err(eraro);
         }
@@ -119,6 +136,13 @@ impl AdresaSpaco for X86AdresaSpaco {
         self.radiko()
     }
 
+    fn privataj_pdptoj(&self) -> usize {
+        self.privataj_pdptoj
+            .iter()
+            .map(|vorto| vorto.count_ones() as usize)
+            .sum()
+    }
+
     fn ŝalti(&self) {
         // PAE, LME kaj CR0.PG jam estas ŝaltitaj de la praŝarĝa ŝelko.
         // SAFETY: la radika kadro apartenas al ĉi tiu viva spaco, kiu enhavas
@@ -127,7 +151,32 @@ impl AdresaSpaco for X86AdresaSpaco {
     }
 
     fn detruu(self, alokilo: &mut KadraAlokilo) -> Result<(), PaĝaEraro> {
+        // 1. La uzanta fenestro: folioj kaj la tabeloj, kiuj restas malplenaj.
         liberigi_intervalon(self.radiko(), UZANTA_BAZO, UZANTA_FINO, alokilo)?;
+
+        // 2. La privataj PDPT-oj. `kopii_kernajn` alokis ilin nur por ĉi tiu
+        // spaco, do ili ne estas kunhavataj kun la nukleo aŭ alia procezo.
+        // Post la fenestra liberigo ili rajtas enhavi nur `U=0`-erojn; se
+        // uzanta ero restus, ĝi kuŝus ekster la fenestro kaj la spaco estus
+        // difektita — tiam ni rifuzas liberigi la PDPT-on anstataŭ riski
+        // kernan mapon.
+        for indekso in 0..512 {
+            if !self.ĉu_privata(indekso) {
+                continue;
+            }
+            let valoro = ero(self.radiko(), indekso);
+            if valoro & PREZENTA == 0 {
+                continue;
+            }
+            let pdpt = FizikaAdreso::nova(valoro & ADRESO_MASKO);
+            if ĉu_uzanta_tabelo(pdpt) {
+                return Err(PaĝaEraro::Konflikto);
+            }
+            agordi_eron(self.radiko(), indekso, 0);
+            alokilo.liberigi(Kadro::el_adreso(pdpt.adreso()));
+        }
+
+        // 3. La radika kadro mem.
         alokilo.liberigi(self.radiko);
         Ok(())
     }
@@ -243,11 +292,12 @@ fn nuligi(kadro: Kadro) {
 ///
 /// Puraj kernaj subtableoj restas kunhavataj (la sama fizika kadro). PML4-ero
 /// kun uzantaj eroj — aŭ kiu enhavas parton de la uzanta fenestro — ricevas
-/// privatan PDPT-on, en kiu nur la `U=0`-eroj estas kopiitaj. Tiel la nova
-/// spaco heredas la tutan kernan mapon sed neniun uzantan folion.
+/// privatan PDPT-on, en kiu nur la `U=0`-eroj estas kopiitaj; la indekso estas
+/// registrita en `privataj`, por ke `detruu` liberigu ĝuste tiujn kadrojn.
 fn kopii_kernajn(
     fonto: FizikaAdreso,
     celo: FizikaAdreso,
+    privataj: &mut [u64; PRIVATAJ_VORTOJ],
     alokilo: &mut KadraAlokilo,
 ) -> Result<(), PaĝaEraro> {
     for indekso in 0..512 {
@@ -278,6 +328,7 @@ fn kopii_kernajn(
         // La flagoj de la PML4-ero (inkluzive `U`, kiu malfermas la fenestron)
         // restas; nur la adreso montras al la privata PDPT.
         agordi_eron(celo, indekso, (valoro & !ADRESO_MASKO) | kadro.adreso());
+        privataj[indekso / 64] |= 1 << (indekso % 64);
     }
     Ok(())
 }

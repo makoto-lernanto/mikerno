@@ -228,11 +228,16 @@ pub trait AdresaSpaco: PaĝaTablo {
     /// La fizika adreso de la radika paĝtabelo, uzata por `CR3`.
     fn radika_adreso(&self) -> FizikaAdreso;
 
+    /// Kiom da privataj PDPT-kadroj la spaco posedas. Ili estis alokitaj de
+    /// `krei_kunhavantan` nur por ĉi tiu spaco kaj estas liberigitaj de
+    /// `detruu`; la nombro utilas por diagnozo.
+    fn privataj_pdptoj(&self) -> usize;
+
     /// Ŝaltu la procesoran `CR3` al ĉi tiu spaco.
     fn ŝalti(&self);
 
     /// Malmapu la uzantajn paĝojn, liberigu la paĝtabelojn, kiuj restas
-    /// malplenaj, kaj la radikan kadron.
+    /// malplenaj, la privatajn PDPT-ojn kaj la radikan kadron.
     ///
     /// # Antaŭkondiĉo
     /// La spaco ne rajtas esti la aktiva en `CR3`: ĝiaj mapoj malaperos.

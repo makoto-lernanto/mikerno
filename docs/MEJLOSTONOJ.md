@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-12 · Versio de la workspace: 0.2.2
+> Stato: 2026-11-12 · Versio de la workspace: 0.2.3
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -24,7 +24,7 @@
 | M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 12 pruvoj verkitaj, Kani ne instalita |
 | M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Plenumita | ABI difinita; `horizonto` plenumiĝas en Ring 3 |
 | M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj (0.1.5) |
-| M12 | Per-procesaj adresspacoj | Daŭranta | Fazo 3: `CR3`-ŝalto en la planisto, per-procesa `RSP0`, bildo en la proceza spaco (0.2.2) |
+| M12 | Per-procesaj adresspacoj | Daŭranta | Fazo 4: preciza liberigo de privataj `PDPT`-oj, proceza detruo ĉe `FINI`/`#PF` (0.2.3) |
 | M13 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Venonta | — |
 | M14 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
 | M15 | Konservado, dosiersistemo, ŝelo | Venonta | — |
@@ -430,7 +430,8 @@ horizonto: la unua procezo vekis en Ring 3.
    ripetiĝi; la `justfile` devus eventuale fari la version videbla aŭ la
    kontrolo devus ĉiam rekonstrui.
 2. **Versio hardkodita.** `kerno/mod.rs`, `mikerno/boot/limine.conf` kaj
-   `Cargo.toml` enhavas `0.2.2` sendepende. Oni devus derivi ĝin per
+   `Cargo.toml` enhavas la nunan version (`0.2.3`) sendepende. Oni devus derivi
+   ĝin per
    `env!("CARGO_PKG_VERSION")` kaj `build.rs`.
 3. **Kani mankas.** La formala pordego ne estas plenumebla en ĉi tiu medio;
    `just verify` malsukcesos ĝis `cargo kani` estos instalita.
@@ -465,6 +466,7 @@ procezo ne haltigas la kernon; la kadro-alokilo reuzas liberigitajn kadrojn.
 | 2026-11-12 | 1. `liberigi`, kaskada `detruu`, provo ĉe starto | 0.2.0 | PVH: `[memoro] liberigo (bone): 65148 kadroj antaŭ, 65148 post`; 0 esceptoj |
 | 2026-11-12 | 2. proceza abstrakto, `krei_kunhavantan`, `mapi_uzantan` | 0.2.1 | PVH/ISO: `[procezo] 4: Preta, kerna stako 0x0, kerna mapo kunhavata, uzanta fenestro privata`; 0 esceptoj |
 | 2026-11-12 | 3. `CR3`-ŝalto, per-procesa `RSP0`, bildo en la proceza spaco | 0.2.2 | PVH: `kerna stako 0x161d60, PML4 0x204000, kerna mapo kunhavata, bildo nur en la proceza spaco jes`; ISO: PML4 `0x209000`; 0 esceptoj, 1000 tikoj |
+| 2026-11-12 | 4. privataj `PDPT`-oj, detruo ĉe `FINI`/`#PF`, reuzoprovo kaj du procezoj | 0.2.3 | PVH: `reuzo (bone): 10 cikloj, 64984 kadroj antaŭ, 64984 post`; `[procezo] 4 detruita: 1 privataj PDPT-oj … 27 kadroj liberigitaj`; `[eraro] procezo 5: paĝa eraro … CR2=0xdeadbeef`; ISO: sama, 64982 kadroj; `fina stato: 5 mortintaj` |
 
 **Fazo 1 (0.2.0).** `KadraAlokilo::liberigi` malmarkas la biton, nuligas la
 kadron kaj retreatigas `sekva`; duobla liberigo estas senefika. `detruu`
@@ -520,6 +522,37 @@ la kerno ne plu gastigas kopion de la bildo; la memtesto de la marko portempe
 radikon. La starta raporto pruvas la izoladon: la kerna spaco ne havas mapon ĉe
 `bilda_komenco`, la proceza havas la kernan mapon kaj la bildon, kaj la nombro
 de liberaj kadroj restas egala antaŭ/post la memtesto.
+
+**Fazo 4 (0.2.3).** `detruu` nun liberigas ankaŭ la privatajn `PDPT`-ojn.
+`X86AdresaSpaco` tenas 512-bitan bitaron `privataj_pdptoj`, kiun
+`kopii_kernajn` plenigas por ĉiu `PML4`-ero, kiun ĝi privatigis. Post la
+fenestra liberigo `detruu` trairas nur tiujn indeksojn, forigas la eron el la
+radika tabelo kaj redonas la kadron. La kerno ne liberigas blinde la subtableojn
+de `PML4[0]`: tie kuŝas la identeca mapo de la unuaj 4 GiB, do `PML4[0]` estas
+ĉiam privatigita, sed la `U=0`-eroj en ĝia `PDPT` estas kopioj de la kernaj
+mapoj, ne apartenaj kadroj. Se post la fenestra liberigo restus `U=1`-ero,
+`detruu` rifuzas per `Konflikto` anstataŭ riski kernan mapon.
+`kerno/procezo::detrui` reŝaltas la kernan `CR3` se la proceza estas aktiva —
+la nuna kodo kaj la kernaj stakoj kuŝas en la kunhavata kerna mapo — kaj
+raportas la antaŭan kaj postan nombrojn de liberaj kadroj. Ĉar MiKerno ne uzas
+PCID, tiu `mov cr3` ankaŭ malplenigas la TLB; neniu malnova mapo restas videbla.
+
+La planisto nun detruas la procezon en `morti`: `SYS_FINI` kaj mortiga Ring
+3-escepto sekvas la saman vojon. La escepta dispetĉo kontrolas `CS & 3 == 3`
+kaj, por vektoro 14 aŭ 13, printas `[eraro] procezo N …` kun `rip`,
+`erarkodo` kaj `CR2`, poste vokas `planisto::morti()`; `#PF`/`#GP` el Ring 0
+kaj ĉiuj aliaj esceptoj restas fatalaj kaj haltigas la sistemon.
+
+Por pruvi la vojon la praŝarĝo rulas `testi_procezan_reuzon`: dek fojojn
+`krei` + `munti` + `detrui` de proceza spaco kun la reala `horizonto`-bildo,
+kaj komparas `liberaj()` antaŭ/post (PVH `64984`, ISO `64982` — egalaj). Poste
+ĝi lanĉas procezon `4` kun `REĜIMO_FINI` (eliro per `SYS_FINI`) kaj procezon
+`5` kun `REĜIMO_KRUI` (intenca legado de `0xdeadbeef`). La reĝimo vojaĝas en
+`RDI` tra `iretq` al `horizonto_start(reĝimo)`. Ĉiu detruo raportas
+`[procezo] N detruita: 1 privataj PDPT-oj, PML4 0x…, 27 kadroj liberigitaj`;
+la dua procezo montras la kapton
+`[eraro] procezo 5: paĝa eraro ĉe rip=…, erarkodo=0x4, CR2=0xdeadbeef`, kaj la
+sistemo daŭras ĝis `fina stato: 5 mortintaj`.
 
 ---
 
@@ -595,15 +628,14 @@ QEMU-smokan teston; la ISO estas artefakto de CI, ne permana dosiero.
 
 | Prioritate | Ŝuldo | Efiko | Rimedo |
 | --- | --- | --- | --- |
-| Alta | Unu uzanta procezo; neniu proceza forigo | Bildo, privata `PDPT` kaj kadroj restas okupitaj ĝis haltigo | M12-fazoj 4–5 |
-| Alta | Liberigo nur permana (`liberigi`/`detruu`), sen elira vojo | Memoro elĉerpiĝas post multaj procezoj | M12-fazoj 4–5 |
+| Alta | Sekvencaj uzantaj procezoj; neniu `fork`/`exec` | Ne eblas samtempa multprocezeco aŭ dinamika lanĉo | M15 |
+| Alta | Ring 3-esceptoj krom `#PF`/`#GP` haltigas la sistemon | Ne rekaptebla eraro (ekz. `#UD`) | M12/M16 |
 | Alta | Identeca mapo RWX | Malobservo de W^X | M12/M16 |
 | Alta | Neniu CI nek testoj | Regresoj nerimarkeblaj | M16 |
 | Alta | Malaktuala ISO | Konfuzaj testrezultoj | CI + versio |
 | Meza | Versio hardkodita en 3 lokoj | Malkongruaj eldonoj | `env!` + `build.rs` |
 | Meza | IPC finpunkto = fadeno | Ne eblas sendependaj objektoj | M13 |
 | Meza | Framebuffer sen rulumo | Malbona uzsperto | M6-poste |
-| Meza | Esceptoj haltigas | Ne rekaptebla eraro | M12 |
 | Malalta | `Kunhavigita::akiri` prenas `&self` | Facila misuzo | revizio |
 | Malalta | Kani-modelo ≠ produkta kodo | Pruvoj ne rekte aplikeblas | M9 |
 | Malalta | Neniu `LICENSE` | Jura neklaro | M16 |

@@ -110,6 +110,31 @@ fn estas_apic_vektoro(vektoro: usize) -> bool {
 }
 
 fn trakti_escepton(kadro: &mut InterrompaKadro) -> ! {
+    // `#GP` kaj `#PF` el Ring 3 apartenas al la uzanta procezo, ne al la
+    // kerno: la procezo estas mortigata kaj la planisto daŭrigas. Ĉiuj aliaj
+    // esceptoj — ankaŭ la samaj vektoroj el Ring 0 — restas fatalaj.
+    if kadro.cs & 3 == 3 && matches!(kadro.vektoro, 13 | 14) {
+        let nomo = if kadro.vektoro == 14 {
+            "paĝa eraro"
+        } else {
+            "ĝenerala protekta eraro"
+        };
+        crate::skribu!(
+            "\n[eraro] procezo {}: {} ĉe rip=0x{:016x}, erarkodo=0x{:x}",
+            crate::kerno::planisto::nuna_procezo(),
+            nomo,
+            kadro.rip,
+            kadro.erarkodo
+        );
+        if kadro.vektoro == 14 {
+            crate::skribu!(", CR2=0x{:016x}", crate::arkitekturo::fuŝa_adreso());
+        }
+        crate::skribu!("; la procezo estas mortigata\n");
+        // `morti` detruas la procezan adresan spacon, elektas alian fadenon
+        // kaj neniam revenas al ĉi tiu kadro.
+        crate::kerno::planisto::morti()
+    }
+
     crate::skribu!(
         "\n[kerno] escepto {} (erarkodo 0x{:x}) rip=0x{:016x} rsp=0x{:016x} rflags=0x{:x}\n",
         kadro.vektoro,

@@ -10,7 +10,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.2.2 (workspace)
+- **Versio:** 0.2.3 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.85`
@@ -49,7 +49,9 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 | Modula liverado: Multiboot2 tipo 3 kaj PVH-modlisto (`horizonto`) | Funkcias | `mb2.rs`, `pvh.rs`, `memoro/mod.rs` |
 | Bitmapa kadro-alokilo por la unuaj 4 GiB, kun `liberigi` kaj rekuzo | Funkcias | `memoro/kadro.rs` |
 | Kaskada forigo de adresa spaco (`detruu`) kun liberigo de paĝtabeloj | Funkcias | `arkitekturo/x86_64/pagxado.rs` |
+| Preciza liberigo de privataj `PDPT`-oj (inkl. `PML4[0]`) sen tuŝi kunhavatajn kernajn mapojn | Funkcias | `pagxado.rs`, `kerno/procezo.rs` |
 | Per-procesa adresa spaco: privata PML4, kunhavataj kernaj mapoj (`krei_kunhavantan`) | Funkcias | `kerno/procezo.rs`, `pagxado.rs` |
+| Proceza detruo ĉe `SYS_FINI` kaj ĉe mortiga Ring 3-escepto (`#PF`, `#GP`) | Funkcias | `kerno/planisto.rs`, `interrompo/mod.rs` |
 | `CR3`-ŝalto dum kuntekstŝanĝo kaj per-procesa `TSS.RSP0` (16 KiB kerna stako) | Funkcias | `kerno/planisto.rs`, `kerno/procezo.rs`, `tss.rs` |
 | Strikta uzanta mapado (`mapi_uzantan`): fenestra limkontrolo kaj devigata bito `U` | Funkcias | `memoro/virtuala.rs`, `kerno/uzantspaco.rs` |
 | 4-nivela paĝado (PML4 → PDPT → PD → PT), NX, PCD | Funkcias | `arkitekturo/x86_64/pagxado.rs` |
@@ -66,15 +68,17 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 | Uzanta fenestro super 4 GiB, ELF64-ŝargo kun bito `U`, 64 KiB stako | Funkcias | `kerno/uzantspaco.rs`, `memoro/virtuala.rs` |
 | Ring 3-transiro per `iretq` (`CS=0x23`, `SS=0x1B`, `IF=1`) | Funkcias | `arkitekturo/x86_64/uzanta.rs` |
 | Unua uzanta procezo `horizonto`: `SKRIBI` + `FINI` el Ring 3 | Funkcias | `horizonto/`, `kerno/sistemvoko.rs` |
+| Ring 3-escepta kapto: `#PF`/`#GP` mortigas la procezon kaj la sistemo daŭras | Funkcias | `interrompo/mod.rs` |
 | 12 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ipc.rs` |
 
 > `horizonto` estas liverata kiel praŝarĝa modulo, muntata super 4 GiB kun la
 > bito `U` tra ĉiuj paĝtabelaj niveloj, kaj ekzekutas en Ring 3 per `iretq`.
-> Ĝi skribas sian saluton per `int 0x80` kaj eliras per `fini(0)`; la planisto
-> tiam revenas al la ripoza kunteksto. La bildo estas ŝargata nur en la privata
-> adresa spaco de la procezo; kiam la planisto elektas ĝian fadenon, ĝi ŝaltas
-> `CR3` al tiu spaco kaj `TSS.RSP0` al la propra 16 KiB-a kerna stako. Malmapi
-> kaj liberigi la spacon ĉe eliro restas M12-fazoj 4–5.
+> La praŝarĝo lanĉas ĝin dufoje: procezo `4` eliras per `fini(0)`, procezo `5`
+> intence legas nemapitan adreson. Ambaŭokaze la kerno mortigas la fadenon,
+> detruas ĝian tutan adresan spacon — inkl. la privatan `PDPT`-on sub
+> `PML4[0]` — kaj la planisto daŭrigas kun la ripoza kunteksto. La bildo estas
+> ŝargata nur en la privata adresa spaco; kiam la planisto elektas ĝian fadenon,
+> ĝi ŝaltas `CR3` al tiu spaco kaj `TSS.RSP0` al la propra 16 KiB-a kerna stako.
 
 ---
 
@@ -181,11 +185,12 @@ kerno::ĉefa                          kerno/mod.rs
   · nova PML4 (4 KiB paĝoj), identeca mapo, framebuffer (PCD)
   · modulaj regionoj identece mapitaj, CR3 ŝalto, konzolo, TSS/RSP0
   · APIC + temporizilo (100 Hz)
-  · procezo 4: privata PML4 + 16 KiB kerna stako, kernaj mapoj kunhavataj
-  · uzantspaco: ELF64-segmentoj + stako nur en la proceza spaco (`mapi_uzantan`)
+  · reuzoprovo: 10× krei/munti/detrui procezan spacon, liberaj kadroj egalaj
   · IPC-testo, 3 testaj fadenoj (procezo 0), planisto
-  · `horizonto` en Ring 3 en la proceza spaco: `CR3`-ŝalto + per-procesa `RSP0`
-  · `FINI` revenigas la planiston al la kerna `CR3`; 10 s da observado, halto
+  · procezo 4 (`REĜIMO_FINI`): privata PML4, bildo + 64 KiB stako, Ring 3
+  · `SYS_FINI`: `detrui` liberigas privatan `PDPT`, bildon, stakon kaj PML4
+  · procezo 5 (`REĜIMO_KRUI`): Ring 3 legas `0xdeadbeef` → `#PF` → mortigo
+  · `detrui` denove; 10 s da observado, halto
 ```
 
 ---
@@ -280,7 +285,11 @@ ciferpremo kaj ŝaltas `U` ĉe la folio kaj ĉiuj gepatraj niveloj.
   traktilo por vektoroj ≥ `0x20` (krom la spuria `0xFF`), ĉar traktilo rajtas
   ŝanĝi la kuntekston kaj la sekva tiko devas povi alveni dum la nova fadeno
   plenumas. Nekonataj esceptoj (`< 0x20`) raportas `rip`, `rsp`, `rflags`,
-  `erarkodo` kaj — por vektoro 14 — `CR2`, poste haltigas la sistemon.
+  `erarkodo` kaj — por vektoro 14 — `CR2`. Escepto el Ring 0 haltigas la
+  sistemon. Escepto `#PF` (14) aŭ `#GP` (13) el Ring 3 apartenas al la uzanta
+  procezo: la kerno printas `[eraro] procezo N …` kun `rip`/`erarkodo`/`CR2`,
+  vokas `planisto::morti()` (kiu detruas la procezan spacon) kaj daŭrigas kun
+  la sekva fadeno anstataŭ `halti()`.
 - **APIC** (`apic.rs`): la 8259-PIC estas maskita, la APIC-bazo venas el
   `IA32_APIC_BASE`, la spuria vektoro estas `0xFF`. Restas en MMIO-reĝimo (la
   x2APIC-bito estas nuligita de la masko).
@@ -311,10 +320,11 @@ ciferpremo kaj ŝaltas `U` ĉe la folio kaj ĉiuj gepatraj niveloj.
   radiko diferencas de la aktiva `CR3`, ĝi ŝaltas `CR3` al la proceza `PML4`;
   samtempe ĝi agordas `TSS.RSP0` al la proceza 16 KiB-a kerna stako (aŭ al la
   defaŭlta kerna stako por procezo `0`);
-- la uzanta fadeno (id 4) estas planita post la testaj: ĝia enirpunkto
-  transiras al Ring 3 per `iretq`, kaj `SYS_FINI` mortigas ĝin, do la planisto
-  elektas la ripozan kuntekston, reŝaltas la kernan `CR3` kaj la observado
-  daŭras.
+- la uzantaj fadenoj (id 4 kaj 5) estas planitaj post la testaj: iliaj
+  enirpunktoj transiras al Ring 3 per `iretq` kun la reĝimo en `RDI`. Fadeno 4
+  eliras per `SYS_FINI`, fadeno 5 kaŭzas `#PF`; ambaŭokaze `morti` detruas la
+  procezan spacon, do la planisto elektas la ripozan kuntekston, reŝaltas la
+  kernan `CR3` kaj la observado daŭras.
 
 `switch` revenas nur kiam la malnova kunteksto estas planita denove. La ripoza
 kunteksto konservas sian interrompan kadron sur la stako, do `planumi` povas
@@ -442,7 +452,7 @@ interrompa kadro. `Fadeno` portas `procezo`-idon, kaj la planisto spegulas
 **ŝargas la bildon rekte en ĝian spacon**. La konzolo konfirmas per:
 
 ```text
-[procezo] 4: Preta, kerna stako 0x161d60, PML4 0x204000, kerna mapo kunhavata, bildo nur en la proceza spaco jes
+[procezo] 4: Preta, kerna stako 0x167d70, PML4 0x205000, kerna mapo kunhavata, bildo nur en la proceza spaco jes
 ```
 
 La kontrolo legas `traduki(0x1000)` en la proceza spaco (kerna mapo ĉeestas)
@@ -452,12 +462,23 @@ ekzistas nur en la propra spaco). Dum planado `aktivigi(4)` komparas la aktivan
 `0` ĝi revenas al la kerna radiko. Samtempe `TSS.RSP0` montras al la kerna
 stako de la elektita procezo.
 
+`krei_kunhavantan` registras en `X86AdresaSpaco` kiujn `PML4`-indeksojn ĝi
+privatigis (`privataj_pdptoj`). La indekso `0` ĉiam estas privata: ĝi portas
+kaj la identecan mapon de la unuaj 4 GiB kaj la uzantan fenestron. `detruu`
+tial unue malmapas la fenestron (folioj, poste malplenaj `PT`/`PD`), poste
+liberigas **nur la registritajn privatajn `PDPT`-ojn** — neniam la kunhavatajn
+kernajn subtableojn — kaj laste la radikan `PML4`-on. Se post la fenestra
+liberigo restus `U=1`-ero en privata `PDPT`, la spaco estus difektita kaj
+`detruu` rifuzas liberigi ĝin (`Konflikto`) anstataŭ riski kernan mapon.
+`KadraAlokilo::liberigi` nuligas la kadron kaj traktas duoblan liberigon kiel
+senefikan.
+
 ### Transiro al Ring 3
 
-Post la testaj fadenoj la praŝarĝa kunteksto aldonas la uzantan fadenon (id 4)
-kaj planas ĝin; la fadeno unue plenumas sur la kerna stako de sia procezo (la
-sama pinto, kiun `TSS.RSP0` uzos poste). `arkitekturo/x86_64/uzanta.rs`
-konstruas la `iretq`-kadron sur tiu stako:
+Post la testaj fadenoj la praŝarĝa kunteksto lanĉas la du `horizonto`-procezojn
+sinsekve; ĉiu fadeno unue plenumas sur la kerna stako de sia procezo (la sama
+pinto, kiun `TSS.RSP0` uzos poste). `arkitekturo/x86_64/uzanta.rs` konstruas
+la `iretq`-kadron sur tiu stako:
 
 ```text
 push SS=0x1B
@@ -465,14 +486,19 @@ push RSP=UZANTA_STAKO_SUPRO - 8
 push RFLAGS=0x202        (IF=1 + rezervita bito 1)
 push CS=0x23
 push RIP=enirpunkto
+mov  RDI=reĝimo          (0 = FINI, 1 = intenca #PF)
 iretq
 ```
 
 La stakpinto estas malaltigita je 8 por ke la x86-64-ABI vidu `rsp % 16 == 8`
-ĉe la funkcia eniro. La `int 0x80`-pordego havas DPL3, do Ring 3 rajtas voki
+ĉe la funkcia eniro; `RDI` transdonas la komencan reĝimon al `extern "C"
+fn horizonto_start(reĝimo: u64)` (`REĜIMO_FINI` aŭ `REĜIMO_KRUI` el
+`libmikerno::starto`). La `int 0x80`-pordego havas DPL3, do Ring 3 rajtas voki
 `SKRIBI` kaj `FINI`; la CPU ŝaltas al `TSS.RSP0` por ĉiu reveno al Ring 0.
-Post `fini(0)` la fadeno mortas kaj la planisto revenas al la ripoza
-kunteksto, kiu daŭrigas la observadon.
+Post `fini(0)` la fadeno mortas, la proceza spaco estas detruita kaj la
+planisto revenas al la ripoza kunteksto, kiu lanĉas la duan procezon. Ĝi legas
+la nemapitan `0xdeadbeef`; la `#PF` el Ring 3 mortigas ĝin same, kaj la
+ripoza kunteksto daŭrigas la observadon.
 
 Antaŭ la eliro `horizonto` kontrolas la negativajn kontraktojn el Ring 3: vojo
 `0x7FFF` (nekonata), nula montrilo, kerna adreso `0x1000` kaj troa longo
@@ -514,8 +540,8 @@ Ambaŭ praŝarĝaj vojoj estis praktike testitaj per QEMU 256 MiB:
 
 | Vojo | Rezulto |
 | --- | --- |
-| PVH (`-kernel` + `-initrd`) | 7 regionoj, 255 MiB uzeblaj, sen framebuffer, bildo `0x100000000..0x100001082`, 8/8 kontroloj, procezo `4` kun propra PML4 (`0x204000`) kaj 16 KiB kerna stako (`0x161d60`), bildo nur en la proceza spaco, `horizonto` kaj negativaj kazoj en Ring 3, 1000 tikoj, 4 fadenoj mortintaj |
-| Limine/Multiboot2 (ISO) | framebuffer `1280x800, 32 bpp`, bildo `0x100000000..0x100001082`, 8/8 kontroloj, procezo `4` kun propra PML4 (`0x209000`) kaj 16 KiB kerna stako (`0x161d60`), bildo nur en la proceza spaco, `horizonto` kaj negativaj kazoj en Ring 3, 1000 tikoj, 4 fadenoj mortintaj |
+| PVH (`-kernel` + `-initrd`) | 7 regionoj, 255 MiB uzeblaj, sen framebuffer, reuzoprovo `10 cikloj, 64984 kadroj antaŭ, 64984 post`, procezoj `4` kaj `5` kun propra PML4 (`0x205000`), 16 KiB kerna stako, bildo nur en la proceza spaco, `1 privataj PDPT-oj`, `27 kadroj liberigitaj` po procezo, `#PF` de procezo `5` kaptita, 1000 tikoj, 5 fadenoj mortintaj |
+| Limine/Multiboot2 (ISO) | framebuffer `1280x800, 32 bpp`, reuzoprovo `10 cikloj, 64982 kadroj antaŭ, 64982 post`, procezoj `4` kaj `5` kun propra PML4 (`0x20a000`), 16 KiB kerna stako, bildo nur en la proceza spaco, `1 privataj PDPT-oj`, `27 kadroj liberigitaj` po procezo, `#PF` de procezo `5` kaptita, 1000 tikoj, 5 fadenoj mortintaj |
 
 `just verify` ne estis rulita en ĉi tiu medio, ĉar `cargo kani` ne estas
 instalita. La 12 pruvoj (6 pri la kadro-alokilo, 6 pri la mesaĝujo) estas
@@ -526,33 +552,46 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.2.2!
+[MiKerno] Saluton, mi estas MiKerno v0.2.3!
 [sistemvoko] pordego 0x80 (DPL3) instalita
 [kerno] memoro: 7 regionoj, 255 MiB uzeblaj
-[memoro] liberigo (bone): 65118 kadroj antaŭ, 65118 post
+[memoro] liberigo (bone): 65117 kadroj antaŭ, 65117 post
 [kerno] framebuffer 1280x800, 32 bpp        (nur ISO)
-[tss] TR ŝargita; kernostako pinto 0x174b80
+[tss] TR ŝargita; kernostako pinto 0x122d90
 [temporizilo] kalibrado: ... kalkuloj/s, komenca ...
 [kerno] APIC 0 kaj paĝado pretaj; temporizilo 100 Hz
-[uzanto] horizonto: bildo 0x100000000..0x100001082, enirpunkto 0x1000000d0
-[uzanto] stako 0x100ff0000..0x101000000 (64 KiB), pinto 0x101000000
-[uzanto] kontrolo (bone): skriba=true lega=true nurlega_skribo=false kerna=false nemapita=false translima=false eksterfenestra=false enirpunkta=true
-[uzanto] memoro: marko 0x4d694b65726e6f21, legita 0x4d694b65726e6f21
-[procezo] 4: Preta, kerna stako 0x161d60, PML4 0x..., kerna mapo kunhavata, bildo nur en la proceza spaco jes
+[procezo] 6 detruita: 1 privataj PDPT-oj, PML4 0x205000, 23 kadroj liberigitaj
+... (10 reuzaj cikloj)
+[memoro] reuzo (bone): 10 cikloj, 64984 kadroj antaŭ, 64984 post
 [kerno] IPC: mesaĝo sendita al fadeno 2
 [kerno] planisto ekas: 3 fadenoj, antaŭokupo ĉiu 10 ms
 saluton el Ring 0 tra int 0x80
 [sistemvoko] Ring 0-memtesto: skribo=0, nekonata=-2, nula=-1, troa=-1, cedo=0
 ...
 [planisto] fadeno 3 finiĝis
-[kerno] horizonto ekas en Ring 3: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x1000000d0
+[uzanto] horizonto: bildo 0x100000000..0x1000010e2, enirpunkto 0x100000080
+[uzanto] stako 0x100ff0000..0x101000000 (64 KiB), pinto 0x101000000
+[uzanto] kontrolo (bone): skriba=true lega=true nurlega_skribo=false kerna=false nemapita=false translima=false eksterfenestra=false enirpunkta=true
+[uzanto] memoro: marko 0x4d694b65726e6f21, legita 0x4d694b65726e6f21
+[procezo] 4: Preta, kerna stako 0x167d70, PML4 0x205000, kerna mapo kunhavata, bildo nur en la proceza spaco jes
+[kerno] horizonto ekas en Ring 3: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x100000080
 horizonto: la unua procezo vekis en Ring 3.
 [ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1
 [planisto] fadeno 4 finiĝis
-[kerno] horizonto finiĝis; planisto revenis
+[procezo] 4 detruita: 1 privataj PDPT-oj, PML4 0x205000, 27 kadroj liberigitaj
+[uzanto] horizonto: bildo 0x100000000..0x1000010e2, enirpunkto 0x100000080
+[procezo] 5: Preta, kerna stako 0x16bd70, PML4 0x205000, kerna mapo kunhavata, bildo nur en la proceza spaco jes
+[kerno] horizonto ekas en Ring 3: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x100000080
+horizonto: la unua procezo vekis en Ring 3.
+[ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1
+[ring3] provokas paĝan eraron ĉe 0xdeadbeef
+
+[eraro] procezo 5: paĝa eraro ĉe rip=0x0000000100000021, erarkodo=0x4, CR2=0x00000000deadbeef; la procezo estas mortigata
+[planisto] fadeno 5 finiĝis
+[procezo] 5 detruita: 1 privataj PDPT-oj, PML4 0x205000, 27 kadroj liberigitaj
 [kerno] planisto revenis al la ripoza fadeno
 ...
-[kerno] fina stato: 4 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+[kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
 ```
 
 ---
@@ -568,13 +607,20 @@ horizonto: la unua procezo vekis en Ring 3.
    **fadeno 3**, kiu vekiĝas kaj printas ĝin.
 4. Post la lasta fojo ĉiu fadeno finiĝas; la planisto revenas al la ripoza
    kunteksto.
-5. La praŝarĝo aldonas la uzantan fadenon: `horizonto` ekas en Ring 3 per
-   `iretq`, skribas sian saluton per `int 0x80`, kontrolas la negativajn
-   kazojn (nekonata voko, nula kaj kerna montrilo, troa longo) kaj eliras per
-   `fini(0)`. `SYS_FINI` mortigas la fadenon, do la planisto denove elektas la
-   ripozan kuntekston.
-6. La praŝarĝo observas 1000 tikojn (≈10 s ĉe 100 Hz), printas la finan staton
-   kaj haltas per `hlt`.
+5. Antaŭ la uzantaj procezoj la praŝarĝo rulas la reuzoprovo: ĝi kreas la
+   procezan spacon kun la sama bildo kaj stako, detruas ĝin kaj ripetas dek
+   fojojn. La nombro de liberaj kadroj devas esti egala antaŭ kaj post.
+6. La praŝarĝo lanĉas procezon `4`: `horizonto` ekas en Ring 3 per `iretq`,
+   skribas sian saluton per `int 0x80`, kontrolas la negativajn kazojn
+   (nekonata voko, nula kaj kerna montrilo, troa longo) kaj eliras per
+   `fini(0)`. `SYS_FINI` mortigas la fadenon kaj detruas la tutan adresan
+   spacon, inkl. la privatan `PDPT`-on kaj la radikan `PML4`-on.
+7. La praŝarĝo lanĉas procezon `5` kun `REĜIMO_KRUI`: `horizonto` legas la
+   nemapitan adreson `0xdeadbeef`, la `#PF` el Ring 3 estas kaptita, la kerno
+   printas `[eraro] procezo 5 …`, mortigas la procezon kaj detruas ĝian
+   spacon. La planisto daŭrigas; neniu `halti()` okazas.
+8. La praŝarĝo observas la ceterajn 1000 tikojn (≈10 s ĉe 100 Hz), printas la
+   finan staton `5 mortintaj` kaj haltas per `hlt`.
 
 ---
 
@@ -649,14 +695,15 @@ horizonto: la unua procezo vekis en Ring 3.
 
 ## Limigoj kaj sekva laboro
 
-- **Unu uzanta procezo**: la planisto jam ŝaltas la procezan `PML4` kaj
-  `TSS.RSP0` laŭ la celata fadeno, sed la praŝarĝo kreas nur unu uzantan
-  procezon (`horizonto`), kaj la kernaj stakoj estas fiksa tabelo de ok statikaj
-  16 KiB blokoj anstataŭ kadraj alokoj.
-- **Neniu proceza forigo**: `KadraAlokilo::liberigi` kaj `detruu` ekzistas,
-  sed ĝis M12-fazoj 4–5 neniu proceza eliro vokas ilin; la privata `PDPT` por
-  `PML4[0]` kaj la ŝarĝitaj kadroj restas okupitaj, do la alokilo restas
-  preskaŭ monotona dum la vivo de la sistemo.
+- **Sekvencaj uzantaj procezoj**: la praŝarĝo lanĉas du `horizonto`-procezojn
+  sinsekve (normala `FINI` kaj intenca `#PF`). Ne ekzistas samtempa
+  multprocezeco, proceza kontrolo el Ring 3 nek atendovico por novaj bildoj.
+- **Statikaj kernaj stakoj**: la kernaj stakoj estas fiksa tabelo de ok
+  statikaj 16 KiB blokoj en `.bss` anstataŭ kadraj alokoj; la proceza detruo
+  ne resorbas tiujn blokojn.
+- **Proceza detruo estas antaŭkondiĉa**: `detrui` postulas, ke neniu alia
+  fadeno de la procezo plenumas kaj ke la vokanto tenas interrompojn
+  malŝaltitaj; kun unu uzanta fadeno po procezo tio ĉiam validas.
 - **Identeca mapo RWX**: oportunas por la prototipo, sed malobservas W^X;
   SMEP/SMAP, KASLR kaj APIC/IOMMU-izolado mankas.
 - **Unuprocesora**: neniu SMP, afineco, prioritatoj aŭ dormantaj temporiziloj.
@@ -664,8 +711,9 @@ horizonto: la unua procezo vekis en Ring 3.
   4 GiB fizika memoro.
 - **IPC**: finpunkta id == fadena id; ne ekzistas apartaj objektoj, rajtorevoko,
   tempolimoj aŭ sendblokado.
-- **Esceptoj haltigas** la sistemon; ne ekzistas rekaptebla paĝa eraro aŭ
-  demando-paĝado.
+- **Ring 3-esceptoj nur `#PF`/`#GP`**: tiuj du mortigas la procezon; aliaj
+  esceptoj — ankaŭ el Ring 3 — restas fatalaj, kaj demando-paĝado ne
+  ekzistas.
 - **Framebuffer**: nur 32 bpp, kvar fiksaj strekoj (8×16 … 32×64), 111 glifoj
   (95 ASCII + Esperanto + citiloj), malplenigo anstataŭ rulumo.
 - **Pruvoj**: 12 Kani-pruvoj spegulas la bitan logikon sur 64 kadroj; la produkta

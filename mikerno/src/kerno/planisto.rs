@@ -173,11 +173,27 @@ impl Planisto {
 
     pub fn morti(&mut self, id: FadenoId) -> ! {
         crate::arkitekturo::malebligi_interrompojn();
+        let proceza = self.fadenoj[id as usize]
+            .as_ref()
+            .map_or(0, |fadeno| fadeno.procezo);
         if let Some(fadeno) = self.fadenoj[id as usize].as_mut() {
             fadeno.stato = FadenoStato::Mortinta;
         }
         crate::skribu!("[planisto] fadeno {} finiĝis\n", id);
         self.stato_procezan(id, ProcezaEstado::Mortinta);
+
+        // La uzanta fadeno vivas same longe kiel sia procezo: je `SYS_FINI` aŭ
+        // mortiga escepto ni liberigas la tutan adresan spacon antaŭ ol elekti
+        // la sekvan fadenon. La kernaj mapoj kaj la statika kerna stako restas
+        // validaj dum la ŝalto.
+        if proceza != 0 {
+            match super::procezo::detrui(proceza, super::kadra_alokilo()) {
+                Ok(()) => {}
+                Err(eraro) => {
+                    crate::skribu!("[procezo] {} ne povis esti detruita: {}\n", proceza, eraro)
+                }
+            }
+        }
 
         let sekva = self.elekti_proksiman().unwrap_or(RIPAZA_ID);
         self.kurigu(sekva);
@@ -202,6 +218,16 @@ impl Planisto {
 
     pub fn nuna_id(&self) -> FadenoId {
         self.nuna_fadeno.unwrap_or(RIPAZA_ID)
+    }
+
+    /// La procezo de la nuna fadeno; `0` por la ripoza kaj la kernaj fadenoj.
+    pub fn nuna_procezo(&self) -> ProcezaId {
+        let Some(id) = self.nuna_fadeno else {
+            return 0;
+        };
+        self.fadenoj[id as usize]
+            .as_ref()
+            .map_or(0, |fadeno| fadeno.procezo)
     }
 
     pub fn raporto(&self) -> (usize, usize, usize) {
@@ -283,8 +309,10 @@ pub fn veki(id: FadenoId) {
 
 /// Finu la nunan fadenon; la voko neniam revenas.
 ///
-/// Vokata de `SYS_FINI`. La ripoza kunteksto ne havas fadenan vivciklon, do
-/// voko de tie haltigas la sistemon anstataŭ ŝajnigi sukceson.
+/// Vokata de `SYS_FINI` kaj de la escepta dispetĉo por mortiginda uzanta
+/// fadeno. Se la fadeno apartenas al procezo, ĝia tuta adresa spaco estas
+/// detruita. La ripoza kunteksto ne havas fadenan vivciklon, do voko de tie
+/// haltigas la sistemon anstataŭ ŝajnigi sukceson.
 pub fn morti() -> ! {
     let id = nuna_id();
     if id == RIPAZA_ID {
@@ -296,6 +324,11 @@ pub fn morti() -> ! {
 
 pub fn nuna_id() -> FadenoId {
     planisto().nuna_id()
+}
+
+/// La procezo de la nuna fadeno; `0` por la nukleo.
+pub fn nuna_procezo() -> ProcezaId {
+    planisto().nuna_procezo()
 }
 
 pub fn lanĉi() {

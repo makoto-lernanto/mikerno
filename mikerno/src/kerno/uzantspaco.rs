@@ -80,16 +80,27 @@ pub struct UzantaBildo {
     pub enirpunkto: u64,
 }
 
+/// Ŝarĝu la bildon kaj pretigu la stakon sen la Ring 0-memtesto kaj sen
+/// protokolaj linioj. Uzata de `pravalorizi` kaj de la reuzoprovo.
+pub fn munti(
+    spaco: &mut impl AdresaSpaco,
+    alokilo: &mut KadraAlokilo,
+    modulo: &Modulo,
+) -> Result<UzantaBildo, ŜargaEraro> {
+    let bildo = ŝargi_bildon(modulo, spaco, alokilo)?;
+    *BILDA_LIMOJ.akiri() = (bildo.komenco, bildo.fino);
+    *BILDA_ENIRPUNKTO.akiri() = bildo.enirpunkto;
+    prepari_stakon(spaco, alokilo)?;
+    Ok(bildo)
+}
+
 /// Ŝarĝu la bildon, pretigu la stakon kaj rulu la memteston.
 pub fn pravalorizi(
     spaco: &mut impl AdresaSpaco,
     alokilo: &mut KadraAlokilo,
     modulo: &Modulo,
 ) -> Result<(), ŜargaEraro> {
-    let bildo = ŝargi_bildon(modulo, spaco, alokilo)?;
-    *BILDA_LIMOJ.akiri() = (bildo.komenco, bildo.fino);
-    *BILDA_ENIRPUNKTO.akiri() = bildo.enirpunkto;
-    prepari_stakon(spaco, alokilo)?;
+    let bildo = munti(spaco, alokilo, modulo)?;
     crate::skribu!(
         "[uzanto] horizonto: bildo 0x{:x}..0x{:x}, enirpunkto 0x{:x}\n",
         bildo.komenco,

@@ -105,11 +105,13 @@ pub fn defaŭlta_kernostako() -> u64 {
 
 /// Transiru al Ring 3 per `iretq`; la voko neniam revenas.
 ///
+/// `reĝimo` estas transdonata al la enirpunkto en `RDI` kiel unua argumento.
+///
 /// # Sekureco
 /// La enirpunkto kaj la stakpinto devas aparteni al mapita uzanta bildo kaj
 /// stako (vidu `uzanta::transiri_al_ring3`).
-pub unsafe fn transiri_al_ring3(enirpunkto: u64, stakpinto: u64) -> ! {
-    unsafe { malantaŭo::uzanta::transiri_al_ring3(enirpunkto, stakpinto) }
+pub unsafe fn transiri_al_ring3(enirpunkto: u64, stakpinto: u64, reĝimo: u64) -> ! {
+    unsafe { malantaŭo::uzanta::transiri_al_ring3(enirpunkto, stakpinto, reĝimo) }
 }
 
 pub fn temporizilaj_tikoj() -> u64 {

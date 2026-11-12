@@ -8,7 +8,9 @@
 
 pub mod kapablo;
 pub mod mesago;
+pub mod starto;
 pub mod syscall;
 
 pub use kapablo::{FinaPunkto, Kapablo, Permesoj};
 pub use mesago::{MAKSA_MESAGA_LONGO, Mesago};
+pub use starto::{REĜIMO_FINI, REĜIMO_KRUI};

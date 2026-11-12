@@ -50,6 +50,7 @@ pub enum ProcezaEstado {
 pub enum ProcezaEraro {
     NevalidaIdentigilo,
     JamRegistrita,
+    NeniuKernaSpaco,
     Paĝa(PaĝaEraro),
 }
 
@@ -58,6 +59,7 @@ impl fmt::Display for ProcezaEraro {
         match self {
             Self::NevalidaIdentigilo => f.write_str("proceza identigilo ekster la tabelo"),
             Self::JamRegistrita => f.write_str("procezo kun tiu identigilo jam ekzistas"),
+            Self::NeniuKernaSpaco => f.write_str("la kerna radiko ne estas registrita"),
             Self::Paĝa(eraro) => write!(f, "paĝa eraro: {eraro}"),
         }
     }
@@ -70,7 +72,6 @@ impl From<PaĝaEraro> for ProcezaEraro {
 }
 
 pub struct Procezo {
-    id: ProcezaId,
     adresa_spaco: Spaco,
     kerna_stako_pinto: u64,
     estado: ProcezaEstado,
@@ -85,15 +86,10 @@ impl Procezo {
         alokilo: &mut KadraAlokilo,
     ) -> Result<Self, PaĝaEraro> {
         Ok(Self {
-            id,
             adresa_spaco: kerna_spaco.krei_kunhavantan(alokilo)?,
             kerna_stako_pinto: kerna_stako_pinto(id),
             estado: ProcezaEstado::Preta,
         })
-    }
-
-    pub fn id(&self) -> ProcezaId {
-        self.id
     }
 
     pub fn spaco(&mut self) -> &mut Spaco {
@@ -185,6 +181,56 @@ pub fn akiri(id: ProcezaId) -> Option<&'static mut Procezo> {
         return None;
     }
     tabelo()[indekso].as_mut()
+}
+
+/// Detruu la adresan spacon de la procezo kaj forigu ĝian eron el la tabelo.
+/// Se la proceza `CR3` estas la aktiva, la funkcio unue reŝaltas la kernan
+/// radikon; la nuna kodo kaj la kernaj stakoj kuŝas en la kunhavata kerna
+/// mapo, do tio estas sekura ankaŭ meze de sistemvoko aŭ escepto.
+///
+/// # Sekureco
+/// Vokenda en Ring 0 kun interrompoj malŝaltitaj kaj kiam neniu alia fadeno de
+/// la procezo plenumas.
+pub fn detrui(id: ProcezaId, alokilo: &mut KadraAlokilo) -> Result<(), ProcezaEraro> {
+    let indekso = id as usize;
+    if id == 0 || indekso >= MAKSAJ_PROCEZOJ {
+        return Err(ProcezaEraro::NevalidaIdentigilo);
+    }
+    let Some(procezo) = tabelo()[indekso].take() else {
+        return Ok(());
+    };
+
+    let privataj = procezo.adresa_spaco.privataj_pdptoj();
+    let radiko = procezo.radika_adreso();
+    if arkitekturo::aktiva_adreso_spaco() == radiko.adreso() {
+        let Some(kerna) = kerna_radiko() else {
+            tabelo()[indekso] = Some(procezo);
+            return Err(ProcezaEraro::NeniuKernaSpaco);
+        };
+        // SAFETY: la nuna kodo kaj la kernaj stakoj estas en la kunhavataj
+        // kernaj mapoj; la alvokanto tenas interrompojn malŝaltitaj.
+        unsafe { arkitekturo::ŝalti_adresan_spacon(kerna.adreso()) };
+    }
+
+    let antaŭ = alokilo.liberaj();
+    let rezulto = procezo.adresa_spaco.detruu(alokilo);
+    let post = alokilo.liberaj();
+    match &rezulto {
+        Ok(()) => crate::skribu!(
+            "[procezo] {} detruita: {} privataj PDPT-oj, PML4 0x{:x}, {} kadroj liberigitaj\n",
+            id,
+            privataj,
+            radiko.adreso(),
+            post - antaŭ
+        ),
+        Err(eraro) => crate::skribu!(
+            "[procezo] {} detruo malsukcesis post {} kadroj: {}\n",
+            id,
+            post - antaŭ,
+            eraro
+        ),
+    }
+    rezulto.map_err(ProcezaEraro::Paĝa)
 }
 
 /// Ŝanĝu la staton de la donita procezo; nekonata `id` estas senefika.

@@ -15,12 +15,15 @@ const UZANTA_RFLAGS: u64 = 0x202;
 
 /// Transiru al Ring 3 kaj neniam revenu.
 ///
+/// `reĝimo` estas transdonata en `RDI`, do `extern "C"`-enirpunkto ricevas ĝin
+/// kiel sian unuan argumenton.
+///
 /// # Sekureco
 /// `enirpunkto` devas esti plenumebla uzanta adreso de la ŝargita bildo, kaj
 /// `stakpinto` devas esti la pinto de mapita, skribebla uzanta stako. La
 /// alvokanto devas esti en Ring 0 kun la TSS ŝargita, ĉar la unua reveno al la
 /// kerno uzos `RSP0`.
-pub unsafe fn transiri_al_ring3(enirpunkto: u64, stakpinto: u64) -> ! {
+pub unsafe fn transiri_al_ring3(enirpunkto: u64, stakpinto: u64, reĝimo: u64) -> ! {
     // La x86-64-ABI atendas `rsp % 16 == 8` ĉe funkcia eniro (kvazaŭ `call`
     // ĵus puŝus revenadreson); `iretq` ne puŝas unu, do ni mem malaltigas la
     // stakpinton.
@@ -33,12 +36,14 @@ pub unsafe fn transiri_al_ring3(enirpunkto: u64, stakpinto: u64) -> ! {
             "push {rflags}",
             "push {cs}",
             "push {rip}",
+            "mov rdi, {reĝimo}",
             "iretq",
             ss = in(reg) UZANTA_SS,
             sp = in(reg) uzanta_rsp,
             rflags = in(reg) UZANTA_RFLAGS,
             cs = in(reg) UZANTA_CS,
             rip = in(reg) enirpunkto,
+            reĝimo = in(reg) reĝimo,
             options(noreturn),
         );
     }
