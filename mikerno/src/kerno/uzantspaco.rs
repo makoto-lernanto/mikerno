@@ -33,10 +33,17 @@ const MAKSAJ_SEGMENTOJ: usize = 16;
 const PROVA_BAZO: u64 = UZANTA_FINO - 16 * 1024 * 1024;
 
 static BILDA_LIMOJ: Kunhavigita<(u64, u64)> = Kunhavigita::nova((UZANTA_BAZO, UZANTA_BAZO));
+static BILDA_ENIRPUNKTO: Kunhavigita<u64> = Kunhavigita::nova(0);
 
 /// La mapita bilda intervalo `(komenco, fino)`, se `horizonto` jam ŝarĝis.
 pub fn bildaj_limoj() -> (u64, u64) {
     *BILDA_LIMOJ.akiri()
+}
+
+/// La ELF-enirpunkto de la ŝargita bildo, se ĝi jam estas muntita.
+pub fn enirpunkto() -> Option<u64> {
+    let enirpunkto = *BILDA_ENIRPUNKTO.akiri();
+    (enirpunkto != 0).then_some(enirpunkto)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -80,6 +87,7 @@ pub fn pravalorizi(
 ) -> Result<(), ŜargaEraro> {
     let bildo = ŝargi_bildon(modulo, spaco, alokilo)?;
     *BILDA_LIMOJ.akiri() = (bildo.komenco, bildo.fino);
+    *BILDA_ENIRPUNKTO.akiri() = bildo.enirpunkto;
     prepari_stakon(spaco, alokilo)?;
     crate::skribu!(
         "[uzanto] horizonto: bildo 0x{:x}..0x{:x}, enirpunkto 0x{:x}\n",

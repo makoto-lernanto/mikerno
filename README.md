@@ -8,9 +8,9 @@ kodo, la protokoloj kaj la dokumentaro estas en Esperanto.
 
 La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
-reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj la antaŭpreparo por Ring 3.
+reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.1.3 (workspace)
+- **Versio:** 0.1.4 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.85`
@@ -51,8 +51,8 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj la antaŭpreparo por Ring 3.
 | 4-nivela paĝado (PML4 → PDPT → PD → PT), NX, PCD | Funkcias | `arkitekturo/x86_64/pagxado.rs` |
 | GDT, 256-vektora IDT, escepta raportado | Funkcias | `gdt.rs`, `idt.rs`, `interrompo/mod.rs` |
 | Uzantaj DPL3-segmentoj kaj `int 0x80`-pordego (interrompa, `0xEE`) | Funkcias | `gdt.rs`, `idt.rs`, `kerno/sistemvoko.rs` |
-| Kvin sistemvokoj (`SENDI`/`RICEVI`/`SKRIBI`/`FINI`/`CEDI`), unueca `Mesago`, montrila kontrolo | Funkcias (Ring 0) | `kerno/sistemvoko.rs`, `arkitekturo/x86_64/sistemvoko.rs` |
-| TSS kun `RSP0` por Ring 3 → Ring 0 | Funkcias (preta) | `tss.rs` |
+| Kvin sistemvokoj (`SENDI`/`RICEVI`/`SKRIBI`/`FINI`/`CEDI`), unueca `Mesago`, montrila kontrolo | Funkcias (Ring 0 kaj 3) | `kerno/sistemvoko.rs`, `arkitekturo/x86_64/sistemvoko.rs` |
+| TSS kun `RSP0` por Ring 3 → Ring 0 | Funkcias | `tss.rs` |
 | xAPIC (MMIO), malŝalto de 8259-PIC, spuria vektoro `0xFF` | Funkcias | `apic.rs` |
 | 100 Hz perioda temporizilo, kalibrita kontraŭ la PIT | Funkcias | `temporizilo.rs` |
 | Antaŭokupa rondiga planisto, 8 fadenoj + ripoza kunteksto | Funkcias | `kerno/planisto.rs` |
@@ -60,13 +60,15 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj la antaŭpreparo por Ring 3.
 | Framebuffer-teksta konzolo (4 strekoj, 8×16 … 32×64) kaj COM1 | Funkcias | `ekrano/`, `seria.rs` |
 | Komuna kerna/uzanta ABI (`libmikerno`) | Difinita | `libmikerno/` |
 | Uzanta fenestro super 4 GiB, ELF64-ŝargo kun bito `U`, 64 KiB stako | Funkcias | `kerno/uzantspaco.rs`, `memoro/virtuala.rs` |
-| Unua uzanta procezo `horizonto` (bildo ŝargita, `iretq` mankas) | Parte | `horizonto/` |
+| Ring 3-transiro per `iretq` (`CS=0x23`, `SS=0x1B`, `IF=1`) | Funkcias | `arkitekturo/x86_64/uzanta.rs` |
+| Unua uzanta procezo `horizonto`: `SKRIBI` + `FINI` el Ring 3 | Funkcias | `horizonto/`, `kerno/sistemvoko.rs` |
 | 11 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ipc.rs` |
 
-> `horizonto` jam estas liverata kiel praŝarĝa modulo kaj muntata en la uzantan
-> fenestron super 4 GiB — la bildaj segmentoj, la bito `U` tra ĉiuj paĝtabelaj
-> niveloj kaj la 64 KiB-a stako estas kontrolitaj dum starto. La Ring 3-transiro
-> per `iretq` kaj per-procesaj adresspacoj ankoraŭ mankas (M11-tasko 5, M12).
+> `horizonto` estas liverata kiel praŝarĝa modulo, muntata super 4 GiB kun la
+> bito `U` tra ĉiuj paĝtabelaj niveloj, kaj ekzekutas en Ring 3 per `iretq`.
+> Ĝi skribas sian saluton per `int 0x80` kaj eliras per `fini(0)`; la planisto
+> tiam revenas al la ripoza kunteksto. Per-procesaj adresspacoj kaj per-fadena
+> `TSS.RSP0` ankoraŭ mankas (M12).
 
 ---
 
@@ -173,6 +175,7 @@ kerno::ĉefa                          kerno/mod.rs
   · modulaj regionoj identece mapitaj, CR3 ŝalto, konzolo, TSS/RSP0
   · APIC + temporizilo (100 Hz), 3 testaj fadenoj
   · uzantspaco: ELF64-segmentoj + stako super 4 GiB, bito `U`
+  · `horizonto` en Ring 3 per `iretq`; `FINI` revenigas la planiston
   · IPC-testo, planisto, 10 s da observado, halto
 ```
 
@@ -274,7 +277,10 @@ oportuna sed ne sekura longtempe (vidu [Limigoj](#limigoj-kaj-sekva-laboro)).
   `rip`, `rflags`) per `#[repr(C)]` `Kunteksto`; la unua eniro uzas artefaritan
   stakon kun `fadeno_trampolino`, kiu ŝaltas interrompojn kaj transdonas la
   fadenan identigilon en `rax` → `rdi`;
-- ĉiu fadeno havas 16 KiB stakon; la testaj stakoj estas statikaj.
+- ĉiu fadeno havas 16 KiB stakon; la testaj stakoj estas statikaj;
+- la uzanta fadeno (id 4) estas planita post la testaj: ĝia enirpunkto
+  transiras al Ring 3 per `iretq`, kaj `SYS_FINI` mortigas ĝin, do la planisto
+  elektas la ripozan kuntekston kaj la observado daŭras.
 
 `switch` revenas nur kiam la malnova kunteksto estas planita denove. La ripoza
 kunteksto konservas sian interrompan kadron sur la stako, do `planumi` povas
@@ -379,8 +385,28 @@ intervalo kaj adreso ekster la fenestro devas esti rifuzitaj laŭ la bito `U`.
 
 `horizonto` estas liverata de ambaŭ praŝarĝaj vojoj — Multiboot2 tipo 3 el
 `limine.conf`, aŭ la PVH-modlisto el `-initrd` (``just run`` aldonas ĝin
-aŭtomate) — sed la Ring 3-transiro ankoraŭ ne okazas: `iretq` mankas, do la
-bildo restas muntita, ne plenumata.
+aŭtomate).
+
+### Transiro al Ring 3
+
+Post la testaj fadenoj la praŝarĝa kunteksto aldonas la uzantan fadenon (id 4)
+kaj planas ĝin. `arkitekturo/x86_64/uzanta.rs` konstruas la `iretq`-kadron sur
+la fadena stako:
+
+```text
+push SS=0x1B
+push RSP=UZANTA_STAKO_SUPRO - 8
+push RFLAGS=0x202        (IF=1 + rezervita bito 1)
+push CS=0x23
+push RIP=enirpunkto
+iretq
+```
+
+La stakpinto estas malaltigita je 8 por ke la x86-64-ABI vidu `rsp % 16 == 8`
+ĉe la funkcia eniro. La `int 0x80`-pordego havas DPL3, do Ring 3 rajtas voki
+`SKRIBI` kaj `FINI`; la CPU ŝaltas al `TSS.RSP0` por ĉiu reveno al Ring 0.
+Post `fini(0)` la fadeno mortas kaj la planisto revenas al la ripoza
+kunteksto, kiu daŭrigas la observadon.
 
 ### Dispetĉilo
 
@@ -417,8 +443,8 @@ Ambaŭ praŝarĝaj vojoj estis praktike testitaj per QEMU 256 MiB:
 
 | Vojo | Rezulto |
 | --- | --- |
-| PVH (`-kernel` + `-initrd`) | 7 regionoj, 255 MiB uzeblaj, sen framebuffer, bildo `0x100000000..0x10000102c`, 8/8 kontroloj, 1000 tikoj, 3 fadenoj mortintaj |
-| Limine/Multiboot2 (ISO) | framebuffer `1280x800, 32 bpp`, bildo `0x100000000..0x10000102c`, 8/8 kontroloj, 1000 tikoj, 3 fadenoj mortintaj |
+| PVH (`-kernel` + `-initrd`) | 7 regionoj, 255 MiB uzeblaj, sen framebuffer, bildo `0x100000000..0x10000102c`, 8/8 kontroloj, `horizonto` en Ring 3, 1000 tikoj, 4 fadenoj mortintaj |
+| Limine/Multiboot2 (ISO) | framebuffer `1280x800, 32 bpp`, bildo `0x100000000..0x10000102c`, 8/8 kontroloj, `horizonto` en Ring 3, 1000 tikoj, 4 fadenoj mortintaj |
 
 `just verify` ne estis rulita en ĉi tiu medio, ĉar `cargo kani` ne estas
 instalita. La 11 pruvoj (5 pri la kadro-alokilo, 6 pri la mesaĝujo) estas
@@ -429,7 +455,7 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.1.3!
+[MiKerno] Saluton, mi estas MiKerno v0.1.4!
 [sistemvoko] pordego 0x80 (DPL3) instalita
 [kerno] memoro: 7 regionoj, 255 MiB uzeblaj
 [kerno] framebuffer 1280x800, 32 bpp        (nur ISO)
@@ -445,7 +471,14 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 saluton el Ring 0 tra int 0x80
 [sistemvoko] Ring 0-memtesto: skribo=0, nekonata=-2, nula=-1, troa=-1, cedo=0
 ...
-[kerno] fina stato: 3 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+[planisto] fadeno 3 finiĝis
+[kerno] horizonto ekas en Ring 3: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x100000020
+horizonto: la unua procezo vekis en Ring 3.
+[planisto] fadeno 4 finiĝis
+[kerno] horizonto finiĝis; planisto revenis
+[kerno] planisto revenis al la ripoza fadeno
+...
+[kerno] fina stato: 4 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
 ```
 
 ---
@@ -461,7 +494,11 @@ saluton el Ring 0 tra int 0x80
    **fadeno 3**, kiu vekiĝas kaj printas ĝin.
 4. Post la lasta fojo ĉiu fadeno finiĝas; la planisto revenas al la ripoza
    kunteksto.
-5. La praŝarĝo observas 1000 tikojn (≈10 s ĉe 100 Hz), printas la finan staton
+5. La praŝarĝo aldonas la uzantan fadenon: `horizonto` ekas en Ring 3 per
+   `iretq`, skribas sian saluton per `int 0x80` kaj eliras per `fini(0)`.
+   `SYS_FINI` mortigas la fadenon, do la planisto denove elektas la ripozan
+   kuntekston.
+6. La praŝarĝo observas 1000 tikojn (≈10 s ĉe 100 Hz), printas la finan staton
    kaj haltas per `hlt`.
 
 ---
@@ -498,6 +535,7 @@ saluton el Ring 0 tra int 0x80
 │       │       ├── planado.rs  # kuntekstŝanĝo (asm)
 │       │       ├── sistemvoko.rs # 0x80-dispetĉilo el la kadro
 │       │       ├── procesoro.rs# hlt, cli/sti, CR2
+│       │       ├── uzanta.rs   # `iretq` al Ring 3
 │       │       └── seria.rs    # COM1
 │       ├── memoro/
 │       │   ├── mod.rs          # regionoj, mapo, EniraInformo, Modulo
@@ -535,9 +573,10 @@ saluton el Ring 0 tra int 0x80
 
 ## Limigoj kaj sekva laboro
 
-- **Ring 3 nur parte**: la bildo estas liverata kaj muntata kun bito `U`, sed la
-  `iretq`-transiro mankas, do `horizonto` ne plenumiĝas. Mankas ankaŭ
-  per-procesaj adresspacoj (unu PML4 por ĉiuj) kaj per-fadena `TSS.RSP0`.
+- **Ring 3 unuprocesa**: `horizonto` ekzekutas en Ring 3 kaj vokas `int 0x80`,
+  sed ĉiuj procezoj kunhavas unu `PML4` (neniu izolado), `TSS.RSP0` estas
+  komuna kaj ne ekzistas reveno al uzanto krom nova `iretq`; mankas ankaŭ
+  per-fadena kernostako.
 - **Neniu liberigo de kadroj**: la alokilo estas monotona; `KadraAlokilo` ne
   havas publikan `liberigi`.
 - **Identeca mapo RWX**: oportunas por la prototipo, sed malobservas W^X;

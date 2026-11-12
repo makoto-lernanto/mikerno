@@ -11,6 +11,7 @@ pub mod seria;
 pub mod sistemvoko;
 pub mod temporizilo;
 pub mod tss;
+pub mod uzanta;
 
 pub fn pravalorizi() {
     seria::pravalorizi();

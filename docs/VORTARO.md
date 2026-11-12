@@ -53,6 +53,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `uzantaj datumoj` | user data | 用户数据段 | DPL3. |
 | `kerna stako` | kernel stack | 内核栈 | `RSP0`. |
 | `uzanta stako` | user stack | 用户栈 | |
+| `uzanta fadeno` | user thread | 用户线程 | Plenumas en Ring 3 post `iretq`. |
 | `kunteksto` | context | 上下文 | `Kunteksto`. |
 | `kunteksta ŝanĝo` | context switch | 上下文切换 | |
 | `enirpunkto` | entry point | 入口点 | |

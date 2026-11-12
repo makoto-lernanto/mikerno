@@ -4,18 +4,18 @@ version = 4
 
 [[package]]
 name = "horizonto"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "libmikerno",
 ]
 
 [[package]]
 name = "libmikerno"
-version = "0.1.3"
+version = "0.1.4"
 
 [[package]]
 name = "mikerno"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "libmikerno",
 ]

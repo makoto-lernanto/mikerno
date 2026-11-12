@@ -1,7 +1,8 @@
 //! Horizonto: la unua uzanta procezo (Ring 3).
 //!
-//! La bildo ankoraŭ ne estas enŝovita en la kernan bildon; ĝi fiksas la
-//! enirpunkton, la vokprotokolon kaj la vivociklon por la venonta Ring 3-ŝalto.
+//! La kerno liveras ĉi tiun bildon kiel praŝarĝan modulon, muntas ĝin super
+//! 4 GiB kaj transiras al `horizonto_start` per `iretq`. La vokprotokolo estas
+//! `int 0x80` kun la registra aranĝo el `libmikerno`.
 
 #![no_std]
 #![no_main]

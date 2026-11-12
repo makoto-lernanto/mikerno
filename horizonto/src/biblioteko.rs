@@ -1,9 +1,7 @@
 //! Uzanta baza biblioteko: maldikaj envolvaĵoj ĉirkaŭ la sistemvokoj.
 //!
 //! La protokolo venas el `libmikerno`; ĉi tiu modulo nur donas al la uzanta
-//! kodo Esperantajn nomojn sen montri la registran aranĝon. Ĝis la Ring 3-ŝalto
-//! la funkcioj restas senvokaj en la bildo, sed ili jam difinas la surfacon,
-//! kiun la rultempo uzos.
+//! kodo Esperantajn nomojn sen montri la registran aranĝon.
 
 #![allow(dead_code)]
 

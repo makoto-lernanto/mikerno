@@ -4,7 +4,7 @@
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::EniraInformo;
 use crate::memoro::kadro::KadraAlokilo;
-use crate::memoro::virtuala::{AdresaSpaco, PaĝaPermesoj, VirtuaAdreso};
+use crate::memoro::virtuala::{AdresaSpaco, PaĝaPermesoj, UZANTA_STAKO_SUPRO, VirtuaAdreso};
 
 pub mod ipc;
 pub mod objekto;
@@ -15,7 +15,7 @@ pub mod uzantspaco;
 static ALOKILO: Kunhavigita<KadraAlokilo> = Kunhavigita::nova(KadraAlokilo::nova());
 
 pub fn ĉefa(informo: EniraInformo) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.1.3!\n");
+    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.1.4!\n");
     sistemvoko::pravalorizi();
     crate::skribu!(
         "[kerno] memoro: {} regionoj, {} MiB uzeblaj\n",
@@ -123,6 +123,15 @@ pub fn ĉefa(informo: EniraInformo) {
     crate::skribu!("[kerno] planisto ekas: 3 fadenoj, antaŭokupo ĉiu 10 ms\n");
     planisto::lanĉi();
 
+    // La testaj fadenoj finiĝis; nun `horizonto` ekas en Ring 3.
+    match uzantspaco::enirpunkto() {
+        Some(enirpunkto) => match lanĉi_horizonton(enirpunkto) {
+            Ok(()) => crate::skribu!("[kerno] horizonto finiĝis; planisto revenis\n"),
+            Err(eraro) => crate::skribu!("[uzanto] fadena kreado malsukcesis: {:?}\n", eraro),
+        },
+        None => crate::skribu!("[uzanto] horizonto ne ŝargita; Ring 3 ne ekas\n"),
+    }
+
     crate::arkitekturo::malebligi_interrompojn();
     crate::skribu!("[kerno] planisto revenis al la ripoza fadeno\n");
 
@@ -150,12 +159,17 @@ pub fn ĉefa(informo: EniraInformo) {
 
 const STAKA_GRANDE: usize = 16 * 1024;
 const TESTAJ_FADENOJ: usize = 3;
+const UZANTA_FADENO_ID: u64 = TESTAJ_FADENOJ as u64 + 1;
 
 #[repr(align(16))]
 struct FadenaStako(#[allow(dead_code)] [u8; STAKA_GRANDE]);
 
 static mut STAKOJ: [FadenaStako; TESTAJ_FADENOJ] =
     [const { FadenaStako([0; STAKA_GRANDE]) }; TESTAJ_FADENOJ];
+
+/// La fadena stako de `horizonto`; post `iretq` la fadeno uzas la uzantan
+/// stakon, sed la eniro kaj la eventuala reveno bezonas ĉi tiun.
+static mut UZANTA_FADENA_STAKO: FadenaStako = FadenaStako([0; STAKA_GRANDE]);
 
 fn krei_testajn_fadenojn() -> Result<(), planisto::PlanistaEraro> {
     for indekso in 0..TESTAJ_FADENOJ {
@@ -168,6 +182,32 @@ fn krei_testajn_fadenojn() -> Result<(), planisto::PlanistaEraro> {
         ))?;
     }
     Ok(())
+}
+
+/// Aldonu la uzantan fadenon kaj planu ĝin. La voko revenas, kiam `fini`
+/// mortigas ĝin kaj la planisto elektas la ripozan kuntekston.
+fn lanĉi_horizonton(enirpunkto: u64) -> Result<(), planisto::PlanistaEraro> {
+    let pinto = &raw const UZANTA_FADENA_STAKO as u64 + STAKA_GRANDE as u64;
+    planisto::aldoni_fadenon(planisto::pretigi_fadenon(
+        UZANTA_FADENO_ID,
+        VirtuaAdreso::nova(pinto),
+        uzanta_fadeno,
+    ))?;
+    crate::skribu!(
+        "[kerno] horizonto ekas en Ring 3: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x{:x}\n",
+        enirpunkto
+    );
+    planisto::lanĉi();
+    Ok(())
+}
+
+fn uzanta_fadeno(_id: u64) {
+    let Some(enirpunkto) = uzantspaco::enirpunkto() else {
+        planisto::morti();
+    };
+    // SAFETY: `uzantspaco::pravalorizi` muntis la bildon kun bito `U` kaj
+    // kontrolis la enirpunkton; la stako estas la mapita 64 KiB-a regiono.
+    unsafe { crate::arkitekturo::transiri_al_ring3(enirpunkto, UZANTA_STAKO_SUPRO) }
 }
 
 fn testa_fadeno(id: u64) {
