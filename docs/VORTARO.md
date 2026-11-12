@@ -50,7 +50,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `sistemvoka vektoro` | syscall vector | 系统调用向量 | `0x80`. |
 | `sistemvoka numero` | system call number | 系统调用号 | `rax` ĉe la voko. |
 | `sistemvoka dispetĉo` | system call dispatch | 系统调用分发 | `sistemvoka_dispetĉo`. |
-| `uzanta montrilo` | user pointer | 用户指针 | Kontrolata antaŭ ĉiu aliro. |
+| `uzanta montrilo` | user pointer | 用户指针 | Kontrolata antaŭ ĉiu aliro, folio post folio. |
 | `anoncita regiono` | declared region | 已声明区域 | La bildo kaj la uzanta stako. |
 | `uzanta fenestro` | user window | 用户窗口 | `UZANTA_BAZO..UZANTA_FINO`. |
 | `U-bito` | U bit | U 位 | Ring 3-alireblo; tra ĉiuj niveloj. |
@@ -79,6 +79,20 @@ kaj protokolaj nomoj sekvu ĝin.
 | `finpunkto` | endpoint | 端点 | `FinaPunkto`. |
 | `kapablo` | capability | 能力 | `Kapablo`. |
 | `permeso` | permission | 权限 | `Permesoj`. |
+| `folia permeso` | leaf permission | 叶页权限 | `permesoj(adreso)` legas la realajn PTE-bitojn de folio. |
+| `W^X` | write-xor-execute | 写异或执行 | Skribebla paĝo neniam estas plenumebla samtempe. |
+| `sekcia limo` | section boundary | 节边界 | `__kerna_kodo_komenco`, `__kerna_rodata_fino`, … el `linker.ld`. |
+| `antaŭkodo` | preamble | 前导区 | La regiono antaŭ `.text` (ELF-kapo kaj aligned-padding). |
+| `nurlegaj datumoj` | read-only data | 只读数据 | `.rodata`; R+NX. |
+| `skribprotekto` | write protection | 写保护 | `CR0.WP`; Ring 0 ankaŭ respektas nurlegajn foliojn. |
+| `kerna firmigo` | kernel hardening | 内核加固 | M13: SMEP, SMAP, KASLR. |
+| `relokebla` | relocatable | 可重定位 | KASLR postulas relokeblan aŭ alta-duonan kernon. |
+| `alta duonmapo` | higher-half mapping | 高半区映射 | La kerno loĝas super la uzanta fenestro. |
+| `hazarda bazadreso` | randomized base address | 随机基址 | KASLR elektas ĝin ĉe starto. |
+| `aparata izolado` | device isolation | 设备隔离 | IOMMU malhelpas arbitran DMA. |
+| `DMA-mapo` | DMA mapping | DMA 映射 | IOMMU-donita traduko por aparato. |
+| `interrompa readresado` | interrupt remapping | 中断重映射 | IOMMU-akompananto por interrompoj. |
+| `AC-bito` | AC flag | AC 标志 | `STAC` starigas, `CLTAC` nuligas por SMAP. |
 | `sendi` / `ricevi` | send / receive | 发送 / 接收 | |
 | `bloki` / `veki` | block / wake | 阻塞 / 唤醒 | |
 | `cedi` | yield | 让出 | `SYS_CEDI`. |
@@ -145,7 +159,8 @@ eksteraj protokolaj nomoj:
 `x86_64`, `CR0`, `CR2`, `CR3`, `CR4`, `RSP0`, `RIP`, `RFLAGS`, `RAX`, `RDI`,
 `RSI`, `RDX`, `R10`, `MSR`, `EFER`, `NXE`, `PAE`, `PML4`, `PDPT`, `PD`, `PT`,
 `IDT`, `GDT`, `TSS`, `APIC`, `PIT`, `COM1`, `Multiboot2`, `Xen-PVH`, `ELF`,
-`Limine`, `QEMU`, `int 0x80`, `iretq`, `syscall`, `sysret`.
+`Limine`, `QEMU`, `int 0x80`, `iretq`, `syscall`, `sysret`, `W^X`, `CR0.WP`,
+`SMEP`, `SMAP`, `KASLR`, `IOMMU`, `DMA`, `PCI`, `DMAR`, `IVRS`, `STAC`, `CLTAC`.
 
 ## Reguloj
 

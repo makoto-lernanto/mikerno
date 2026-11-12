@@ -8,7 +8,46 @@ use super::{KADRA_GRANDO, MemoraMapo};
 
 unsafe extern "C" {
     static __kerna_komenco: u8;
+    static __kerna_kodo_komenco: u8;
+    static __kerna_kodo_fino: u8;
+    static __kerna_rodata_komenco: u8;
+    static __kerna_rodata_fino: u8;
+    static __kerna_datumoj_komenco: u8;
     static __kerna_fino: u8;
+}
+
+/// La sekciaj limoj de la kerna bildo. La identeca mapo uzas ilin por doni
+/// al `.text` RX, al `.rodata` nur legadon kaj al `.data`/`.bss` RW+NX.
+#[derive(Clone, Copy)]
+pub struct KernajLimoj {
+    /// Ĉapeloj kaj notoj antaŭ `.text` (Multiboot2, Xen-PVH).
+    pub antaŭkodo: (u64, u64),
+    pub kodo: (u64, u64),
+    pub rodata: (u64, u64),
+    pub datumoj: (u64, u64),
+}
+
+/// Adresoj de la sekciaj limoj el la ligilo.
+pub fn kernaj_limoj() -> KernajLimoj {
+    // Nur la adresoj de la simboloj estas prenitaj; la bildo mem ne estas legata.
+    KernajLimoj {
+        antaŭkodo: (
+            &raw const __kerna_komenco as u64,
+            &raw const __kerna_kodo_komenco as u64,
+        ),
+        kodo: (
+            &raw const __kerna_kodo_komenco as u64,
+            &raw const __kerna_kodo_fino as u64,
+        ),
+        rodata: (
+            &raw const __kerna_rodata_komenco as u64,
+            &raw const __kerna_rodata_fino as u64,
+        ),
+        datumoj: (
+            &raw const __kerna_datumoj_komenco as u64,
+            &raw const __kerna_fino as u64,
+        ),
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -73,9 +112,26 @@ impl PaĝaPermesoj {
         uzanta: false,
     };
 
-    pub const KERNELA: Self = Self {
-        skribebla: true,
+    /// Kerna kodo (`.text`): Ring 0 rajtas legi kaj plenumi, ne skribi.
+    pub const KERNA_KODO: Self = Self {
+        skribebla: false,
         plenumebla: true,
+        kaŝebla: true,
+        uzanta: false,
+    };
+
+    /// Kernaj nurlegaj datumoj (`.rodata`, moduloj): sen skribado, sen plenumo.
+    pub const KERNA_LEGA: Self = Self {
+        skribebla: false,
+        plenumebla: false,
+        kaŝebla: true,
+        uzanta: false,
+    };
+
+    /// Kernaj datumoj, `.bss` kaj la cetera uzebla RAM: skribebla, sen plenumo.
+    pub const KERNA_DATUMOJ: Self = Self {
+        skribebla: true,
+        plenumebla: false,
         kaŝebla: true,
         uzanta: false,
     };
@@ -105,6 +161,25 @@ impl PaĝaPermesoj {
     };
 }
 
+impl fmt::Display for PaĝaPermesoj {
+    /// Mallonga formo por diagnozo: `R`, `RX`, `RW NX`, `RWX` plus `U`.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("R")?;
+        if self.skribebla {
+            f.write_str("W")?;
+        }
+        if self.plenumebla {
+            f.write_str("X")?;
+        } else {
+            f.write_str(" NX")?;
+        }
+        if self.uzanta {
+            f.write_str(" U")?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PaĝaEraro {
     NevalidaAdreso,
@@ -132,6 +207,10 @@ pub trait PaĝaTablo {
     ) -> Result<(), PaĝaEraro>;
 
     fn traduki(&self, virtuala: VirtuaAdreso) -> Option<FizikaAdreso>;
+
+    /// La efektivaj permesoj de la folio, kiu tradukas `virtuala`; `None` se
+    /// la adreso ne estas mapita. Uzata de la W^X-memtesto kaj de diagnozo.
+    fn permesoj(&self, virtuala: VirtuaAdreso) -> Option<PaĝaPermesoj>;
 
     /// Ĉu ĉiu paĝo de `[adreso, adreso + longo)` estas atingebla de Ring 3
     /// (bitoj `U` ĉe ĉiuj niveloj) kaj, se `skriba`, ankaŭ skribebla?
@@ -309,25 +388,44 @@ pub trait AdresaSpaco: PaĝaTablo {
         Ok(())
     }
 
-    /// Identeca mapo: la malalta 1 MiB, la kerna bildo kaj ĉiuj uzeblaj
-    /// regionoj, por ke la nukleo restu atingebla post CR3. La bildo estas
-    /// mapita aparte, ĉar iuj praŝarĝiloj raportas ĝin kiel rezervitan.
+    /// Identeca mapo: la malalta 1 MiB, la kerna bildo laŭ sekciaj permesoj
+    /// (W^X) kaj ĉiuj uzeblaj regionoj kiel RW+NX. La bildo estas mapita
+    /// aparte, ĉar iuj praŝarĝiloj raportas ĝin kiel rezervitan.
     fn idente_mapigi(
         &mut self,
         mapo: &MemoraMapo,
-        permesoj: PaĝaPermesoj,
         alokilo: &mut KadraAlokilo,
     ) -> Result<(), PaĝaEraro> {
         self.mapigi_intervalon(
             VirtuaAdreso::nova(0),
             VirtuaAdreso::nova(0x10_0000),
-            permesoj,
+            PaĝaPermesoj::KERNA_DATUMOJ,
+            alokilo,
+        )?;
+
+        let limoj = kernaj_limoj();
+        self.mapigi_intervalon(
+            VirtuaAdreso::nova(limoj.antaŭkodo.0),
+            VirtuaAdreso::nova(limoj.antaŭkodo.1),
+            PaĝaPermesoj::KERNA_LEGA,
             alokilo,
         )?;
         self.mapigi_intervalon(
-            VirtuaAdreso::nova(&raw const __kerna_komenco as u64),
-            VirtuaAdreso::nova(&raw const __kerna_fino as u64),
-            permesoj,
+            VirtuaAdreso::nova(limoj.kodo.0),
+            VirtuaAdreso::nova(limoj.kodo.1),
+            PaĝaPermesoj::KERNA_KODO,
+            alokilo,
+        )?;
+        self.mapigi_intervalon(
+            VirtuaAdreso::nova(limoj.rodata.0),
+            VirtuaAdreso::nova(limoj.rodata.1),
+            PaĝaPermesoj::KERNA_LEGA,
+            alokilo,
+        )?;
+        self.mapigi_intervalon(
+            VirtuaAdreso::nova(limoj.datumoj.0),
+            VirtuaAdreso::nova(limoj.datumoj.1),
+            PaĝaPermesoj::KERNA_DATUMOJ,
             alokilo,
         )?;
 
@@ -335,7 +433,7 @@ pub trait AdresaSpaco: PaĝaTablo {
             self.mapigi_intervalon(
                 VirtuaAdreso::nova(regiono.komenco),
                 VirtuaAdreso::nova(regiono.fino()),
-                permesoj,
+                PaĝaPermesoj::KERNA_DATUMOJ,
                 alokilo,
             )?;
         }

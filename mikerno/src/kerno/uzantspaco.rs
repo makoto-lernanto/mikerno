@@ -40,6 +40,7 @@ pub enum ŜargaEraro {
     NevalidaElfo,
     EksterFenestro,
     NeniuSegmento,
+    NevalidaWX,
     Paĝa(PaĝaEraro),
 }
 
@@ -50,6 +51,9 @@ impl fmt::Display for ŜargaEraro {
             Self::NevalidaElfo => f.write_str("nevalida ELF64-bildo"),
             Self::EksterFenestro => f.write_str("segmento eliras la uzantan fenestron"),
             Self::NeniuSegmento => f.write_str("la bildo havas neniun PT_LOAD-segmenton"),
+            Self::NevalidaWX => {
+                f.write_str("segmento postulas samtempe skribadon kaj plenumon (W^X)")
+            }
             Self::Paĝa(eraro) => write!(f, "paĝa eraro: {eraro}"),
         }
     }
@@ -307,6 +311,9 @@ fn mapigi_bildon(
             }
         }
         let virtuala_paĝo = VirtuaAdreso::nova(paĝo);
+        if skribebla && plenumebla {
+            return Err(ŜargaEraro::NevalidaWX);
+        }
         if spaco.traduki(virtuala_paĝo).is_some() {
             return Err(ŜargaEraro::Paĝa(PaĝaEraro::Konflikto));
         }
@@ -345,14 +352,11 @@ fn mapigi_bildon(
     Ok(())
 }
 
+/// La permesoj de unu bilda paĝo. `mapigi_bildon` jam rifuzas `W+X`, do
+/// skribebla paĝo ĉiam estas NX; la `if` restas kiel dua barilo.
 fn permesoj_el(skribebla: bool, plenumebla: bool) -> PaĝaPermesoj {
     if skribebla {
-        PaĝaPermesoj {
-            skribebla: true,
-            plenumebla,
-            kaŝebla: true,
-            uzanta: true,
-        }
+        PaĝaPermesoj::UZANTA_DATUMOJ
     } else if plenumebla {
         PaĝaPermesoj::UZANTA_KODO
     } else {
@@ -394,6 +398,10 @@ fn testi_kontrolon(
     let translima = spaco.kontroli_uzantan(PROVA_BAZO, 3 * KADRA_GRANDO as usize, false);
     let eksterfenestra = spaco.kontroli_uzantan(UZANTA_FINO, 1, false);
     let enirpunkta = spaco.kontroli_uzantan(bildo.enirpunkto, 1, false);
+    let enirpermesoj = spaco.permesoj(VirtuaAdreso::nova(bildo.enirpunkto));
+    let stakaj = spaco.permesoj(VirtuaAdreso::nova(UZANTA_STAKO_SUPRO - KADRA_GRANDO));
+    let enir_rx = matches!(enirpermesoj, Some(p) if p.plenumebla && !p.skribebla);
+    let stako_rw = matches!(stakaj, Some(p) if p.skribebla && !p.plenumebla);
 
     let bone = skribo
         && lego
@@ -402,9 +410,11 @@ fn testi_kontrolon(
         && !nemapita
         && !translima
         && !eksterfenestra
-        && enirpunkta;
+        && enirpunkta
+        && enir_rx
+        && stako_rw;
     crate::skribu!(
-        "[uzanto] kontrolo ({}): skriba={} lega={} nurlega_skribo={} kerna={} nemapita={} translima={} eksterfenestra={} enirpunkta={}\n",
+        "[uzanto] kontrolo ({}): skriba={} lega={} nurlega_skribo={} kerna={} nemapita={} translima={} eksterfenestra={} enirpunkta={} enir_rx={} stako_rw={}\n",
         if bone { "bone" } else { "MALBONE" },
         skribo,
         lego,
@@ -413,7 +423,9 @@ fn testi_kontrolon(
         nemapita,
         translima,
         eksterfenestra,
-        enirpunkta
+        enirpunkta,
+        enir_rx,
+        stako_rw
     );
 
     let marko: u64 = 0x4D69_4B65_726E_6F21;

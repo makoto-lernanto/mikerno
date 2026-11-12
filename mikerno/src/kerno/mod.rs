@@ -28,7 +28,7 @@ pub fn kadra_alokilo() -> &'static mut KadraAlokilo {
 }
 
 pub fn ĉefa(informo: EniraInformo) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.2.4!\n");
+    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.2.5!\n");
     sistemvoko::pravalorizi();
     crate::skribu!(
         "[kerno] memoro: {} regionoj, {} MiB uzeblaj\n",
@@ -50,23 +50,25 @@ pub fn ĉefa(informo: EniraInformo) {
                 return;
             }
         };
-        if let Err(eraro) = spaco.idente_mapigi(informo.memora_mapo, PaĝaPermesoj::KERNELA, alokilo)
-        {
-            crate::skribu!("[kerno] identeca mapo malsukcesis: {}\n", eraro);
-            return;
-        }
         // Moduloj povas kuŝi en regiono, kiun la memormapo ne markas uzebla; la
-        // identeca mapo tiam mankas, do mapu ilin antaŭ ol ŝalti CR3.
+        // identeca mapo tiam mankus. Mapu ilin unue kiel nurlegajn: la sekva
+        // identeca mapado respektas la jamajn paĝojn, do la ELF-bildo restas
+        // R+NX anstataŭ fariĝi skribebla RAM. La bildo estas datumoj por la
+        // nukleo, ne kodo de Ring 0.
         for modulo in informo.moduloj {
             if let Err(eraro) = spaco.mapigi_intervalon(
                 VirtuaAdreso::nova(modulo.komenco),
                 VirtuaAdreso::nova(modulo.fino()),
-                PaĝaPermesoj::KERNELA,
+                PaĝaPermesoj::KERNA_LEGA,
                 alokilo,
             ) {
                 crate::skribu!("[kerno] modula mapado malsukcesis: {}\n", eraro);
                 return;
             }
+        }
+        if let Err(eraro) = spaco.idente_mapigi(informo.memora_mapo, alokilo) {
+            crate::skribu!("[kerno] identeca mapo malsukcesis: {}\n", eraro);
+            return;
         }
         let framebuffer = match informo.framebuffer {
             Some(fb) => {
@@ -86,6 +88,7 @@ pub fn ĉefa(informo: EniraInformo) {
             }
             None => None,
         };
+        testi_w_x(&spaco, informo.moduloj.first());
         spaco.ŝalti();
         procezo::agordi_kernan_spacon(spaco.radika_adreso());
         (spaco, framebuffer)
@@ -252,9 +255,49 @@ fn testi_liberigon(alokilo: &mut KadraAlokilo) {
     }
 }
 
+/// Kontrolu la efektivajn W^X-permesojn de la kerna bildo kaj de la modulo.
+/// La valoroj estas legitaj el la paĝtabeloj de `spaco`, do la linio pruvas la
+/// bitojn `W`/`NX`, ne nur la intencon de la mapigaj alvokoj.
+fn testi_w_x(spaco: &Spaco, modulo: Option<&Modulo>) {
+    let limoj = crate::memoro::virtuala::kernaj_limoj();
+    let kodo = spaco.permesoj(VirtuaAdreso::nova(limoj.kodo.0));
+    let rodata = spaco.permesoj(VirtuaAdreso::nova(limoj.rodata.0));
+    let datumoj = spaco.permesoj(VirtuaAdreso::nova(limoj.datumoj.0));
+    let modula = modulo.and_then(|m| spaco.permesoj(VirtuaAdreso::nova(m.komenco)));
+
+    let kodo_bone = matches!(kodo, Some(p) if p.plenumebla && !p.skribebla && !p.uzanta);
+    let rodata_bone = matches!(rodata, Some(p) if !p.plenumebla && !p.skribebla && !p.uzanta);
+    let datumoj_bone = matches!(datumoj, Some(p) if p.skribebla && !p.plenumebla && !p.uzanta);
+    let modulo_bone = match (modulo, modula) {
+        (None, _) => true,
+        (Some(_), Some(p)) => !p.plenumebla && !p.skribebla && !p.uzanta,
+        (Some(_), None) => false,
+    };
+    let bone = kodo_bone && rodata_bone && datumoj_bone && modulo_bone;
+    crate::skribu!(
+        "[memoro] W^X ({}): .text {}, .rodata {}, .data/.bss {}, modulo {}\n",
+        if bone { "bone" } else { "MALBONE" },
+        Priskribo(kodo),
+        Priskribo(rodata),
+        Priskribo(datumoj),
+        Priskribo(modula)
+    );
+}
+
+/// Prezento de `Option<PaĝaPermesoj>` por la W^X-linio.
+struct Priskribo(Option<PaĝaPermesoj>);
+
+impl core::fmt::Display for Priskribo {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self.0 {
+            Some(permesoj) => write!(f, "{permesoj}"),
+            None => f.write_str("mankas"),
+        }
+    }
+}
+
 #[repr(align(16))]
 struct FadenaStako(#[allow(dead_code)] [u8; STAKA_GRANDE]);
-
 static mut STAKOJ: [FadenaStako; TESTAJ_FADENOJ] =
     [const { FadenaStako([0; STAKA_GRANDE]) }; TESTAJ_FADENOJ];
 

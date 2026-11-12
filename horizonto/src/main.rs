@@ -17,7 +17,7 @@ use libmikerno::starto::{
     MAGIA_NUMERO, REĜIMO_SEKRETO, REĜIMO_SPIONO, SEKRETA_ADRESO, SEKRETA_DUA_ADRESO,
     SEKRETA_ID_DEŜOVO,
 };
-use libmikerno::syscall::{SYS_SKRIBI, invoki};
+use libmikerno::syscall::{SYS_RICEVI, SYS_SKRIBI, invoki};
 
 const SALUTO: &str = "horizonto: procezo vekis en Ring 3.\n";
 
@@ -115,18 +115,25 @@ fn spioni(identigilo: u64) -> ! {
 /// Kontrolu, ke la kerno rifuzas malvalidajn Ring 3-argumentojn anstataŭ
 /// dereferenci ilin.
 fn testi_negativajn() {
-    // SAFETY: la argumentoj estas intence malvalidaj; la kerna dispetĉilo
-    // validigas montrilojn kaj longojn antaŭ ol legi aŭ skribi ion ajn.
-    let (nekonata, nula, kerna, troa) = unsafe {
+    // La kvara provo celas sian propran enirpaĝon, kiu estas RX: la regiona
+    // kontrolo trapasas, sed la folia permeso por skribo mankas, do ankaŭ la
+    // paĝnivela kontrolo devas rifuzi ĝin.
+    // SAFETY: la argumentoj estas intence malvalidaj aŭ malpermesitaj; la kerna
+    // dispetĉilo validigas montrilojn, longojn kaj foliajn permesojn antaŭ ol
+    // legi aŭ skribi ion ajn.
+    let (nekonata, nula, kerna, troa, nurlega) = unsafe {
         (
             invoki(0x7FFF, [0; 4]),
             invoki(SYS_SKRIBI, [0, 8, 0, 0]),
             invoki(SYS_SKRIBI, [0x1000, 8, 0, 0]),
             invoki(SYS_SKRIBI, [SALUTO.as_ptr() as usize, 4097, 0, 0]),
+            invoki(SYS_RICEVI, [0, horizonto_start as *const () as usize, 0, 0]),
         )
     };
-    if nekonata == -2 && nula == -1 && kerna == -1 && troa == -1 {
-        biblioteko::skribi("[ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1\n");
+    if nekonata == -2 && nula == -1 && kerna == -1 && troa == -1 && nurlega == -1 {
+        biblioteko::skribi(
+            "[ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1, nurlega=-1\n",
+        );
     } else {
         biblioteko::skribi("[ring3] negativaj: MALBONE\n");
     }

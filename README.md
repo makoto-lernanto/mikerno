@@ -10,7 +10,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.2.4 (workspace)
+- **Versio:** 0.2.5 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.85`
@@ -259,16 +259,21 @@ komparas la nombrojn de liberaj kadroj.
 
 `X86AdresaSpaco` konstruas freŝan PML4-on kaj mapas per 4 KiB folioj:
 
-- la malaltan 1 MiB,
-- la kernan bildon (aparte, ĉar iuj praŝarĝiloj raportas ĝin rezervita),
-- ĉiujn uzeblajn regionojn (identece, `KERNELA` = RWX),
+- la malaltan 1 MiB kaj ĉiujn uzeblajn regionojn identece kiel RW+NX,
+- la kernan bildon laŭ sekciaj limoj el `boot/linker.ld`: `.text` (`RX`),
+  `.rodata` (`R`+`NX`) kaj `.data`/`.bss`/`.boot_bss` (`RW`+`NX`),
 - la framebuffer-on (`SKRIBA_SENKAŜE`: skribebla, neplenumebla, `PCD`),
 - la APIC-MMIO-on (`SKRIBA`).
 
-`EFER.NXE` estas ŝaltita antaŭ ol oni uzas biton 63. `mapigi` rifuzas
-nealiniiĝintajn adresojn kaj jam mapitajn foliojn (`Konflikto`); `traduki`
-komprenas ankaŭ 2 MiB grandegajn paĝojn. La identeca mapo estas RWX, kio estas
-oportuna sed ne sekura longtempe (vidu [Limigoj](#limigoj-kaj-sekva-laboro)).
+`EFER.NXE` kaj `CR0.WP` estas ŝaltitaj antaŭ ol oni uzas la biton 63 aŭ
+nurlegajn mapojn: `CR0.WP` devigas ankaŭ Ring 0 respekti la biton `W`, do
+nurlega paĝo estas vera barilo, ne konsilo. `mapigi` rifuzas nealiniiĝintajn
+adresojn kaj jam mapitajn foliojn (`Konflikto`); `traduki` komprenas ankaŭ 2 MiB
+grandegajn paĝojn. Neniu paĝo estas samtempe skribebla kaj plenumebla. La
+praŝarĝa modulo estas mapita nurlega antaŭ la identeca mapado, do ĝiaj paĝoj
+restas `R`+`NX` anstataŭ fariĝi skribebla RAM. `permesoj(adreso)` legas la
+efektivajn bitojn el la folio, kaj la starta memtesto printas
+`[memoro] W^X (bone): .text RX, .rodata R NX, .data/.bss RW NX, modulo R NX`.
 
 `krei_kunhavantan(&self, …)` konstruas procezan spacon super ekzistanta kerna
 spaco. Por ĉiu ĉeesta PML4-ero ĝi kontrolas la suban PDPT-on: se ĝi enhavas
@@ -428,7 +433,11 @@ La uzanta virtuala spaco estas rezervita supre de la kerna identeca mapo:
 `PaĝaPermesoj` havas la biton `uzanta`; la mapado metas `U` en ĉiun nivelon
 (PML4 → PDPT → PD → PT), do `kontroli_uzantan` povas pruvi per unu promenado,
 ke la tuta vojo estas alirebla el Ring 3. La folia nivelo ricevas `W` nur por
-skribaj regionoj kaj `NX` por datumoj kaj stako.
+skribaj regionoj kaj `NX` por datumoj kaj stako; skribebla paĝo neniam estas
+plenumebla (`W^X`). Sistemvokoj kun Ring 3-montrilo kontrolas ne nur la
+anoncitan bildan/stakan regionon, sed ankaŭ ĉiun folian permeson: `SYS_SKRIBI`
+kaj `SYS_SENDI` postulas legeblan folion, `SYS_RICEVI` skribeblan. Rifuzo estas
+raportita per `[eraro] procezo N: montrilo … ne havas la postulatan folian permeson`.
 
 ### Ŝargo de la bildo
 
@@ -442,14 +451,17 @@ skribaj regionoj kaj `NX` por datumoj kaj stako.
 3. muntas paĝon post paĝo: ĉiu folio ricevas la **unuon** de la permesoj de ĉiuj
    segmentoj, kiuj ĝin tuŝas (LLVM ofte kunigas la segmentojn sur unu paĝo),
    poste oni nuligas la kadron kaj kopias la dosierajn bajtojn de ĉiu segmento;
+   paĝo, kiu postulus samtempe `W` kaj `X`, estas rifuzata (`NevalidaWX`);
 4. mapas la 64 KiB-an stakon ĉe `UZANTA_STAKO_SUPRO`.
 
 Post tio `pravalorizi()` redonas la bildajn limojn, la enirpunkton kaj la
 stakon, kaj rulas memkontrolon: skribo/lego tra la uzanta fenestro el Ring 0
 devas sukcesi, dum nurlega skribo, kerna adreso, nemapita adreso, translima
 intervalo kaj adreso ekster la fenestro devas esti rifuzitaj laŭ la bito `U`.
-Ĉar la ŝargo okazas en la proceza spaco, la marka skribo/lego provizore ŝaltas
-tiun `CR3` (kun interrompoj malŝaltitaj) kaj poste restarigas la kernan radikon.
+La kontrolo ankaŭ legas la foliajn permesojn de la enirpunkto (`RX`) kaj de la
+stako (`RW`+`NX`). Ĉar la ŝargo okazas en la proceza spaco, la marka
+skribo/lego provizore ŝaltas tiun `CR3` (kun interrompoj malŝaltitaj) kaj poste
+restarigas la kernan radikon.
 
 `horizonto` estas liverata de ambaŭ praŝarĝaj vojoj — Multiboot2 tipo 3 el
 `limine.conf`, aŭ la PVH-modlisto el `-initrd` (``just run`` aldonas ĝin
@@ -474,7 +486,7 @@ memoras siajn bildajn limojn, enirpunkton kaj sekretan adreson. La konzolo
 konfirmas per:
 
 ```text
-[procezo] 4: Preta, kerna stako 0x164d10, PML4 0x206000, kerna mapo kunhavata, bildo nur en la proceza spaco jes, sekreta paĝo 0x200000000
+[procezo] 4: Preta, kerna stako 0x138d90, PML4 0x207000, kerna mapo kunhavata, bildo nur en la proceza spaco jes, sekreta paĝo 0x200000000
 ```
 
 La kontrolo legas `traduki(0x1000)` en la proceza spaco (kerna mapo ĉeestas)
@@ -548,9 +560,12 @@ adreson, kiu ekzistas nur en la adresa spaco de proceso `4`, eĉ kiam ambaŭ
 uzas la saman virtualan bazon por la unua sekreta paĝo.
 
 Antaŭ la eliro la unua procezo ankaŭ kontrolas la negativajn kontraktojn el
-Ring 3: vojo `0x7FFF` (nekonata), nula montrilo, kerna adreso `0x1000` kaj troa
-longo `4097`. Ĉiuj devas redoni respektive `-2` aŭ `-1`; se iu ajn sukcessus,
-la uzanta programo printus `[ring3] negativaj: MALBONE` anstataŭ la valorojn.
+Ring 3: vojo `0x7FFF` (nekonata), nula montrilo, kerna adreso `0x1000`, troa
+longo `4097` kaj skriba `SYS_RICEVI` en la nurlega enirpaĝo. Ĉiuj devas redoni
+respektive `-2` aŭ `-1`; se iu ajn sukcessus, la uzanta programo printus
+`[ring3] negativaj: MALBONE` anstataŭ la valorojn. La provo skribi en la
+plenumeblan enirpaĝon ankaŭ lasas la kernan protokolon
+`… ne havas la postulatan folian permeson`.
 
 ### Dispetĉilo
 
@@ -575,7 +590,7 @@ Kontrolo farita la **2026-11-12** per Rust 1.99.1 sur Windows:
 
 ```sh
 cargo build --workspace --release
-#   Finished `release` profile [optimized] target(s) in 5.20s
+#   Finished `release` profile [optimized] target(s) in 6.55s
 
 cargo clippy --workspace --release
 #   Finished `release` profile ... (neniu averto)
@@ -584,12 +599,13 @@ cargo fmt --all -- --check
 #   (neniu diferenco)
 ```
 
-Ambaŭ praŝarĝaj vojoj estis praktike testitaj per QEMU 256 MiB:
+Ĉiuj tri praŝarĝaj vojoj estis praktike testitaj per QEMU 256 MiB:
 
 | Vojo | Rezulto |
 | --- | --- |
-| PVH (`-kernel` + `-initrd`) | 7 regionoj, 255 MiB uzeblaj, sen framebuffer, reuzoprovo `10 cikloj, 64980 kadroj antaŭ, 64980 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `32`/`33` kadroj liberigitaj, `izolado (bone): 64980 kadroj antaŭ, 64980 post`, 1000 tikoj, 5 fadenoj mortintaj |
-| Limine/Multiboot2 (ISO) | framebuffer `1280x800, 32 bpp`, reuzoprovo `10 cikloj, 64978 kadroj antaŭ, 64978 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `32`/`33` kadroj liberigitaj, `izolado (bone): 64978 kadroj antaŭ, 64978 post`, 1000 tikoj, 5 fadenoj mortintaj |
+| PVH (`-kernel` + `-initrd`) | 7 regionoj, 255 MiB uzeblaj, sen framebuffer, reuzoprovo `10 cikloj, 64979 kadroj antaŭ, 64979 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `32`/`33` kadroj liberigitaj, `izolado (bone): 64979 kadroj antaŭ, 64979 post`, 1000 tikoj, 5 fadenoj mortintaj |
+| Limine/Multiboot2 (ISO, BIOS) | framebuffer `1280x800, 32 bpp`, reuzoprovo `10 cikloj, 64977 kadroj antaŭ, 64977 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `32`/`33` kadroj liberigitaj, `izolado (bone): 64977 kadroj antaŭ, 64977 post`, 1000 tikoj, 5 fadenoj mortintaj |
+| Limine (ISO, UEFI/OVMF) | sama scenaro; liberaj kadroj `63507` antaŭ/post, framebuffer `1280x800, 32 bpp`, 1000 tikoj, 5 fadenoj mortintaj |
 
 `just verify` ne estis rulita en ĉi tiu medio, ĉar `cargo kani` ne estas
 instalita. La 12 pruvoj (6 pri la kadro-alokilo, 6 pri la mesaĝujo) estas
@@ -600,17 +616,18 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.2.4!
+[MiKerno] Saluton, mi estas MiKerno v0.2.5!
 [sistemvoko] pordego 0x80 (DPL3) instalita
 [kerno] memoro: 7 regionoj, 255 MiB uzeblaj
-[memoro] liberigo (bone): 65113 kadroj antaŭ, 65113 post
+[memoro] liberigo (bone): 65112 kadroj antaŭ, 65112 post
+[memoro] W^X (bone): .text RX, .rodata R NX, .data/.bss RW NX, modulo R NX
 [kerno] framebuffer ne havebla; nur COM1    (PVH; ISO montras 1280x800)
-[tss] TR ŝargita; kernostako pinto 0x176b70
+[tss] TR ŝargita; kernostako pinto 0x148d90
 [temporizilo] kalibrado: ... kalkuloj/s, komenca ...
 [kerno] APIC 0 kaj paĝado pretaj; temporizilo 100 Hz
-[procezo] 6 detruita: 1 privataj PDPT-oj, PML4 0x206000, 25 kadroj liberigitaj
+[procezo] 6 detruita: 1 privataj PDPT-oj, PML4 0x207000, 25 kadroj liberigitaj
 ... (10 reuzaj cikloj)
-[memoro] reuzo (bone): 10 cikloj, 64980 kadroj antaŭ, 64980 post
+[memoro] reuzo (bone): 10 cikloj, 64979 kadroj antaŭ, 64979 post
 [kerno] IPC: mesaĝo sendita al fadeno 2
 [kerno] planisto ekas: 3 fadenoj, antaŭokupo ĉiu 10 ms
 saluton el Ring 0 tra int 0x80
@@ -619,34 +636,38 @@ saluton el Ring 0 tra int 0x80
 [planisto] fadeno 3 finiĝis
 [uzanto] horizonto: bildo 0x100000000..0x100003028, enirpunkto 0x100001840
 [uzanto] stako 0x100ff0000..0x101000000 (64 KiB), pinto 0x101000000
-[uzanto] kontrolo (bone): skriba=true lega=true nurlega_skribo=false kerna=false nemapita=false translima=false eksterfenestra=false enirpunkta=true
+[uzanto] kontrolo (bone): skriba=true lega=true nurlega_skribo=false kerna=false nemapita=false translima=false eksterfenestra=false enirpunkta=true enir_rx=true stako_rw=true
 [uzanto] memoro: marko 0x4d694b65726e6f21, legita 0x4d694b65726e6f21
-[procezo] 4: Preta, kerna stako 0x164d10, PML4 0x206000, kerna mapo kunhavata, bildo nur en la proceza spaco jes, sekreta paĝo 0x200000000
+[procezo] 4: Preta, kerna stako 0x138d90, PML4 0x207000, kerna mapo kunhavata, bildo nur en la proceza spaco jes, sekreta paĝo 0x200000000
 [kerno] horizonto 4 pretas: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x100001840
 [uzanto] ... kontrolo (bone) ...
-[procezo] 5: Preta, kerna stako 0x168d10, PML4 0x227000, kerna mapo kunhavata, bildo nur en la proceza spaco jes, sekreta paĝo 0x200000000
+[procezo] 5: Preta, kerna stako 0x13cd90, PML4 0x228000, kerna mapo kunhavata, bildo nur en la proceza spaco jes, sekreta paĝo 0x200000000
 [kerno] horizonto 5 pretas: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x100001840
 [kerno] du procezoj pretaj; unu planista voko
 horizonto: procezo vekis en Ring 3.
-[ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1
+[eraro] procezo 5: montrilo 0x1000 (longo 8) estas ekster la anoncita regiono
+[eraro] procezo 5: montrilo 0x100001840 (longo 96, skriba true) ne havas la postulatan folian permeson
+[ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1, nurlega=-1
 [ring3] procezo 5: sekreta paĝo kongruas (magio 0x4d694b65726e6f21, id 5)
 [ring3] procezo 5: spionas la viktimon
 horizonto: procezo vekis en Ring 3.
-[ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1
+[eraro] procezo 4: montrilo 0x1000 (longo 8) estas ekster la anoncita regiono
+[eraro] procezo 4: montrilo 0x100001840 (longo 96, skriba true) ne havas la postulatan folian permeson
+[ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1, nurlega=-1
 [ring3] procezo 4: sekreta paĝo kongruas (magio 0x4d694b65726e6f21, id 4)
 [ring3] procezo 4: laboras (fojo 1)
 [ring3] procezo 5: legas la duan sekretan paĝon ĉe 0x200001000
 
-[eraro] procezo 5: paĝa eraro ĉe rip=0x00000001000014de, erarkodo=0x4, CR2=0x0000000200001000; la procezo estas mortigata
+[eraro] procezo 5: paĝa eraro ĉe rip=0x00000001000014ce, erarkodo=0x4, CR2=0x0000000200001000; la procezo estas mortigata
 [planisto] fadeno 5 finiĝis
-[procezo] 5 detruita: 1 privataj PDPT-oj, PML4 0x227000, 32 kadroj liberigitaj
+[procezo] 5 detruita: 1 privataj PDPT-oj, PML4 0x228000, 32 kadroj liberigitaj
 [ring3] procezo 4: laboras (fojo 2)
 ...
 [ring3] procezo 4: laboras (fojo 6)
 [ring3] procezo 4: pluvivas post la spiono; finas per SYS_FINI
 [planisto] fadeno 4 finiĝis
-[procezo] 4 detruita: 1 privataj PDPT-oj, PML4 0x206000, 33 kadroj liberigitaj
-[memoro] izolado (bone): 64980 kadroj antaŭ, 64980 post
+[procezo] 4 detruita: 1 privataj PDPT-oj, PML4 0x207000, 33 kadroj liberigitaj
+[memoro] izolado (bone): 64979 kadroj antaŭ, 64979 post
 [kerno] planisto revenis al la ripoza fadeno
 ...
 [kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
@@ -769,8 +790,10 @@ horizonto: procezo vekis en Ring 3.
 - **Proceza detruo estas antaŭkondiĉa**: `detrui` postulas, ke neniu alia
   fadeno de la procezo plenumas kaj ke la vokanto tenas interrompojn
   malŝaltitaj; kun unu uzanta fadeno po procezo tio ĉiam validas.
-- **Identeca mapo RWX**: oportunas por la prototipo, sed malobservas W^X;
-  SMEP/SMAP, KASLR kaj APIC/IOMMU-izolado mankas.
+- **W^X sed sen SMEP/SMAP**: la identeca mapo estas nun dividita laŭ sekcioj
+  (`.text` RX, `.rodata` R NX, datumoj RW NX) kaj `CR0.WP` protektas la
+  nurlegajn paĝojn ankaŭ el Ring 0; SMEP/SMAP kaj KASLR estas planitaj por
+  M13, dum IOMMU-izolado por M18 (post 1.0).
 - **Unuprocesora**: neniu SMP, afineco, prioritatoj aŭ dormantaj temporiziloj.
 - **Fiksaj limoj**: 8 fadenoj, 16 mesaĝoj po fadeno, 64 bajtoj po mesaĝo,
   4 GiB fizika memoro.

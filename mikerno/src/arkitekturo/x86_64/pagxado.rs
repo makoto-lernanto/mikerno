@@ -28,8 +28,11 @@ const DU_MIB_BAZA_MASKO: u64 = 0x000F_FFFF_FFE0_0000;
 const EFER_MSR: u32 = 0xC000_0080;
 const NXE_BITO: u32 = 1 << 11;
 
-/// Ŝaltu `EFER.NXE`, por ke mapoj rajtas uzi la biton 63.
+/// Ŝaltu `EFER.NXE` (por la bito 63) kaj `CR0.WP` (por ke Ring 0 ankaŭ respektu
+/// nurlegajn paĝojn). Sen `WP` nurlegaj mapoj estus nur konsilo, ne barilo.
 pub fn pravalorizi() {
+    // SAFETY: `rdmsr`/`wrmsr` kun `EFER_MSR` estas la dokumentita vojo por
+    // ŝalti `NXE`; la aliaj bitoj de la MSR estas konservitaj.
     unsafe {
         let malalta: u32;
         let alta: u32;
@@ -47,6 +50,14 @@ pub fn pravalorizi() {
             in("edx") alta,
             options(nostack, preserves_flags),
         );
+    }
+    // SAFETY: `CR0.WP` (bito 16) estas la sola bito ŝanĝata; la ceteraj,
+    // inkluzive `PG` kaj `PE`, restas kiel la praŝarĝa ŝelko lasis ilin.
+    unsafe {
+        let mut cr0: u64;
+        asm!("mov {}, cr0", out(reg) cr0, options(nomem, nostack, preserves_flags));
+        cr0 |= 1 << 16;
+        asm!("mov cr0, {}", in(reg) cr0, options(nomem, nostack, preserves_flags));
     }
 }
 
@@ -218,7 +229,7 @@ impl PaĝaTablo for X86AdresaSpaco {
         let Some(fino) = adreso.checked_add(longo as u64) else {
             return false;
         };
-        if fino > UZANTA_FINO {
+        if adreso < UZANTA_BAZO || fino > UZANTA_FINO {
             return false;
         }
 
@@ -233,6 +244,29 @@ impl PaĝaTablo for X86AdresaSpaco {
             }
             paĝo = sekva;
         }
+    }
+
+    fn permesoj(&self, virtuala: VirtuaAdreso) -> Option<PaĝaPermesoj> {
+        let pml4 = ero(self.radiko(), indico(virtuala, 3));
+        if pml4 & PREZENTA == 0 {
+            return None;
+        }
+        let pdpt = ero(FizikaAdreso::nova(pml4 & ADRESO_MASKO), indico(virtuala, 2));
+        if pdpt & PREZENTA == 0 {
+            return None;
+        }
+        let pd = ero(FizikaAdreso::nova(pdpt & ADRESO_MASKO), indico(virtuala, 1));
+        if pd & PREZENTA == 0 {
+            return None;
+        }
+        if pd & GRANDA != 0 {
+            return Some(permesoj_el_ero(pd));
+        }
+        let pt = ero(FizikaAdreso::nova(pd & ADRESO_MASKO), indico(virtuala, 0));
+        if pt & PREZENTA == 0 {
+            return None;
+        }
+        Some(permesoj_el_ero(pt))
     }
 
     fn traduki(&self, virtuala: VirtuaAdreso) -> Option<FizikaAdreso> {
@@ -511,4 +545,14 @@ fn permesaj_eroj(permesoj: PaĝaPermesoj) -> u64 {
         valoro |= NEKAŜEBLA;
     }
     valoro
+}
+
+/// La permesoj, kiujn folia ero donas al la tradukita paĝo.
+fn permesoj_el_ero(ero: u64) -> PaĝaPermesoj {
+    PaĝaPermesoj {
+        skribebla: ero & SKRIBEBA != 0,
+        plenumebla: ero & NE_PLENUMEBLA == 0,
+        kaŝebla: ero & NEKAŜEBLA == 0,
+        uzanta: ero & UZANTA != 0,
+    }
 }
