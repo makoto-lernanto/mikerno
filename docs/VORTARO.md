@@ -32,12 +32,16 @@ kaj protokolaj nomoj sekvu ĝin.
 | `taska stata segmento` | task state segment (TSS) | 任务状态段 | `TaskaStataSegmento`. |
 | `priskribo` | descriptor | 描述符 | |
 | `selektilo` | selector | 选择子 | |
+| `pordego` | gate | 门 | |
+| `interrompa pordego` | interrupt gate | 中断门 | Malŝaltas `RFLAGS.IF`. |
+| `kapta pordego` | trap gate | 陷阱门 | Ne malŝaltas `RFLAGS.IF`. |
 | `privilegia nivelo` | privilege level (DPL/RPL/CPL) | 特权级 | |
 | `kerna reĝimo` | kernel mode (Ring 0) | 内核态 | |
 | `uzanta reĝimo` | user mode (Ring 3) | 用户态 | |
 | `uzantspaco` | user space | 用户空间 | |
 | `sistemvoko` | system call | 系统调用 | `SYS_*` restas kiel ABI-prefikso. |
 | `sistemvoka vektoro` | syscall vector | 系统调用向量 | `0x80`. |
+| `sistemvoka numero` | system call number | 系统调用号 | `rax` ĉe la voko. |
 | `uzanta kodo` | user code | 用户代码段 | DPL3. |
 | `uzantaj datumoj` | user data | 用户数据段 | DPL3. |
 | `kerna stako` | kernel stack | 内核栈 | `RSP0`. |

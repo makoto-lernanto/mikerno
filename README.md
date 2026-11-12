@@ -10,7 +10,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj la antaŭpreparo por Ring 3.
 
-- **Versio:** 0.1.0 (workspace)
+- **Versio:** 0.1.1 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.85`
@@ -49,6 +49,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj la antaŭpreparo por Ring 3.
 | Bitmapa kadro-alokilo por la unuaj 4 GiB | Funkcias | `memoro/kadro.rs` |
 | 4-nivela paĝado (PML4 → PDPT → PD → PT), NX, PCD | Funkcias | `arkitekturo/x86_64/pagxado.rs` |
 | GDT, 256-vektora IDT, escepta raportado | Funkcias | `gdt.rs`, `idt.rs`, `interrompo/mod.rs` |
+| Uzantaj DPL3-segmentoj kaj `int 0x80`-pordego (interrompa, `0xEE`) | Funkcias | `gdt.rs`, `idt.rs`, `kerno/sistemvoko.rs` |
 | TSS kun `RSP0` por Ring 3 → Ring 0 | Funkcias (preta) | `tss.rs` |
 | xAPIC (MMIO), malŝalto de 8259-PIC, spuria vektoro `0xFF` | Funkcias | `apic.rs` |
 | 100 Hz perioda temporizilo, kalibrita kontraŭ la PIT | Funkcias | `temporizilo.rs` |
@@ -59,8 +60,9 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj la antaŭpreparo por Ring 3.
 | Unua uzanta procezo `horizonto` | Skeleta | `horizonto/` |
 | 11 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ipc.rs` |
 
-> La Ring 3-transiro mem ankoraŭ ne estas efektivigita: `horizonto` fiksas la
-> kontrakton, sed la kerno ankoraŭ ne enŝovas ĝin nek instalas DPL3-pordon.
+> La Ring 3-transiro mem ankoraŭ ne estas efektivigita: la GDT havas la
+> uzantajn DPL3-segmentojn kaj la IDT havas la DPL3-pordon por `int 0x80`, sed
+> la kerno ankoraŭ ne enŝovas `horizonto` nek transiras per `iretq`.
 
 ---
 
@@ -331,9 +333,9 @@ ekzistas aparta kapablotabelo, rajtorevoko aŭ tempolimoj.
 
 `horizonto` estas la unua uzanta bildo (`horizonto_start`), ligita je 4 MiB
 super la kerna bildo. Ĝi ankoraŭ **ne estas enŝovita** en la kernan bildon nek
-lanĉebla memstare: `tools/run-qemu.sh` ĝentile rifuzas ĝin, kaj la kerno ankoraŭ
-ne instalas DPL3-pordon por `int 0x80`. Ĝi do estas kontrakto kaj skeleto por la
-venonta Ring 3-ŝalto.
+lanĉebla memstare: `tools/run-qemu.sh` ĝentile rifuzas ĝin. La GDT kaj la IDT
+jam estas pretaj por Ring 3; la kerna dispetĉilo ankoraŭ redonas `-ENOSYS`
+(`-38`) por la kvin konataj vokoj kaj `-EINVAL` (`-22`) por nekonata numero.
 
 ---
 
@@ -368,7 +370,9 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.1.0!
+[MiKerno] Saluton, mi estas MiKerno v0.1.1!
+[sistemvoko] pordego 0x80 (DPL3) instalita
+[sistemvoko] memtesto: konata=-38, nekonata=-22
 [kerno] memoro: 7 regionoj, 255 MiB uzeblaj
 [kerno] framebuffer 1280x800, 32 bpp        (nur ISO)
 [tss] TR ŝargita; kernostako pinto 0x...
@@ -463,8 +467,8 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 
 ## Limigoj kaj sekva laboro
 
-- **Neniu Ring 3**: mankas uzantaj GDT-pecoj, DPL3-pordo por `int 0x80`,
-  enŝovo de `horizonto` kaj per-procesaj adresspacoj.
+- **Neniu Ring 3**: mankas enŝovo de `horizonto`, uzanta adresospaco kun bito
+  `U`, la `iretq`-transiro kaj la efektivigo de la kvin sistemvokoj.
 - **Neniu liberigo de kadroj**: la alokilo estas monotona; `KadraAlokilo` ne
   havas publikan `liberigi`.
 - **Identeca mapo RWX**: oportunas por la prototipo, sed malobservas W^X;

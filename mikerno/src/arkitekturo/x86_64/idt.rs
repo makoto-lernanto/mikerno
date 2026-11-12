@@ -7,7 +7,7 @@
 use core::arch::{asm, global_asm};
 use core::mem::{offset_of, size_of};
 
-use crate::interrompo::{InterrompaKadro, VEKTOROJ};
+use crate::interrompo::{InterrompaKadro, SISTEMVOKA_VEKTORO, VEKTOROJ};
 
 const ERARKODAJ: [u8; 10] = [8, 10, 11, 12, 13, 14, 17, 21, 29, 30];
 const STRIDO: u64 = 32;
@@ -37,11 +37,12 @@ impl IdtEro {
         }
     }
 
-    fn agordi(&mut self, traktilo: u64) {
+    fn agordi(&mut self, traktilo: u64, dpl3: bool) {
         self.offseto_malalta = traktilo as u16;
         self.selektilo = 0x08;
-        // Ĉeesta | DPL0 | 64-bita interrompa pordego.
-        self.tipo_atributo = 0x8E;
+        // Ĉeesta | DPL | 64-bita interrompa pordego. Interrompa pordego (ne
+        // kapta) malŝaltas `RFLAGS.IF`, do temporizilo ne reeniras dum voko.
+        self.tipo_atributo = if dpl3 { 0xEE } else { 0x8E };
         self.offseto_meza = (traktilo >> 16) as u16;
         self.offseto_alta = (traktilo >> 32) as u32;
     }
@@ -166,7 +167,10 @@ pub fn instali() {
             } else {
                 sen_eraro
             };
-            ero.agordi(bazo + STRIDO * vektoro as u64);
+            ero.agordi(
+                bazo + STRIDO * vektoro as u64,
+                vektoro as u8 == SISTEMVOKA_VEKTORO,
+            );
         }
 
         let montrilo = IdtMontrilo {

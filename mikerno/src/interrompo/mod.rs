@@ -6,6 +6,8 @@ use crate::kunhavigita::Kunhavigita;
 pub use crate::arkitekturo::{ebligi_interrompojn, interrompoj_ebligitaj, malebligi_interrompojn};
 
 pub const VEKTOROJ: usize = 256;
+/// La vektoro de `int 0x80`; ĝia pordego estas la sola DPL3-pordego.
+pub const SISTEMVOKA_VEKTORO: u8 = 0x80;
 
 /// La stako, kiun la enira ŝelko konservas antaŭ ol voki Rust.
 #[repr(C)]
@@ -36,7 +38,8 @@ pub struct InterrompaKadro {
 }
 
 pub trait InterrompaTraktilo {
-    fn trakta(&self, kadro: &InterrompaKadro);
+    /// La kadro estas ŝanĝebla, ĉar sistemvoko skribas sian rezulton en `rax`.
+    fn trakta(&self, kadro: &mut InterrompaKadro);
 }
 
 static TRAKTILOJ: Kunhavigita<[Option<&'static dyn InterrompaTraktilo>; VEKTOROJ]> =
@@ -71,13 +74,13 @@ impl Drop for InterrompaGardo {
 /// Vokata de la arkitektura enira ŝelko.
 #[unsafe(no_mangle)]
 pub extern "C" fn interrompa_dispetcho(kadro: *mut InterrompaKadro) {
-    let kadro = unsafe { &*kadro };
+    let kadro = unsafe { &mut *kadro };
     let vektoro = kadro.vektoro as usize;
 
     if let Some(traktilo) = TRAKTILOJ.akiri()[vektoro] {
         // EOI antaŭ la traktilo: ĝi rajtas ŝanĝi la kuntekston, kaj la venonta
         // tiko devas povi alveni ankaŭ dum la nova fadeno plenumas.
-        if vektoro >= 0x20 && vektoro != 0xFF {
+        if estas_apic_vektoro(vektoro) {
             crate::arkitekturo::konfirmi_interrompon();
         }
         traktilo.trakta(kadro);
@@ -93,10 +96,17 @@ pub extern "C" fn interrompa_dispetcho(kadro: *mut InterrompaKadro) {
     }
 
     crate::skribu!("\n[kerno] neatendita interrompo: vektoro {}\n", vektoro);
-    crate::arkitekturo::konfirmi_interrompon();
+    if estas_apic_vektoro(vektoro) {
+        crate::arkitekturo::konfirmi_interrompon();
+    }
 }
 
-fn trakti_escepton(kadro: &InterrompaKadro) -> ! {
+/// Nur la lokaj APIC-vektoroj postulas EOI; `int 0x80` kaj `int3` ne.
+fn estas_apic_vektoro(vektoro: usize) -> bool {
+    (0x20..0x80).contains(&vektoro)
+}
+
+fn trakti_escepton(kadro: &mut InterrompaKadro) -> ! {
     crate::skribu!(
         "\n[kerno] escepto {} (erarkodo 0x{:x}) rip=0x{:016x} rsp=0x{:016x} rflags=0x{:x}\n",
         kadro.vektoro,

@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-12 · Versio de la workspace: 0.1.0
+> Stato: 2026-11-12 · Versio de la workspace: 0.1.1
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -23,7 +23,7 @@
 | M8 | Mesaĝa IPC kun kapabloj | Plenumita | mesaĝoj liveritaj, fadeno 3 vekita |
 | M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 11 pruvoj verkitaj, Kani ne instalita |
 | M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Parte | ABI difinita; Ring 3 ne efektivigita |
-| M11 | Ring 3 kaj sistemvokoj | Venonta | — |
+| M11 | Ring 3 kaj sistemvokoj | Parte | GDT/TSS (0.1.0), `int 0x80`-pordego (0.1.1) |
 | M12 | Per-procesaj adresspacoj | Venonta | — |
 | M13 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Venonta | — |
 | M14 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
@@ -309,8 +309,8 @@ etaj abstraktaĵoj, kaj aldoni testojn por la arkitekture sendependaj partoj
 
 - La kerno ne enŝovas `horizonto` (nek kiel Multiboot2-modulon nek kiel
   enigitan ELF-sekcion).
-- Mankas uzantaj GDT-pecoj (DPL3), DPL3-pordo por `int 0x80`, per-procesa
-  mapado kun bito `U`, uzanta stako kaj `iretq`-transiro.
+- Mankas uzanta adresospaco kun bito `U`, uzanta stako, `iretq`-transiro kaj
+  la efektivigo de la kvin sistemvokoj (vidu M11).
 - La kerna `ipc::Mesago` kaj `libmikerno::Mesago` ne havas identan aranĝon
   (`sendinto`/`ricevonto` mankas en la kerna versio).
 
@@ -409,17 +409,29 @@ Elĉerpaĵo:
 
 **Taskoj.**
 
-1. Aldoni uzantajn GDT-pecojn: kodo DPL3 (indico 4, `0x20`) kaj datumoj DPL3
-   (indico 5, `0x28`).
+1. ~~Aldoni uzantajn GDT-pecojn.~~ La fina aranĝo estas: kerna kodo `0x08`,
+   kernaj datumoj `0x10`, uzantaj datumoj DPL3 `0x18`, uzanta kodo DPL3
+   `0x20`, TSS `0x28`/`0x30` (16 bajtoj). `iretq` do uzas `CS=0x23` kaj
+   `SS=0x1B`; la aranĝo ankaŭ taŭgas por estonta `syscall`/`sysret`.
 2. Enŝovi `horizonto` en la kernan bildon aŭ liveri ĝin kiel Multiboot2-modulon
-   (`limine.conf`), kun la enirpunkto el la ELF-kapo.
-3. Krei uzantan adresospacon: mapi la bildon je 4 MiB kun bito `U`, alokigi
-   uzantan stakon, kaj konservi la kernan mapadon nur en la supra duono.
-4. Instali `int 0x80`-pordon kun DPL3; la traktilo legu `rax`/`rdi`/`rsi`/
-   `rdx`/`r10` el `InterrompaKadro` kaj dispetĉu al la kerna efektivigo.
-5. Efektivigi `SYS_SKRIBI`, `SYS_FINI`, `SYS_CEDI`, `SYS_SENDI`, `SYS_RICEVI`.
-6. Transiri per `iretq` kun `CS=0x20|3`, `SS=0x28|3`, `RFLAGS.IF=1`; la TSS
-   `RSP0` jam pretas.
+   (tipo 3) aŭ per la PVH-modlisto, kun la enirpunkto el la ELF-kapo.
+3. Krei uzantan adresospacon: mapi la bildon super 4 GiB (bazo
+   `0x1_0000_0000`), alokigi 64 KiB da uzanta stako je bazo + 16 MiB, kaj
+   propagi la biton `U` tra la paĝtabeloj.
+4. Instali `int 0x80`-pordon kun DPL3 (interrompa pordego `0xEE`); la traktilo
+   legu `rax`/`rdi`/`rsi`/`rdx`/`r10` el ŝanĝebla `InterrompaKadro`,
+   dispetĉu al la kerna efektivigo kaj skribu la rezulton en `rax`. EOI nur por
+   vektoroj `0x20..0x80`.
+5. Efektivigi `SENDI`, `RICEVI`, `SKRIBI`, `FINI`, `CEDI` kun validigo de
+   uzantaj montriloj kaj per-fadena kerna stako (`TSS.RSP0`).
+6. Transiri per `iretq` kun `CS=0x23`, `SS=0x1B`, `RFLAGS.IF=1`.
+
+**Progreso.**
+
+| Dato | Tasko | Versio | Pruvo |
+| --- | --- | --- | --- |
+| 2026-11-12 | 1. GDT/TSS-aranĝo, `VORTARO.md` | 0.1.0 | QEMU PVH: `TR ŝargita`, neniuj esceptoj |
+| 2026-11-12 | 2. DPL3-pordego, ŝanĝebla kadro, EOI-limigo, dispetĉa skeleto | 0.1.1 | Ring 0-memtesto: konata `-38`, nekonata `-22` |
 
 **Akceptkriterioj.**
 

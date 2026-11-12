@@ -35,7 +35,7 @@ static TIKOJ: AtomicU64 = AtomicU64::new(0);
 struct TemporizilaTraktilo;
 
 impl InterrompaTraktilo for TemporizilaTraktilo {
-    fn trakta(&self, _kadro: &InterrompaKadro) {
+    fn trakta(&self, _kadro: &mut InterrompaKadro) {
         let tiko = TIKOJ.fetch_add(1, Ordering::Relaxed) + 1;
         if tiko <= 5 || tiko % 100 == 0 {
             crate::skribu!("[horloĝo] tiko {}\n", tiko);

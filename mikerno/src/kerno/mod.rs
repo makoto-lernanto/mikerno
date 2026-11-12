@@ -9,11 +9,14 @@ use crate::memoro::virtuala::{AdresaSpaco, PaĝaPermesoj, VirtuaAdreso};
 pub mod ipc;
 pub mod objekto;
 pub mod planisto;
+pub mod sistemvoko;
 
 static ALOKILO: Kunhavigita<KadraAlokilo> = Kunhavigita::nova(KadraAlokilo::nova());
 
 pub fn ĉefa(informo: EniraInformo) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.1.0!\n");
+    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.1.1!\n");
+    sistemvoko::pravalorizi();
+    sistemvoko::testi_pordegon();
     crate::skribu!(
         "[kerno] memoro: {} regionoj, {} MiB uzeblaj\n",
         informo.memora_mapo.regionoj().len(),
