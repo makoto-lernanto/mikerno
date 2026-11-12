@@ -1,0 +1,11 @@
+[package]
+name = "libmikerno"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Komunaj IPC- kaj sistemvokaj difinoj por MiKerno kaj horizonto."
+
+[dependencies]
+
+[lints]
+workspace = true

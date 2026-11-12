@@ -1,0 +1,12 @@
+[package]
+name = "horizonto"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "La unua uzanta procezo de MiKerno (Ring 3)."
+
+[dependencies]
+libmikerno = { path = "../libmikerno" }
+
+[lints]
+workspace = true
