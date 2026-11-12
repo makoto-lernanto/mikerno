@@ -10,7 +10,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.1.4 (workspace)
+- **Versio:** 0.1.5 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.85`
@@ -408,6 +408,11 @@ La stakpinto estas malaltigita je 8 por ke la x86-64-ABI vidu `rsp % 16 == 8`
 Post `fini(0)` la fadeno mortas kaj la planisto revenas al la ripoza
 kunteksto, kiu daŭrigas la observadon.
 
+Antaŭ la eliro `horizonto` kontrolas la negativajn kontraktojn el Ring 3: vojo
+`0x7FFF` (nekonata), nula montrilo, kerna adreso `0x1000` kaj troa longo
+`4097`. Ĉiuj devas redoni respektive `-2` aŭ `-1`; se iu ajn sukcesus, la
+uzanta programo printus `[ring3] negativaj: MALBONE` anstataŭ la valorojn.
+
 ### Dispetĉilo
 
 La kerna dispetĉilo (`arkitekturo/x86_64/sistemvoko.rs`) legas
@@ -430,7 +435,7 @@ Kontrolo farita la **2026-11-12** per Rust 1.99.1 sur Windows:
 
 ```sh
 cargo build --workspace --release
-#   Finished `release` profile [optimized] target(s) in 4.72s
+#   Finished `release` profile [optimized] target(s) in 5.20s
 
 cargo clippy --workspace --release
 #   Finished `release` profile ... (neniu averto)
@@ -443,8 +448,8 @@ Ambaŭ praŝarĝaj vojoj estis praktike testitaj per QEMU 256 MiB:
 
 | Vojo | Rezulto |
 | --- | --- |
-| PVH (`-kernel` + `-initrd`) | 7 regionoj, 255 MiB uzeblaj, sen framebuffer, bildo `0x100000000..0x10000102c`, 8/8 kontroloj, `horizonto` en Ring 3, 1000 tikoj, 4 fadenoj mortintaj |
-| Limine/Multiboot2 (ISO) | framebuffer `1280x800, 32 bpp`, bildo `0x100000000..0x10000102c`, 8/8 kontroloj, `horizonto` en Ring 3, 1000 tikoj, 4 fadenoj mortintaj |
+| PVH (`-kernel` + `-initrd`) | 7 regionoj, 255 MiB uzeblaj, sen framebuffer, bildo `0x100000000..0x100001082`, 8/8 kontroloj, `horizonto` kaj negativaj kazoj en Ring 3, 1000 tikoj, 4 fadenoj mortintaj |
+| Limine/Multiboot2 (ISO) | framebuffer `1280x800, 32 bpp`, bildo `0x100000000..0x100001082`, 8/8 kontroloj, `horizonto` kaj negativaj kazoj en Ring 3, 1000 tikoj, 4 fadenoj mortintaj |
 
 `just verify` ne estis rulita en ĉi tiu medio, ĉar `cargo kani` ne estas
 instalita. La 11 pruvoj (5 pri la kadro-alokilo, 6 pri la mesaĝujo) estas
@@ -455,13 +460,13 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.1.4!
+[MiKerno] Saluton, mi estas MiKerno v0.1.5!
 [sistemvoko] pordego 0x80 (DPL3) instalita
 [kerno] memoro: 7 regionoj, 255 MiB uzeblaj
 [kerno] framebuffer 1280x800, 32 bpp        (nur ISO)
 [tss] TR ŝargita; kernostako pinto 0x...
 [temporizilo] kalibrado: ... kalkuloj/s, komenca ...
-[uzanto] horizonto: bildo 0x100000000..0x10000102c, enirpunkto 0x100000020
+[uzanto] horizonto: bildo 0x100000000..0x100001082, enirpunkto 0x1000000d0
 [uzanto] stako 0x100ff0000..0x101000000 (64 KiB), pinto 0x101000000
 [uzanto] kontrolo (bone): skriba=true lega=true nurlega_skribo=false kerna=false nemapita=false translima=false eksterfenestra=false enirpunkta=true
 [uzanto] memoro: marko 0x4d694b65726e6f21, legita 0x4d694b65726e6f21
@@ -472,8 +477,9 @@ saluton el Ring 0 tra int 0x80
 [sistemvoko] Ring 0-memtesto: skribo=0, nekonata=-2, nula=-1, troa=-1, cedo=0
 ...
 [planisto] fadeno 3 finiĝis
-[kerno] horizonto ekas en Ring 3: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x100000020
+[kerno] horizonto ekas en Ring 3: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x1000000d0
 horizonto: la unua procezo vekis en Ring 3.
+[ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1
 [planisto] fadeno 4 finiĝis
 [kerno] horizonto finiĝis; planisto revenis
 [kerno] planisto revenis al la ripoza fadeno
@@ -495,9 +501,10 @@ horizonto: la unua procezo vekis en Ring 3.
 4. Post la lasta fojo ĉiu fadeno finiĝas; la planisto revenas al la ripoza
    kunteksto.
 5. La praŝarĝo aldonas la uzantan fadenon: `horizonto` ekas en Ring 3 per
-   `iretq`, skribas sian saluton per `int 0x80` kaj eliras per `fini(0)`.
-   `SYS_FINI` mortigas la fadenon, do la planisto denove elektas la ripozan
-   kuntekston.
+   `iretq`, skribas sian saluton per `int 0x80`, kontrolas la negativajn
+   kazojn (nekonata voko, nula kaj kerna montrilo, troa longo) kaj eliras per
+   `fini(0)`. `SYS_FINI` mortigas la fadenon, do la planisto denove elektas la
+   ripozan kuntekston.
 6. La praŝarĝo observas 1000 tikojn (≈10 s ĉe 100 Hz), printas la finan staton
    kaj haltas per `hlt`.
 

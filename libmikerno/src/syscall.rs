@@ -1,7 +1,7 @@
 //! Sistemvokaj numeroj kaj maldika `int 0x80`-envolvaĵo.
 //!
-//! La kerno ankoraŭ ne instalas la DPL3-pordon; ĉi tiu modulo fiksas la
-//! interkonsenton, kiun `horizonto` uzos post la Ring 3-ŝalto.
+//! La DPL3-pordego estas instalita, do la samaj envolvaĵoj funkcias el Ring 0
+//! kaj Ring 3.
 //!
 //! Registra ABI: `rax` = numero, `rdi`/`rsi`/`rdx`/`r10` = argumentoj,
 //! `rax` = rezulto. La kerno konservas la ceterajn ĝeneralajn registreojn.

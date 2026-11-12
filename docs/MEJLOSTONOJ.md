@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-12 · Versio de la workspace: 0.1.4
+> Stato: 2026-11-12 · Versio de la workspace: 0.1.5
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -22,8 +22,8 @@
 | M7 | Antaŭokupa planisto kaj kuntekstŝanĝo | Plenumita | 3 fadenoj interplektitaj kaj finitaj |
 | M8 | Mesaĝa IPC kun kapabloj | Plenumita | mesaĝoj liveritaj, fadeno 3 vekita |
 | M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 11 pruvoj verkitaj, Kani ne instalita |
-| M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Plenumita | ABI difinita; `horizonto` plenumiĝas en Ring 3 (0.1.4) |
-| M11 | Ring 3 kaj sistemvokoj | Parte | GDT/TSS (0.1.0), `int 0x80` (0.1.1), dispetĉo kaj kvin vokoj (0.1.2), modula `horizonto` kaj uzanta fenestro (0.1.3), `iretq`-transiro (0.1.4) |
+| M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Plenumita | ABI difinita; `horizonto` plenumiĝas en Ring 3 |
+| M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj (0.1.5) |
 | M12 | Per-procesaj adresspacoj | Venonta | — |
 | M13 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Venonta | — |
 | M14 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
@@ -262,10 +262,72 @@ tempolimoj, sendblokado aŭ apartaj kernaj objektoj.
 
 ---
 
+### M10 — Uzantspaca kontrakto
+
+**Celo.** Fiksi la ABI antaŭ ol efektivigi Ring 3.
+
+**Havigita.**
+
+- `libmikerno` — `no_std`, sen dependaĵoj, `#[repr(C)]` mesaĝoj, kapabloj,
+  permesoj, sistemvokaj numeroj (`SENDI=1`, `RICEVI=2`, `SKRIBI=3`, `FINI=4`,
+  `CEDI=5`) kaj la registra ABI (`rax`, `rdi`, `rsi`, `rdx`, `r10`,
+  `int 0x80`).
+- `horizonto` — unua uzanta bildo, ligita super 4 GiB (`0x1_0000_0000`), kun
+  `horizonto_start`, maldika `biblioteko` kaj propra `linker.ld`.
+- La kerno liveras `horizonto` kiel praŝarĝan modulon (Multiboot2 tipo 3 aŭ
+  PVH-modlisto) kaj plenumas ĝin en Ring 3 (vidu M11).
+
+---
+
+### M11 — Ring 3 kaj sistemvokoj
+
+**Celo.** Lanĉi `horizonto` en Ring 3 kaj plenumi la unuan sistemvokon.
+
+**Havigita.**
+
+1. GDT/TSS-aranĝo: kerna kodo `0x08`, kernaj datumoj `0x10`, uzantaj datumoj
+   DPL3 `0x18`, uzanta kodo DPL3 `0x20`, TSS `0x28`/`0x30` (16 bajtoj).
+   `iretq` uzas `CS=0x23` kaj `SS=0x1B`; la aranĝo taŭgas ankaŭ por estonta
+   `syscall`/`sysret`.
+2. `int 0x80`-pordego kun DPL3 (interrompa pordego `0xEE`), ŝanĝebla interrompa
+   kadro kaj EOI limigita al la vektoroj `0x20..0x80`.
+3. Sistema dispetĉo kaj la kvin vokoj `SENDI`, `RICEVI`, `SKRIBI`, `FINI`,
+   `CEDI`; unueca `Mesago` el `libmikerno`; montrila kontrolo de uzantaj
+   bufroj (bildo kaj stako); rezulto en `rax`; `SYS_FINI` neniam revenas.
+4. `horizonto` liverata kiel Multiboot2-modulo (tipo 3) aŭ per la PVH-modlisto;
+   la ELF64 `PT_LOAD`-segmentoj estas muntitaj super 4 GiB (bazo
+   `0x1_0000_0000`), kun 64 KiB da uzanta stako je bazo + 16 MiB kaj la bito
+   `U` tra ĉiuj paĝtabelaj niveloj.
+5. Transiro per `iretq` (`CS=0x23`, `SS=0x1B`, `RFLAGS=0x202`); per-fadena
+   `TSS.RSP0` restas M12-tasko.
+6. Ambaŭ praŝarĝaj vojoj kaj la negativaj kazoj el Ring 3 verifitaj.
+
+**Progreso.**
+
+| Dato | Tasko | Versio | Pruvo |
+| --- | --- | --- | --- |
+| 2026-11-12 | 1. GDT/TSS-aranĝo, `VORTARO.md` | 0.1.0 | QEMU PVH: `TR ŝargita`, neniuj esceptoj |
+| 2026-11-12 | 2. DPL3-pordego, ŝanĝebla kadro, EOI-limigo | 0.1.1 | Ring 0-memtesto: konata `-38`, nekonata `-22` |
+| 2026-11-12 | 3. Dispetĉo, kvin sistemvokoj, unueca `Mesago`, montrila kontrolo | 0.1.2 | Ring 0-memtesto: `skribo=0`, `nekonata=-2`, `nula=-1`, `troa=-1`, `cedo=0`; fina stato `3 mortintaj` |
+| 2026-11-12 | 4. PVH/Multiboot2-modulo, ELF64-ŝargo super 4 GiB, stako, bito `U` | 0.1.3 | Ambaŭ vojoj: bildo `0x100000000..0x10000102c`, enirpunkto `0x100000020`, 8/8 kontroloj `bone`, fina stato `3 mortintaj` |
+| 2026-11-12 | 5. `iretq` (`CS=0x23`, `SS=0x1B`, `RFLAGS=0x202`), uzanta fadeno | 0.1.4 | Ambaŭ vojoj: `horizonto: la unua procezo vekis en Ring 3.`, `[planisto] fadeno 4 finiĝis`, fina stato `4 mortintaj`; 0 esceptoj |
+| 2026-11-12 | 6. Ambaŭ vojoj kaj negativaj kazoj el Ring 3 | 0.1.5 | `[ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1`; bildo `0x100000000..0x100001082`, enirpunkto `0x1000000d0`; 0 esceptoj |
+
+**Akceptkriterioj — pruvitaj.**
+
+- `horizonto` printas `horizonto: la unua procezo vekis en Ring 3.` kaj eliras
+  per `fini(0)` sen escepto.
+- Post la eliro la planisto revenas al la ripoza kunteksto kaj raportas
+  `4 mortintaj, 0 pretaj, 0 blokitaj`.
+- `int 0x80` el Ring 3 (`SKRIBI`, `FINI`, negativaj kazoj) kaj el Ring 0
+  (memtesto) funkcias.
+- Neniu paĝa eraro aŭ `#GP` dum la tuta scenaro (0 `escepto`-linioj).
+
+---
+
 ## 3. Partaj mejloŝtonoj
 
 ### M9 — Kvalita pordego
-
 **Celo.** Ĉiu ŝanĝo estu pruvebla per ripeteblaj komandoj.
 
 **Havigita.**
@@ -290,34 +352,6 @@ etaj abstraktaĵoj, kaj aldoni testojn por la arkitekture sendependaj partoj
 
 ---
 
-### M10 — Uzantspaca kontrakto
-
-**Celo.** Fiksi la ABI antaŭ ol efektivigi Ring 3.
-
-**Havigita.**
-
-- `libmikerno` — `no_std`, sen dependaĵoj, `#[repr(C)]` mesaĝoj, kapabloj,
-  permesoj, sistemvokaj numeroj (`SENDI=1`, `RICEVI=2`, `SKRIBI=3`, `FINI=4`,
-  `CEDI=5`) kaj la registra ABI (`rax`, `rdi`, `rsi`, `rdx`, `r10`,
-  `int 0x80`).
-- `horizonto` — unua uzanta bildo, ligita je 4 MiB, kun `horizonto_start`,
-  maldika `biblioteko` kaj propra `linker.ld`.
-- `tools/run-qemu.sh` agnoskas uzantajn bildojn kaj rifuzas lanĉi ilin per
-  `qemu -kernel`.
-
-**Mankanta.**
-
-- La kerno ne enŝovas `horizonto` (nek kiel Multiboot2-modulon nek kiel
-  enigitan ELF-sekcion).
-- Mankas uzanta adresospaco kun bito `U`, uzanta stako, `iretq`-transiro kaj
-  la efektivigo de la kvin sistemvokoj (vidu M11).
-- La kerna `ipc::Mesago` kaj `libmikerno::Mesago` ne havas identan aranĝon
-  (`sendinto`/`ricevonto` mankas en la kerna versio).
-
-**Sekva paŝo.** M11.
-
----
-
 ## 4. Pruvprotokolo de 2026-11-12
 
 Medio: Windows, Rust 1.99.1, QEMU 256 MiB, Git Bash.
@@ -326,11 +360,11 @@ Medio: Windows, Rust 1.99.1, QEMU 256 MiB, Git Bash.
 
 | Komando | Rezulto |
 | --- | --- |
-| `cargo build --workspace --release` | Sukceso, 4,72 s, sen avertoj |
+| `cargo build --workspace --release` | Sukceso, 5,20 s, sen avertoj |
 | `cargo clippy --workspace --release` | Sukceso, sen avertoj |
 | `cargo fmt --all -- --check` | Sen diferencoj |
 | `cargo kani --version` | `error: no such command: kani` |
-| `just iso` | ISO kreita, 2 144 sektoroj, 4 390 912 bajtoj |
+| `just iso` | ISO kreita, 2 184 sektoroj |
 
 ### 4.2 PVH-starto
 
@@ -338,24 +372,30 @@ Komando (senkapa QEMU, 25 s):
 
 ```sh
 qemu-system-x86_64 -kernel target/x86_64-unknown-none/release/mikerno \
+  -initrd target/x86_64-unknown-none/release/horizonto \
   -m 256M -serial stdio -display none -no-reboot -no-shutdown
 ```
 
 Elĉerpaĵo:
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.1.0!
+[MiKerno] Saluton, mi estas MiKerno v0.1.5!
 [kerno] memoro: 7 regionoj, 255 MiB uzeblaj
 [kerno] framebuffer ne havebla; nur COM1
-[tss] TR ŝargita; kernostako pinto 0x144fe0
-[temporizilo] kalibrado: 62603724 kalkuloj/s, komenca 626037
-[kerno] APIC 0 kaj paĝado pretaj; temporizilo 100 Hz
-[kerno] IPC: mesaĝo sendita al fadeno 2
+[tss] TR ŝargita; kernostako pinto 0x...
+[temporizilo] kalibrado: ... kalkuloj/s, komenca ...
+[uzanto] horizonto: bildo 0x100000000..0x100001082, enirpunkto 0x1000000d0
 ...
-[fadeno 3] finas sian laboron
+[kerno] planisto ekas: 3 fadenoj, antaŭokupo ĉiu 10 ms
+...
+[kerno] horizonto ekas en Ring 3: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x1000000d0
+horizonto: la unua procezo vekis en Ring 3.
+[ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1
+[planisto] fadeno 4 finiĝis
+[kerno] horizonto finiĝis; planisto revenis
 [kerno] planisto revenis al la ripoza fadeno
 ...
-[kerno] fina stato: 3 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+[kerno] fina stato: 4 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
 ```
 
 ### 4.3 ISO-starto
@@ -370,11 +410,15 @@ qemu-system-x86_64 -cdrom mikerno.iso -m 256M -serial stdio \
 Elĉerpaĵo:
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.1.0!
+[MiKerno] Saluton, mi estas MiKerno v0.1.5!
 [kerno] memoro: 7 regionoj, 255 MiB uzeblaj
 [kerno] framebuffer 1280x800, 32 bpp
 ...
-[kerno] fina stato: 3 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+[kerno] horizonto ekas en Ring 3: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x1000000d0
+horizonto: la unua procezo vekis en Ring 3.
+[ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1
+...
+[kerno] fina stato: 4 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
 ```
 
 ### 4.4 Trovaĵoj de la kontrolo
@@ -386,7 +430,7 @@ Elĉerpaĵo:
    ripetiĝi; la `justfile` devus eventuale fari la version videbla aŭ la
    kontrolo devus ĉiam rekonstrui.
 2. **Versio hardkodita.** `kerno/mod.rs`, `mikerno/boot/limine.conf` kaj
-   `Cargo.toml` enhavas `0.1.0` sendepende. Oni devus derivi ĝin per
+   `Cargo.toml` enhavas `0.1.5` sendepende. Oni devus derivi ĝin per
    `env!("CARGO_PKG_VERSION")` kaj `build.rs`.
 3. **Kani mankas.** La formala pordego ne estas plenumebla en ĉi tiu medio;
    `just verify` malsukcesos ĝis `cargo kani` estos instalita.
@@ -402,51 +446,6 @@ Elĉerpaĵo:
 ---
 
 ## 5. Venontaj mejloŝtonoj
-
-### M11 — Ring 3 kaj sistemvokoj (sekva)
-
-**Celo.** Lanĉi `horizonto` en Ring 3 kaj plenumi la unuan sistemvokon.
-
-**Taskoj.**
-
-1. ~~Aldoni uzantajn GDT-pecojn.~~ La fina aranĝo estas: kerna kodo `0x08`,
-   kernaj datumoj `0x10`, uzantaj datumoj DPL3 `0x18`, uzanta kodo DPL3
-   `0x20`, TSS `0x28`/`0x30` (16 bajtoj). `iretq` do uzas `CS=0x23` kaj
-   `SS=0x1B`; la aranĝo ankaŭ taŭgas por estonta `syscall`/`sysret`.
-2. Instali `int 0x80`-pordon kun DPL3 (interrompa pordego `0xEE`), igi la
-   interrompan kadron ŝanĝebla kaj limigi EOI al la vektoroj `0x20..0x80`.
-3. Efektivigi la sistemvokan dispetĉon kaj la kvin vokojn `SENDI`, `RICEVI`,
-   `SKRIBI`, `FINI`, `CEDI`: unueca `Mesago` el `libmikerno`, montrila kontrolo
-   de uzantaj bufroj, rezulto skribata en `rax`, `SYS_FINI` neniam revenas.
-   Unu `RSP0`-kernostako sufiĉas por la sola Ring 3-fadeno.
-4. Liveri `horizonto` kiel Multiboot2-modulon (tipo 3) aŭ per la PVH-modlisto,
-   ŝargi la ELF64 `PT_LOAD`-segmentojn super 4 GiB (bazo `0x1_0000_0000`),
-   alokigi 64 KiB da uzanta stako je bazo + 16 MiB, kaj propagi la biton `U`
-   tra ĉiuj paĝtabelaj niveloj.
-5. Transiri per `iretq` kun `CS=0x23`, `SS=0x1B`, `RFLAGS.IF=1`; per-fadena
-   `TSS.RSP0` restas M12-tasko.
-6. Verifi ambaŭ praŝarĝajn vojojn (PVH kaj Limine/ISO) kaj la negativajn
-   kazojn (malbona montrilo, nekonata voko, paĝa eraro mankas).
-
-**Progreso.**
-
-| Dato | Tasko | Versio | Pruvo |
-| --- | --- | --- | --- |
-| 2026-11-12 | 1. GDT/TSS-aranĝo, `VORTARO.md` | 0.1.0 | QEMU PVH: `TR ŝargita`, neniuj esceptoj |
-| 2026-11-12 | 2. DPL3-pordego, ŝanĝebla kadro, EOI-limigo | 0.1.1 | Ring 0-memtesto: konata `-38`, nekonata `-22` |
-| 2026-11-12 | 3. Dispetĉo, kvin sistemvokoj, unueca `Mesago`, montrila kontrolo | 0.1.2 | Ring 0-memtesto: `skribo=0`, `nekonata=-2`, `nula=-1`, `troa=-1`, `cedo=0`; fina stato `3 mortintaj` |
-| 2026-11-12 | 4. PVH/Multiboot2-modulo, ELF64-ŝargo super 4 GiB, stako, bito `U` | 0.1.3 | Ambaŭ vojoj: `horizonto` bildo `0x100000000..0x10000102c`, enirpunkto `0x100000020`, 8/8 kontroloj `bone`, fina stato `3 mortintaj` |
-| 2026-11-12 | 5. `iretq` (`CS=0x23`, `SS=0x1B`, `RFLAGS=0x202`), uzanta fadeno | 0.1.4 | Ambaŭ vojoj: `horizonto: la unua procezo vekis en Ring 3.`, `[planisto] fadeno 4 finiĝis`, fina stato `4 mortintaj`; 0 esceptoj |
-
-**Akceptkriterioj.**
-
-- `horizonto` printas sian saluton kaj eliras per `fini(0)` sen escepto.
-- Post la eliro la planisto revenas al la ripoza kunteksto kaj la fina stato
-  estas raportita.
-- `int 0x80` el Ring 3 funkcias kaj el Ring 0 restas valida.
-- Neniu paĝa eraro aŭ `#GP` dum la tuta scenaro.
-
----
 
 ### M12 — Per-procesaj adresspacoj
 
@@ -468,8 +467,8 @@ procezo ne haltigas la kernon; la kadro-alokilo reuzas liberigitajn kadrojn.
 **Celo.** Apartigi finpunktojn de fadenoj kaj firmigi la kapablomodelon.
 
 **Taskoj.** Propraj finpunktaj objektoj; kapablotabelo por procezo; rajtoj kaj
-revoko; tempolimoj kaj sendblokado; unuecigi `libmikerno::Mesago` kun la kerna
-aranĝo; pli da Kani-pruvoj pri la vico kaj la kapabloj.
+revoko; tempolimoj kaj sendblokado; pli da Kani-pruvoj pri la vico kaj la
+kapabloj.
 
 **Akceptkriterioj.** Mesaĝo portas `sendinto`/`ricevonto`; revoko malvalidigas
 kapablon; plena vico ne perdas mesaĝojn; tempolimo vekas la ricevanton.
@@ -535,14 +534,13 @@ QEMU-smokan teston; la ISO estas artefakto de CI, ne permana dosiero.
 
 | Prioritate | Ŝuldo | Efiko | Rimedo |
 | --- | --- | --- | --- |
-| Alta | Neniu Ring 3 / uzanta izolado | Sekureca modelo ne pruvebla | M11–M12 |
+| Alta | Neniu uzanta izolado (komuna `PML4`, komuna kern-stako `RSP0`) | Procezoj vidas unu la alian | M12 |
 | Alta | Neniu liberigo de kadroj | Memoro elĉerpiĝas post longa uzo | M12 |
 | Alta | Identeca mapo RWX | Malobservo de W^X | M12/M16 |
 | Alta | Neniu CI nek testoj | Regresoj nerimarkeblaj | M16 |
 | Alta | Malaktuala ISO | Konfuzaj testrezultoj | CI + versio |
 | Meza | Versio hardkodita en 3 lokoj | Malkongruaj eldonoj | `env!` + `build.rs` |
 | Meza | IPC finpunkto = fadeno | Ne eblas sendependaj objektoj | M13 |
-| Meza | `Mesago`-aranĝoj malkongruaj | ABI-rompo ĉe Ring 3 | M13 |
 | Meza | Framebuffer sen rulumo | Malbona uzsperto | M6-poste |
 | Meza | Esceptoj haltigas | Ne rekaptebla eraro | M12 |
 | Malalta | `Kunhavigita::akiri` prenas `&self` | Facila misuzo | revizio |
