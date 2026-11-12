@@ -22,9 +22,11 @@ run: build-kerno
 
 # Kunmetu praŝarĝeblan ISO-on (Limine + Multiboot2).
 iso: build-kerno
+    cargo build -p horizonto --release
     rm -rf iso_root
     mkdir -p iso_root
     cp {{kerno}} iso_root/mikerno.elf
+    cp target/x86_64-unknown-none/release/horizonto iso_root/horizonto.elf
     cp mikerno/boot/limine.conf iso_root/limine.conf
     cp tools/limine/limine-bios.sys iso_root/
     cp tools/limine/limine-bios-cd.bin iso_root/

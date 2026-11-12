@@ -20,20 +20,23 @@ SECTIONS
         *(.text .text.*)
     }
 
+    /* `code-model=large` metas datumojn en `.lrodata`/`.ldata`/`.lbss`; ili
+       devas resti ene de la bildo, alie `__kerna_fino` ne kovrus ilin. */
     .rodata : ALIGN(4K)
     {
-        *(.rodata .rodata.*)
+        *(.rodata .rodata.* .lrodata .lrodata.*)
     }
 
     .data : ALIGN(4K)
     {
-        *(.data .data.*)
+        *(.data .data.* .ldata .ldata.*)
+        *(.got .got.plt)
     }
 
     .bss : ALIGN(4K)
     {
         __bss_komenco = .;
-        *(.bss .bss.*)
+        *(.bss .bss.* .lbss .lbss.*)
         *(COMMON)
         __bss_fino = .;
     }

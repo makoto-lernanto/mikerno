@@ -2,9 +2,12 @@
 target = "x86_64-unknown-none"
 
 [target.x86_64-unknown-none]
+# `code-model=large` permesas al `horizonto` esti ligita super 4 GiB; la
+# statika reloka modelo restas, do nek PLT nek dinamika ligilo aperas.
 rustflags = [
     "-C", "linker=rust-lld",
     "-C", "relocation-model=static",
+    "-C", "code-model=large",
 ]
 
 [target.'cfg(all(target_arch = "x86_64", target_os = "none"))']

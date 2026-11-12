@@ -9,11 +9,12 @@ use core::ptr;
 use crate::memoro::KADRA_GRANDO;
 use crate::memoro::kadro::{KadraAlokilo, Kadro};
 use crate::memoro::virtuala::{
-    AdresaSpaco, FizikaAdreso, PaĝaEraro, PaĝaPermesoj, PaĝaTablo, VirtuaAdreso,
+    AdresaSpaco, FizikaAdreso, PaĝaEraro, PaĝaPermesoj, PaĝaTablo, UZANTA_FINO, VirtuaAdreso,
 };
 
 const PREZENTA: u64 = 1 << 0;
 const SKRIBEBA: u64 = 1 << 1;
+const UZANTA: u64 = 1 << 2;
 const NEKAŜEBLA: u64 = 1 << 4;
 const GRANDA: u64 = 1 << 7;
 const NE_PLENUMEBLA: u64 = 1 << 63;
@@ -92,9 +93,9 @@ impl PaĝaTablo for X86AdresaSpaco {
             return Err(PaĝaEraro::NevalidaAdreso);
         }
 
-        let pdpt = suba_tabelo(self.radiko, indico(virtuala, 3), alokilo)?;
-        let pd = suba_tabelo(pdpt, indico(virtuala, 2), alokilo)?;
-        let pt = suba_tabelo(pd, indico(virtuala, 1), alokilo)?;
+        let pdpt = suba_tabelo(self.radiko, indico(virtuala, 3), permesoj.uzanta, alokilo)?;
+        let pd = suba_tabelo(pdpt, indico(virtuala, 2), permesoj.uzanta, alokilo)?;
+        let pt = suba_tabelo(pd, indico(virtuala, 1), permesoj.uzanta, alokilo)?;
 
         let indekso = indico(virtuala, 0);
         if ero(pt, indekso) & PREZENTA != 0 {
@@ -107,6 +108,30 @@ impl PaĝaTablo for X86AdresaSpaco {
         );
         flushi(virtuala);
         Ok(())
+    }
+
+    fn kontroli_uzantan(&self, adreso: u64, longo: usize, skriba: bool) -> bool {
+        if longo == 0 {
+            return true;
+        }
+        let Some(fino) = adreso.checked_add(longo as u64) else {
+            return false;
+        };
+        if fino > UZANTA_FINO {
+            return false;
+        }
+
+        let mut paĝo = adreso & !(KADRA_GRANDO - 1);
+        loop {
+            if !folio_uzanta(self.radiko, paĝo, skriba) {
+                return false;
+            }
+            let sekva = paĝo + KADRA_GRANDO;
+            if sekva >= fino {
+                return true;
+            }
+            paĝo = sekva;
+        }
     }
 
     fn traduki(&self, virtuala: VirtuaAdreso) -> Option<FizikaAdreso> {
@@ -169,29 +194,68 @@ fn flushi(virtuala: VirtuaAdreso) {
     }
 }
 
-/// Liveru la sekvan tabelon; kreu kaj nuligu ĝin se mankas.
+/// Liveru la sekvan tabelon; kreu kaj nuligu ĝin se mankas. La bito `U`
+/// sekvas la folion: se la folio estas uzanta, ankaŭ la tabeloj estas.
 fn suba_tabelo(
     tabelo: FizikaAdreso,
     indekso: usize,
+    uzanta: bool,
     alokilo: &mut KadraAlokilo,
 ) -> Result<FizikaAdreso, PaĝaEraro> {
     let valoro = ero(tabelo, indekso);
     if valoro & PREZENTA == 0 {
         let kadro = alokilo.aloki().ok_or(PaĝaEraro::Elĉerpita)?;
         nuligi(kadro);
-        agordi_eron(tabelo, indekso, kadro.adreso() | PREZENTA | SKRIBEBA);
+        let mut nova = kadro.adreso() | PREZENTA | SKRIBEBA;
+        if uzanta {
+            nova |= UZANTA;
+        }
+        agordi_eron(tabelo, indekso, nova);
         return Ok(FizikaAdreso::nova(kadro.adreso()));
     }
     if valoro & GRANDA != 0 {
         return Err(PaĝaEraro::Konflikto);
     }
+    if uzanta && valoro & UZANTA == 0 {
+        // La tabelo jam ekzistas pro kerna mapo; malfermu nur ĉi tiun vojon.
+        agordi_eron(tabelo, indekso, valoro | UZANTA);
+    }
     Ok(FizikaAdreso::nova(valoro & ADRESO_MASKO))
+}
+
+/// Ĉu unu paĝo estas atingebla de Ring 3? La bito `U` devas esti ĉe ĉiuj
+/// niveloj; skribo postulas ankaŭ la biton `W` ĉe la folio.
+fn folio_uzanta(radiko: FizikaAdreso, adreso: u64, skriba: bool) -> bool {
+    let virtuala = VirtuaAdreso::nova(adreso);
+    let pml4 = ero(radiko, indico(virtuala, 3));
+    if pml4 & (PREZENTA | UZANTA) != (PREZENTA | UZANTA) {
+        return false;
+    }
+    let pdpt = ero(FizikaAdreso::nova(pml4 & ADRESO_MASKO), indico(virtuala, 2));
+    if pdpt & (PREZENTA | UZANTA) != (PREZENTA | UZANTA) {
+        return false;
+    }
+    let pd = ero(FizikaAdreso::nova(pdpt & ADRESO_MASKO), indico(virtuala, 1));
+    if pd & (PREZENTA | UZANTA) != (PREZENTA | UZANTA) {
+        return false;
+    }
+    if pd & GRANDA != 0 {
+        return !skriba || pd & SKRIBEBA != 0;
+    }
+    let pt = ero(FizikaAdreso::nova(pd & ADRESO_MASKO), indico(virtuala, 0));
+    if pt & (PREZENTA | UZANTA) != (PREZENTA | UZANTA) {
+        return false;
+    }
+    !skriba || pt & SKRIBEBA != 0
 }
 
 fn permesaj_eroj(permesoj: PaĝaPermesoj) -> u64 {
     let mut valoro = 0;
     if permesoj.skribebla {
         valoro |= SKRIBEBA;
+    }
+    if permesoj.uzanta {
+        valoro |= UZANTA;
     }
     if !permesoj.plenumebla {
         valoro |= NE_PLENUMEBLA;

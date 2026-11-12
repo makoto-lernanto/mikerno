@@ -1,31 +1,34 @@
 /* Horizonto: la unua uzanta bildo.
-   La nuna fazo uzas unu komunan adresan spacon; la bildo estas metita je
-   4 MiB, super la kerna bildo (1 MiB). Kiam la kerno akiras privatajn
-   adresajn spacojn, la sama bildo estos mapita en la uzantan fenestron. */
+   La bildo estas ligita je la bazo de la uzanta fenestro (4 GiB), kiun la
+   kerno mapas per la bito `U`. La stako venas de la kerno, ne de ĉi tiu
+   skripto. */
 ENTRY(horizonto_start)
 
 SECTIONS
 {
-    . = 4M;
+    . = 0x100000000;
 
     .text : ALIGN(4K)
     {
         *(.text .text.*)
     }
 
+    /* `code-model=large` metas datumojn en `.lrodata`/`.ldata`/`.lbss`; la
+       kerno ŝarĝas ilin kune kun la aliaj sekcioj. */
     .rodata : ALIGN(4K)
     {
-        *(.rodata .rodata.*)
+        *(.rodata .rodata.* .lrodata .lrodata.*)
     }
 
     .data : ALIGN(4K)
     {
-        *(.data .data.*)
+        *(.data .data.* .ldata .ldata.*)
+        *(.got .got.plt)
     }
 
     .bss : ALIGN(4K)
     {
-        *(.bss .bss.*)
+        *(.bss .bss.* .lbss .lbss.*)
         *(COMMON)
     }
 

@@ -91,8 +91,16 @@ if [[ -n "$ISO" ]]; then
         -no-shutdown
 fi
 
+# La uzanta bildo apud la kerna estas liverita kiel PVH-modulo (`-initrd`).
+UZANTA="$(dirname "$KERNEL")/horizonto"
+INITRD=()
+if [[ -f "$UZANTA" ]]; then
+    INITRD=(-initrd "$UZANTA")
+fi
+
 exec "$QEMU" \
     -kernel "$KERNEL" \
+    "${INITRD[@]}" \
     -m 256M \
     -serial mon:stdio \
     -display none \

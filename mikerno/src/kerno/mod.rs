@@ -10,11 +10,12 @@ pub mod ipc;
 pub mod objekto;
 pub mod planisto;
 pub mod sistemvoko;
+pub mod uzantspaco;
 
 static ALOKILO: Kunhavigita<KadraAlokilo> = Kunhavigita::nova(KadraAlokilo::nova());
 
 pub fn ĉefa(informo: EniraInformo) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.1.2!\n");
+    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.1.3!\n");
     sistemvoko::pravalorizi();
     crate::skribu!(
         "[kerno] memoro: {} regionoj, {} MiB uzeblaj\n",
@@ -35,6 +36,19 @@ pub fn ĉefa(informo: EniraInformo) {
     if let Err(eraro) = spaco.idente_mapigi(informo.memora_mapo, PaĝaPermesoj::KERNELA, alokilo) {
         crate::skribu!("[kerno] identeca mapo malsukcesis: {}\n", eraro);
         return;
+    }
+    // Moduloj povas kuŝi en regiono, kiun la memormapo ne markas uzebla; la
+    // identeca mapo tiam mankas, do mapu ilin antaŭ ol ŝalti CR3.
+    for modulo in informo.moduloj {
+        if let Err(eraro) = spaco.mapigi_intervalon(
+            VirtuaAdreso::nova(modulo.komenco),
+            VirtuaAdreso::nova(modulo.fino()),
+            PaĝaPermesoj::KERNELA,
+            alokilo,
+        ) {
+            crate::skribu!("[kerno] modula mapado malsukcesis: {}\n", eraro);
+            return;
+        }
     }
     let framebuffer = match informo.framebuffer {
         Some(fb) => {
@@ -81,6 +95,16 @@ pub fn ĉefa(informo: EniraInformo) {
         "[kerno] APIC {} kaj paĝado pretaj; temporizilo 100 Hz\n",
         apic_id
     );
+
+    match informo.moduloj.first() {
+        Some(modulo) => {
+            if let Err(eraro) = uzantspaco::pravalorizi(&mut spaco, alokilo, modulo) {
+                crate::skribu!("[uzanto] ŝargo malsukcesis: {}\n", eraro);
+                return;
+            }
+        }
+        None => crate::skribu!("[uzanto] horizonto ne liverita (mankas modulo)\n"),
+    }
 
     if let Err(eraro) = krei_testajn_fadenojn() {
         crate::skribu!("[kerno] fadena kreado malsukcesis: {:?}\n", eraro);

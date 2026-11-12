@@ -37,6 +37,15 @@ impl FizikaAdreso {
     }
 }
 
+/// La komenco de la uzanta fenestro, super la identeca mapo de 4 GiB.
+pub const UZANTA_BAZO: u64 = 0x0000_0001_0000_0000;
+/// La supra limo de la uzanta fenestro en la kanonika malalta duono.
+pub const UZANTA_FINO: u64 = 0x0000_0080_0000_0000;
+/// Grando de la uzanta stako (64 KiB).
+pub const UZANTA_STAKO_GRANDE: usize = 64 * 1024;
+/// La pinto de la uzanta stako: bazo + 16 MiB; la stako kreskas malsupren.
+pub const UZANTA_STAKO_SUPRO: u64 = UZANTA_BAZO + 16 * 1024 * 1024;
+
 /// Rajtoj de unu paĝo. Legeblo ĉiam ĉeestas: la x86_64-backendo ne subtenas
 /// tute nelegeblajn paĝojn.
 #[derive(Clone, Copy)]
@@ -45,6 +54,8 @@ pub struct PaĝaPermesoj {
     pub plenumebla: bool,
     /// `false` por framebuffer-MMIO: la paĝo estas nekaŝebla (PCD).
     pub kaŝebla: bool,
+    /// `true` por Ring 3-atingeblaj paĝoj: la bito `U` ĉe ĉiu nivelo.
+    pub uzanta: bool,
 }
 
 impl PaĝaPermesoj {
@@ -52,18 +63,45 @@ impl PaĝaPermesoj {
         skribebla: true,
         plenumebla: false,
         kaŝebla: true,
+        uzanta: false,
     };
 
     pub const SKRIBA_SENKAŜE: Self = Self {
         skribebla: true,
         plenumebla: false,
         kaŝebla: false,
+        uzanta: false,
     };
 
     pub const KERNELA: Self = Self {
         skribebla: true,
         plenumebla: true,
         kaŝebla: true,
+        uzanta: false,
+    };
+
+    /// Uzantaj datumoj kaj stako: Ring 3 rajtas legi kaj skribi, sen plenumo.
+    pub const UZANTA_DATUMOJ: Self = Self {
+        skribebla: true,
+        plenumebla: false,
+        kaŝebla: true,
+        uzanta: true,
+    };
+
+    /// Nurlega uzanta paĝo (ekz. `.rodata`).
+    pub const UZANTA_LEGA: Self = Self {
+        skribebla: false,
+        plenumebla: false,
+        kaŝebla: true,
+        uzanta: true,
+    };
+
+    /// Uzanta kodo: Ring 3 rajtas legi kaj plenumi, sen skribi.
+    pub const UZANTA_KODO: Self = Self {
+        skribebla: false,
+        plenumebla: true,
+        kaŝebla: true,
+        uzanta: true,
     };
 }
 
@@ -94,6 +132,10 @@ pub trait PaĝaTablo {
     ) -> Result<(), PaĝaEraro>;
 
     fn traduki(&self, virtuala: VirtuaAdreso) -> Option<FizikaAdreso>;
+
+    /// Ĉu ĉiu paĝo de `[adreso, adreso + longo)` estas atingebla de Ring 3
+    /// (bitoj `U` ĉe ĉiuj niveloj) kaj, se `skriba`, ankaŭ skribebla?
+    fn kontroli_uzantan(&self, adreso: u64, longo: usize, skriba: bool) -> bool;
 }
 
 pub trait AdresaSpaco: PaĝaTablo {
@@ -119,6 +161,50 @@ pub trait AdresaSpaco: PaĝaTablo {
                 self.mapigi(virtuala, FizikaAdreso::nova(adreso), permesoj, alokilo)?;
             }
             adreso += KADRA_GRANDO;
+        }
+        Ok(())
+    }
+
+    /// Mapu freŝajn, nuligitajn kadrojn por la intervalo `[komenco,
+    /// komenco + longo)`. La virtuala adreso devas esti paĝ-aliniiĝinta.
+    ///
+    /// La nukleo atingu la novajn kadrojn per la identeca mapo; tio validas
+    /// ĝis la per-procesaj adresspacoj de M12.
+    fn mapigi_freŝan_regionon(
+        &mut self,
+        komenco: VirtuaAdreso,
+        longo: usize,
+        permesoj: PaĝaPermesoj,
+        alokilo: &mut KadraAlokilo,
+    ) -> Result<(), PaĝaEraro> {
+        if komenco.adreso() % KADRA_GRANDO != 0 {
+            return Err(PaĝaEraro::NevalidaAdreso);
+        }
+        if longo == 0 {
+            return Ok(());
+        }
+
+        let paĝoj = longo.div_ceil(KADRA_GRANDO as usize);
+        // Kontrolu antaŭ la unua aloko, por ne lasi duonmapitan intervalon.
+        for indekso in 0..paĝoj {
+            let virtuala = VirtuaAdreso::nova(komenco.adreso() + indekso as u64 * KADRA_GRANDO);
+            if self.traduki(virtuala).is_some() {
+                return Err(PaĝaEraro::Konflikto);
+            }
+        }
+
+        for indekso in 0..paĝoj {
+            let kadro = alokilo.aloki().ok_or(PaĝaEraro::Elĉerpita)?;
+            // La kadro estas identece mapita, do la nukleo povas nuligi ĝin.
+            unsafe {
+                core::ptr::write_bytes(kadro.adreso() as *mut u8, 0, KADRA_GRANDO as usize);
+            }
+            self.mapigi(
+                VirtuaAdreso::nova(komenco.adreso() + indekso as u64 * KADRA_GRANDO),
+                FizikaAdreso::nova(kadro.adreso()),
+                permesoj,
+                alokilo,
+            )?;
         }
         Ok(())
     }

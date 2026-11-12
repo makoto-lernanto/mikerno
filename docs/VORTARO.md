@@ -45,6 +45,10 @@ kaj protokolaj nomoj sekvu ĝin.
 | `sistemvoka dispetĉo` | system call dispatch | 系统调用分发 | `sistemvoka_dispetĉo`. |
 | `uzanta montrilo` | user pointer | 用户指针 | Kontrolata antaŭ ĉiu aliro. |
 | `anoncita regiono` | declared region | 已声明区域 | La bildo kaj la uzanta stako. |
+| `uzanta fenestro` | user window | 用户窗口 | `UZANTA_BAZO..UZANTA_FINO`. |
+| `U-bito` | U bit | U 位 | Ring 3-alireblo; tra ĉiuj niveloj. |
+| `segmento` | segment (ELF `PT_LOAD`) | 段 | Malunue kun la GDT-segmentoj. |
+| `programa kaplinio` | program header | 程序头 | ELF64 `Elf64_Phdr`. |
 | `uzanta kodo` | user code | 用户代码段 | DPL3. |
 | `uzantaj datumoj` | user data | 用户数据段 | DPL3. |
 | `kerna stako` | kernel stack | 内核栈 | `RSP0`. |
@@ -54,6 +58,8 @@ kaj protokolaj nomoj sekvu ĝin.
 | `enirpunkto` | entry point | 入口点 | |
 | `bildo` | image | 镜像 | Ekz. `horizonto`. |
 | `modulo` | module | 模块 | Multiboot2 module. |
+| `praŝarĝa modulo` | boot module | 引导模块 | Multiboot2 tipo 3 aŭ PVH-modlisto. |
+| `modlisto` | module list (PVH) | 模块列表 | `modlist_paddr`. |
 | `praŝarĝilo` | bootloader | 引导加载器 | |
 | `praŝarĝo` | boot | 引导 | |
 | `pravalorizi` | initialize | 初始化 | |

@@ -10,7 +10,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj la antaŭpreparo por Ring 3.
 
-- **Versio:** 0.1.2 (workspace)
+- **Versio:** 0.1.3 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.85`
@@ -46,6 +46,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj la antaŭpreparo por Ring 3.
 | Du praŝarĝaj protokoloj: Xen-PVH (`qemu -kernel`) kaj Multiboot2 (Limine/ISO) | Funkcias | `mikerno/src/arkitekturo/x86_64/eniro.rs` |
 | 32-bita → PAE → longa reĝimo, propraj praŝarĝaj paĝtabeloj | Funkcias | `eniro.rs`, `mikerno/boot/linker.ld` |
 | Memora mapo el la praŝarĝilo, rezervitaj regionoj | Funkcias | `mb2.rs`, `pvh.rs`, `memoro/mod.rs` |
+| Modula liverado: Multiboot2 tipo 3 kaj PVH-modlisto (`horizonto`) | Funkcias | `mb2.rs`, `pvh.rs`, `memoro/mod.rs` |
 | Bitmapa kadro-alokilo por la unuaj 4 GiB | Funkcias | `memoro/kadro.rs` |
 | 4-nivela paĝado (PML4 → PDPT → PD → PT), NX, PCD | Funkcias | `arkitekturo/x86_64/pagxado.rs` |
 | GDT, 256-vektora IDT, escepta raportado | Funkcias | `gdt.rs`, `idt.rs`, `interrompo/mod.rs` |
@@ -58,13 +59,14 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj la antaŭpreparo por Ring 3.
 | Mesaĝa IPC: finpunktoj, kapabloj, blokado/vekado | Funkcias | `kerno/ipc.rs` |
 | Framebuffer-teksta konzolo (4 strekoj, 8×16 … 32×64) kaj COM1 | Funkcias | `ekrano/`, `seria.rs` |
 | Komuna kerna/uzanta ABI (`libmikerno`) | Difinita | `libmikerno/` |
-| Unua uzanta procezo `horizonto` | Skeleta | `horizonto/` |
+| Uzanta fenestro super 4 GiB, ELF64-ŝargo kun bito `U`, 64 KiB stako | Funkcias | `kerno/uzantspaco.rs`, `memoro/virtuala.rs` |
+| Unua uzanta procezo `horizonto` (bildo ŝargita, `iretq` mankas) | Parte | `horizonto/` |
 | 11 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ipc.rs` |
 
-> La Ring 3-transiro mem ankoraŭ ne estas efektivigita: la GDT havas la
-> uzantajn DPL3-segmentojn, la IDT havas la DPL3-pordon por `int 0x80`, kaj la
-> kvin sistemvokoj funkcias el Ring 0, sed la kerno ankoraŭ ne enŝovas
-> `horizonto` nek transiras per `iretq`.
+> `horizonto` jam estas liverata kiel praŝarĝa modulo kaj muntata en la uzantan
+> fenestron super 4 GiB — la bildaj segmentoj, la bito `U` tra ĉiuj paĝtabelaj
+> niveloj kaj la 64 KiB-a stako estas kontrolitaj dum starto. La Ring 3-transiro
+> per `iretq` kaj per-procesaj adresspacoj ankoraŭ mankas (M11-tasko 5, M12).
 
 ---
 
@@ -134,7 +136,9 @@ La workspace havas tri crate-ojn:
 | --- | --- | --- |
 | `mikerno` | `no_std` binara | La kerno: praŝarĝo, memoro, interrompoj, planisto, IPC, konzolo |
 | `libmikerno` | `no_std` biblioteko | Komunaj `#[repr(C)]`-difinoj: mesaĝoj, kapabloj, sistemvokaj numeroj |
-| `horizonto` | `no_std` binara | La unua uzanta procezo (Ring 3), ligita je 4 MiB |
+| `horizonto` | `no_std` binara | La unua uzanta procezo, ligita jam super 4 GiB (`0x1_0000_0000`) |> **Noto:** la tuta workspace uzas `code-model=large`, ĉar `horizonto` estas
+> ligita super 4 GiB; la statika reloka modelo restas, do neniu dinamika ligilo
+> aperas.
 
 Dependa grafo:
 
@@ -164,10 +168,11 @@ kerna_eniro                          main.rs
         │
         ▼
 kerno::ĉefa                          kerno/mod.rs
-  · kadro-alokilo ← memora mapo + rezervoj
+  · kadro-alokilo ← memora mapo + rezervoj (inkl. praŝarĝaj moduloj)
   · nova PML4 (4 KiB paĝoj), identeca mapo, framebuffer (PCD)
-  · CR3 ŝalto, framebuffer-konzolo, TSS/RSP0
+  · modulaj regionoj identece mapitaj, CR3 ŝalto, konzolo, TSS/RSP0
   · APIC + temporizilo (100 Hz), 3 testaj fadenoj
+  · uzantspaco: ELF64-segmentoj + stako super 4 GiB, bito `U`
   · IPC-testo, planisto, 10 s da observado, halto
 ```
 
@@ -180,10 +185,12 @@ subtenas du protokolojn samtempe:
 
 1. **Xen-PVH** — `qemu-system-x86_64 -kernel`. La ELF enhavas
    `XEN_ELFNOTE_PHYS32_ENTRY`; `EBX` montras al `hvm_start_info`. La magio
-   estas `0x336e_c578` (`pvh.rs`).
+   estas `0x336e_c578` (`pvh.rs`). `horizonto` venas per `-initrd` kiel ero de
+   `modlist_paddr` (32-bajta `hvm_modlist_entry`).
 2. **Multiboot2** — Limine el ISO. La kapo petas la memormapon (etikedo 6) kaj
    32-bitan framebuffer-on (etikedo 5). `EAX` estas `0x36d7_6289`, `EBX` montras
-   al la informo (`mb2.rs`).
+   al la informo (`mb2.rs`). `horizonto` venas per `module_path:` en
+   `limine.conf` kiel etikedo de tipo 3.
 
 La ŝelko unue identece mapas la unuajn 4 GiB per 2 MiB grandegaj paĝoj, por ke
 la 64-bita kodo restu atingebla tuj post `CR0.PG`. La tabeloj (`_pml4`, `_pdpt`,
@@ -324,6 +331,8 @@ ekzistas aparta kapablotabelo, rajtorevoko aŭ tempolimoj.
 
 ## Uzantspaco
 
+### Komuna kontrakto
+
 `libmikerno` fiksas la komunan kontrakton:
 
 - `Mesago` (`#[repr(C)]`, 64-bajta datumaro, `tipo`, `sendinto`, `ricevonto`),
@@ -333,9 +342,47 @@ ekzistas aparta kapablotabelo, rajtorevoko aŭ tempolimoj.
 - registra ABI: `rax` = numero, `rdi`/`rsi`/`rdx`/`r10` = argumentoj, `rax` =
   rezulto; la voko estas `int 0x80`.
 
-`horizonto` estas la unua uzanta bildo (`horizonto_start`), ligita je 4 MiB
-super la kerna bildo. Ĝi ankoraŭ **ne estas enŝovita** en la kernan bildon nek
-lanĉebla memstare: `tools/run-qemu.sh` ĝentile rifuzas ĝin.
+### Uzanta fenestro
+
+La uzanta virtuala spaco estas rezervita supre de la kerna identeca mapo:
+
+| Limo | Valoro |
+| --- | --- |
+| `UZANTA_BAZO` | `0x1_0000_0000` (4 GiB) |
+| `UZANTA_FINO` | `0x80_0000_0000` (512 GiB) |
+| `UZANTA_STAKO_SUPRO` | `UZANTA_BAZO + 16 MiB` = `0x1_0100_0000` |
+| `UZANTA_STAKO_GRANDE` | 64 KiB (`0x100ff0000..0x101000000`) |
+
+`PaĝaPermesoj` havas la biton `uzanta`; la mapado metas `U` en ĉiun nivelon
+(PML4 → PDPT → PD → PT), do `kontroli_uzantan` povas pruvi per unu promenado,
+ke la tuta vojo estas alirebla el Ring 3. La folia nivelo ricevas `W` nur por
+skribaj regionoj kaj `NX` por datumoj kaj stako.
+
+### Ŝargo de la bildo
+
+`kerno/uzantspaco.rs` legas la modulon kiel ELF64:
+
+1. validigas la kaplinion (magio, klaso 64, LE, maŝino 62), la tabelon de
+   programaj kaplinioj kaj ĉiun `PT_LOAD`-eron (dosiera longo ≤ memora longo,
+   dosieraj kaj virtualaj limoj ene de la modulo kaj de la uzanta fenestro,
+   maksimume 16 segmentoj);
+2. kalkulas la bildajn limojn kaj kontrolas, ke la enirpunkto estas ene;
+3. muntas paĝon post paĝo: ĉiu folio ricevas la **unuon** de la permesoj de ĉiuj
+   segmentoj, kiuj ĝin tuŝas (LLVM ofte kunigas la segmentojn sur unu paĝo),
+   poste oni nuligas la kadron kaj kopias la dosierajn bajtojn de ĉiu segmento;
+4. mapas la 64 KiB-an stakon ĉe `UZANTA_STAKO_SUPRO`.
+
+Post tio `pravalorizi()` raportas la bildajn limojn, la enirpunkton kaj la
+stakon, kaj rulas memkontrolon: skribo/lego tra la uzanta fenestro el Ring 0
+devas sukcesi, dum nurlega skribo, kerna adreso, nemapita adreso, translima
+intervalo kaj adreso ekster la fenestro devas esti rifuzitaj laŭ la bito `U`.
+
+`horizonto` estas liverata de ambaŭ praŝarĝaj vojoj — Multiboot2 tipo 3 el
+`limine.conf`, aŭ la PVH-modlisto el `-initrd` (``just run`` aldonas ĝin
+aŭtomate) — sed la Ring 3-transiro ankoraŭ ne okazas: `iretq` mankas, do la
+bildo restas muntita, ne plenumata.
+
+### Dispetĉilo
 
 La kerna dispetĉilo (`arkitekturo/x86_64/sistemvoko.rs`) legas
 `rax`/`rdi`/`rsi`/`rdx`/`r10` el la interrompa kadro, plenumas la vokon kaj
@@ -344,7 +391,8 @@ skribas la rezulton reen en `kadro.rax`. La mesaĝa aranĝo venas el
 strukturon; la kongruo estas fiksita per kompila-tempaj asertoj.
 `kerno/sistemvoko.rs` efektivigas `SENDI`, `RICEVI`, `SKRIBI`, `FINI` kaj
 `CEDI`: Ring 3-bufroj estas ne-nulaj, limigitaj kaj ene de la anoncitaj bilda
-kaj stakaj regionoj; `SYS_FINI` vokas `planisto::morti()` kaj neniam revenas.
+kaj stakaj regionoj (la limoj venas el `uzantspaco::bildaj_limoj()`);
+`SYS_FINI` vokas `planisto::morti()` kaj neniam revenas.
 Ring 0-memtesto pruvas la vojon per `int 0x80` en la unua fadeno (`SYS_CEDI`
 tie vere cedas la procesoron).
 
@@ -369,8 +417,8 @@ Ambaŭ praŝarĝaj vojoj estis praktike testitaj per QEMU 256 MiB:
 
 | Vojo | Rezulto |
 | --- | --- |
-| PVH (`-kernel`) | 7 regionoj, 255 MiB uzeblaj, sen framebuffer, 1000 tikoj, 3 fadenoj mortintaj |
-| Limine/Multiboot2 (ISO) | framebuffer `1280x800, 32 bpp`, 1000 tikoj, 3 fadenoj mortintaj |
+| PVH (`-kernel` + `-initrd`) | 7 regionoj, 255 MiB uzeblaj, sen framebuffer, bildo `0x100000000..0x10000102c`, 8/8 kontroloj, 1000 tikoj, 3 fadenoj mortintaj |
+| Limine/Multiboot2 (ISO) | framebuffer `1280x800, 32 bpp`, bildo `0x100000000..0x10000102c`, 8/8 kontroloj, 1000 tikoj, 3 fadenoj mortintaj |
 
 `just verify` ne estis rulita en ĉi tiu medio, ĉar `cargo kani` ne estas
 instalita. La 11 pruvoj (5 pri la kadro-alokilo, 6 pri la mesaĝujo) estas
@@ -381,12 +429,16 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.1.2!
+[MiKerno] Saluton, mi estas MiKerno v0.1.3!
 [sistemvoko] pordego 0x80 (DPL3) instalita
 [kerno] memoro: 7 regionoj, 255 MiB uzeblaj
 [kerno] framebuffer 1280x800, 32 bpp        (nur ISO)
 [tss] TR ŝargita; kernostako pinto 0x...
 [temporizilo] kalibrado: ... kalkuloj/s, komenca ...
+[uzanto] horizonto: bildo 0x100000000..0x10000102c, enirpunkto 0x100000020
+[uzanto] stako 0x100ff0000..0x101000000 (64 KiB), pinto 0x101000000
+[uzanto] kontrolo (bone): skriba=true lega=true nurlega_skribo=false kerna=false nemapita=false translima=false eksterfenestra=false enirpunkta=true
+[uzanto] memoro: marko 0x4d694b65726e6f21, legita 0x4d694b65726e6f21
 [kerno] APIC 0 kaj paĝado pretaj; temporizilo 100 Hz
 [kerno] IPC: mesaĝo sendita al fadeno 2
 [kerno] planisto ekas: 3 fadenoj, antaŭokupo ĉiu 10 ms
@@ -444,17 +496,20 @@ saluton el Ring 0 tra int 0x80
 │       │       ├── temporizilo.rs # PIT-kalibrita 100 Hz
 │       │       ├── pagxado.rs  # PML4/PDPT/PD/PT, CR3
 │       │       ├── planado.rs  # kuntekstŝanĝo (asm)
+│       │       ├── sistemvoko.rs # 0x80-dispetĉilo el la kadro
 │       │       ├── procesoro.rs# hlt, cli/sti, CR2
 │       │       └── seria.rs    # COM1
 │       ├── memoro/
-│       │   ├── mod.rs          # regionoj, mapo, EniraInformo
+│       │   ├── mod.rs          # regionoj, mapo, EniraInformo, Modulo
 │       │   ├── kadro.rs        # bitmapa alokilo + Kani-pruvoj
-│       │   └── virtuala.rs     # adresoj, permesoj, trait-oj
+│       │   └── virtuala.rs     # adresoj, permesoj, uzanta fenestro
 │       ├── interrompo/mod.rs   # kadro, traktiloj, RAII-gardo
 │       ├── kerno/
 │       │   ├── mod.rs          # ĉefa sekvenco, testaj fadenoj
 │       │   ├── objekto.rs      # Fadeno, Kunteksto, stato
 │       │   ├── planisto.rs    # rondiga planisto
+│       │   ├── sistemvoko.rs   # SENDI/RICEVI/SKRIBI/FINI/CEDI
+│       │   ├── uzantspaco.rs   # ELF64-ŝargo, stako, U-kontrolo
 │       │   └── ipc.rs          # mesaĝoj, kapabloj + Kani-pruvoj
 │       └── ekrano/
 │           ├── mod.rs          # framebuffer-konzolo kaj elekto de streko
@@ -463,7 +518,7 @@ saluton el Ring 0 tra int 0x80
 ├── libmikerno/
 │   └── src/{lib,kapablo,mesago,syscall}.rs
 ├── horizonto/
-│   ├── build.rs, linker.ld     # 4 MiB
+│   ├── build.rs, linker.ld     # 0x1_0000_0000 (4 GiB)
 │   └── src/{main,biblioteko}.rs
 ├── tools/
 │   ├── run-qemu.sh / .cmd
@@ -472,16 +527,17 @@ saluton el Ring 0 tra int 0x80
 │   └── xorriso/                # ISO-kreado sur Windows
 ├── third_party/dejavu/         # permesilo de la fonto
 └── docs/
-    └── MEJLOSTONOJ.md          # mejloŝtonoj kaj pruvaro
+    ├── MEJLOSTONOJ.md          # mejloŝtonoj kaj pruvaro
+    └── VORTARO.md              # Esperanta terminologio
 ```
 
 ---
 
 ## Limigoj kaj sekva laboro
 
-- **Neniu Ring 3**: mankas enŝovo de `horizonto`, la uzanta adresospaco kun
-  bito `U` kaj la `iretq`-transiro. La kvin sistemvokoj jam funkcias el Ring 0
-  kaj estas pretaj por la Ring 3-vojo.
+- **Ring 3 nur parte**: la bildo estas liverata kaj muntata kun bito `U`, sed la
+  `iretq`-transiro mankas, do `horizonto` ne plenumiĝas. Mankas ankaŭ
+  per-procesaj adresspacoj (unu PML4 por ĉiuj) kaj per-fadena `TSS.RSP0`.
 - **Neniu liberigo de kadroj**: la alokilo estas monotona; `KadraAlokilo` ne
   havas publikan `liberigi`.
 - **Identeca mapo RWX**: oportunas por la prototipo, sed malobservas W^X;

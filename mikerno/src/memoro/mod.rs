@@ -7,6 +7,7 @@ use core::fmt;
 
 pub const KADRA_GRANDO: u64 = 4096;
 pub const MAKSAJ_REGIONOJ: usize = 128;
+pub const MAKSAJ_MODULOJ: usize = 8;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum RegionaTipo {
@@ -77,6 +78,20 @@ impl MemoraMapo {
     }
 }
 
+/// Praŝarĝa modulo: fizika bildo liverita de la praŝarĝilo (Multiboot2 tipo 3
+/// aŭ PVH-modlisto).
+#[derive(Clone, Copy)]
+pub struct Modulo {
+    pub komenco: u64,
+    pub longo: u64,
+}
+
+impl Modulo {
+    pub const fn fino(&self) -> u64 {
+        self.komenco + self.longo
+    }
+}
+
 /// Arkitekture sendependa praŝarĝa handoff.
 pub struct EniraInformo {
     pub memora_mapo: &'static MemoraMapo,
@@ -84,6 +99,8 @@ pub struct EniraInformo {
     pub rezervindaj: &'static [MemoraRegiono],
     /// Framebuffer liverita de la praŝarĝilo, se ĝi subtenas ĝin.
     pub framebuffer: Option<crate::ekrano::FramebufferInformo>,
+    /// Moduloj liveritaj de la praŝarĝilo, en la ordo de la protokolo.
+    pub moduloj: &'static [Modulo],
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -93,6 +110,8 @@ pub enum EniraEraro {
     NesubtenataVersio,
     NeniuMemoraMapo,
     TroMultajRegionoj,
+    NevalidaModulo,
+    TroMultajModuloj,
 }
 
 impl fmt::Display for EniraEraro {
@@ -103,6 +122,8 @@ impl fmt::Display for EniraEraro {
             Self::NesubtenataVersio => "nesubtenata PVH-versio",
             Self::NeniuMemoraMapo => "mankas memora mapo",
             Self::TroMultajRegionoj => "tro da regionoj en la memora mapo",
+            Self::NevalidaModulo => "nevalida praŝarĝa modulo",
+            Self::TroMultajModuloj => "tro da praŝarĝaj moduloj",
         })
     }
 }

@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-12 · Versio de la workspace: 0.1.2
+> Stato: 2026-11-12 · Versio de la workspace: 0.1.3
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -23,7 +23,7 @@
 | M8 | Mesaĝa IPC kun kapabloj | Plenumita | mesaĝoj liveritaj, fadeno 3 vekita |
 | M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 11 pruvoj verkitaj, Kani ne instalita |
 | M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Parte | ABI difinita; Ring 3 ne efektivigita |
-| M11 | Ring 3 kaj sistemvokoj | Parte | GDT/TSS (0.1.0), `int 0x80` (0.1.1), dispetĉo kaj kvin vokoj (0.1.2) |
+| M11 | Ring 3 kaj sistemvokoj | Parte | GDT/TSS (0.1.0), `int 0x80` (0.1.1), dispetĉo kaj kvin vokoj (0.1.2), modula `horizonto` kaj uzanta fenestro (0.1.3) |
 | M12 | Per-procesaj adresspacoj | Venonta | — |
 | M13 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Venonta | — |
 | M14 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
@@ -435,6 +435,7 @@ Elĉerpaĵo:
 | 2026-11-12 | 1. GDT/TSS-aranĝo, `VORTARO.md` | 0.1.0 | QEMU PVH: `TR ŝargita`, neniuj esceptoj |
 | 2026-11-12 | 2. DPL3-pordego, ŝanĝebla kadro, EOI-limigo | 0.1.1 | Ring 0-memtesto: konata `-38`, nekonata `-22` |
 | 2026-11-12 | 3. Dispetĉo, kvin sistemvokoj, unueca `Mesago`, montrila kontrolo | 0.1.2 | Ring 0-memtesto: `skribo=0`, `nekonata=-2`, `nula=-1`, `troa=-1`, `cedo=0`; fina stato `3 mortintaj` |
+| 2026-11-12 | 4. PVH/Multiboot2-modulo, ELF64-ŝargo super 4 GiB, stako, bito `U` | 0.1.3 | Ambaŭ vojoj: `horizonto` bildo `0x100000000..0x10000102c`, enirpunkto `0x100000020`, 8/8 kontroloj `bone`, fina stato `3 mortintaj` |
 
 **Akceptkriterioj.**
 

@@ -11,6 +11,7 @@ use libmikerno::Mesago;
 use libmikerno::syscall::{SYS_CEDI, SYS_FINI, SYS_RICEVI, SYS_SENDI, SYS_SKRIBI};
 
 use crate::interrompo::{InterrompaKadro, InterrompaTraktilo, SISTEMVOKA_VEKTORO};
+use crate::memoro::virtuala::{UZANTA_STAKO_GRANDE, UZANTA_STAKO_SUPRO};
 
 use super::{ipc, planisto};
 
@@ -25,12 +26,6 @@ pub const MESAGUJO_PLENA: u64 = (-4i64) as u64;
 
 /// Maksimuma longo de unu `SYS_SKRIBI`-bufro.
 const MAKS_SKRIBO: usize = 4096;
-
-// M11 anoncas la regionojn por la montrila kontrolo; Task 4 mapos ilin.
-const BILDO_BAZO: u64 = 0x0000_0001_0000_0000;
-const BILDO_MAKSO: u64 = 4 * 1024 * 1024;
-const STAKO_SUPRO: u64 = BILDO_BAZO + 16 * 1024 * 1024;
-const STAKO_GRANDE: u64 = 64 * 1024;
 
 /// Efektivigu unu sistemvokon.
 ///
@@ -129,9 +124,12 @@ fn kontroli_mesagon(montrilo: u64, el_ring3: bool) -> bool {
     !el_ring3 || en_uzanta_regiono(montrilo, fino)
 }
 
+/// La anoncitaj uzantaj regionoj: la efektive ŝarĝita bildo kaj la stako.
 fn en_uzanta_regiono(komenco: u64, fino: u64) -> bool {
-    let en_bildo = komenco >= BILDO_BAZO && fino <= BILDO_BAZO + BILDO_MAKSO;
-    let en_stako = komenco >= STAKO_SUPRO - STAKO_GRANDE && fino <= STAKO_SUPRO;
+    let (bilda_komenco, bilda_fino) = super::uzantspaco::bildaj_limoj();
+    let en_bildo = bilda_fino > bilda_komenco && komenco >= bilda_komenco && fino <= bilda_fino;
+    let staka_komenco = UZANTA_STAKO_SUPRO - UZANTA_STAKO_GRANDE as u64;
+    let en_stako = komenco >= staka_komenco && fino <= UZANTA_STAKO_SUPRO;
     en_bildo || en_stako
 }
 

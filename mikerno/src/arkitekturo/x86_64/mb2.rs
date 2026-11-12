@@ -6,23 +6,33 @@ use core::slice;
 use crate::ekrano::FramebufferInformo;
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::{
-    EniraEraro, EniraInformo, MAKSAJ_REGIONOJ, MemoraMapo, MemoraRegiono, RegionaTipo,
+    EniraEraro, EniraInformo, MAKSAJ_MODULOJ, MAKSAJ_REGIONOJ, MemoraMapo, MemoraRegiono, Modulo,
+    RegionaTipo,
 };
 
 pub const MAGIO: u32 = 0x36d7_6289;
 
 const TIPO_FINO: u32 = 0;
+const TIPO_MODULO: u32 = 3;
 const TIPO_MEMORA_MAPO: u32 = 6;
 const TIPO_FRAMEBUFO: u32 = 8;
 const KAPA_GRANDO: usize = 8;
 const MAPERA_GRANDO: usize = 24;
-const REZERVOJ: usize = 1;
+const MODULA_KAPA_GRANDO: usize = 16;
+const REZERVOJ: usize = 1 + MAKSAJ_MODULOJ;
 
 static MAPO: Kunhavigita<MemoraMapo> = Kunhavigita::nova(MemoraMapo::nova());
 static REZERVOJ_AREO: Kunhavigita<[MemoraRegiono; REZERVOJ]> =
     Kunhavigita::nova([MemoraRegiono::MALPLENA; REZERVOJ]);
 static REZERVOJ_NOMBRO: Kunhavigita<usize> = Kunhavigita::nova(0);
 static FRAMEBUFO: Kunhavigita<Option<FramebufferInformo>> = Kunhavigita::nova(None);
+static MODULOJ: Kunhavigita<[Modulo; MAKSAJ_MODULOJ]> = Kunhavigita::nova(
+    [Modulo {
+        komenco: 0,
+        longo: 0,
+    }; MAKSAJ_MODULOJ],
+);
+static MODULA_NOMBRO: Kunhavigita<usize> = Kunhavigita::nova(0);
 
 pub fn analizi(informo: *const u8) -> Result<EniraInformo, EniraEraro> {
     if informo.is_null() {
@@ -37,6 +47,7 @@ pub fn analizi(informo: *const u8) -> Result<EniraInformo, EniraEraro> {
     *mapo = MemoraMapo::nova();
     let framebufo = FRAMEBUFO.akiri();
     *framebufo = None;
+    *MODULA_NOMBRO.akiri() = 0;
 
     let fino = informo as usize + tuta;
     let mut etikedo = unsafe { informo.add(KAPA_GRANDO) };
@@ -55,6 +66,8 @@ pub fn analizi(informo: *const u8) -> Result<EniraInformo, EniraEraro> {
             vidis_mapon = true;
         } else if tipo == TIPO_FRAMEBUFO {
             legi_framebufferon(etikedo, grando, framebufo);
+        } else if tipo == TIPO_MODULO {
+            legi_modulon(etikedo, grando)?;
         }
         etikedo = (etikedo as usize + grando).next_multiple_of(8) as *const u8;
     }
@@ -63,18 +76,50 @@ pub fn analizi(informo: *const u8) -> Result<EniraInformo, EniraEraro> {
     }
 
     let rezervoj = REZERVOJ_AREO.akiri();
+    let modulo_nombro = *MODULA_NOMBRO.akiri();
+    let modulo_eroj = &MODULOJ.akiri()[..modulo_nombro];
     rezervoj[0] = MemoraRegiono {
         komenco: informo as u64,
         longo: tuta as u64,
         tipo: RegionaTipo::Rezervita,
     };
-    *REZERVOJ_NOMBRO.akiri() = 1;
+    for (indekso, modulo) in modulo_eroj.iter().enumerate() {
+        rezervoj[indekso + 1] = MemoraRegiono {
+            komenco: modulo.komenco,
+            longo: modulo.longo,
+            tipo: RegionaTipo::Rezervita,
+        };
+    }
+    *REZERVOJ_NOMBRO.akiri() = 1 + modulo_nombro;
 
     Ok(EniraInformo {
         memora_mapo: &*MAPO.akiri(),
-        rezervindaj: unsafe { slice::from_raw_parts(rezervoj.as_ptr(), 1) },
+        rezervindaj: unsafe { slice::from_raw_parts(rezervoj.as_ptr(), 1 + modulo_nombro) },
         framebuffer: *framebufo,
+        moduloj: unsafe { slice::from_raw_parts(MODULOJ.akiri().as_ptr(), modulo_nombro) },
     })
+}
+
+/// Multiboot2-modulo (tipo 3): `mod_start`, `mod_end`, `cmdline`, `reserved`.
+fn legi_modulon(etikedo: *const u8, grando: usize) -> Result<(), EniraEraro> {
+    if grando < MODULA_KAPA_GRANDO {
+        return Err(EniraEraro::NevalidaModulo);
+    }
+    let komenco = unsafe { legi_u32(etikedo.add(8)) } as u64;
+    let fino = unsafe { legi_u32(etikedo.add(12)) } as u64;
+    if fino <= komenco {
+        return Err(EniraEraro::NevalidaModulo);
+    }
+    let nombro = MODULA_NOMBRO.akiri();
+    if *nombro == MAKSAJ_MODULOJ {
+        return Err(EniraEraro::TroMultajModuloj);
+    }
+    MODULOJ.akiri()[*nombro] = Modulo {
+        komenco,
+        longo: fino - komenco,
+    };
+    *nombro += 1;
+    Ok(())
 }
 
 fn legi_framebufferon(etikedo: *const u8, grando: usize, celo: &mut Option<FramebufferInformo>) {
