@@ -8,6 +8,8 @@ mod kerno;
 mod kunhavigita;
 mod memoro;
 
+// Kani kunligas la gastigan `std`, kiu jam provizas la panikan traktilon.
+#[cfg(not(kani))]
 use core::panic::PanicInfo;
 
 /// Skribu formatitan tekston al la arkitektura konzolo.
@@ -47,6 +49,7 @@ pub extern "C" fn kerna_eniro_kopio(
     arkitekturo::halti()
 }
 
+#[cfg(not(kani))]
 #[panic_handler]
 fn paniko(informo: &PanicInfo) -> ! {
     skribu!("\n[kerno] paniko: {}\n", informo);
