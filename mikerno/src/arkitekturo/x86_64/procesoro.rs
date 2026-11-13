@@ -49,6 +49,58 @@ fn cpuid(folio: u32, subfolio: u32) -> (u32, u32, u32, u32) {
     (eax, ebx, ecx, edx)
 }
 
+/// Hazarda 64-bita valoro por la KASLR-bazo.
+///
+/// `RDRAND` estas uzata kiam `CPUID.01:ECX[30]` ĝin proklamas; alie du
+/// `RDTSC`-legadoj estas miksitaj per SplitMix64. La dua vojo gravas en
+/// virtualigiloj, kiuj ne elmontras `RDRAND` (ekz. la `qemu64`-modelo).
+pub fn hazardo() -> u64 {
+    let (_, _, ecx, _) = cpuid(1, 0);
+    if ecx & (1 << 30) != 0 {
+        for _ in 0..10 {
+            let (mut valoro, mut sukceso) = (0u64, 0u8);
+            // SAFETY: `rdrand` nur legas la aparatan hazardan generatoron;
+            // `setc` registras, ĉu ĝi sukcesis. `RDRAND` modifas `CF`.
+            unsafe {
+                asm!(
+                    "rdrand {valoro}",
+                    "setc {sukceso}",
+                    valoro = out(reg) valoro,
+                    sukceso = out(reg_byte) sukceso,
+                    options(nomem, nostack),
+                );
+            }
+            if sukceso != 0 {
+                return valoro;
+            }
+        }
+    }
+    miksi(tsc().rotate_left(32) ^ tsc())
+}
+
+fn tsc() -> u64 {
+    let (malalta, alta): (u32, u32);
+    // SAFETY: `rdtsc` nur legas la tempigilon.
+    unsafe {
+        asm!(
+            "rdtsc",
+            out("eax") malalta,
+            out("edx") alta,
+            options(nomem, nostack, preserves_flags),
+        );
+    }
+    ((alta as u64) << 32) | malalta as u64
+}
+
+/// SplitMix64-miksado: malmultaj instrukcioj, bona disigo de proksimaj enigoj.
+fn miksi(mut valoro: u64) -> u64 {
+    valoro ^= valoro >> 30;
+    valoro = valoro.wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    valoro ^= valoro >> 27;
+    valoro = valoro.wrapping_mul(0x94D0_49BB_1331_11EB);
+    valoro ^ (valoro >> 31)
+}
+
 pub fn halti() -> ! {
     loop {
         unsafe { asm!("hlt", options(nomem, nostack, preserves_flags)) };

@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-13 · Versio de la workspace: 0.3.1
+> Stato: 2026-11-13 · Versio de la workspace: 0.3.2
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -25,7 +25,7 @@
 | M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Plenumita | ABI difinita; `horizonto` plenumiĝas en Ring 3 |
 | M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj (0.1.5) |
 | M12 | Per-procesaj adresspacoj | Plenumita | Fazo 6: W^X laŭ sekcioj, `CR0.WP`, foliaj permesoj en sistemvokoj; Fazo 5: samtempaj procezoj `4`/`5`, sama sekreta adreso `0x200000000`, spiono `#PF` ĉe `0x200001000`, viktimo pluvivas; kadroj egalaj (0.2.5) |
-| M13 | Kerna memoro-firmigo: SMEP, SMAP, KASLR | Parte | Fazo 1 (0.3.0): CPUID-provo, `CR4.SMEP`, Ring 0-provo kaŭzas `#PF` (`erarkodo=0x11`) kaj haltigas la kernon; Fazo 2 (0.3.1): `CR4.SMAP`, `STAC`/`CLAC`-fenestroj, `SMAP-malobservo` (`erarkodo=0x1`); alta-duona kerno venonta |
+| M13 | Kerna memoro-firmigo: SMEP, SMAP, KASLR | Plenumita | Fazo 1 (0.3.0): `CR4.SMEP`, Ring 0-provo `#PF` (`erarkodo=0x11`); Fazo 2 (0.3.1): `CR4.SMAP`, `STAC`/`CLAC`, `SMAP-malobservo` (`erarkodo=0x1`); Fazo 3 (0.3.2): ET_DYN + `R_X86_64_RELATIVE`, hazarda bazo (`0x5400000`, `0xd200000`, `0x3000000` en tri startoj), ĉiuj scenaroj verdaj |
 | M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Venonta | — |
 | M15 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
 | M16 | Konservado, dosiersistemo, ŝelo | Venonta | — |
@@ -131,10 +131,10 @@ kaj ŝalti proprietan `CR3`.
 **Pruvo.** Post `CR3`-ŝalto la kerno daŭre uzas la framebuffer-on (ISO) kaj la
 APIC-on; neniu paĝa eraro aperas dum la tuta testa scenaro.
 
-**Resto.** La identeca mapo jam respektas W^X laŭ sekcioj (0.2.5), kaj SMEP
-(0.3.0) plus SMAP (0.3.1) baras Ring 0 de uzantaj folioj. KASLR, la alta-duona
-kerno (0.3.2) kaj APIC/IOMMU-izolado ankoraŭ mankas; la per-procesa mapado
-venis en M12.
+**Resto.** La identeca mapo jam respektas W^X laŭ sekcioj (0.2.5), SMEP
+(0.3.0) kaj SMAP (0.3.1) baras Ring 0 de uzantaj folioj, kaj KASLR (0.3.2)
+hazardigas la kernan bazadreson per ET_DYN-relokado; la per-procesa mapado
+venis en M12. IOMMU-izolado restas en M18.
 
 ---
 
@@ -491,6 +491,57 @@ kaj komparas `liberaj()` antaŭ/post (PVH `64979`, ISO `64977` — egalaj).
 
 ---
 
+### M13 — Kerna memoro-firmigo
+
+**Celo.** Firmigi la limon inter Ring 0 kaj Ring 3 kaj malfaciligi la
+ekspluaton de konataj kernaj adresoj.
+
+**Efektivigo.** Tri sendependaj tavoloj:
+
+1. **SMEP (0.3.0)** — CPUID-provo, `CR4.SMEP`, malpermesi plenumon de uzantaj
+   paĝoj el Ring 0; se la procesoro ne subtenas ĝin, la kerno bone faldas.
+2. **SMAP (0.3.1)** — CPUID-provo, `CR4.SMAP`, `STAC`/`CLAC`-fenestroj ĉirkaŭ
+   ĉiu kerna aliro al uzantaj bufroj (RAII-gardo `StacGardo`); revizio de
+   `SYS_SKRIBI`, `SYS_SENDI` kaj `SYS_RICEVI`.
+3. **KASLR (0.3.2)** — la bildo estas ligita kiel ET_DYN
+   (`relocation-model=pic`, `-Bsymbolic`) ĉe la sama 1 MiB. La ligilo produktas
+   nur `R_X86_64_RELATIVE`-relokojn. `hazardigo` legas la memormapon, elektas
+   2 MiB-aliniiĝintan bazon en uzebla RAM (≥ 2 MiB, sub 4 GiB, ekster la
+   devena bildo, la moduloj, la praŝarĝaj strukturoj kaj la framebuffer), kopias
+   la bildon per `rep movsb`, aplikas la relokojn al la kopio kaj saltas en ĝin
+   per `kerna_salto_al_kopio`. La 64-bita eniro aplikas la relokojn ankaŭ al la
+   devena bildo antaŭ la unua Rust-voko, ĉar la ligilo lasas la RELATIVE-celojn
+   nulaj (la aldonaĵo estas nur en `.rela.dyn`). La 32-bita ŝelko trovas sian
+   bazon per `call`/`pop` kaj uzas nur nombrajn deŝovojn; la praŝarĝa stako
+   translokiĝis al `.bss`, ĉar `.boot_text` estas nurlega post la unua
+   `CR3`-ŝalto. Ĉiuj limoj (`__kerna_komenco`, `__kerna_fino`,
+   `__bss_komenco`, `__bss_fino`, `__rela_komenco`, `__rela_fino`, sekciaj
+   limoj) kuŝas ene de sekcioj, do ili ricevas la saman RELATIVE-relokon.
+   Sen `RDRAND` la hazardo venas el du `RDTSC`-legoj miksitaj per SplitMix64.
+   La kadro-alokilo rezervas ankaŭ la devenan bildon ĉe `origino` ĝis la unua
+   `CR3`-ŝalto.
+
+**Progreso.**
+
+| Dato | Fazo | Versio | Pruvo |
+| --- | --- | --- | --- |
+| 2026-11-13 | 1. SMEP: CPUID-provo, `CR4.SMEP`, Ring 0-provo | 0.3.0 | PVH `-cpu qemu64,+smep,+smap`: `[kerno] SMEP subtenata: jes`, `[kerno] SMEP ŝaltita`, post la 1000 tikoj `[memoro] SMEP-provo … ĉe 0x100000000` kaj `[eraro] SMEP-malobservo … (erarkodo=0x11)`; la tuta M12-scenaro antaŭe verda (`izolado 64980 = 64980`). Sen SMEP (`-cpu qemu64`): `subtenata: ne`, provo preterlasita, 1000 tikoj, neniuj esceptoj |
+| 2026-11-13 | 2. SMAP: CPUID-provo, `CR4.SMAP`, `STAC`/`CLAC`-gardo en sistemvokoj kaj ŝargilo | 0.3.1 | PVH `-cpu qemu64,+smep,+smap`: `SMAP subtenata: jes`, `SMAP ŝaltita`, M12 verda (`izolado 64978 = 64978`), Ring 3-linioj kaj `[uzanto] memoro: marko … legita …` pruvas la pozitivan fenestron, fine `[memoro] SMAP-provo … ĉe 0x100000000` kaj `[eraro] procezo 0: SMAP-malobservo … (erarkodo=0x1)`. ISO BIOS `64976 = 64976`, UEFI/OVMF `63506 = 63506`, VirtualBox EFI `60216 = 60216`. Sen la trajtoj (`-cpu qemu64`, VirtualBox): `subtenata: ne`, provo preterlasita, 1000 tikoj, neniuj esceptoj |
+| 2026-11-13 | 3. KASLR: ET_DYN, relokebla bildo, hazarda bazo | 0.3.2 | PVH `-cpu qemu64,+smep,+smap`: tri startoj montras `0x5400000`, `0xd200000` kaj `0x3000000`; `[memoro] W^X (bone)` kaj `izolado 64839 = 64839`; ISO BIOS `0x4200000` (`64837 = 64837`), UEFI/OVMF `0x4a00000` (`63367 = 63367`); sen la trajtoj (`-cpu qemu64`) `0x8c00000`, SMEP/SMAP-provo preterlasita, 1000 tikoj |
+
+**Akceptkriterioj — pruvitaj.**
+
+| Kriterio | Stato | Pruvo |
+| --- | --- | --- |
+| Ring 0 ne povas plenumi uzantan paĝon (SMEP) | **Pruvita** | `[eraro] SMEP-malobservo … (erarkodo=0x11)` post la Ring 0-provo |
+| Ring 0 legas uzantan bufron nur en `STAC`-fenestro | **Pruvita** | `[uzanto] memoro: marko … legita …`; sen `STAC` `[eraro] procezo 0: SMAP-malobservo … (erarkodo=0x1)` |
+| Du startoj montras malsamajn bazadresojn | **Pruvita** | Tri PVH-startoj: `0x5400000`, `0xd200000`, `0x3000000`; ISO BIOS `0x4200000`, UEFI/OVMF `0x4a00000` |
+| Ĉiuj antaŭaj scenaroj restas verdaj | **Pruvita** | `W^X (bone)`, `reuzo (bone): 10 cikloj`, `izolado 64839 = 64839`, 5 fadenoj mortintaj, 1000 tikoj |
+
+**Versioj.** 0.3.0 (SMEP), 0.3.1 (SMAP), 0.3.2 (KASLR).
+
+---
+
 ## 3. Partaj mejloŝtonoj
 
 ### M9 — Kvalita pordego
@@ -649,7 +700,7 @@ kadroj antaŭ, 63507 post`).
    `mikerno.iso` estas git-ignoritaj, do malnova ISO povas montri malnovan
    version. Oni ĉiam rulu `just iso` post kerna aŭ dokumenta ŝanĝo.
 4. **Versio hardkodita.** `kerno/mod.rs`, `mikerno/boot/limine.conf` kaj
-   `Cargo.toml` enhavas la nunan version (`0.3.1`) sendepende. Oni devus derivi
+   `Cargo.toml` enhavas la nunan version (`0.3.2`) sendepende. Oni devus derivi
    ĝin per `env!("CARGO_PKG_VERSION")` kaj `build.rs`.
 5. **Kani mankas.** La formala pordego ne estas plenumebla en ĉi tiu medio;
    `just verify` malsukcesos ĝis `cargo kani` estos instalita.
@@ -670,40 +721,6 @@ kadroj antaŭ, 63507 post`).
 ---
 
 ## 5. Venontaj mejloŝtonoj
-
-### M13 — Kerna memoro-firmigo
-
-**Celo.** Firmigi la limon inter Ring 0 kaj Ring 3 kaj malfaciligi la
-ekspluaton de konataj kernaj adresoj.
-
-**Taskoj.**
-
-1. **SMEP (0.3.0, plenumita)** — CPUID-provo, `CR4.SMEP`, malpermesi
-   plenumon de uzantaj paĝoj el Ring 0. Se la procesoro ne subtenas ĝin, la
-   kerno devas bone faldi.
-2. **SMAP (0.3.1, plenumita)** — CPUID-provo, `CR4.SMAP`, `STAC`/`CLAC`-
-   fenestroj ĉirkaŭ ĉiu kerna aliro al uzantaj bufroj (RAII-gardo); revizio de
-   `SYS_SKRIBI`, `SYS_SENDI` kaj `SYS_RICEVI`; `#PF`-testoj por aliro sen
-   `STAC`, inkluzive de la ŝargila memtesto.
-3. **KASLR (0.3.2)** — relokebla aŭ alta-duona kerna bildo, hazarda bazadreso,
-   ĝisdatigo de `KernajLimoj` kaj de la praŝarĝaj enirpunktoj; la fiksa
-   `0x100000`-bazo malaperas.
-
-**Progreso.**
-
-| Dato | Fazo | Versio | Pruvo |
-| --- | --- | --- | --- |
-| 2026-11-13 | 1. SMEP: CPUID-provo, `CR4.SMEP`, Ring 0-provo | 0.3.0 | PVH `-cpu qemu64,+smep,+smap`: `[kerno] SMEP subtenata: jes`, `[kerno] SMEP ŝaltita`, post la 1000 tikoj `[memoro] SMEP-provo … ĉe 0x100000000` kaj `[eraro] SMEP-malobservo … (erarkodo=0x11)`; la tuta M12-scenaro antaŭe verda (`izolado 64980 = 64980`). Sen SMEP (`-cpu qemu64`): `subtenata: ne`, provo preterlasita, 1000 tikoj, neniuj esceptoj |
-| 2026-11-13 | 2. SMAP: CPUID-provo, `CR4.SMAP`, `STAC`/`CLAC`-gardo en sistemvokoj kaj ŝargilo | 0.3.1 | PVH `-cpu qemu64,+smep,+smap`: `SMAP subtenata: jes`, `SMAP ŝaltita`, M12 verda (`izolado 64978 = 64978`), Ring 3-linioj kaj `[uzanto] memoro: marko … legita …` pruvas la pozitivan fenestron, fine `[memoro] SMAP-provo … ĉe 0x100000000` kaj `[eraro] procezo 0: SMAP-malobservo … (erarkodo=0x1)`. ISO BIOS `64976 = 64976`, UEFI/OVMF `63506 = 63506`, VirtualBox EFI `60216 = 60216`. Sen la trajtoj (`-cpu qemu64`, VirtualBox): `subtenata: ne`, provo preterlasita, 1000 tikoj, neniuj esceptoj |
-
-**Akceptkriterioj.** Ring 0 ne povas plenumi uzantan paĝon (SMEP); sen `STAC`
-Ring 0 ne povas legi aŭ skribi uzantan bufron, kun `STAC` jes (SMAP); du startoj
-montras malsamajn kernajn bazadresojn sen rompi PVH/BIOS/UEFI (KASLR); ĉiuj
-ekzistantaj scenaroj restas verdaj.
-
-**Versioj.** 0.3.0 (SMEP), 0.3.1 (SMAP), 0.3.2 (KASLR).
-
----
 
 ### M14 — IPC-firmigo
 
@@ -795,13 +812,11 @@ mejloŝtono venas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo el M16.
 | --- | --- | --- | --- |
 | Alta | Neniu `fork`/`exec`; procezoj estas preparitaj de la praŝarĝo | Ne eblas dinamika lanĉo el Ring 3 | M16 (`fork`/`exec`) |
 | Alta | Ring 3-esceptoj krom `#PF`/`#GP` haltigas la sistemon | Ne rekaptebla eraro (ekz. `#UD`) | M12/M17 |
-| Alta | Neniu SMEP/SMAP | Ring 0 povas plenumi aŭ legi uzantajn paĝojn | M13 |
 | Alta | Neniu CI nek testoj | Regresoj nerimarkeblaj | M17 |
 | Alta | Malaktuala ISO | Konfuzaj testrezultoj | CI + versio |
 | Meza | Versio hardkodita en 3 lokoj | Malkongruaj eldonoj | `env!` + `build.rs` |
 | Meza | IPC finpunkto = fadeno | Ne eblas sendependaj objektoj | M14 |
 | Meza | Sekreta paĝo estas unu fiksa mapado por procezo | Neniu ĝenerala `mmap`/`brk` por uzantaj datumoj | M16 |
-| Meza | Neniu KASLR | Fiksa kerna bazadreso | M13 |
 | Meza | Neniu IOMMU | Aparata DMA ne estas izolita | M18 |
 | Meza | Framebuffer sen rulumo | Malbona uzsperto | M6-poste |
 | Malalta | `Kunhavigita::akiri` prenas `&self` | Facila misuzo | revizio |

@@ -5,14 +5,48 @@ SECTIONS
     . = 1M;
     __kerna_komenco = .;
 
-    .multiboot2_header : ALIGN(8)
+    /* Praŝarĝa ŝelko: 32-bita eniro, GDT kaj la unuaj paĝtabeloj. La Xen-PVH
+       noto enhavas la literalon 0x100000, do `_komenco` devas resti ĉe la
+       unua bajto de la bildo. */
+    .boot_text : ALIGN(16)
     {
-        KEEP(*(.multiboot2_header))
+        KEEP(*(.boot_text))
     }
 
     .note.Xen : ALIGN(4)
     {
         KEEP(*(.note.Xen))
+    }
+
+    /* Relokoj de la pozicio-sendependa bildo. La KASLR-ŝelko legas ilin el la
+       liga kopio (1 MiB) antaŭ ol salti en la relokitan bildon. */
+    .rela.dyn : ALIGN(8)
+    {
+        __rela_komenco = .;
+        *(.rela.dyn)
+        *(.rela.*)
+        __rela_fino = .;
+    }
+
+    .dynamic : ALIGN(8)
+    {
+        *(.dynamic)
+    }
+    .dynsym : ALIGN(8)
+    {
+        *(.dynsym)
+    }
+    .dynstr : ALIGN(8)
+    {
+        *(.dynstr)
+    }
+    .hash : ALIGN(8)
+    {
+        *(.hash)
+    }
+    .gnu.hash : ALIGN(8)
+    {
+        *(.gnu.hash)
     }
 
     /* Sekciaj limoj por W^X: la identeca mapado donas al `.text` nur
@@ -53,18 +87,12 @@ SECTIONS
         __bss_komenco = .;
         *(.bss .bss.* .lbss .lbss.*)
         *(COMMON)
+        . = ALIGN(4K);
         __bss_fino = .;
+        /* Ene de la sekcio, do la simbolo ricevas la saman RELATIVE-relokon
+           kiel la ceteraj limoj kaj sekvas la hazardan bazadreson. */
+        __kerna_fino = .;
     }
-
-    /* Praŝarĝaj paĝtabeloj kaj stako. Ili ne rajtas esti en
-       [__bss_komenco, __bss_fino): la longreĝima eniro nuligas tiun aron jam
-       uzante ĝuste ĉi tiujn paĝojn. */
-    .boot_bss (NOLOAD) : ALIGN(4K)
-    {
-        *(.boot_bss .boot_bss.*)
-    }
-
-    __kerna_fino = ALIGN(4K);
 
     /DISCARD/ :
     {
@@ -74,3 +102,6 @@ SECTIONS
         *(.comment)
     }
 }
+
+/* La PVH-noto kaj la unua paĝo de la ŝelko devas koincidi kun la liga bazo. */
+ASSERT(_komenco == 1M, "la enirpunkto devas esti ĉe 1 MiB por la PVH-noto")

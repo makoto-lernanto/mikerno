@@ -27,8 +27,21 @@ pub fn kadra_alokilo() -> &'static mut KadraAlokilo {
     ALOKILO.akiri()
 }
 
-pub fn ĉefa(informo: EniraInformo) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.3.1!\n");
+pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
+    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.3.2!\n");
+    if bazo == origino {
+        crate::skribu!(
+            "[kerno] KASLR malŝaltita: la bildo restas ĉe 0x{:x}\n",
+            bazo
+        );
+    } else {
+        crate::skribu!(
+            "[kerno] KASLR: kerna bazo 0x{:x} (deŝovo 0x{:x}); la bildo venis de 0x{:x}\n",
+            bazo,
+            bazo - 0x10_0000,
+            origino
+        );
+    }
     let trajtoj = crate::arkitekturo::procesoraj_trajtoj();
     crate::skribu!("[kerno] SMEP subtenata: {}\n", jes_ne(trajtoj.smep));
     crate::skribu!("[kerno] SMAP subtenata: {}\n", jes_ne(trajtoj.smap));
@@ -51,7 +64,7 @@ pub fn ĉefa(informo: EniraInformo) {
     // aliras ĝin mem dum la proceza detruo, do longa `&mut` malhelpus.
     let (mut spaco, framebuffer) = {
         let alokilo = kadra_alokilo();
-        alokilo.pravalorizi(informo.memora_mapo, informo.rezervindaj);
+        alokilo.pravalorizi(informo.memora_mapo, informo.rezervindaj, origino);
         testi_liberigon(alokilo);
 
         let mut spaco = match crate::arkitekturo::krei_adresan_spacon(alokilo) {

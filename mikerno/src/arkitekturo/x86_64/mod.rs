@@ -2,6 +2,7 @@ pub mod apic;
 pub mod eniro;
 pub mod firmigo;
 pub mod gdt;
+pub mod hazardigo;
 pub mod idt;
 pub mod mb2;
 pub mod pagxado;

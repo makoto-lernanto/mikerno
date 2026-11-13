@@ -10,7 +10,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.3.1 (workspace)
+- **Versio:** 0.3.2 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.85`
@@ -158,8 +158,9 @@ La workspace havas tri crate-ojn:
 | `mikerno` | `no_std` binara | La kerno: praŝarĝo, memoro, interrompoj, planisto, IPC, konzolo |
 | `libmikerno` | `no_std` biblioteko | Komunaj `#[repr(C)]`-difinoj: mesaĝoj, kapabloj, sistemvokaj numeroj |
 | `horizonto` | `no_std` binara | La unua uzanta procezo, ligita jam super 4 GiB (`0x1_0000_0000`) |> **Noto:** la tuta workspace uzas `code-model=large`, ĉar `horizonto` estas
-> ligita super 4 GiB; la statika reloka modelo restas, do neniu dinamika ligilo
-> aperas.
+> ligita super 4 GiB. La kerno estas ligita kun `relocation-model=pic` (ET_DYN)
+> por KASLR; `horizonto` ligas kun `-no-pie` kaj restas ET_EXEC kun statikaj
+> relokoj. Neniu dinamika ligilo aŭ ekstera dependaĵo aperas.
 
 Dependa grafo:
 
@@ -180,10 +181,16 @@ firmvaro / QEMU / Limine
 32-bita enirŝelko (_komenco)          eniro.rs
   · nuligas 6 paĝojn, konstruas identecan mapon de 4 GiB per 2 MiB paĝoj
   · PAE + LME + PG, GDT, saltas en longan reĝimon
-  · nuligas .bss, starigas stakon, vokas kerna_eniro
+  · nuligas .bss, starigas stakon, aplikas la RELATIVE-relokojn
+  · vokas kerna_eniro
         │
         ▼
 kerna_eniro                          main.rs
+  · hazardigo (KASLR): elektas 2 MiB-aliniiĝintan bazon, kopias la bildon
+    tien, relokas la kopion kaj saltas en ĝin (`kerna_eniro_kopio`)
+        │
+        ▼
+kerna_eniro_kopio                    main.rs
   · pravalorizi: COM1, GDT, IDT, EFER.NXE
   · analizi_eniron: Multiboot2 aŭ Xen-PVH
         │
@@ -223,12 +230,26 @@ subtenas du protokolojn samtempe:
    `limine.conf` kiel etikedo de tipo 3.
 
 La ŝelko unue identece mapas la unuajn 4 GiB per 2 MiB grandegaj paĝoj, por ke
-la 64-bita kodo restu atingebla tuj post `CR0.PG`. La tabeloj (`_pml4`, `_pdpt`,
-`_pd0..3`) kaj la 16 KiB-a praŝarĝa stako vivas en `.boot_bss`, aparte de
-`.bss`: la longreĝima eniro nuligas `.bss` uzante ĝuste tiujn paĝojn.
+la 64-bita kodo restu atingebla tuj post `CR0.PG`. Ĉar la bildo estas ET_DYN,
+la ŝelko trovas sian bazon per `call`/`pop` kaj uzas nur nombrajn deŝovojn ene
+de `.boot_text`: GDT ĉe `0x200`, GDT-montrilo ĉe `0x220`, Multiboot2-kapo ĉe
+`0x280`, la unuaj paĝtabeloj ĉe `0x1000..0x7000` kaj la 64-bita eniro ĉe
+`0x7000`. La paĝtabeloj restas en `.boot_text` (nurlegaj post la unua
+`CR3`-ŝalto), dum la 16 KiB-a praŝarĝa stako translokiĝis en `.bss`, kiun la
+nova spaco mapas skribebla.
+
+Post la unua Rust-voko `hazardigo` (`hazardigo.rs`) legas la memormapon,
+elektas hazardan 2 MiB-aliniiĝintan bazon en uzebla RAM (aŭ `RDRAND`, aŭ
+`RDTSC` miksita per SplitMix64), kopias la bildon tien, aplikas la
+`R_X86_64_RELATIVE`-relokojn al la kopio kaj saltas en ĝin per
+`kerna_salto_al_kopio`. Se la kondiĉoj mankas, la bildo restas ĉe la liga bazo
+kaj la kerno raportas `KASLR malŝaltita`.
 
 La liga skripto metas la kernon je 1 MiB (`mikerno/boot/linker.ld`) kaj
-eksportas `__kerna_komenco`, `__kerna_fino`, `__bss_komenco`, `__bss_fino`.
+eksportas `__kerna_komenco`, `__kerna_fino`, `__bss_komenco`, `__bss_fino`,
+`__rela_komenco` kaj `__rela_fino`. Ĉiuj limoj kuŝas ene de sekcio, do ili
+ricevas RELATIVE-relokon kaj sekvas la hazardan bazadreson; `__kerna_fino`
+preterpasas la plenan bildon inkluzive de `.bss`.
 
 ---
 
@@ -242,8 +263,10 @@ t.e. 128 KiB da bitaro en `.bss`. La alokilo:
 1. markas ĉion okupata;
 2. malmarkas la uzeblajn regionojn de la praŝarĝila memora mapo;
 3. denove rezervas la malaltan 1 MiB (BIOS/legacy), la kernan bildon
-   (`__kerna_komenco..__kerna_fino`) kaj la regionojn el la praŝarĝilo
-   (Multiboot2-informo, PVH-memmapo, RSDP).
+   (`__kerna_komenco..__kerna_fino`), la devenan praŝarĝan bildon ĉe
+   `origino` (ĝiaj kadroj tenas la aktivajn praŝarĝajn paĝtabelojn ĝis la unua
+   `CR3`-ŝalto) kaj la regionojn el la praŝarĝilo (Multiboot2-informo,
+   PVH-memmapo, RSDP).
 
 `aloki()` skanas de `sekva` antaŭen. `liberigi(kadro)` malmarkas la biton,
 nuligas la enhavon (por ke sekva procezo ne vidu malnovajn datumojn) kaj
@@ -263,7 +286,7 @@ komparas la nombrojn de liberaj kadroj.
 
 - la malaltan 1 MiB kaj ĉiujn uzeblajn regionojn identece kiel RW+NX,
 - la kernan bildon laŭ sekciaj limoj el `boot/linker.ld`: `.text` (`RX`),
-  `.rodata` (`R`+`NX`) kaj `.data`/`.bss`/`.boot_bss` (`RW`+`NX`),
+  `.rodata` (`R`+`NX`) kaj `.data`/`.bss` (`RW`+`NX`),
 - la framebuffer-on (`SKRIBA_SENKAŜE`: skribebla, neplenumebla, `PCD`),
 - la APIC-MMIO-on (`SKRIBA`).
 
@@ -605,20 +628,24 @@ cargo fmt --all -- --check
 
 | Vojo | Rezulto |
 | --- | --- |
-| PVH (`-kernel` + `-initrd`) | 7 regionoj, 255 MiB uzeblaj, sen framebuffer, reuzoprovo `10 cikloj, 64979 kadroj antaŭ, 64979 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `32`/`33` kadroj liberigitaj, `izolado (bone): 64979 kadroj antaŭ, 64979 post`, 1000 tikoj, 5 fadenoj mortintaj |
-| Limine/Multiboot2 (ISO, BIOS) | framebuffer `1280x800, 32 bpp`, reuzoprovo `10 cikloj, 64977 kadroj antaŭ, 64977 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `32`/`33` kadroj liberigitaj, `izolado (bone): 64977 kadroj antaŭ, 64977 post`, 1000 tikoj, 5 fadenoj mortintaj |
-| Limine (ISO, UEFI/OVMF) | sama scenaro; liberaj kadroj `63507` antaŭ/post, framebuffer `1280x800, 32 bpp`, 1000 tikoj, 5 fadenoj mortintaj |
+| PVH (`-kernel` + `-initrd`) | 7 regionoj, 255 MiB uzeblaj, sen framebuffer, `KASLR: kerna bazo 0x…` (malsama ĉiu starto), reuzoprovo `10 cikloj, 64839 kadroj antaŭ, 64839 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `32`/`33` kadroj liberigitaj, `izolado (bone): 64839 kadroj antaŭ, 64839 post`, 1000 tikoj, 5 fadenoj mortintaj |
+| Limine/Multiboot2 (ISO, BIOS) | framebuffer `1280x800, 32 bpp`, `KASLR: kerna bazo 0x…`, reuzoprovo `10 cikloj, 64837 kadroj antaŭ, 64837 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `32`/`33` kadroj liberigitaj, `izolado (bone): 64837 kadroj antaŭ, 64837 post`, 1000 tikoj, 5 fadenoj mortintaj |
+| Limine (ISO, UEFI/OVMF) | sama scenaro; `KASLR: kerna bazo 0x…`, liberaj kadroj `63367` antaŭ/post, framebuffer `1280x800, 32 bpp`, 1000 tikoj, 5 fadenoj mortintaj |
 
 Por M13 Fazo 2 la sama scenaro ruliĝis kun `-cpu qemu64,+smep,+smap`: la
 kerno raportas `SMEP subtenata: jes` kaj `SMAP subtenata: jes`, la tuta
-M12-scenaro restas verda (`izolado 64978 = 64978`) kaj nur la lasta memprovo
-haltigas ĝin, per `[eraro] procezo 0: SMAP-malobservo … (erarkodo=0x1)`. La
-Ring 3-linioj kaj `[uzanto] memoro: marko …, legita …` pruvas la pozitivan
-vojon: `SKRIBI` legas la uzantan bufron kaj la ŝargilo skribas la provan paĝon
-nur en `STAC`-fenestro. La ISO-vojoj donas la samajn rezultojn (BIOS
-`64976 = 64976`, UEFI/OVMF `63506 = 63506`). Kun `-cpu qemu64` la kerno
-raportas `ne` por ambaŭ trajtoj, preterlasas la provon kaj finas la tutan
-scenaron sen escepto.
+M12-scenaro restas verda kaj nur la lasta memprovo haltigas ĝin, per
+`[eraro] procezo 0: SMAP-malobservo … (erarkodo=0x1)`. La Ring 3-linioj kaj
+`[uzanto] memoro: marko …, legita …` pruvas la pozitivan vojon: `SKRIBI`
+legas la uzantan bufron kaj la ŝargilo skribas la provan paĝon nur en
+`STAC`-fenestro. Kun `-cpu qemu64` la kerno raportas `ne` por ambaŭ trajtoj,
+preterlasas la provon kaj finas la tutan scenaron sen escepto.
+
+Por M13 Fazo 3 (KASLR) la bildo estas ET_DYN kaj ĉiu starto elektas alian
+bazon: tri sinsekvaj PVH-startoj montris `0x5400000`, `0xd200000` kaj
+`0x3000000`; ISO BIOS `0x4200000`, UEFI/OVMF `0x4a00000`. Ĉiuj ceteraj linioj
+restis verdaj, inkluzive de `W^X` kaj de la izolado. Kun `-cpu qemu64` la
+KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 
 `just verify` ne estis rulita en ĉi tiu medio, ĉar `cargo kani` ne estas
 instalita. La 12 pruvoj (6 pri la kadro-alokilo, 6 pri la mesaĝujo) estas
@@ -629,7 +656,8 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.3.1!
+[MiKerno] Saluton, mi estas MiKerno v0.3.2!
+[kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
 [kerno] SMEP ŝaltita; Ring 0 ne povas plenumi uzantajn paĝojn.
@@ -740,7 +768,7 @@ horizonto: procezo vekis en Ring 3.
 │   ├── Cargo.toml
 │   ├── build.rs                # liveras boot/linker.ld nur al la kerno
 │   ├── boot/
-│   │   ├── linker.ld           # 1 MiB, .boot_bss aparte de .bss
+│   │   ├── linker.ld           # 1 MiB, ET_DYN, RELATIVE-relokoj
 │   │   └── limine.conf         # ISO-menuo (Multiboot2)
 │   └── src/
 │       ├── main.rs             # enirpunkto, `skribu!`, paniko
@@ -809,12 +837,15 @@ horizonto: procezo vekis en Ring 3.
 - **Proceza detruo estas antaŭkondiĉa**: `detrui` postulas, ke neniu alia
   fadeno de la procezo plenumas kaj ke la vokanto tenas interrompojn
   malŝaltitaj; kun unu uzanta fadeno po procezo tio ĉiam validas.
-- **W^X, SMEP kaj SMAP, sen KASLR**: la identeca mapo estas dividita laŭ sekcioj
+- **W^X, SMEP, SMAP kaj KASLR**: la identeca mapo estas dividita laŭ sekcioj
   (`.text` RX, `.rodata` R NX, datumoj RW NX) kaj `CR0.WP` protektas la
   nurlegajn paĝojn ankaŭ el Ring 0; `CR4.SMEP` malpermesas al Ring 0 plenumi
   uzantajn foliojn (0.3.0), kaj `CR4.SMAP` malpermesas legi aŭ skribi ilin
-  ekster `STAC`/`CLAC`-fenestro (0.3.1). La alta-duona kerno venas en 0.3.2,
-  KASLR poste, kaj IOMMU-izolado en M18 (post 1.0).
+  ekster `STAC`/`CLAC`-fenestro (0.3.1). `hazardigo` (0.3.2) kopias la ET_DYN
+  bildon al hazarda 2 MiB-aliniiĝinta bazo kaj relokas ĝin; la kerno restas en
+  la malalta duono, do la identeca mapo kaj ĉiuj ekzistantaj scenaroj
+  senŝanĝe funkcias. Alta-duona kerno ne estis necesa por tiu ĉi firmigo, kaj
+  IOMMU-izolado venas en M18 (post 1.0).
 - **Unuprocesora**: neniu SMP, afineco, prioritatoj aŭ dormantaj temporiziloj.
 - **Fiksaj limoj**: 8 fadenoj, 16 mesaĝoj po fadeno, 64 bajtoj po mesaĝo,
   4 GiB fizika memoro.

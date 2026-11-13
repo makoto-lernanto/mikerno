@@ -11,5 +11,7 @@ fn main() {
         .replace('\\', "/");
     println!("cargo::rerun-if-changed=boot/linker.ld");
     println!("cargo::rustc-link-arg=-T{radiko}/boot/linker.ld");
-    println!("cargo::rustc-link-arg=-no-pie");
+    // La bildo estas PIE (ET_DYN): ĉiuj difinoj estas lokaj, do la ŝelko kaj
+    // la kerno alvokas ilin sen PLT, kiun neniu dinamika ligilo plenumus.
+    println!("cargo::rustc-link-arg=-Bsymbolic");
 }

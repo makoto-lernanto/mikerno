@@ -17,6 +17,18 @@ pub fn pravalorizi() {
     malantaŭo::pravalorizi();
 }
 
+/// Unua kerna enirpunkto: la KASLR-ŝelko kopias la bildon al hazarda bazo kaj
+/// saltas tien; se tio ne eblas, la funkcio daŭrigas ĉe la liga bazo. Neniam
+/// revenas.
+pub fn hazardigi(starta_informo: *const u8, magio: u32) -> ! {
+    malantaŭo::hazardigo::hazardigi(starta_informo, magio)
+}
+
+/// Hazarda valoro por la KASLR-bazo (aparata `RDRAND` aŭ miksita `RDTSC`).
+pub fn hazardo() -> u64 {
+    malantaŭo::procesoro::hazardo()
+}
+
 pub use malantaŭo::firmigo::{
     StacGardo, aktiva as smep_aktiva, clac, smap_aktiva, testi_smap, testi_smep,
 };

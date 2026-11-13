@@ -42,7 +42,10 @@ impl KadraAlokilo {
         }
     }
 
-    pub fn pravalorizi(&mut self, mapo: &MemoraMapo, rezervindaj: &[MemoraRegiono]) {
+    /// `origino` estas la adreso, de kiu la KASLR-ŝelko kopiis la bildon; ĝiaj
+    /// kadroj restas rezervitaj, ĉar la aktiva praŝarĝa paĝtabelo loĝas tie
+    /// ĝis la unua `CR3`-ŝalto.
+    pub fn pravalorizi(&mut self, mapo: &MemoraMapo, rezervindaj: &[MemoraRegiono], origino: u64) {
         self.bitmapo.fill(0xFF);
 
         for regiono in mapo.regionoj().iter().filter(|regiono| regiono.uzebla()) {
@@ -53,11 +56,14 @@ impl KadraAlokilo {
 
         // Malalta memoro enhavas BIOS/legacy-strukturojn.
         self.agordi_intervalon(0, 0x10_0000, true);
-        self.agordi_intervalon(
-            &raw const __kerna_komenco as u64,
-            &raw const __kerna_fino as u64,
-            true,
-        );
+        let bildo_komenco = &raw const __kerna_komenco as u64;
+        let bildo_fino = &raw const __kerna_fino as u64;
+        self.agordi_intervalon(bildo_komenco, bildo_fino, true);
+        // Post KASLR la praŝarĝa bildo restas ĉe `origino`; ĝiaj kadroj ne
+        // rajtas esti reuzataj, eĉ kiam la nukleo mem loĝas alie.
+        if origino != bildo_komenco {
+            self.agordi_intervalon(origino, origino + (bildo_fino - bildo_komenco), true);
+        }
         for regiono in rezervindaj {
             self.agordi_intervalon(regiono.komenco, regiono.fino(), true);
         }
