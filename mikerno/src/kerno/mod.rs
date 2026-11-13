@@ -28,7 +28,13 @@ pub fn kadra_alokilo() -> &'static mut KadraAlokilo {
 }
 
 pub fn ĉefa(informo: EniraInformo) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.2.5!\n");
+    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.3.0!\n");
+    let trajtoj = crate::arkitekturo::procesoraj_trajtoj();
+    crate::skribu!("[kerno] SMEP subtenata: {}\n", jes_ne(trajtoj.smep));
+    crate::skribu!("[kerno] SMAP subtenata: {}\n", jes_ne(trajtoj.smap));
+    if crate::arkitekturo::smep_aktiva() {
+        crate::skribu!("[kerno] SMEP ŝaltita; Ring 0 ne povas plenumi uzantajn paĝojn.\n");
+    }
     sistemvoko::pravalorizi();
     crate::skribu!(
         "[kerno] memoro: {} regionoj, {} MiB uzeblaj\n",
@@ -197,7 +203,19 @@ pub fn ĉefa(informo: EniraInformo) {
         blokitaj,
         tikoj
     );
+
+    // La memprovo venas laste: ĝi intence elvokas Ring 0 `#PF` kaj haltigas la
+    // kernon, do ĉiuj antaŭaj scenaroj jam raportis sian rezulton.
+    if crate::arkitekturo::smep_aktiva() {
+        crate::arkitekturo::testi_smep(&mut spaco, kadra_alokilo());
+    } else {
+        crate::skribu!("[memoro] SMEP-provo preterlasita: la procesoro ne subtenas ĝin\n");
+    }
     crate::arkitekturo::halti()
+}
+
+fn jes_ne(valoro: bool) -> &'static str {
+    if valoro { "jes" } else { "ne" }
 }
 
 const STAKA_GRANDE: usize = 16 * 1024;

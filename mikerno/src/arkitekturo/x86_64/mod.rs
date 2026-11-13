@@ -1,5 +1,6 @@
 pub mod apic;
 pub mod eniro;
+pub mod firmigo;
 pub mod gdt;
 pub mod idt;
 pub mod mb2;
@@ -18,4 +19,5 @@ pub fn pravalorizi() {
     gdt::instali();
     idt::instali();
     pagxado::pravalorizi();
+    firmigo::pravalorizi();
 }

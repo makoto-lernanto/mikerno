@@ -2,6 +2,7 @@
 //! registrejo kaj la RAII-gardo por `RFLAGS.IF`.
 
 use crate::kunhavigita::Kunhavigita;
+use crate::memoro::virtuala::{UZANTA_BAZO, UZANTA_FINO};
 
 pub use crate::arkitekturo::{ebligi_interrompojn, interrompoj_ebligitaj, malebligi_interrompojn};
 
@@ -133,6 +134,26 @@ fn trakti_escepton(kadro: &mut InterrompaKadro) -> ! {
         // `morti` detruas la procezan adresan spacon, elektas alian fadenon
         // kaj neniam revenas al ĉi tiu kadro.
         crate::kerno::planisto::morti()
+    }
+
+    // Ring 0 `#PF` kun `I=1` ĉe uzanta adreso estas SMEP-malobservo: la
+    // procesoro rifuzis plenumi `U=1`-folion el la kerna reĝimo. `U/S` en la
+    // erarkodo estas 0 ĉar la fuŝo okazis en Ring 0; la signo estas la bito
+    // `I` kune kun la uzanta celo.
+    if kadro.vektoro == 14
+        && kadro.cs & 3 == 0
+        && kadro.erarkodo & 0x10 != 0
+        && crate::arkitekturo::smep_aktiva()
+    {
+        let adreso = crate::arkitekturo::fuŝa_adreso();
+        if (UZANTA_BAZO..UZANTA_FINO).contains(&adreso) {
+            crate::skribu!(
+                "\n[eraro] SMEP-malobservo: Ring 0 provis plenumi uzantan paĝon ĉe 0x{:016x} (erarkodo=0x{:x})\n",
+                adreso,
+                kadro.erarkodo
+            );
+            crate::arkitekturo::halti();
+        }
     }
 
     crate::skribu!(

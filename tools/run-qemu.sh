@@ -73,6 +73,11 @@ if [[ -z "$QEMU" ]]; then
     fi
 fi
 
+# SMEP/SMAP: la implicita `qemu64` ne havigas ilin. Por la firmigaĵoj (M13)
+# ni petas ilin eksplicite; `QEMU_CPU=qemu64` permesas kontroli la gracian
+# degradon sur procesoro sen la trajtoj.
+CPU_ARGS=(-cpu "${QEMU_CPU:-qemu64,+smep,+smap}")
+
 # `mon:stdio` muxas la serian konzolon kaj la QEMU-monitoron sur la sama
 # terminalo. Tio necesas ĉar Windows-QEMU forprenas `ENABLE_PROCESSED_INPUT`
 # de la konzolo: Ctrl+C ne plu finas la procezon, ĝi nur sendiĝas al la guest
@@ -85,6 +90,7 @@ if [[ -n "$ISO" ]]; then
     exec "$QEMU" \
         -cdrom "$ISO" \
         -m 256M \
+        "${CPU_ARGS[@]}" \
         -serial mon:stdio \
         "${DISPLAY_ARGS[@]}" \
         -no-reboot \
@@ -102,6 +108,7 @@ exec "$QEMU" \
     -kernel "$KERNEL" \
     "${INITRD[@]}" \
     -m 256M \
+    "${CPU_ARGS[@]}" \
     -serial mon:stdio \
     -display none \
     -no-reboot \
