@@ -40,5 +40,6 @@ run-iso: iso
     bash tools/run-qemu.sh iso
 
 # Pruvu la kernajn algoritmojn per Kani (formala verifikado).
+# Kani ne subtenas tutmondan asemblaĵon; la pruvoj ne atingas ĝin.
 verify:
-    cargo kani -p mikerno
+    cargo kani -p mikerno -Z unstable-options --ignore-global-asm

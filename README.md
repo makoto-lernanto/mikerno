@@ -890,8 +890,18 @@ La plena, numerita vojkarto kun akceptkriterioj estas en
 
 ## Licenco kaj triaj komponantoj
 
-La projekto ankoraŭ ne havas `LICENSE`-dosieron; aldonu ĝin antaŭ publika
-disdono.
+La originala kodo de MiKerno estas publikigita sub la permesilo **MIT** (vidu
+[`LICENSE`](LICENSE)). Vi rajtas uzi, modifi, kunfandi, publikigi, disdoni kaj
+vendi la programaron, kondiĉe ke la kopirajta avizo kaj la permesila teksto
+restu kunigitaj kun la disdonataĵo. La programaro estas provizita "tia, kia ĝi
+estas", sen ia ajn garantio.
+
+MiKerno elektis MIT anstataŭ Apache-2.0 ĉar la kerno estas malgranda kaj sen
+eksteraj dependaĵoj, kaj ĉar MIT restas kongrua kun GPLv2 — tio faciligas reuzon
+de la koderoj en aliaj kernaj projektoj.
+
+La triaj komponantoj listigitaj sube havas siajn proprajn permesilojn; la MIT
+permesilo ne anstataŭas ilin.
 
 Enigitaj triaj komponantoj:
 
