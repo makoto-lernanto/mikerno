@@ -733,11 +733,14 @@ La tuta workspace estis rekompilita de nulo per Rust 1.100.0:
 | `cargo clippy --workspace --release` | Sukceso, sen avertoj (post riparo de 12 novaj lintoj) |
 | `cargo fmt --all -- --check` | Neniu diferenco |
 | PVH-starto (`qemu64,+smep,+smap`) | Verda: `KASLR: kerna bazo 0x800000`, `reuzo (bone): 10 cikloj, 64839 kadroj antaŭ, 64839 post`, `izolado (bone): 64839 kadroj antaŭ, 64839 post`, 5 mortintaj fadenoj, `SMAP-malobservo` mortigas nur la Ring 3-procezon |
+| ISO-starto (Limine, BIOS, `qemu64,+smep,+smap`) | Verda: `KASLR: kerna bazo 0x7800000`, framebuffer `1280x800, 32 bpp`, `izolado (bone): 64837 kadroj antaŭ, 64837 post`, 5 mortintaj fadenoj, 1000 tikoj |
 
 La novaj lintoj estis `manual_is_multiple_of` (9) kaj `collapsible_if` (3); ili
 estis riparitaj per `is_multiple_of()` kaj `let`-ĉenoj, do la konduto ne
-ŝanĝiĝis. La ISO ne estis regenerita por ĉi tiu ŝanĝo: la aliformigoj estas
-semantike ekvivalentaj kaj la PVH-starto pruvas la novan konstruaĵon.
+ŝanĝiĝis. La ISO estis regenerita per la sama ilaro; la Release-aktivaĵo
+`mikerno.iso` (v0.3.2) anstataŭiĝis (SHA-256
+`7e8c2fb764cb1e55598fbfa5984d6c21b53e188286fd33453c5ed46df8d1674a`) kaj la
+ISO-BIOS-starto pruvas la novan bildon.
 
 ---
 

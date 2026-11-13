@@ -632,9 +632,10 @@ cargo fmt --all -- --check
 ```
 
 Ĉiuj tri praŝarĝaj vojoj estis praktike testitaj per QEMU 256 MiB (matrico de
-la 2026-11-12 per Rust 1.99.1; la PVH-vojo ripetiĝis la 2026-11-13 per
-1.100.0 kun samaj rezultoj, `KASLR: kerna bazo 0x800000`, `izolado (bone):
-64839 kadroj antaŭ, 64839 post`):
+la 2026-11-12 per Rust 1.99.1; la PVH- kaj ISO-BIOS-vojoj ripetiĝis la
+2026-11-13 per 1.100.0 kun samaj rezultoj: PVH `KASLR: kerna bazo 0x800000`,
+`izolado (bone): 64839 kadroj antaŭ, 64839 post`; ISO BIOS `KASLR: kerna bazo
+0x7800000`, `izolado (bone): 64837 kadroj antaŭ, 64837 post`):
 
 | Vojo | Rezulto |
 | --- | --- |
