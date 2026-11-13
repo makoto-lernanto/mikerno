@@ -10,58 +10,23 @@ use crate::kunhavigita::Kunhavigita;
 use super::objekto::FadenoId;
 use super::planisto::{self, MAKSAJ_FADENOJ};
 
-/// La mesaĝa aranĝo venas el `libmikerno`, do la kerno kaj Ring 3 uzas la
-/// saman `#[repr(C)]`-strukturon sen konverto.
-pub use libmikerno::MAKSA_MESAGA_LONGO;
-pub use libmikerno::Mesago;
+/// La mesaĝa aranĝo, la permesoj kaj la kapabloj venas el `libmikerno`, do la
+/// kerno kaj Ring 3 uzas la saman `#[repr(C)]`-strukturon sen konverto kaj sen
+/// duobla difino.
+pub use libmikerno::{FinaPunkto, Kapablo, MAKSA_MESAGA_LONGO, Mesago, Permesoj};
 
 /// La kongruo kun la komuna ABI estas fiksita je kompila tempo.
 const _: () = {
+    assert!(libmikerno::ABI_VERSIO == 2);
     assert!(core::mem::size_of::<Mesago>() == 96);
+    assert!(core::mem::align_of::<Mesago>() == 8);
     assert!(core::mem::offset_of!(Mesago, tipo) == 0);
     assert!(core::mem::offset_of!(Mesago, sendinto) == 8);
     assert!(core::mem::offset_of!(Mesago, ricevonto) == 16);
+    assert!(core::mem::offset_of!(Mesago, longo) == 24);
 };
 
 const MAKSAJ_MESAGOJ: usize = 16;
-
-#[derive(Clone, Copy)]
-pub struct Permesoj(u8);
-
-impl Permesoj {
-    pub const SENDI: Self = Self(1);
-    pub const RICEVI: Self = Self(2);
-    pub const ĈIUJ: Self = Self(Self::SENDI.0 | Self::RICEVI.0);
-
-    pub const fn posedas(&self, permeso: Self) -> bool {
-        self.0 & permeso.0 == permeso.0
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct FinaPunkto {
-    pub id: u64,
-    pub permesoj: Permesoj,
-}
-
-impl FinaPunkto {
-    pub const fn nova(id: u64, permesoj: Permesoj) -> Self {
-        Self { id, permesoj }
-    }
-
-    pub const fn kapablo(&self) -> Kapablo {
-        Kapablo {
-            objekto_id: self.id,
-            permesoj: self.permesoj,
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct Kapablo {
-    pub objekto_id: u64,
-    pub permesoj: Permesoj,
-}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IpcEraro {
@@ -331,6 +296,55 @@ mod kani_proofs {
         while indekso < MAKSAJ_MESAGOJ {
             assert!(ujo.eroj[indekso].is_none());
             indekso += 1;
+        }
+    }
+}
+
+#[cfg(kani)]
+mod kani_tenilo {
+    //! Pruvo de la `Tenilo`-kodigo: valida paro (indekso, generacio) revenas
+    //! senŝanĝe, dum generacio `0` kaj indekso super `15` estas rifuzataj — kaj
+    //! ĉe la kunmeto kaj ĉe la malpakado de kruda valoro.
+
+    use libmikerno::Tenilo;
+
+    #[kani::proof]
+    fn tenilo_kodigo_roundtrip() {
+        let indekso: u8 = kani::any();
+        let generacio: u32 = kani::any();
+        let valida = indekso <= Tenilo::MAKSA_INDEKSO
+            && generacio != 0
+            && generacio <= Tenilo::MAKSA_GENERACIO;
+
+        match Tenilo::nova(indekso, generacio) {
+            Some(tenilo) => {
+                assert!(valida);
+                assert_eq!(tenilo.indekso(), indekso);
+                assert_eq!(tenilo.generacio(), generacio);
+                let rekonstruita = Tenilo::el_nombro(tenilo.nombro()).unwrap();
+                assert!(rekonstruita == tenilo);
+            }
+            None => assert!(!valida),
+        }
+
+        // Generacio 0 kaj indekso super 15 estas malvalidaj en ambaŭ vojoj.
+        assert!(Tenilo::nova(0, 0).is_none());
+        assert!(Tenilo::nova(16, 1).is_none());
+        assert!(Tenilo::nova(255, 1).is_none());
+        assert!(Tenilo::el_nombro(0).is_none());
+        assert!(Tenilo::el_nombro((1 << 8) | 16).is_none());
+
+        let kruda: u32 = kani::any();
+        match Tenilo::el_nombro(kruda) {
+            Some(tenilo) => {
+                assert!(tenilo.indekso() <= Tenilo::MAKSA_INDEKSO);
+                assert_ne!(tenilo.generacio(), 0);
+                assert_eq!(tenilo.nombro(), kruda);
+            }
+            None => {
+                let indekso = (kruda & 0xFF) as u8;
+                assert!(indekso > Tenilo::MAKSA_INDEKSO || kruda >> 8 == 0);
+            }
         }
     }
 }

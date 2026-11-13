@@ -28,7 +28,7 @@ pub fn kadra_alokilo() -> &'static mut KadraAlokilo {
 }
 
 pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.3.2!\n");
+    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.4.0!\n");
     if bazo == origino {
         crate::skribu!(
             "[kerno] KASLR malŝaltita: la bildo restas ĉe 0x{:x}\n",
@@ -158,7 +158,7 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         return;
     }
 
-    let kapablo = ipc::FinaPunkto::nova(2, ipc::Permesoj::ĈIUJ).kapablo();
+    let kapablo: ipc::Kapablo = ipc::FinaPunkto::nova(2, ipc::Permesoj::ĈIUJ).kapablo();
     if kapablo.permesoj.posedas(ipc::Permesoj::SENDI) {
         let mesago = ipc::Mesago::nova(1, 0, 2, "saluton el la praŝarĝo".as_bytes());
         match ipc::sendi_mesagon(kapablo.objekto_id, &mesago) {

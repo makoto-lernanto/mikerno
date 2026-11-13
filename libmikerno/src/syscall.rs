@@ -15,6 +15,30 @@ pub const SYS_SKRIBI: usize = 3;
 pub const SYS_FINI: usize = 4;
 pub const SYS_CEDI: usize = 5;
 
+/// La sekvaj numeroj estas rezervitaj per ABI-versio `2`; en la unua fazo de
+/// M14 la kerno ankoraŭ respondas `-2` (nekonata voko).
+pub const SYS_KREI_FINPUNKTON: usize = 6;
+pub const SYS_DONI: usize = 7;
+pub const SYS_REVOKI: usize = 8;
+pub const SYS_RICEVI_TEMPO: usize = 9;
+pub const SYS_SENDI_TEMPO: usize = 10;
+pub const SYS_FERMI: usize = 11;
+
+/// `-9`: la tenilo ne validas, la generacio malakordas aŭ la kapablo estas
+/// revokita (`EBADF`).
+pub const NEVALIDA_TENILO: isize = -9;
+/// `-11`: nebloka vojo trovis malplenan vicon; la vokanto rajtas reprovi
+/// (`EAGAIN`).
+pub const PROVU_DENOVE: isize = -11;
+/// `-28`: la finpunkta aŭ kapabla tabelo estas plena (`ENOSPC`).
+pub const TABELO_PLENA: isize = -28;
+/// `-32`: la finpunkto estis revokita aŭ ĝia posedanto finiĝis (`EPIPE`).
+pub const FINPUNKTO_REVOKITA: isize = -32;
+/// `-90`: la mesaĝa longaro superas `MAKSA_MESAGA_LONGO` (`EMSGSIZE`).
+pub const TRO_LONGA_MESAGO: isize = -90;
+/// `-110`: la tempolimo pasis antaŭ ol mesaĝo alvenis (`ETIMEDOUT`).
+pub const TEMPOLIMO: isize = -110;
+
 /// Voku la kernon; la signifo de la argumentoj dependas de `numero`.
 ///
 /// # Safety

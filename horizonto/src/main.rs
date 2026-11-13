@@ -18,6 +18,18 @@ use libmikerno::starto::{
     SEKRETA_ID_DEŜOVO,
 };
 use libmikerno::syscall::{SYS_RICEVI, SYS_SKRIBI, invoki};
+use libmikerno::{Mesago, Permesoj};
+
+/// La mesaĝa aranĝo devas kongrui bajte kun la kerno (kun `libmikerno`).
+const _: () = {
+    assert!(libmikerno::ABI_VERSIO == 2);
+    assert!(core::mem::size_of::<Mesago>() == 96);
+    assert!(core::mem::align_of::<Mesago>() == 8);
+    assert!(core::mem::offset_of!(Mesago, tipo) == 0);
+    assert!(core::mem::offset_of!(Mesago, sendinto) == 8);
+    assert!(core::mem::offset_of!(Mesago, ricevonto) == 16);
+    assert!(core::mem::offset_of!(Mesago, longo) == 24);
+};
 
 const SALUTO: &str = "horizonto: procezo vekis en Ring 3.\n";
 
@@ -26,6 +38,7 @@ const SALUTO: &str = "horizonto: procezo vekis en Ring 3.\n";
 #[unsafe(no_mangle)]
 pub extern "C" fn horizonto_start(reĝimo: u64, identigilo: u64) -> ! {
     biblioteko::skribi(SALUTO);
+    testi_identon(identigilo);
     testi_negativajn();
     match reĝimo {
         REĜIMO_SEKRETO => sekreta_provo(identigilo),
@@ -110,6 +123,43 @@ fn spioni(identigilo: u64) -> ! {
     core::hint::black_box(fremda);
     biblioteko::skribi("[ring3] ERARO: la fremda legado sukcesis; izolado mankas\n");
     biblioteko::fini(1)
+}
+
+/// A1: la kerno, ne la uzanto, plenigas `sendinto`/`ricevonto`.
+///
+/// La procezo sendas al si mem mesaĝon, kies du identigiloj estas intence
+/// falsitaj (`999`). Post la sendo la kerno anstataŭigas ilin per la vera
+/// sendinto kaj la celo; la neuzata resto de la datumaro devas resti nula.
+fn testi_identon(identigilo: u64) {
+    let kapablo = libmikerno::FinaPunkto::nova(identigilo, Permesoj::ĈIUJ).kapablo();
+    let sendata = Mesago::nova(0x4901, 999, 999, b"idento");
+    let sendo = biblioteko::sendi(kapablo, &sendata);
+    if sendo != 0 {
+        biblioteko::skribi_formaton(format_args!(
+            "[ring3] procezo {}: idento (MALBONE): sendo={}\n",
+            identigilo, sendo
+        ));
+        return;
+    }
+    let mut ricevita = Mesago::malplena();
+    let ricevo = biblioteko::ricevi(kapablo, &mut ricevita);
+    let resto_nula = ricevita.datumaro()[sendata.longo()..]
+        .iter()
+        .all(|bajto| *bajto == 0);
+    let bone = ricevo == 0
+        && ricevita.tipo == sendata.tipo
+        && ricevita.sendinto == identigilo
+        && ricevita.ricevonto == identigilo
+        && ricevita.enhavo() == sendata.enhavo()
+        && resto_nula;
+    biblioteko::skribi_formaton(format_args!(
+        "[ring3] procezo {}: idento ({}): sendinto={} (uzanto asertis 999), ricevonto={}, resto_nula={}\n",
+        identigilo,
+        if bone { "bone" } else { "MALBONE" },
+        ricevita.sendinto,
+        ricevita.ricevonto,
+        if resto_nula { "jes" } else { "ne" },
+    ));
 }
 
 /// Kontrolu, ke la kerno rifuzas malvalidajn Ring 3-argumentojn anstataŭ

@@ -8,7 +8,9 @@
 use core::mem::size_of;
 
 use libmikerno::Mesago;
-use libmikerno::syscall::{SYS_CEDI, SYS_FINI, SYS_RICEVI, SYS_SENDI, SYS_SKRIBI};
+use libmikerno::syscall::{
+    SYS_CEDI, SYS_FERMI, SYS_FINI, SYS_KREI_FINPUNKTON, SYS_RICEVI, SYS_SENDI, SYS_SKRIBI,
+};
 
 use crate::interrompo::{InterrompaKadro, InterrompaTraktilo, SISTEMVOKA_VEKTORO};
 use crate::kunhavigita::Kunhavigita;
@@ -45,6 +47,9 @@ pub fn voki(numero: usize, a0: u64, a1: u64, _a2: u64, _a3: u64, el_ring3: bool)
         SYS_CEDI => cedi(),
         SYS_SENDI => sendi(a0, a1, el_ring3),
         SYS_RICEVI => ricevi(a0, a1, el_ring3),
+        // La numeroj 6–11 apartenas al ABI-versio 2, sed la unua fazo de M14
+        // nur fiksas ilin: la efektivigo venas en la sekvaj fazoj.
+        SYS_KREI_FINPUNKTON..=SYS_FERMI => NEKONATA_VOKO,
         _ => NEKONATA_VOKO,
     }
 }

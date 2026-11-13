@@ -78,7 +78,22 @@ kaj protokolaj nomoj sekvu ĝin.
 | `mesaĝujo` | mailbox / message queue | |
 | `finpunkto` | endpoint | `FinaPunkto`. |
 | `kapablo` | capability | `Kapablo`. |
-| `permeso` | permission | `Permesoj`. |
+| `permeso` | permission | `Permesoj`: `SENDI`, `RICEVI`, `REVOKI`, `ĈIUJ`, `PLENAJ`. |
+| `tenilo` | handle | `Tenilo`: 8 bitoj da indekso + 24 bitoj da generacio; `0` estas malvalida. |
+| `generacio` | generation | 24 bitoj, komenciĝas ĉe `1`; altiĝas ĉe reuzo de fendo (kontraŭ-ABA). |
+| `indekso` | index | `Tenilo::indekso`, `0..=15`; `Tenilo` rifuzas pli grandan valoron. |
+| `finpunkta objekto` | endpoint object | `FinaPunktoObjekto` (Fazo 2); posedas la vicon kaj la atendoliston. |
+| `revoki` | revoke | `REVOKI`: finpunkta generacio +1, ĉiuj teniloj malvalidiĝas. |
+| `doni` | grant / transfer | `DONI`: permesoj nur malpliiĝas dum transdono. |
+| `fermi` | close | `FERMI`: fermas unu lokan kapablofendon. |
+| `tempolimo` | timeout | `RICEVI_TEMPO`/`SENDI_TEMPO`; `TEMPOLIMO = -110`. |
+| `nebloka` | non-blocking | `r10 = 0`; malplena vico redonas `PROVU_DENOVE = -11`. |
+| `ABI-versio` | ABI version | `ABI_VERSIO = 2` ekde M14 Fazo 1. |
+| `nevalida tenilo` | invalid handle (`EBADF`) | `NEVALIDA_TENILO = -9`. |
+| `provu denove` | try again (`EAGAIN`) | `PROVU_DENOVE = -11`. |
+| `tabelo plena` | table full (`ENOSPC`) | `TABELO_PLENA = -28`. |
+| `finpunkto revokita` | endpoint revoked (`EPIPE`) | `FINPUNKTO_REVOKITA = -32`. |
+| `tro longa mesaĝo` | oversize message (`EMSGSIZE`) | `TRO_LONGA_MESAGO = -90`. |
 | `folia permeso` | leaf permission | `permesoj(adreso)` legas la realajn PTE-bitojn de folio. |
 | `W^X` | write-xor-execute | Skribebla paĝo neniam estas plenumebla samtempe. |
 | `sekcia limo` | section boundary | `__kerna_kodo_komenco`, `__kerna_rodata_fino`, … el `linker.ld`. |
@@ -164,7 +179,9 @@ eksteraj protokolaj nomoj:
 `RSI`, `RDX`, `R10`, `MSR`, `EFER`, `NXE`, `PAE`, `PML4`, `PDPT`, `PD`, `PT`,
 `IDT`, `GDT`, `TSS`, `APIC`, `PIT`, `COM1`, `Multiboot2`, `Xen-PVH`, `ELF`,
 `Limine`, `QEMU`, `int 0x80`, `iretq`, `syscall`, `sysret`, `W^X`, `CR0.WP`,
-`SMEP`, `SMAP`, `KASLR`, `IOMMU`, `DMA`, `PCI`, `DMAR`, `IVRS`, `STAC`, `CLAC`.
+`SMEP`, `SMAP`, `KASLR`, `IOMMU`, `DMA`, `PCI`, `DMAR`, `IVRS`, `STAC`, `CLAC`,
+`KREI_FINPUNKTON`, `DONI`, `REVOKI`, `RICEVI_TEMPO`, `SENDI_TEMPO`, `FERMI`,
+`EBADF`, `EAGAIN`, `ENOSPC`, `EPIPE`, `EMSGSIZE`, `ETIMEDOUT`.
 
 ## Reguloj
 

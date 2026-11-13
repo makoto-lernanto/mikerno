@@ -5,17 +5,20 @@ pub const MAKSA_MESAGA_LONGO: usize = 64;
 
 /// Enlinia mesaĝo inter du finpunktoj.
 ///
-/// `sendinto` kaj `ricevonto` estas fadenaj identigiloj, kiujn la kerno
-/// plenigas dum la sendo; la mesaĝujo ankoraŭ konservas la fonton flanke por
-/// filtrado. La datumaro estas kopiata, do la sendanto rajtas reuzi sian
-/// bufron tuj post la voko.
+/// `sendinto` estas la fadena identigilo de la sendanto. `ricevonto` estas
+/// hodiaŭ la celo-fadeno, sed ekde la finpunktaj objektoj (Fazo 2 de M14) ĝi
+/// estos la finpunkta identigilo; la aranĝo restas 96 bajtoj. La kerno
+/// plenigas ambaŭ kampojn dum la sendo, do la uzanto ne povas mensogi pri ili.
+/// La datumaro estas kopiata, do la sendanto rajtas reuzi sian bufron tuj post
+/// la voko.
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Mesago {
     pub tipo: u64,
     pub sendinto: u64,
     pub ricevonto: u64,
-    longo: usize,
+    /// Publika por la ABI-layoutaj asertoj; uzu `nova` por valida mesaĝo.
+    pub longo: usize,
     datumo: [u8; MAKSA_MESAGA_LONGO],
 }
 
@@ -59,4 +62,18 @@ impl Mesago {
     pub fn enhavo(&self) -> &[u8] {
         &self.datumo[..self.longo]
     }
+
+    /// La tuta fiksa datumaro, inkluzive de la nula remburgo post `longo`.
+    pub const fn datumaro(&self) -> &[u8; MAKSA_MESAGA_LONGO] {
+        &self.datumo
+    }
 }
+
+const _: () = {
+    assert!(core::mem::size_of::<Mesago>() == 96);
+    assert!(core::mem::align_of::<Mesago>() == 8);
+    assert!(core::mem::offset_of!(Mesago, tipo) == 0);
+    assert!(core::mem::offset_of!(Mesago, sendinto) == 8);
+    assert!(core::mem::offset_of!(Mesago, ricevonto) == 16);
+    assert!(core::mem::offset_of!(Mesago, longo) == 24);
+};

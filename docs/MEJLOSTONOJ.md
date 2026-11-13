@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-13 · Versio de la workspace: 0.3.2
+> Stato: 2026-11-13 · Versio de la workspace: 0.4.0
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -26,7 +26,7 @@
 | M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj (0.1.5) |
 | M12 | Per-procesaj adresspacoj | Plenumita | Fazo 6: W^X laŭ sekcioj, `CR0.WP`, foliaj permesoj en sistemvokoj; Fazo 5: samtempaj procezoj `4`/`5`, sama sekreta adreso `0x200000000`, spiono `#PF` ĉe `0x200001000`, viktimo pluvivas; kadroj egalaj (0.2.5) |
 | M13 | Kerna memoro-firmigo: SMEP, SMAP, KASLR | Plenumita | Fazo 1 (0.3.0): `CR4.SMEP`, Ring 0-provo `#PF` (`erarkodo=0x11`); Fazo 2 (0.3.1): `CR4.SMAP`, `STAC`/`CLAC`, `SMAP-malobservo` (`erarkodo=0x1`); Fazo 3 (0.3.2): ET_DYN + `R_X86_64_RELATIVE`, hazarda bazo (`0x5400000`, `0xd200000`, `0x3000000` en tri startoj), ĉiuj scenaroj verdaj |
-| M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Venonta | — |
+| M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Parta | Fazo 1 (0.4.0): ABI 2 — `Tenilo`, `REVOKI`/`PLENAJ`, erar-kodoj `-9/-11/-28/-32/-90/-110`, vokoj 6–11 rezervitaj, A1-identeco, 13 Kani-pruvoj |
 | M15 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
 | M16 | Konservado, dosiersistemo, ŝelo | Venonta | — |
 | M17 | CI, testoj, plena pruvaro | Venonta | — |
@@ -553,7 +553,7 @@ ekspluaton de konataj kernaj adresoj.
 - `cargo fmt --all -- --check` — pura.
 - `cargo clippy --workspace --release` — sen avertoj.
 - `cargo build --workspace --release` — sukcesa.
-- 12 Kani-pruvoj: 6 en `memoro/kadro.rs`, 6 en `kerno/ipc.rs`; ĉiuj maŝine
+- 13 Kani-pruvoj: 6 en `memoro/kadro.rs`, 7 en `kerno/ipc.rs`; ĉiuj maŝine
   pruvitaj per Kani 0.68.0 (CBMC 6.11.0) en WSL2 Ubuntu; vidu §4.6.
 - `just verify` difinas la formalan pordegon.
 
@@ -573,6 +573,7 @@ ekspluaton de konataj kernaj adresoj.
 | `kerno/ipc.rs` | `fifo_ordo` | 8 |
 | `kerno/ipc.rs` | `fifo_ordo_inter_fontoj` | 8 |
 | `kerno/ipc.rs` | `malplena_mesagujo_ricevas_nenion` | — |
+| `kerno/ipc.rs` | `tenilo_kodigo_roundtrip` | — |
 
 **Mankanta.**
 
@@ -767,8 +768,10 @@ Medio: WSL2 Ubuntu, deponejo kopiita al la hejma dosierujo (ext4; `/mnt/d` estas
 preterlasas la tutmondan `asm!`-eniron de la 64-bita starto, kiun CBMC ne
 modelas.
 
-Rezulto: `Complete - 12 successfully verified harnesses, 0 failures, 12 total.`
-La unuopaj `unwind`-limoj estas en la tabelo de §3 (M9).
+Rezulto: `Complete - 13 successfully verified harnesses, 0 failures, 13 total.`
+La unuopaj `unwind`-limoj estas en la tabelo de §3 (M9). La nova pruvo
+`tenilo_kodigo_roundtrip` kovras la `Tenilo`-kodigon: valida paro revenas
+senŝanĝe, dum generacio `0` kaj indekso super `15` estas rifuzataj.
 
 **Kial la pruvoj estas skribitaj tiel.** La unua plena rulo malsukcesis per
 «CBMC appears to have run out of memory» ĉe `fifo_ordo_inter_fontoj` — ne per
@@ -797,9 +800,62 @@ pli ol 3 GB al malpli ol 1 GB, kaj la tuta pordo fariĝas verda.
 
 **Celo.** Apartigi finpunktojn de fadenoj kaj firmigi la kapablomodelon.
 
-**Taskoj.** Propraj finpunktaj objektoj; kapablotabelo por procezo; rajtoj kaj
-revoko; tempolimoj kaj sendblokado; pli da Kani-pruvoj pri la vico kaj la
-kapabloj.
+**Taskoj (Fazoj).**
+
+| Fazo | Versio | Enhavo |
+| --- | --- | --- |
+| 1 | 0.4.0 | ABI 2: `Tenilo` (indekso + generacio), `Permesoj::REVOKI/PLENAJ`, erar-kodoj `-9/-11/-28/-32/-90/-110`, vokoj 6–11 rezervitaj (`-2`), `ABI_VERSIO = 2`; A1-identeca pruvo; 13 Kani-pruvoj |
+| 2 | 0.4.1 | `FinaPunktoObjekto`-tabelo `FINAJ_PUNKTOJ`, generacioj, referenckalkulo, minimuma kapablotabelo, `KREI_FINPUNKTON`(6)/`FERMI`(11); malnova vojo per defaulta finpunkto |
+| 3 | 0.4.2 | Permes-kontroloj, `DONI`(7), `SENDI`/`RICEVI` transiras al `rdi` = tenilo; fonta filtro en `RICEVI_TEMPO.rdx` |
+| 4 | 0.4.3 | `REVOKI`(8) tutfinpunkta, revokaj vekoj `-32`, purigo ĉe proceza detruo, `Result<Mesago, IpcEraro>` |
+| 5 | 0.4.4 | Plen-vica premrego (sendblokado), identeco, `-90`, `IpcStatistiko` |
+| 6 | 0.4.5 | `RICEVI_TEMPO`(9)/`SENDI_TEMPO`(10), `-110`, `-11` |
+| 7 | 0.4.6 | AC/CR3/EOI/ellasa revizio, pruva kompletigo, eldono |
+
+**Decidoj (C1–C16, arbitracio de Fazo 1).**
+
+- **C1.** `Mesago` restas 96 bajtoj; `ricevonto` estos finpunkta identigilo ekde
+  Fazo 2 (hodiaŭ ĝi estas la celo-fadeno). Identigilon de la sendinta procezo
+  oni aldonu per aparta voko, neniam per nova kampo.
+- **C2.** La malnovaj erar-kodoj `-1/-2/-3/-4` restas porĉiam; `-3/-4` estas
+  `malrekomenditaj` post M14, sed la konstantoj ne foriĝas. Novaj kodoj nur
+  aldoniĝas.
+- **C3.** La memorbuĝeto estas **aldona**: forigo de la malnova `MESAGUJOJ`
+  kompensas la novajn tabelojn; la neta kresko estas ≤ 20 KiB.
+- **C4.** `SENDI`/`RICEVI` ricevos tenilon en `rdi` en Fazo 3; la fonta filtro
+  moviĝas al `RICEVI_TEMPO.rdx` (fadena id).
+- **C5.** La kerno re-exportas `Permesoj`/`Kapablo` el `libmikerno`; la finpunkta
+  objekto nomiĝas `FinaPunktoObjekto`, la tabelo `FINAJ_PUNKTOJ`. Oni ne
+  enkonduku sinonimon `Rajtoj`.
+- **C6.** La versio estas sinkronigata en ĉiuj konataj lokoj (Cargo,
+  `kerno/mod.rs`, README, MEJLOSTONOJ, `limine.conf`, AGENTS.md); `env!` +
+  `build.rs` restas aparta tasko.
+- **C7.** `switch` jam konservas `RFLAGS` (inkl. AC); la AC-aserto restas
+  disciplina kaj la kialo estas la `STAC`-vivo, ne la kuntekstŝanĝo.
+- **C8.** La kapablotabelo havas 8 liniojn (`[[KapabloEniro; 16]; 8]`); linio
+  `0` (kerno) restas ĉiam malplena.
+- **C9.** Ne ekzistas novaj plenigaĵoj; testoj pruvas nulan payload-reston kaj
+  la identecan transprenon.
+- **C10.** Fazo 2 liveras verajn `Tenilo`-jn (minimuma kapablotabelo); Fazo 3
+  ŝanĝas `rdi` al tenilo sen duobla modelo.
+- **C11.** Montrila kontrolo okazas **antaŭ** tenila kontrolo; la malnovaj
+  negativaj valoroj (`nurlega=-1`) restas.
+- **C12.** Generacio komenciĝas ĉe `1`; indekso `< 16`; eluzita generacio
+  emeritigas la fendon.
+- **C13.** Buĝeto: ≈ 27 KiB da finpunktaj vicoj + 2 KiB da kapabloj + ≈ 1 KiB da
+  IPC-stato, minus ≈ 15 KiB da malnova `MESAGUJOJ` → neta ≈ 15 KiB.
+- **C14.** `REVOKI` estas ĉiam tutfinpunkta; `rsi` devas esti `0`; `FERMI` nur
+  fermas la lokan tenilon.
+- **C15.** `r10 = u32::MAX` senfina; `0` nebloka (`-11`); alie
+  `ceil(ms/10)` tikoj kaj `-110`.
+- **C16.** `ricevi_mesagon` transiros al `Result<Mesago, IpcEraro>` en Fazo 4;
+  la shim de Fazo 2 validigos, ĉu la cela fadeno vivas, kaj rifuzos per `-3`.
+
+**Progreso.**
+
+| Dato | Fazo | Versio | Pruvo |
+| --- | --- | --- | --- |
+| 2026-11-13 | 1. ABI 2: `Tenilo`, permesoj, erar-kodoj, rezervitaj vokoj, A1-testo | 0.4.0 | `[ring3] procezo 4/5: idento (bone): sendinto=4/5 (uzanto asertis 999), ricevonto=4/5, resto_nula=jes`; `tenilo_kodigo_roundtrip`; 13 Kani-pruvoj; `size -A`: `.text` 76159, `.rodata` 50212, `.data` 4496, `.bss` 380928 B (bazo por la buĝeto C3) |
 
 **Akceptkriterioj.** Mesaĝo portas `sendinto`/`ricevonto`; revoko malvalidigas
 kapablon; plena vico ne perdas mesaĝojn; tempolimo vekas la ricevanton.

@@ -16,7 +16,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.3.2 (workspace)
+- **Versio:** 0.4.0 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -66,6 +66,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 | GDT, 256-vektora IDT, escepta raportado | Funkcias | `gdt.rs`, `idt.rs`, `interrompo/mod.rs` |
 | Uzantaj DPL3-segmentoj kaj `int 0x80`-pordego (interrompa, `0xEE`) | Funkcias | `gdt.rs`, `idt.rs`, `kerno/sistemvoko.rs` |
 | Kvin sistemvokoj (`SENDI`/`RICEVI`/`SKRIBI`/`FINI`/`CEDI`), unueca `Mesago`, montrila kontrolo | Funkcias (Ring 0 kaj 3) | `kerno/sistemvoko.rs`, `arkitekturo/x86_64/sistemvoko.rs` |
+| ABI 2: `Tenilo`, `REVOKI`/`PLENAJ`, erar-kodoj, vokoj 6–11 rezervitaj | Difinita (0.4.0) | `libmikerno/` |
 | TSS kun `RSP0` por Ring 3 → Ring 0 | Funkcias | `tss.rs` |
 | xAPIC (MMIO), malŝalto de 8259-PIC, spuria vektoro `0xFF` | Funkcias | `apic.rs` |
 | 100 Hz perioda temporizilo, kalibrita kontraŭ la PIT | Funkcias | `temporizilo.rs` |
@@ -79,7 +80,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 | Ring 3-escepta kapto: `#PF`/`#GP` mortigas la procezon kaj la sistemo daŭras | Funkcias | `interrompo/mod.rs` |
 | Samtempaj procezoj `4`/`5` kun sama sekreta adreso sed malsamaj kadroj | Funkcias | `kerno/mod.rs`, `kerno/uzantspaco.rs` |
 | Izolado de adresa spaco: spiono `#PF` ĉe nur-viktima paĝo, viktimo pluvivas | Funkcias | `horizonto/`, `interrompo/mod.rs` |
-| 12 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ipc.rs` |
+| 13 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ipc.rs` |
 
 > `horizonto` estas liverata kiel praŝarĝa modulo, muntata super 4 GiB kun la
 > bito `U` tra ĉiuj paĝtabelaj niveloj, kaj ekzekutas en Ring 3 per `iretq`.
@@ -474,7 +475,12 @@ ekzistas aparta kapablotabelo, rajtorevoko aŭ tempolimoj.
 - `Mesago` (`#[repr(C)]`, 64-bajta datumaro, `tipo`, `sendinto`, `ricevonto`),
 - `FinaPunkto`, `Kapablo`, `Permesoj`,
 - sistemvokaj numeroj: `SYS_SENDI = 1`, `SYS_RICEVI = 2`, `SYS_SKRIBI = 3`,
-  `SYS_FINI = 4`, `SYS_CEDI = 5`,
+  `SYS_FINI = 4`, `SYS_CEDI = 5`; la numeroj 6–11 (`KREI_FINPUNKTON`, `DONI`,
+  `REVOKI`, `RICEVI_TEMPO`, `SENDI_TEMPO`, `FERMI`) estas rezervitaj per
+  `ABI_VERSIO = 2` kaj ankoraŭ respondas `-2`,
+- `Tenilo` — 32-bita kapabla tenilo (8 bitoj da indekso + 24 bitoj da
+  generacio, generacio ekde `1`); la novaj erar-kodoj estas `-9`, `-11`, `-28`,
+  `-32`, `-90` kaj `-110`,
 - registra ABI: `rax` = numero, `rdi`/`rsi`/`rdx`/`r10` = argumentoj, `rax` =
   rezulto; la voko estas `int 0x80`;
 - starta ABI: `horizonto_start(reĝimo: u64, identigilo: u64)` — la kerno
@@ -700,7 +706,7 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.3.2!
+[MiKerno] Saluton, mi estas MiKerno v0.4.0!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
@@ -899,7 +905,7 @@ horizonto: procezo vekis en Ring 3.
   ekzistas.
 - **Framebuffer**: nur 32 bpp, kvar fiksaj strekoj (8×16 … 32×64), 111 glifoj
   (95 ASCII + Esperanto + citiloj), malplenigo anstataŭ rulumo.
-- **Pruvoj**: 12 Kani-pruvoj spegulas la bitan logikon sur 64 kadroj; la produkta
+- **Pruvoj**: 13 Kani-pruvoj spegulas la bitan logikon sur 64 kadroj; la produkta
   kodo mem ne estas pruvita. `just verify` postulas apartan Kani-instalon.
 - **Neniu CI nek testoharness**: la kontrolo estas `build` + `clippy` + `fmt` +
   QEMU-smoka testo.
