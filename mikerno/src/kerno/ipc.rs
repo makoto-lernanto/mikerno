@@ -167,20 +167,30 @@ mod kani_proofs {
     //! sen eliri la no_std-medion. La pruvoj do celas la enan `Mesagujo`-kodon,
     //! kiun ambaŭ funkcioj rekte uzas.
     //!
-    //! La `unwind`-limo 70 kovras la 64-bajan kopion de `Mesago::nova` kaj la
-    //! 16-ŝtupan vicon.
+    //! La pruvoj uzas la plej malgrandan `unwind`-limon, kiun la koncerna
+    //! buklo bezonas: 8 por la FIFO-pruvoj (maksimume tri mesaĝoj kaj tri
+    //! `preni_de`-paŝoj), 20 por la plenigo de la 16 fendoj, 70 por la
+    //! 64-bajta kopio de `Mesago::nova`. La mesaĝoj de la vicaj pruvoj havas
+    //! malplenan datumaron, ĉar la vica ordo dependas nur de `tipo` kaj de la
+    //! fonto; la plenlongan buferlimon aparte pruvas `mesaĝa_enhavo_en_limoj`.
 
     use crate::kerno::objekto::FadenoId;
 
     use super::{Ero, IpcEraro, MAKSA_MESAGA_LONGO, MAKSAJ_MESAGOJ, Mesago, Mesagujo};
 
-    /// Arbitra mesaĝo kun fiksa `tipo`; la enhavo estas arbitra, sed `longo`
-    /// restas en la limoj de la bufero.
+    /// Arbitra mesaĝo kun fiksa `tipo`. La vicaj pruvoj nur dependas de `tipo`
+    /// kaj de la fonto, do la datumaro restas malplena kaj la kopi-buklo de
+    /// `Mesago::nova` malaperas el la SAT-formulo.
     fn iu_mesago(tipo: u64) -> Mesago {
+        Mesago::nova(tipo, 0, 0, &[])
+    }
+
+    /// Arbitra mesaĝo, kies `longo` rajtas atingi la realan buferlimon.
+    fn plenlonga_mesago() -> Mesago {
         let longo: usize = kani::any();
         kani::assume(longo <= MAKSA_MESAGA_LONGO);
         let datumo: [u8; MAKSA_MESAGA_LONGO] = kani::any();
-        Mesago::nova(tipo, kani::any(), kani::any(), &datumo[..longo])
+        Mesago::nova(kani::any(), kani::any(), kani::any(), &datumo[..longo])
     }
 
     fn iu_ero(tipo: u64) -> Ero {
@@ -192,15 +202,16 @@ mod kani_proofs {
 
     /// Mesaĝa `longo` neniam eliras la datumaron.
     #[kani::proof]
+    #[kani::unwind(70)]
     fn mesaĝa_enhavo_en_limoj() {
-        let mesago = iu_mesago(kani::any());
+        let mesago = plenlonga_mesago();
         assert_eq!(mesago.enhavo().len(), mesago.longo());
         assert!(mesago.longo() <= MAKSA_MESAGA_LONGO);
     }
 
     /// Plena mesaĝujo rifuzas pliajn mesaĝojn sen ŝanĝi `nombro`.
     #[kani::proof]
-    #[kani::unwind(70)]
+    #[kani::unwind(20)]
     fn plena_mesagujo_rifuzas() {
         let mut ujo = Mesagujo::nova();
         let fonto: FadenoId = kani::any();
@@ -224,7 +235,7 @@ mod kani_proofs {
 
     /// FIFO: de la sama fonto, la unue sendita mesaĝo unue revenas.
     #[kani::proof]
-    #[kani::unwind(70)]
+    #[kani::unwind(8)]
     fn fifo_ordo() {
         let mut ujo = Mesagujo::nova();
         let fonto: FadenoId = kani::any();
@@ -256,7 +267,7 @@ mod kani_proofs {
     /// FIFO restas valida ankaŭ inter malsamaj fontoj: forpreno de unu fonto
     /// ne renversas la ordon de la aliaj.
     #[kani::proof]
-    #[kani::unwind(70)]
+    #[kani::unwind(8)]
     fn fifo_ordo_inter_fontoj() {
         let mut ujo = Mesagujo::nova();
         let fonto_a: FadenoId = kani::any();
@@ -307,7 +318,7 @@ mod kani_proofs {
     /// Forpreno konservas la invariantojn: `nombro` restas en limoj kaj ĉiuj
     /// fendoj ekster `nombro` restas malplenaj.
     #[kani::proof]
-    #[kani::unwind(70)]
+    #[kani::unwind(20)]
     fn preno_konservas_la_invarianton() {
         let mut ujo = Mesagujo::nova();
         let fonto: FadenoId = kani::any();

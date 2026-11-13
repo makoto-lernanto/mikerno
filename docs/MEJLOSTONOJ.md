@@ -21,7 +21,7 @@
 | M6 | Framebuffer-konzolo kaj COM1 | Plenumita | `1280x800, 32 bpp` (ISO) |
 | M7 | Antaŭokupa planisto kaj kuntekstŝanĝo | Plenumita | 3 fadenoj interplektitaj kaj finitaj |
 | M8 | Mesaĝa IPC kun kapabloj | Plenumita | mesaĝoj liveritaj, fadeno 3 vekita |
-| M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 12 pruvoj verkitaj, Kani ne instalita |
+| M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 12 pruvoj maŝine plenumitaj kaj verdaj |
 | M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Plenumita | ABI difinita; `horizonto` plenumiĝas en Ring 3 |
 | M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj (0.1.5) |
 | M12 | Per-procesaj adresspacoj | Plenumita | Fazo 6: W^X laŭ sekcioj, `CR0.WP`, foliaj permesoj en sistemvokoj; Fazo 5: samtempaj procezoj `4`/`5`, sama sekreta adreso `0x200000000`, spiono `#PF` ĉe `0x200001000`, viktimo pluvivas; kadroj egalaj (0.2.5) |
@@ -553,16 +553,33 @@ ekspluaton de konataj kernaj adresoj.
 - `cargo fmt --all -- --check` — pura.
 - `cargo clippy --workspace --release` — sen avertoj.
 - `cargo build --workspace --release` — sukcesa.
-- 12 Kani-pruvoj: 6 en `memoro/kadro.rs`, 6 en `kerno/ipc.rs`.
+- 12 Kani-pruvoj: 6 en `memoro/kadro.rs`, 6 en `kerno/ipc.rs`; ĉiuj maŝine
+  pruvitaj per Kani 0.68.0 (CBMC 6.11.0) en WSL2 Ubuntu; vidu §4.6.
 - `just verify` difinas la formalan pordegon.
+
+**Pruvoj kaj `unwind`-limoj.**
+
+| Dosiero | Pruvo | `unwind` |
+| --- | --- | --- |
+| `memoro/kadro.rs` | `agordi_intervalon_sen_paniko` | 70 |
+| `memoro/kadro.rs` | `aloki_preterpasas_uzatajn_kadrojn` | 70 |
+| `memoro/kadro.rs` | `duobla_liberigo_estas_senefika` | 70 |
+| `memoro/kadro.rs` | `liberigo_lasas_la_kadron_reuzebla` | 70 |
+| `memoro/kadro.rs` | `neniom_da_duobla_alokado` | 70 |
+| `memoro/kadro.rs` | `marki_kaj_malmarki_sen_paniko` | — |
+| `kerno/ipc.rs` | `mesaĝa_enhavo_en_limoj` | 70 |
+| `kerno/ipc.rs` | `plena_mesagujo_rifuzas` | 20 |
+| `kerno/ipc.rs` | `preno_konservas_la_invarianton` | 20 |
+| `kerno/ipc.rs` | `fifo_ordo` | 8 |
+| `kerno/ipc.rs` | `fifo_ordo_inter_fontoj` | 8 |
+| `kerno/ipc.rs` | `malplena_mesagujo_ricevas_nenion` | — |
 
 **Mankanta.**
 
-- `cargo kani` ne estas instalita en la kontrolmedio (`error: no such command:
-  kani`), do la pruvoj ne estis maŝine plenumitaj.
 - La pruvoj spegulas la logikon per 64-kadra modelo anstataŭ pruvi la
   produktan `KadraAlokilo`.
-- Neniu unuopa/bitnivela testo, neniu CI, neniu `miri` aŭ `loom`.
+- La formala pordego rulas nur loke (WSL2); neniu CI, neniu unuopa aŭ bitnivela
+  testo, neniu `miri` aŭ `loom`.
 
 **Sekva paŝo.** Instali Kani en CI, aldivi la pruvojn al la produkta kodo per
 etaj abstraktaĵoj, kaj aldoni testojn por la arkitekture sendependaj partoj
@@ -581,7 +598,7 @@ Medio: Windows, Rust 1.99.1, QEMU 256 MiB, Git Bash.
 | `cargo build --workspace --release` | Sukceso, sen avertoj |
 | `cargo clippy --workspace --release` | Sukceso, sen avertoj |
 | `cargo fmt --all -- --check` | Sen diferencoj |
-| `cargo kani --version` | `error: no such command: kani` |
+| `cargo kani --version` | `Kani Rust Verifier 0.68.0 (cargo plugin)`, `CBMC 6.11.0` |
 | `just iso` | ISO kreita kaj startita |
 
 ### 4.2 PVH-starto
@@ -703,17 +720,15 @@ kadroj antaŭ, 63507 post`).
 4. **Versio hardkodita.** `kerno/mod.rs`, `mikerno/boot/limine.conf` kaj
    `Cargo.toml` enhavas la nunan version (`0.3.2`) sendepende. Oni devus derivi
    ĝin per `env!("CARGO_PKG_VERSION")` kaj `build.rs`.
-5. **Kani mankas.** La formala pordego ne estas plenumebla en ĉi tiu medio;
-   `just verify` malsukcesos ĝis `cargo kani` estos instalita.
-6. **Piksela kontrolo nur per `screendump`.** La framebuffer estis vidita per
+5. **Piksela kontrolo nur per `screendump`.** La framebuffer estis vidita per
    QEMU `screendump` (2026-11-12): la titolo, la ĉapelitaj literoj kaj la
    citiloj desegniĝas ĝuste. La alta distingivo (16×32/32×64) ne estis provita
    en QEMU; ĝi dependas nur de la sama elekta funkcio, sed meritas apartan
    starton kun pli granda framebuffer. La aspekto sur reala aparato ankoraŭ
    ne estas kontrolita.
-7. **`just run-iso` malfermas SDL-fenestron**; por senkapa kontrolo oni voku
+6. **`just run-iso` malfermas SDL-fenestron**; por senkapa kontrolo oni voku
    QEMU rekte aŭ uzu `QEMU_DISPLAY=none`.
-8. **Orfaj `.ltext`-sekcioj (grava, 0.2.5).** Kun `code-model=large` LLVM metas
+7. **Orfaj `.ltext`-sekcioj (grava, 0.2.5).** Kun `code-model=large` LLVM metas
    multajn funkciojn en `.ltext.*`; la unua W^X-mapado lasis ilin ekster
    `.text`, do ili falis en la nurlegan antaŭkodon kaj la unua alvoko trioble
    fuŝis. La riparo kunigas `*(.ltext .ltext.*)` en `.text`; oni kontrolu la
@@ -741,6 +756,37 @@ estis riparitaj per `is_multiple_of()` kaj `let`-ĉenoj, do la konduto ne
 `mikerno.iso` (v0.3.2) anstataŭiĝis (SHA-256
 `7e8c2fb764cb1e55598fbfa5984d6c21b53e188286fd33453c5ed46df8d1674a`) kaj la
 ISO-BIOS-starto pruvas la novan bildon.
+
+### 4.6 Formala pordego per Kani (2026-11-13)
+
+Medio: WSL2 Ubuntu, deponejo kopiita al la hejma dosierujo (ext4; `/mnt/d` estas
+9p kaj tro malrapida por la kompilo kaj CBMC), Kani 0.68.0, CBMC 6.11.0.
+`just verify` vokas
+`cargo kani -p mikerno -Z unstable-options --ignore-global-asm`; la lasta
+preterlasas la tutmondan `asm!`-eniron de la 64-bita starto, kiun CBMC ne
+modelas.
+
+Rezulto: `Complete - 12 successfully verified harnesses, 0 failures, 12 total.`
+La unuopaj `unwind`-limoj estas en la tabelo de §3 (M9).
+
+**Kial la pruvoj estas skribitaj tiel.** La unua plena rulo malsukcesis per
+«CBMC appears to have run out of memory» ĉe `fifo_ordo_inter_fontoj` — ne per
+malvera aserto. La kaŭzo estis la SAT-formulo: `Mesago::nova` kopias ĝis 64
+bajtojn per buklo, kiun `unwind 70` malvolvas por ĉiu mesaĝo, kaj la vico tenas
+16 erojn da 96-bajtaj mesaĝoj. Tri ŝanĝoj tenas la formulon memorebla sen perdi
+la pruvatan enhavon:
+
+1. La vicaj pruvoj uzas **malplenan datumaron**: `iu_mesago` fariĝis
+   `Mesago::nova(tipo, 0, 0, &[])`. La vica ordo dependas nur de `tipo` kaj de
+   la fonto; simbolaj payload-bajtoj nur pligrandigis la formulon.
+2. `unwind` malkreskis al **8** en la du FIFO-pruvoj (maksimume tri mesaĝoj kaj
+   tri `preni_de`-paŝoj) kaj al **20** kie la pruvo trairas la plenajn 16
+   fendojn (`plena_mesagujo_rifuzas`, `preno_konservas_la_invarianton`).
+3. `plenlonga_mesago` kun `unwind 70` aparte pruvas la plenan 64-bajtan buferan
+   limon, do la malplena payload ne malstreĉas tiun garantion.
+
+Post la ŝanĝoj la pinto de CBMC ĉe la antaŭe kadukiĝinta pruvo malaltiĝis de
+pli ol 3 GB al malpli ol 1 GB, kaj la tuta pordo fariĝas verda.
 
 ---
 
