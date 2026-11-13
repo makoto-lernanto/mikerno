@@ -9,6 +9,9 @@ pub use crate::arkitekturo::{ebligi_interrompojn, interrompoj_ebligitaj, malebli
 pub const VEKTOROJ: usize = 256;
 /// La vektoro de `int 0x80`; ĝia pordego estas la sola DPL3-pordego.
 pub const SISTEMVOKA_VEKTORO: u8 = 0x80;
+/// `RFLAGS.AC` (bito 18): kun `CR4.SMAP` ŝaltita, Ring 0 povas aliri uzantajn
+/// paĝojn nur kiam ĉi tiu bito estas 1.
+const FLAGO_AC: u64 = 1 << 18;
 
 /// La stako, kiun la enira ŝelko konservas antaŭ ol voki Rust.
 #[repr(C)]
@@ -75,6 +78,14 @@ impl Drop for InterrompaGardo {
 /// Vokata de la arkitektura enira ŝelko.
 #[unsafe(no_mangle)]
 pub extern "C" fn interrompa_dispetcho(kadro: *mut InterrompaKadro) {
+    // Ring 3 rajtas ŝalti `RFLAGS.AC` per `popfq`, kaj la interrompa pordego
+    // konservas ĝin. La kerno devas malŝalti ĝin antaŭ ol tuŝi ajnan uzantan
+    // montrilon; `iretq` restarigas la konservitan kredaron, do la uzanto
+    // revidas sian propran `AC`. Sen `SMAP` la instrukcio kaŭzus `#UD`.
+    if crate::arkitekturo::smap_aktiva() {
+        crate::arkitekturo::clac();
+    }
+
     let kadro = unsafe { &mut *kadro };
     let vektoro = kadro.vektoro as usize;
 
@@ -136,23 +147,32 @@ fn trakti_escepton(kadro: &mut InterrompaKadro) -> ! {
         crate::kerno::planisto::morti()
     }
 
-    // Ring 0 `#PF` kun `I=1` ĉe uzanta adreso estas SMEP-malobservo: la
-    // procesoro rifuzis plenumi `U=1`-folion el la kerna reĝimo. `U/S` en la
-    // erarkodo estas 0 ĉar la fuŝo okazis en Ring 0; la signo estas la bito
-    // `I` kune kun la uzanta celo.
-    if kadro.vektoro == 14
-        && kadro.cs & 3 == 0
-        && kadro.erarkodo & 0x10 != 0
-        && crate::arkitekturo::smep_aktiva()
-    {
+    // Ring 0 `#PF` ĉe uzanta adreso estas firmiga malobservo. SMEP rifuzas
+    // plenumon (`I=1`); SMAP rifuzas datumaliron (`I=0`) dum `RFLAGS.AC=0`.
+    // `U/S` estas 0 en ambaŭ kazoj, ĉar la fuŝo okazis en Ring 0.
+    if kadro.vektoro == 14 && kadro.cs & 3 == 0 {
         let adreso = crate::arkitekturo::fuŝa_adreso();
         if (UZANTA_BAZO..UZANTA_FINO).contains(&adreso) {
-            crate::skribu!(
-                "\n[eraro] SMEP-malobservo: Ring 0 provis plenumi uzantan paĝon ĉe 0x{:016x} (erarkodo=0x{:x})\n",
-                adreso,
-                kadro.erarkodo
-            );
-            crate::arkitekturo::halti();
+            if kadro.erarkodo & 0x10 != 0 && crate::arkitekturo::smep_aktiva() {
+                crate::skribu!(
+                    "\n[eraro] SMEP-malobservo: Ring 0 provis plenumi uzantan paĝon ĉe 0x{:016x} (erarkodo=0x{:x})\n",
+                    adreso,
+                    kadro.erarkodo
+                );
+                crate::arkitekturo::halti();
+            }
+            if kadro.erarkodo & 0x10 == 0
+                && kadro.rflags & FLAGO_AC == 0
+                && crate::arkitekturo::smap_aktiva()
+            {
+                crate::skribu!(
+                    "\n[eraro] procezo {}: SMAP-malobservo ĉe 0x{:016x} (erarkodo=0x{:x})\n",
+                    crate::kerno::planisto::nuna_procezo(),
+                    adreso,
+                    kadro.erarkodo
+                );
+                crate::arkitekturo::halti();
+            }
         }
     }
 

@@ -88,14 +88,15 @@ kaj protokolaj nomoj sekvu ĝin.
 | `kerna firmigo` | kernel hardening | 内核加固 | M13: SMEP, SMAP, KASLR. |
 | `procesoraj trajtoj` | processor features | 处理器特性 | `procesoro::trajtoj()`; CPUID folio 7. |
 | `SMEP` | supervisor mode execution prevention | 管理模式执行保护 | `CR4.SMEP`; Ring 0 ne plenumas `U=1`-foliojn (0.3.0). |
-| `SMAP` | supervisor mode access prevention | 管理模式访问保护 | `CR4.SMAP`; `STAC` malfermas fenestron (0.3.1). |
+| `SMAP` | supervisor mode access prevention | 管理模式访问保护 | `CR4.SMAP`; `STAC` malfermas kaj `CLAC` fermas la fenestron (0.3.1). |
 | `relokebla` | relocatable | 可重定位 | KASLR postulas relokeblan aŭ alta-duonan kernon. |
 | `alta duonmapo` | higher-half mapping | 高半区映射 | La kerno loĝas super la uzanta fenestro. |
 | `hazarda bazadreso` | randomized base address | 随机基址 | KASLR elektas ĝin ĉe starto. |
 | `aparata izolado` | device isolation | 设备隔离 | IOMMU malhelpas arbitran DMA. |
 | `DMA-mapo` | DMA mapping | DMA 映射 | IOMMU-donita traduko por aparato. |
 | `interrompa readresado` | interrupt remapping | 中断重映射 | IOMMU-akompananto por interrompoj. |
-| `AC-bito` | AC flag | AC 标志 | `STAC` starigas, `CLTAC` nuligas por SMAP. |
+| `STAC-fenestro` | STAC window | STAC 窗口 | `StacGardo`: mallonga Ring 0-alirejo al uzantaj paĝoj; `Drop` fermas ĝin per `CLAC`. |
+| `AC-bito` | AC flag | AC 标志 | `STAC` starigas, `CLAC` nuligas por SMAP. |
 | `sendi` / `ricevi` | send / receive | 发送 / 接收 | |
 | `bloki` / `veki` | block / wake | 阻塞 / 唤醒 | |
 | `cedi` | yield | 让出 | `SYS_CEDI`. |
@@ -163,7 +164,7 @@ eksteraj protokolaj nomoj:
 `RSI`, `RDX`, `R10`, `MSR`, `EFER`, `NXE`, `PAE`, `PML4`, `PDPT`, `PD`, `PT`,
 `IDT`, `GDT`, `TSS`, `APIC`, `PIT`, `COM1`, `Multiboot2`, `Xen-PVH`, `ELF`,
 `Limine`, `QEMU`, `int 0x80`, `iretq`, `syscall`, `sysret`, `W^X`, `CR0.WP`,
-`SMEP`, `SMAP`, `KASLR`, `IOMMU`, `DMA`, `PCI`, `DMAR`, `IVRS`, `STAC`, `CLTAC`.
+`SMEP`, `SMAP`, `KASLR`, `IOMMU`, `DMA`, `PCI`, `DMAR`, `IVRS`, `STAC`, `CLAC`.
 
 ## Reguloj
 

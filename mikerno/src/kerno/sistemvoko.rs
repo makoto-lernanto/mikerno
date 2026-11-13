@@ -11,6 +11,7 @@ use libmikerno::Mesago;
 use libmikerno::syscall::{SYS_CEDI, SYS_FINI, SYS_RICEVI, SYS_SENDI, SYS_SKRIBI};
 
 use crate::interrompo::{InterrompaKadro, InterrompaTraktilo, SISTEMVOKA_VEKTORO};
+use crate::kunhavigita::Kunhavigita;
 use crate::memoro::virtuala::{PaĝaTablo, UZANTA_STAKO_GRANDE, UZANTA_STAKO_SUPRO};
 
 use super::{ipc, planisto};
@@ -26,6 +27,11 @@ pub const MESAGUJO_PLENA: u64 = (-4i64) as u64;
 
 /// Maksimuma longo de unu `SYS_SKRIBI`-bufro.
 const MAKS_SKRIBO: usize = 4096;
+
+/// Kerna kopiujo por `SYS_SKRIBI`: la uzanta bufro estas legata nur dum la
+/// mallonga `STAC`-fenestro, kaj la formatado poste legas ĉi tiun bufron. La
+/// aliro estas unuprocesora kaj okazas kun interrompoj malŝaltitaj.
+static SKRIBA_BUFRO: Kunhavigita<[u8; MAKS_SKRIBO]> = Kunhavigita::nova([0; MAKS_SKRIBO]);
 
 /// Efektivigu unu sistemvokon.
 ///
@@ -50,10 +56,27 @@ fn skribi(montrilo: u64, longo: u64, el_ring3: bool) -> u64 {
     if !kontroli_bufron(montrilo, longo, false, el_ring3) {
         return MALĜUSTA_ARG;
     }
-    // SAFETY: Ring 0-montriloj estas fidindaj; Ring 3-montriloj trapasis la
-    // regionan kontrolon, do la bufro estas ne-nula kaj ene de la anoncita
-    // bildo aŭ stako. `longo` estas limigita per `MAKS_SKRIBO`.
-    let bufro = unsafe { core::slice::from_raw_parts(montrilo as *const u8, longo) };
+    // Ring 3-bufro estas kopiata en kernan bufron dum mallonga `STAC`-fenestro;
+    // la formatado poste legas nur la kernan kopion. Ring 0-montriloj estas
+    // fidindaj kaj ne bezonas fenestron.
+    let bufro: &[u8] = if el_ring3 {
+        let celo = SKRIBA_BUFRO.akiri();
+        {
+            let _gardo = crate::arkitekturo::StacGardo::nova();
+            // SAFETY: Ring 3-montriloj trapasis la regionan kontrolon, do la
+            // bufro estas ne-nula, maplitan kaj ene de la anoncita bildo aŭ
+            // stako; `longo` estas limigita per `MAKS_SKRIBO`. La celo estas
+            // privata kerna bufro de sama grando, kaj interrompoj estas
+            // malŝaltitaj, do neniu alia kopio samtempe uzas ĝin.
+            unsafe {
+                core::ptr::copy_nonoverlapping(montrilo as *const u8, celo.as_mut_ptr(), longo);
+            }
+        }
+        &celo[..longo]
+    } else {
+        // SAFETY: Ring 0-montriloj estas fidindaj kaj la longo estas limigita.
+        unsafe { core::slice::from_raw_parts(montrilo as *const u8, longo) }
+    };
     match core::str::from_utf8(bufro) {
         Ok(teksto) => {
             crate::skribu!("{}", teksto);
@@ -77,9 +100,13 @@ fn sendi(destinacio: u64, montrilo: u64, el_ring3: bool) -> u64 {
     if !kontroli_mesagon(montrilo, false, el_ring3) {
         return MALĜUSTA_ARG;
     }
-    // SAFETY: la montrilo estas ne-nula kaj (por Ring 3) en la anoncita
-    // regiono; `Mesago` estas `Copy`, do unufoja legado sufiĉas.
-    let mesago = unsafe { core::ptr::read_unaligned(montrilo as *const Mesago) };
+    let mesago = {
+        let _gardo = el_ring3.then(crate::arkitekturo::StacGardo::nova);
+        // SAFETY: la montrilo estas ne-nula kaj (por Ring 3) en la anoncita
+        // regiono; `Mesago` estas `Copy`, do unufoja legado sufiĉas. La
+        // `STAC`-fenestro kovras nur la legadon, ne la IPC-vokon.
+        unsafe { core::ptr::read_unaligned(montrilo as *const Mesago) }
+    };
     if mesago.longo() > ipc::MAKSA_MESAGA_LONGO {
         return MALĜUSTA_ARG;
     }
@@ -94,11 +121,17 @@ fn ricevi(fonto: u64, celo: u64, el_ring3: bool) -> u64 {
     if fonto > planisto::MAKSAJ_FADENOJ as u64 || !kontroli_mesagon(celo, true, el_ring3) {
         return MALĜUSTA_ARG;
     }
+    // `ricevi_mesagon` rajtas bloki kaj cedi la procesoron, do ĝi restas
+    // ekster la `STAC`-fenestro.
     let mesago = ipc::ricevi_mesagon(fonto);
-    // SAFETY: `celo` estas ne-nula kaj (por Ring 3) en la anoncita regiono;
-    // `Mesago` estas `Copy` kaj la skribo okazas unufoje, sen referenco restanta.
-    unsafe {
-        core::ptr::write_unaligned(celo as *mut Mesago, mesago);
+    {
+        let _gardo = el_ring3.then(crate::arkitekturo::StacGardo::nova);
+        // SAFETY: `celo` estas ne-nula kaj (por Ring 3) en la anoncita regiono;
+        // `Mesago` estas `Copy` kaj la skribo okazas unufoje, sen referenco
+        // restanta. La fenestro kovras nur la skribon.
+        unsafe {
+            core::ptr::write_unaligned(celo as *mut Mesago, mesago);
+        }
     }
     0
 }

@@ -10,7 +10,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.3.0 (workspace)
+- **Versio:** 0.3.1 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.85`
@@ -56,6 +56,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 | Strikta uzanta mapado (`mapi_uzantan`): fenestra limkontrolo kaj devigata bito `U` | Funkcias | `memoro/virtuala.rs`, `kerno/uzantspaco.rs` |
 | 4-nivela paĝado (PML4 → PDPT → PD → PT), NX, PCD | Funkcias | `arkitekturo/x86_64/pagxado.rs` |
 | SMEP: Ring 0 ne povas plenumi uzantajn foliojn (`CR4.SMEP`), kun CPUID-provo kaj gracia malŝalto | Funkcias | `arkitekturo/x86_64/firmigo.rs`, `procesoro.rs` |
+| SMAP: Ring 0 legas/skribas uzantajn foliojn nur en `STAC`/`CLAC`-fenestroj (`CR4.SMAP`), kun RAII-gardo | Funkcias | `arkitekturo/x86_64/firmigo.rs`, `kerno/sistemvoko.rs` |
 | GDT, 256-vektora IDT, escepta raportado | Funkcias | `gdt.rs`, `idt.rs`, `interrompo/mod.rs` |
 | Uzantaj DPL3-segmentoj kaj `int 0x80`-pordego (interrompa, `0xEE`) | Funkcias | `gdt.rs`, `idt.rs`, `kerno/sistemvoko.rs` |
 | Kvin sistemvokoj (`SENDI`/`RICEVI`/`SKRIBI`/`FINI`/`CEDI`), unueca `Mesago`, montrila kontrolo | Funkcias (Ring 0 kaj 3) | `kerno/sistemvoko.rs`, `arkitekturo/x86_64/sistemvoko.rs` |
@@ -608,11 +609,16 @@ cargo fmt --all -- --check
 | Limine/Multiboot2 (ISO, BIOS) | framebuffer `1280x800, 32 bpp`, reuzoprovo `10 cikloj, 64977 kadroj antaŭ, 64977 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `32`/`33` kadroj liberigitaj, `izolado (bone): 64977 kadroj antaŭ, 64977 post`, 1000 tikoj, 5 fadenoj mortintaj |
 | Limine (ISO, UEFI/OVMF) | sama scenaro; liberaj kadroj `63507` antaŭ/post, framebuffer `1280x800, 32 bpp`, 1000 tikoj, 5 fadenoj mortintaj |
 
-Por M13 Fazo 1 la sama scenaro ruliĝis dufoje: kun `-cpu qemu64,+smep,+smap`
-la kerno raportas `SMEP subtenata: jes` kaj, post la 1000 tikoj, la memprovo
-haltigas ĝin per `[eraro] SMEP-malobservo … (erarkodo=0x11)`; kun `-cpu qemu64`
-ĝi raportas `SMEP subtenata: ne`, preterlasas la provon kaj finas la tutan
-scenaron. Kadroj egalaj en ambaŭ: `64980` antaŭ/post.
+Por M13 Fazo 2 la sama scenaro ruliĝis kun `-cpu qemu64,+smep,+smap`: la
+kerno raportas `SMEP subtenata: jes` kaj `SMAP subtenata: jes`, la tuta
+M12-scenaro restas verda (`izolado 64978 = 64978`) kaj nur la lasta memprovo
+haltigas ĝin, per `[eraro] procezo 0: SMAP-malobservo … (erarkodo=0x1)`. La
+Ring 3-linioj kaj `[uzanto] memoro: marko …, legita …` pruvas la pozitivan
+vojon: `SKRIBI` legas la uzantan bufron kaj la ŝargilo skribas la provan paĝon
+nur en `STAC`-fenestro. La ISO-vojoj donas la samajn rezultojn (BIOS
+`64976 = 64976`, UEFI/OVMF `63506 = 63506`). Kun `-cpu qemu64` la kerno
+raportas `ne` por ambaŭ trajtoj, preterlasas la provon kaj finas la tutan
+scenaron sen escepto.
 
 `just verify` ne estis rulita en ĉi tiu medio, ĉar `cargo kani` ne estas
 instalita. La 12 pruvoj (6 pri la kadro-alokilo, 6 pri la mesaĝujo) estas
@@ -623,10 +629,11 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.3.0!
+[MiKerno] Saluton, mi estas MiKerno v0.3.1!
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
 [kerno] SMEP ŝaltita; Ring 0 ne povas plenumi uzantajn paĝojn.
+[kerno] SMAP ŝaltita; Ring 0 legas uzantajn bufrojn nur en STAC-fenestroj.
 [sistemvoko] pordego 0x80 (DPL3) instalita
 [kerno] memoro: 7 regionoj, 255 MiB uzeblaj
 [memoro] liberigo (bone): 65112 kadroj antaŭ, 65112 post
@@ -681,8 +688,8 @@ horizonto: procezo vekis en Ring 3.
 [kerno] planisto revenis al la ripoza fadeno
 ...
 [kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
-[memoro] SMEP-provo: Ring 0 provos plenumi la uzantan folion ĉe 0x100000000
-[eraro] SMEP-malobservo: Ring 0 provis plenumi uzantan paĝon ĉe 0x0000000100000000 (erarkodo=0x11)
+[memoro] SMAP-provo: Ring 0 provos legi la uzantan folion ĉe 0x100000000
+[eraro] procezo 0: SMAP-malobservo ĉe 0x0000000100000000 (erarkodo=0x1)
 ```
 
 ---
@@ -802,11 +809,12 @@ horizonto: procezo vekis en Ring 3.
 - **Proceza detruo estas antaŭkondiĉa**: `detrui` postulas, ke neniu alia
   fadeno de la procezo plenumas kaj ke la vokanto tenas interrompojn
   malŝaltitaj; kun unu uzanta fadeno po procezo tio ĉiam validas.
-- **W^X kaj SMEP, sen SMAP/KASLR**: la identeca mapo estas dividita laŭ sekcioj
+- **W^X, SMEP kaj SMAP, sen KASLR**: la identeca mapo estas dividita laŭ sekcioj
   (`.text` RX, `.rodata` R NX, datumoj RW NX) kaj `CR0.WP` protektas la
   nurlegajn paĝojn ankaŭ el Ring 0; `CR4.SMEP` malpermesas al Ring 0 plenumi
-  uzantajn foliojn (0.3.0). SMAP venas en 0.3.1, la alta-duona kerno en 0.3.2,
-  kaj IOMMU-izolado en M18 (post 1.0).
+  uzantajn foliojn (0.3.0), kaj `CR4.SMAP` malpermesas legi aŭ skribi ilin
+  ekster `STAC`/`CLAC`-fenestro (0.3.1). La alta-duona kerno venas en 0.3.2,
+  KASLR poste, kaj IOMMU-izolado en M18 (post 1.0).
 - **Unuprocesora**: neniu SMP, afineco, prioritatoj aŭ dormantaj temporiziloj.
 - **Fiksaj limoj**: 8 fadenoj, 16 mesaĝoj po fadeno, 64 bajtoj po mesaĝo,
   4 GiB fizika memoro.

@@ -28,12 +28,17 @@ pub fn kadra_alokilo() -> &'static mut KadraAlokilo {
 }
 
 pub fn ĉefa(informo: EniraInformo) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.3.0!\n");
+    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.3.1!\n");
     let trajtoj = crate::arkitekturo::procesoraj_trajtoj();
     crate::skribu!("[kerno] SMEP subtenata: {}\n", jes_ne(trajtoj.smep));
     crate::skribu!("[kerno] SMAP subtenata: {}\n", jes_ne(trajtoj.smap));
     if crate::arkitekturo::smep_aktiva() {
         crate::skribu!("[kerno] SMEP ŝaltita; Ring 0 ne povas plenumi uzantajn paĝojn.\n");
+    }
+    if crate::arkitekturo::smap_aktiva() {
+        crate::skribu!(
+            "[kerno] SMAP ŝaltita; Ring 0 legas uzantajn bufrojn nur en STAC-fenestroj.\n"
+        );
     }
     sistemvoko::pravalorizi();
     crate::skribu!(
@@ -205,11 +210,16 @@ pub fn ĉefa(informo: EniraInformo) {
     );
 
     // La memprovo venas laste: ĝi intence elvokas Ring 0 `#PF` kaj haltigas la
-    // kernon, do ĉiuj antaŭaj scenaroj jam raportis sian rezulton.
-    if crate::arkitekturo::smep_aktiva() {
+    // kernon, do ĉiuj antaŭaj scenaroj jam raportis sian rezulton. Se SMAP
+    // mankas sed SMEP ekzistas, la pli malnova SMEP-provo ankoraŭ ruliĝas.
+    if crate::arkitekturo::smap_aktiva() {
+        crate::arkitekturo::testi_smap(&mut spaco, kadra_alokilo());
+    } else if crate::arkitekturo::smep_aktiva() {
         crate::arkitekturo::testi_smep(&mut spaco, kadra_alokilo());
     } else {
-        crate::skribu!("[memoro] SMEP-provo preterlasita: la procesoro ne subtenas ĝin\n");
+        crate::skribu!(
+            "[memoro] firmiga provo preterlasita: la procesoro ne subtenas SMEP aŭ SMAP\n"
+        );
     }
     crate::arkitekturo::halti()
 }

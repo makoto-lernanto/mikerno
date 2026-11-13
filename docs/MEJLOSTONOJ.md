@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-13 · Versio de la workspace: 0.3.0
+> Stato: 2026-11-13 · Versio de la workspace: 0.3.1
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -25,7 +25,7 @@
 | M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Plenumita | ABI difinita; `horizonto` plenumiĝas en Ring 3 |
 | M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj (0.1.5) |
 | M12 | Per-procesaj adresspacoj | Plenumita | Fazo 6: W^X laŭ sekcioj, `CR0.WP`, foliaj permesoj en sistemvokoj; Fazo 5: samtempaj procezoj `4`/`5`, sama sekreta adreso `0x200000000`, spiono `#PF` ĉe `0x200001000`, viktimo pluvivas; kadroj egalaj (0.2.5) |
-| M13 | Kerna memoro-firmigo: SMEP, SMAP, KASLR | Parte | Fazo 1 (0.3.0): CPUID-provo, `CR4.SMEP`, Ring 0-provo kaŭzas `#PF` (`erarkodo=0x11`) kaj haltigas la kernon; SMAP kaj alta-duona kerno venontaj |
+| M13 | Kerna memoro-firmigo: SMEP, SMAP, KASLR | Parte | Fazo 1 (0.3.0): CPUID-provo, `CR4.SMEP`, Ring 0-provo kaŭzas `#PF` (`erarkodo=0x11`) kaj haltigas la kernon; Fazo 2 (0.3.1): `CR4.SMAP`, `STAC`/`CLAC`-fenestroj, `SMAP-malobservo` (`erarkodo=0x1`); alta-duona kerno venonta |
 | M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Venonta | — |
 | M15 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
 | M16 | Konservado, dosiersistemo, ŝelo | Venonta | — |
@@ -131,8 +131,9 @@ kaj ŝalti proprietan `CR3`.
 **Pruvo.** Post `CR3`-ŝalto la kerno daŭre uzas la framebuffer-on (ISO) kaj la
 APIC-on; neniu paĝa eraro aperas dum la tuta testa scenaro.
 
-**Resto.** La identeca mapo jam respektas W^X laŭ sekcioj (0.2.5), sed
-SMEP/SMAP, KASLR kaj APIC/IOMMU-izolado ankoraŭ mankas; la per-procesa mapado
+**Resto.** La identeca mapo jam respektas W^X laŭ sekcioj (0.2.5), kaj SMEP
+(0.3.0) plus SMAP (0.3.1) baras Ring 0 de uzantaj folioj. KASLR, la alta-duona
+kerno (0.3.2) kaj APIC/IOMMU-izolado ankoraŭ mankas; la per-procesa mapado
 venis en M12.
 
 ---
@@ -648,7 +649,7 @@ kadroj antaŭ, 63507 post`).
    `mikerno.iso` estas git-ignoritaj, do malnova ISO povas montri malnovan
    version. Oni ĉiam rulu `just iso` post kerna aŭ dokumenta ŝanĝo.
 4. **Versio hardkodita.** `kerno/mod.rs`, `mikerno/boot/limine.conf` kaj
-   `Cargo.toml` enhavas la nunan version (`0.3.0`) sendepende. Oni devus derivi
+   `Cargo.toml` enhavas la nunan version (`0.3.1`) sendepende. Oni devus derivi
    ĝin per `env!("CARGO_PKG_VERSION")` kaj `build.rs`.
 5. **Kani mankas.** La formala pordego ne estas plenumebla en ĉi tiu medio;
    `just verify` malsukcesos ĝis `cargo kani` estos instalita.
@@ -680,9 +681,10 @@ ekspluaton de konataj kernaj adresoj.
 1. **SMEP (0.3.0, plenumita)** — CPUID-provo, `CR4.SMEP`, malpermesi
    plenumon de uzantaj paĝoj el Ring 0. Se la procesoro ne subtenas ĝin, la
    kerno devas bone faldi.
-2. **SMAP (0.3.1)** — CPUID-provo, `CR4.SMAP`, `STAC/CLTAC`-fenestroj ĉirkaŭ
-   ĉiu kerna aliro al uzantaj bufroj; revizio de `SYS_SKRIBI`, `SYS_SENDI` kaj
-   `SYS_RICEVI`; `#PF`-testoj por aliro sen `STAC`.
+2. **SMAP (0.3.1, plenumita)** — CPUID-provo, `CR4.SMAP`, `STAC`/`CLAC`-
+   fenestroj ĉirkaŭ ĉiu kerna aliro al uzantaj bufroj (RAII-gardo); revizio de
+   `SYS_SKRIBI`, `SYS_SENDI` kaj `SYS_RICEVI`; `#PF`-testoj por aliro sen
+   `STAC`, inkluzive de la ŝargila memtesto.
 3. **KASLR (0.3.2)** — relokebla aŭ alta-duona kerna bildo, hazarda bazadreso,
    ĝisdatigo de `KernajLimoj` kaj de la praŝarĝaj enirpunktoj; la fiksa
    `0x100000`-bazo malaperas.
@@ -692,6 +694,7 @@ ekspluaton de konataj kernaj adresoj.
 | Dato | Fazo | Versio | Pruvo |
 | --- | --- | --- | --- |
 | 2026-11-13 | 1. SMEP: CPUID-provo, `CR4.SMEP`, Ring 0-provo | 0.3.0 | PVH `-cpu qemu64,+smep,+smap`: `[kerno] SMEP subtenata: jes`, `[kerno] SMEP ŝaltita`, post la 1000 tikoj `[memoro] SMEP-provo … ĉe 0x100000000` kaj `[eraro] SMEP-malobservo … (erarkodo=0x11)`; la tuta M12-scenaro antaŭe verda (`izolado 64980 = 64980`). Sen SMEP (`-cpu qemu64`): `subtenata: ne`, provo preterlasita, 1000 tikoj, neniuj esceptoj |
+| 2026-11-13 | 2. SMAP: CPUID-provo, `CR4.SMAP`, `STAC`/`CLAC`-gardo en sistemvokoj kaj ŝargilo | 0.3.1 | PVH `-cpu qemu64,+smep,+smap`: `SMAP subtenata: jes`, `SMAP ŝaltita`, M12 verda (`izolado 64978 = 64978`), Ring 3-linioj kaj `[uzanto] memoro: marko … legita …` pruvas la pozitivan fenestron, fine `[memoro] SMAP-provo … ĉe 0x100000000` kaj `[eraro] procezo 0: SMAP-malobservo … (erarkodo=0x1)`. ISO BIOS `64976 = 64976`, UEFI/OVMF `63506 = 63506`, VirtualBox EFI `60216 = 60216`. Sen la trajtoj (`-cpu qemu64`, VirtualBox): `subtenata: ne`, provo preterlasita, 1000 tikoj, neniuj esceptoj |
 
 **Akceptkriterioj.** Ring 0 ne povas plenumi uzantan paĝon (SMEP); sen `STAC`
 Ring 0 ne povas legi aŭ skribi uzantan bufron, kun `STAC` jes (SMAP); du startoj

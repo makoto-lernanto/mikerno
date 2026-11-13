@@ -17,7 +17,9 @@ pub fn pravalorizi() {
     malantaŭo::pravalorizi();
 }
 
-pub use malantaŭo::firmigo::{aktiva as smep_aktiva, testi_smep};
+pub use malantaŭo::firmigo::{
+    StacGardo, aktiva as smep_aktiva, clac, smap_aktiva, testi_smap, testi_smep,
+};
 pub use malantaŭo::procesoro::Trajtoj as ProcesorajTrajtoj;
 
 /// Legu la procesorajn trajtojn uzatajn de la kerna firmigo.

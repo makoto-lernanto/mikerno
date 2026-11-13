@@ -435,12 +435,17 @@ fn testi_kontrolon(
     let antaŭa = crate::arkitekturo::aktiva_adreso_spaco();
     let _gardo = InterrompaGardo::nova();
     spaco.ŝalti();
-    // SAFETY: `PROVA_BAZO` estas paĝ-aliniiĝinta uzanta paĝo, kiun ni ĵus
-    // mapis skribebla en `spaco`; dum ĉi tiu bloko `spaco` estas aktiva, do la
-    // virtuala adreso tradukiĝas al la freŝa kadro.
-    let legita = unsafe {
-        ptr::write_volatile(PROVA_BAZO as *mut u64, marko);
-        ptr::read_volatile(PROVA_BAZO as *const u64)
+    // La provaj paĝoj estas `U=1`; kun SMAP la kerna skribo trapasas nur en
+    // `STAC`-fenestro, kiu ankaŭ pruvas la pozitivan vojon de la firmigo.
+    let legita = {
+        let _stac = crate::arkitekturo::StacGardo::nova();
+        // SAFETY: `PROVA_BAZO` estas paĝ-aliniiĝinta uzanta paĝo, kiun ni ĵus
+        // mapis skribebla en `spaco`; dum ĉi tiu bloko `spaco` estas aktiva, do
+        // la virtuala adreso tradukiĝas al la freŝa kadro.
+        unsafe {
+            ptr::write_volatile(PROVA_BAZO as *mut u64, marko);
+            ptr::read_volatile(PROVA_BAZO as *const u64)
+        }
     };
     // SAFETY: `antaŭa` estis la radiko de la aktiva spaco antaŭ la provo; la
     // kerna radiko kaj ĝiaj mapoj restas vivaj, do la reveno estas sekura.
