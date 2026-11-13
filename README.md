@@ -16,7 +16,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.4.0 (workspace)
+- **Versio:** 0.4.1 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -66,7 +66,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 | GDT, 256-vektora IDT, escepta raportado | Funkcias | `gdt.rs`, `idt.rs`, `interrompo/mod.rs` |
 | Uzantaj DPL3-segmentoj kaj `int 0x80`-pordego (interrompa, `0xEE`) | Funkcias | `gdt.rs`, `idt.rs`, `kerno/sistemvoko.rs` |
 | Kvin sistemvokoj (`SENDI`/`RICEVI`/`SKRIBI`/`FINI`/`CEDI`), unueca `Mesago`, montrila kontrolo | Funkcias (Ring 0 kaj 3) | `kerno/sistemvoko.rs`, `arkitekturo/x86_64/sistemvoko.rs` |
-| ABI 2: `Tenilo`, `REVOKI`/`PLENAJ`, erar-kodoj, vokoj 6–11 rezervitaj | Difinita (0.4.0) | `libmikerno/` |
+| ABI 2: `Tenilo`, finpunktaj objektoj kun generacioj, `KREI_FINPUNKTON`/`FERMI`, `REVOKI`/`PLENAJ`, erar-kodoj | Funkcias (0.4.1) | `libmikerno/`, `kerno/ipc.rs` |
 | TSS kun `RSP0` por Ring 3 → Ring 0 | Funkcias | `tss.rs` |
 | xAPIC (MMIO), malŝalto de 8259-PIC, spuria vektoro `0xFF` | Funkcias | `apic.rs` |
 | 100 Hz perioda temporizilo, kalibrita kontraŭ la PIT | Funkcias | `temporizilo.rs` |
@@ -697,16 +697,16 @@ bazon: tri sinsekvaj PVH-startoj montris `0x5400000`, `0xd200000` kaj
 restis verdaj, inkluzive de `W^X` kaj de la izolado. Kun `-cpu qemu64` la
 KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 
-`just verify` ne estis rulita en ĉi tiu medio, ĉar `cargo kani` ne estas
-instalita. La 12 pruvoj (6 pri la kadro-alokilo, 6 pri la mesaĝujo) estas
-verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
+`just verify` vokas `cargo kani -p mikerno -Z unstable-options --ignore-global-asm`;
+la 16 pruvoj (6 pri la kadro-alokilo, 10 pri la IPC) pruviĝis verde per Kani
+0.68.0.
 
 ### Kion vi devus vidi
 
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.4.0!
+[MiKerno] Saluton, mi estas MiKerno v0.4.1!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
@@ -723,6 +723,7 @@ verkitaj kaj kompiliĝas nur sub `cfg(kani)`.
 [procezo] 6 detruita: 1 privataj PDPT-oj, PML4 0x207000, 25 kadroj liberigitaj
 ... (10 reuzaj cikloj)
 [memoro] reuzo (bone): 10 cikloj, 64979 kadroj antaŭ, 64979 post
+[ipc] tabeloj (bone): kreitaj=13, plena=true, fermitaj=13, duobla_fermo=true, nova_generacio=true, malnova_tenilo=true, kerno=true
 [kerno] IPC: mesaĝo sendita al fadeno 2
 [kerno] planisto ekas: 3 fadenoj, antaŭokupo ĉiu 10 ms
 saluton el Ring 0 tra int 0x80
@@ -740,9 +741,12 @@ saluton el Ring 0 tra int 0x80
 [kerno] horizonto 5 pretas: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x100001840
 [kerno] du procezoj pretaj; unu planista voko
 horizonto: procezo vekis en Ring 3.
+[ring3] procezo 5: idento (bone): sendinto=5 (uzanto asertis 999), ricevonto=5, resto_nula=jes
+[ring3] procezo 5: finpunktoj (bone): tenilo=1025, fermo=0, duobla=-9, malvalida=-9, nulaj_permesoj=-1, nekonataj_permesoj=-1, rekrea=1281, malnova=-9
 [eraro] procezo 5: montrilo 0x1000 (longo 8) estas ekster la anoncita regiono
 [eraro] procezo 5: montrilo 0x100001840 (longo 96, skriba true) ne havas la postulatan folian permeson
 [ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1, nurlega=-1
+[ring3] negativaj (F2): celo6=-3, celo0=-3
 [ring3] procezo 5: sekreta paĝo kongruas (magio 0x4d694b65726e6f21, id 5)
 [ring3] procezo 5: spionas la viktimon
 horizonto: procezo vekis en Ring 3.
@@ -898,14 +902,15 @@ horizonto: procezo vekis en Ring 3.
 - **Unuprocesora**: neniu SMP, afineco, prioritatoj aŭ dormantaj temporiziloj.
 - **Fiksaj limoj**: 8 fadenoj, 16 mesaĝoj po fadeno, 64 bajtoj po mesaĝo,
   4 GiB fizika memoro.
-- **IPC**: finpunkta id == fadena id; ne ekzistas apartaj objektoj, rajtorevoko,
-  tempolimoj aŭ sendblokado.
+- **IPC**: la finpunktaj objektoj havas generaciojn kaj referenckalkulon, sed
+  la defaŭlta finpunkto de fadeno ankoraŭ portas la fadenan id; mankas
+  rajtokontroloj, `REVOKI`, tempolimoj kaj sendblokado (Fazoj 3–6).
 - **Ring 3-esceptoj nur `#PF`/`#GP`**: tiuj du mortigas la procezon; aliaj
   esceptoj — ankaŭ el Ring 3 — restas fatalaj, kaj demando-paĝado ne
   ekzistas.
 - **Framebuffer**: nur 32 bpp, kvar fiksaj strekoj (8×16 … 32×64), 111 glifoj
   (95 ASCII + Esperanto + citiloj), malplenigo anstataŭ rulumo.
-- **Pruvoj**: 13 Kani-pruvoj spegulas la bitan logikon sur 64 kadroj; la produkta
+- **Pruvoj**: 16 Kani-pruvoj spegulas la bitan logikon sur 64 kadroj; la produkta
   kodo mem ne estas pruvita. `just verify` postulas apartan Kani-instalon.
 - **Neniu CI nek testoharness**: la kontrolo estas `build` + `clippy` + `fmt` +
   QEMU-smoka testo.

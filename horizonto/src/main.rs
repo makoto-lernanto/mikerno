@@ -17,8 +17,8 @@ use libmikerno::starto::{
     MAGIA_NUMERO, REĜIMO_SEKRETO, REĜIMO_SPIONO, SEKRETA_ADRESO, SEKRETA_DUA_ADRESO,
     SEKRETA_ID_DEŜOVO,
 };
-use libmikerno::syscall::{SYS_RICEVI, SYS_SKRIBI, invoki};
-use libmikerno::{Mesago, Permesoj};
+use libmikerno::syscall::{SYS_KREI_FINPUNKTON, SYS_RICEVI, SYS_SENDI, SYS_SKRIBI, invoki};
+use libmikerno::{Mesago, Permesoj, Tenilo};
 
 /// La mesaĝa aranĝo devas kongrui bajte kun la kerno (kun `libmikerno`).
 const _: () = {
@@ -39,6 +39,7 @@ const SALUTO: &str = "horizonto: procezo vekis en Ring 3.\n";
 pub extern "C" fn horizonto_start(reĝimo: u64, identigilo: u64) -> ! {
     biblioteko::skribi(SALUTO);
     testi_identon(identigilo);
+    testi_finpunktojn(identigilo);
     testi_negativajn();
     match reĝimo {
         REĜIMO_SEKRETO => sekreta_provo(identigilo),
@@ -162,6 +163,63 @@ fn testi_identon(identigilo: u64) {
     ));
 }
 
+/// B1: veraj teniloj el la kapablotabelo de la procezo.
+///
+/// Fendo `0` portas la defaŭltan finpunkton, do `KREI_FINPUNKTON` uzas la
+/// unuan liberan fendon `1`. Post `FERMI` la fendo reuziĝas kun pli alta
+/// generacio; la malnova tenilo restas malvalida (kontraŭ-ABA).
+fn testi_finpunktojn(identigilo: u64) {
+    let kreo = biblioteko::krei_finpunkton(Permesoj::PLENAJ);
+    let tenilo = if kreo > 0 {
+        Tenilo::el_nombro(kreo as u32)
+    } else {
+        None
+    };
+    let Some(tenilo) = tenilo else {
+        biblioteko::skribi_formaton(format_args!(
+            "[ring3] procezo {}: finpunktoj (MALBONE): kreo={}\n",
+            identigilo, kreo
+        ));
+        return;
+    };
+    let fermo = biblioteko::fermi(tenilo);
+    let duobla = biblioteko::fermi(tenilo);
+    let malvalida = biblioteko::fermi(Tenilo::MALVALIDA);
+    // SAFETY: neniuj montriloj; la kerno nur legas la permes-bitojn.
+    let nulaj = unsafe { invoki(SYS_KREI_FINPUNKTON, [0; 4]) };
+    let nekonataj = unsafe { invoki(SYS_KREI_FINPUNKTON, [8, 0, 0, 0]) };
+    let rekrea = biblioteko::krei_finpunkton(Permesoj::SENDI);
+    let rekrea_tenilo = if rekrea > 0 {
+        Tenilo::el_nombro(rekrea as u32)
+    } else {
+        None
+    };
+    // La fendo `1` nun portas la novan tenilon, do la malnova restas rifuzata.
+    let malnova = biblioteko::fermi(tenilo);
+    let fermo2 = rekrea_tenilo.map_or(-1, biblioteko::fermi);
+    let bone = fermo == 0
+        && duobla == -9
+        && malvalida == -9
+        && nulaj == -1
+        && nekonataj == -1
+        && rekrea > 0
+        && malnova == -9
+        && fermo2 == 0;
+    biblioteko::skribi_formaton(format_args!(
+        "[ring3] procezo {}: finpunktoj ({}): tenilo={}, fermo={}, duobla={}, malvalida={}, nulaj_permesoj={}, nekonataj_permesoj={}, rekrea={}, malnova={}\n",
+        identigilo,
+        if bone { "bone" } else { "MALBONE" },
+        tenilo.nombro(),
+        fermo,
+        duobla,
+        malvalida,
+        nulaj,
+        nekonataj,
+        rekrea,
+        malnova
+    ));
+}
+
 /// Kontrolu, ke la kerno rifuzas malvalidajn Ring 3-argumentojn anstataŭ
 /// dereferenci ilin.
 fn testi_negativajn() {
@@ -186,6 +244,28 @@ fn testi_negativajn() {
         );
     } else {
         biblioteko::skribi("[ring3] negativaj: MALBONE\n");
+    }
+
+    // La celo ne ekzistas kiel viva fadeno: la shim de Fazo 2 devas rifuzi per
+    // `-3` anstataŭ enigi la mesaĝon en la vicon. La montrilo restas valida, do
+    // la kontrolo de la celo estas tiu, kiu rifuzas (C11, C16).
+    let celo = Mesago::malplena();
+    let celo_ptr = &celo as *const Mesago as usize;
+    // SAFETY: `celo` estas valida staka `Mesago`; la celaj identigiloj estas
+    // intence nevivaj.
+    let (fadeno6, fadeno0) = unsafe {
+        (
+            invoki(SYS_SENDI, [6, celo_ptr, 0, 0]),
+            invoki(SYS_SENDI, [0, celo_ptr, 0, 0]),
+        )
+    };
+    if fadeno6 == -3 && fadeno0 == -3 {
+        biblioteko::skribi("[ring3] negativaj (F2): celo6=-3, celo0=-3\n");
+    } else {
+        biblioteko::skribi_formaton(format_args!(
+            "[ring3] negativaj (F2): MALBONE (celo6={}, celo0={})\n",
+            fadeno6, fadeno0
+        ));
     }
 }
 

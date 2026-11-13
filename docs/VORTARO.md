@@ -86,6 +86,16 @@ kaj protokolaj nomoj sekvu ĝin.
 | `revoki` | revoke | `REVOKI`: finpunkta generacio +1, ĉiuj teniloj malvalidiĝas. |
 | `doni` | grant / transfer | `DONI`: permesoj nur malpliiĝas dum transdono. |
 | `fermi` | close | `FERMI`: fermas unu lokan kapablofendon. |
+| `finpunkta identigilo` | endpoint id | `FinaPunktaId` (`u64`); defaŭltaj finpunktoj uzas la fadenan id, eksplicitaj komenciĝas ĉe `UNUA_FINPUNKTA_ID = 16`. |
+| `defaŭlta finpunkto` | default endpoint | Implica finpunkto de fadeno; `registri_fadenon` tenas ĝin vivan por la malnova vojo. |
+| `posedanto` | owner | `FinaPunktoObjekto.posedanto`: la proceza id (`0` = kerno). |
+| `referenckalkulo` | reference counting | `referencoj: u16`; saturiĝas anstataŭ subflui, kaj la objekto liberiĝas ĉe `0`. |
+| `emerita` | retired | `FinaPunktaStato::Emerita`: la generacio eluziĝis, la fendo neniam plu atribuiĝas (C12). |
+| `kapablotabelo` | capability table | `KAPABLOJ: [[KapabloEniro; 16]; 8]`; linio `0` (kerno) restas ĉiam malplena (C8). |
+| `kapablofendo` | capability slot | `KapabloEniro`: `tenilo`, `permesoj`, `finpunkto`, `uzata`. |
+| `registri fadenon` | register thread | `registri_fadenon(fadeno, procezo)`: idempotenta; rezervas la defaŭltan finpunkton kaj la unuan kapablofendon. |
+| `krei finpunkton` | create endpoint | `KREI_FINPUNKTON` (6); redonas novan `Tenilo`. |
+| `vivas` | is alive | `planisto::vivas(id)`: la celo ekzistas kaj ne estas `Mortinta`; la shim rifuzas per `-3`. |
 | `tempolimo` | timeout | `RICEVI_TEMPO`/`SENDI_TEMPO`; `TEMPOLIMO = -110`. |
 | `nebloka` | non-blocking | `r10 = 0`; malplena vico redonas `PROVU_DENOVE = -11`. |
 | `ABI-versio` | ABI version | `ABI_VERSIO = 2` ekde M14 Fazo 1. |

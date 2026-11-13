@@ -1,14 +1,19 @@
-//! Minimuma mesaĝa IPC: finpunktoj, kapabloj, mesagujo.
+//! Minimuma mesaĝa IPC: finpunktaj objektoj, kapabloj, teniloj.
 //!
-//! `sendi_mesagon` metas la mesaĝon en la vicon de la celo kaj vekas ĝin se ĝi
-//! estis blokita. `ricevi_mesagon` blokas la vokanton ĝis mesaĝo de la donita
-//! fonto alvenas. Ĉiuj operacioj tenas interrompojn malŝaltitaj.
+//! Ekde Fazo 2 de M14 la mesaĝvico apartenas al la finpunkto, ne al la fadeno.
+//! Ĉiu fadeno havas defaŭltan finpunkton (kreitan ĉe ĝia registrado), kaj la
+//! malnova vojo `sendi_mesagon(fadeno, …)` / `ricevi_mesagon(fonto)` uzas ĝin
+//! ĝis Fazo 3 transdonos veran `Tenilo`-n en `rdi`.
+//!
+//! Ĉiuj operacioj tenas interrompojn malŝaltitaj.
 
 use crate::interrompo::InterrompaGardo;
 use crate::kunhavigita::Kunhavigita;
+use libmikerno::Tenilo;
 
 use super::objekto::FadenoId;
 use super::planisto::{self, MAKSAJ_FADENOJ};
+use super::procezo::{MAKSAJ_PROCEZOJ, ProcezaId};
 
 /// La mesaĝa aranĝo, la permesoj kaj la kapabloj venas el `libmikerno`, do la
 /// kerno kaj Ring 3 uzas la saman `#[repr(C)]`-strukturon sen konverto kaj sen
@@ -27,11 +32,23 @@ const _: () = {
 };
 
 const MAKSAJ_MESAGOJ: usize = 16;
+/// La finpunkta tabelo kaj la kapablotabelo havas po 16 fendojn; `Tenilo`
+/// povas adresi nur `0..=15`.
+pub const MAKSAJ_FINPUNKTOJ: usize = 16;
+pub const MAKSAJ_KAPABLOJ: usize = 16;
+
+/// La identigilo, kiun `Mesago.ricevonto` portas: la defaŭltaj finpunktoj
+/// uzas la fadenan identigilon (`1..=8`), la eksplicitaj ekde `16`.
+pub type FinaPunktaId = u64;
+
+const UNUA_FINPUNKTA_ID: FinaPunktaId = 16;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum IpcEraro {
     NevalidaCelloko,
     MesagujoPlena,
+    NevalidaTenilo,
+    TabeloPlena,
 }
 
 #[derive(Clone, Copy)]
@@ -75,31 +92,256 @@ impl Mesagujo {
     }
 }
 
-static MESAGUJOJ: Kunhavigita<[Mesagujo; MAKSAJ_FADENOJ + 1]> =
-    Kunhavigita::nova([Mesagujo::nova(); MAKSAJ_FADENOJ + 1]);
-
-fn mesagujo(id: FadenoId) -> &'static mut Mesagujo {
-    &mut MESAGUJOJ.akiri()[id as usize]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FinaPunktaStato {
+    Libera,
+    Aktiva,
+    /// La generacio eluziĝis; la fendo neniam plu estos atribuata (C12).
+    Emerita,
 }
 
-/// Sendu mesaĝon al fadeno; la fonto estas la nuna fadeno.
-///
-/// La mesaĝo estas kopiata, kaj `sendinto`/`ricevonto` estas fiksitaj de la
-/// kerno: la uzanto ne povas mensogi pri ili.
-///
-/// # Eraroj
-/// `NevalidaCelloko` se la destino ne estas fadena identigilo; `MesagujoPlena`
-/// se la vico de la celo jam enhavas `MAKSAJ_MESAGOJ` mesaĝojn.
-pub fn sendi_mesagon(destinacio: FadenoId, mesago: &Mesago) -> Result<(), IpcEraro> {
+#[derive(Clone, Copy)]
+struct FinaPunktoObjekto {
+    stato: FinaPunktaStato,
+    id: FinaPunktaId,
+    generacio: u32,
+    posedanto: ProcezaId,
+    /// La fadeno, kies defaŭlta finpunkto ĉi tio estas; `0` por eksplicitaj.
+    fadeno: FadenoId,
+    referencoj: u16,
+    vico: Mesagujo,
+}
+
+impl FinaPunktoObjekto {
+    const fn nova() -> Self {
+        Self {
+            stato: FinaPunktaStato::Libera,
+            id: 0,
+            generacio: 1,
+            posedanto: 0,
+            fadeno: 0,
+            referencoj: 0,
+            vico: Mesagujo::nova(),
+        }
+    }
+
+    fn aktiva(&self) -> bool {
+        self.stato == FinaPunktaStato::Aktiva
+    }
+
+    /// Forigu la mesaĝojn kaj redonu la fendon; la generacio altiĝas, do ĉiuj
+    /// malnovaj teniloj restas malvalidaj (kontraŭ-ABA).
+    fn liberigu(&mut self) {
+        self.vico = Mesagujo::nova();
+        self.referencoj = 0;
+        self.id = 0;
+        self.posedanto = 0;
+        self.fadeno = 0;
+        match pliigita_generacio(self.generacio) {
+            Some(sekva) => {
+                self.generacio = sekva;
+                self.stato = FinaPunktaStato::Libera;
+            }
+            None => {
+                self.generacio = Tenilo::MAKSA_GENERACIO;
+                self.stato = FinaPunktaStato::Emerita;
+            }
+        }
+    }
+}
+
+/// La sekva generacio de fendo, aŭ `None` se ĝi eluziĝis. Generacio `0` estas
+/// ĉiam malvalida kaj ne havas sekvan valoron.
+const fn pliigita_generacio(generacio: u32) -> Option<u32> {
+    if generacio == 0 || generacio >= Tenilo::MAKSA_GENERACIO {
+        None
+    } else {
+        Some(generacio + 1)
+    }
+}
+
+/// Malaltigu referenckalkulon sen suba transfluo.
+const fn forprenu_referencon(referencoj: u16) -> u16 {
+    if referencoj == 0 { 0 } else { referencoj - 1 }
+}
+
+/// La unua libera finpunkta fendo, aŭ `None` se ĉiuj estas okupataj aŭ
+/// emeritaj. La serĉo estas pura por ke Kani povas pruvi ĝin.
+fn elekti_liberan(statoj: &[FinaPunktaStato; MAKSAJ_FINPUNKTOJ]) -> Option<u8> {
+    let mut indekso = 0;
+    while indekso < MAKSAJ_FINPUNKTOJ {
+        if statoj[indekso] == FinaPunktaStato::Libera {
+            return Some(indekso as u8);
+        }
+        indekso += 1;
+    }
+    None
+}
+
+static FINAJ_PUNKTOJ: Kunhavigita<[FinaPunktoObjekto; MAKSAJ_FINPUNKTOJ]> =
+    Kunhavigita::nova([FinaPunktoObjekto::nova(); MAKSAJ_FINPUNKTOJ]);
+
+static SEKVA_FINPUNKTA_ID: Kunhavigita<FinaPunktaId> = Kunhavigita::nova(UNUA_FINPUNKTA_ID);
+
+fn finpunktoj() -> &'static mut [FinaPunktoObjekto; MAKSAJ_FINPUNKTOJ] {
+    FINAJ_PUNKTOJ.akiri()
+}
+
+fn sekva_finpunkta_id() -> FinaPunktaId {
+    let krado = SEKVA_FINPUNKTA_ID.akiri();
+    let id = *krado;
+    *krado += 1;
+    id
+}
+
+/// Kapabla fendo de unu procezo: kiu finpunkto kaj kun kiuj permesoj.
+#[derive(Clone, Copy)]
+struct KapabloEniro {
+    tenilo: Tenilo,
+    /// Legata ekde la permes-kontroloj de Fazo 3.
+    #[allow(dead_code)]
+    permesoj: Permesoj,
+    finpunkto: u8,
+    uzata: bool,
+}
+
+impl KapabloEniro {
+    const fn libera() -> Self {
+        Self {
+            tenilo: Tenilo::MALVALIDA,
+            permesoj: Permesoj::ĈIUJ,
+            finpunkto: 0,
+            uzata: false,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct Kapablotabelo {
+    eroj: [KapabloEniro; MAKSAJ_KAPABLOJ],
+}
+
+impl Kapablotabelo {
+    const fn nova() -> Self {
+        Self {
+            eroj: [KapabloEniro::libera(); MAKSAJ_KAPABLOJ],
+        }
+    }
+
+    fn unua_libera(&self) -> Option<usize> {
+        self.eroj.iter().position(|eniro| !eniro.uzata)
+    }
+}
+
+/// La kapablotabeloj de la procezoj `0..=7`; linio `0` (la kerno) restas ĉiam
+/// malplena, do `kapabloj(0)` redonas `None` (C8).
+static KAPABLOJ: Kunhavigita<[Kapablotabelo; MAKSAJ_PROCEZOJ]> =
+    Kunhavigita::nova([Kapablotabelo::nova(); MAKSAJ_PROCEZOJ]);
+
+fn kapabloj(procezo: ProcezaId) -> Option<&'static mut Kapablotabelo> {
+    if procezo == 0 || procezo as usize >= MAKSAJ_PROCEZOJ {
+        return None;
+    }
+    KAPABLOJ.akiri().get_mut(procezo as usize)
+}
+
+fn libera_finpunkta_fendo() -> Option<u8> {
+    let mut statoj = [FinaPunktaStato::Emerita; MAKSAJ_FINPUNKTOJ];
+    for (indekso, objekto) in finpunktoj().iter().enumerate() {
+        statoj[indekso] = objekto.stato;
+    }
+    elekti_liberan(&statoj)
+}
+
+/// La indekso de la defaŭlta finpunkto de la fadeno, se ĝi jam ekzistas.
+fn defaŭlta_indekso(fadeno: FadenoId) -> Option<usize> {
+    finpunktoj()
+        .iter()
+        .position(|objekto| objekto.aktiva() && objekto.fadeno == fadeno)
+}
+
+/// Rezervu fendon por nova finpunkto; la alvokanto jam tenas interrompojn
+/// malŝaltitaj.
+fn rezervi_finpunkton(
+    procezo: ProcezaId,
+    fadeno: FadenoId,
+    id: FinaPunktaId,
+) -> Result<u8, IpcEraro> {
+    let fendo = libera_finpunkta_fendo().ok_or(IpcEraro::TabeloPlena)?;
+    let objekto = &mut finpunktoj()[fendo as usize];
+    if Tenilo::nova(0, objekto.generacio).is_none() {
+        return Err(IpcEraro::TabeloPlena);
+    }
+    objekto.stato = FinaPunktaStato::Aktiva;
+    objekto.id = id;
+    objekto.posedanto = procezo;
+    objekto.fadeno = fadeno;
+    objekto.referencoj = 1;
+    Ok(fendo)
+}
+
+/// Registru la defaŭltan finpunkton de fadeno. Procezaj fadenoj ankaŭ ricevas
+/// kapablan fendon `0` kun `PLENAJ`, do la malnova vojo restas uzebla ĝis la
+/// tenila transiro en Fazo 3. `procezo == 0` por kernaj fadenoj (C8).
+pub fn registri_fadenon(fadeno: FadenoId, procezo: ProcezaId) -> Result<(), IpcEraro> {
     let _gardo = InterrompaGardo::nova();
-    if destinacio as usize > MAKSAJ_FADENOJ {
+    if fadeno == 0 || fadeno as usize > MAKSAJ_FADENOJ {
         return Err(IpcEraro::NevalidaCelloko);
     }
+    if defaŭlta_indekso(fadeno).is_some() {
+        return Ok(());
+    }
+    if procezo != 0 && kapabloj(procezo).is_none() {
+        return Err(IpcEraro::NevalidaTenilo);
+    }
+    let fendo = rezervi_finpunkton(procezo, fadeno, fadeno)?;
+    if procezo == 0 {
+        return Ok(());
+    }
+    let Some(tabelo) = kapabloj(procezo) else {
+        finpunktoj()[fendo as usize].liberigu();
+        return Err(IpcEraro::TabeloPlena);
+    };
+    if tabelo.eroj[0].uzata {
+        finpunktoj()[fendo as usize].liberigu();
+        return Err(IpcEraro::TabeloPlena);
+    }
+    let Some(tenilo) = Tenilo::nova(0, finpunktoj()[fendo as usize].generacio) else {
+        finpunktoj()[fendo as usize].liberigu();
+        return Err(IpcEraro::TabeloPlena);
+    };
+    tabelo.eroj[0] = KapabloEniro {
+        tenilo,
+        permesoj: Permesoj::PLENAJ,
+        finpunkto: fendo,
+        uzata: true,
+    };
+    finpunktoj()[fendo as usize].referencoj += 1;
+    Ok(())
+}
+
+/// Sendu mesaĝon al la defaŭlta finpunkto de fadeno; la fonto estas la nuna
+/// fadeno.
+///
+/// La mesaĝo estas kopiata, kaj `sendinto`/`ricevonto` estas fiksitaj de la
+/// kerno: la uzanto ne povas mensogi pri ili. `ricevonto` estas la finpunkta
+/// identigilo, ne plu la celo-fadeno (C1).
+///
+/// # Eraroj
+/// `NevalidaCelloko` se la celo ne estas viva fadeno (C16); `MesagujoPlena`
+/// se la vico de la finpunkto jam enhavas `MAKSAJ_MESAGOJ` mesaĝojn;
+/// `TabeloPlena` se la defaŭlta finpunkto mankas kaj ne plu estas libera fendo.
+pub fn sendi_mesagon(destinacio: FadenoId, mesago: &Mesago) -> Result<(), IpcEraro> {
+    let _gardo = InterrompaGardo::nova();
+    if !planisto::vivas(destinacio) {
+        return Err(IpcEraro::NevalidaCelloko);
+    }
+    let indekso = defaŭlta_indekso(destinacio).ok_or(IpcEraro::TabeloPlena)?;
     let nuna = planisto::nuna_id();
     let mut mesago = *mesago;
     mesago.sendinto = nuna;
-    mesago.ricevonto = destinacio;
-    mesagujo(destinacio).pusxi(Ero {
+    mesago.ricevonto = finpunktoj()[indekso].id;
+    finpunktoj()[indekso].vico.pusxi(Ero {
         fonto: nuna,
         mesago,
     })?;
@@ -107,7 +349,8 @@ pub fn sendi_mesagon(destinacio: FadenoId, mesago: &Mesago) -> Result<(), IpcEra
     Ok(())
 }
 
-/// Ricevu mesaĝon de la donita fonto; bloku la nunan fadenon se mankas.
+/// Ricevu mesaĝon de la donita fonto el la defaŭlta finpunkto de la nuna
+/// fadeno; bloku se mankas.
 pub fn ricevi_mesagon(fonto: FadenoId) -> Mesago {
     loop {
         let _gardo = InterrompaGardo::nova();
@@ -116,11 +359,129 @@ pub fn ricevi_mesagon(fonto: FadenoId) -> Mesago {
             // La ripoza kunteksto ne havas fadenan vivciklon; ne bloku ĝin.
             return Mesago::malplena();
         }
-        if let Some(mesago) = mesagujo(nuna).preni_de(fonto) {
+        if let Some(indekso) = defaŭlta_indekso(nuna)
+            && let Some(mesago) = finpunktoj()[indekso].vico.preni_de(fonto)
+        {
             return mesago;
         }
         planisto::bloki();
     }
+}
+
+/// Kreu eksplicitan finpunkton por la procezo kaj redonu veran tenilon.
+///
+/// La alvokanto ricevas la petatajn permesojn. `TabeloPlena` se la kapabla aŭ
+/// la finpunkta tabelo ne plu havas liberan fendon; la kerno mem (`procezo 0`)
+/// ne havas kapablotabelon (C8).
+pub fn krei_finpunkton(procezo: ProcezaId, permesoj: Permesoj) -> Result<Tenilo, IpcEraro> {
+    let _gardo = InterrompaGardo::nova();
+    let tabelo = kapabloj(procezo).ok_or(IpcEraro::TabeloPlena)?;
+    let fendo_kapabla = tabelo.unua_libera().ok_or(IpcEraro::TabeloPlena)?;
+    let fendo_finpunkta = rezervi_finpunkton(procezo, 0, sekva_finpunkta_id())?;
+    let Some(tenilo) = Tenilo::nova(
+        fendo_kapabla as u8,
+        finpunktoj()[fendo_finpunkta as usize].generacio,
+    ) else {
+        finpunktoj()[fendo_finpunkta as usize].liberigu();
+        return Err(IpcEraro::TabeloPlena);
+    };
+    tabelo.eroj[fendo_kapabla] = KapabloEniro {
+        tenilo,
+        permesoj,
+        finpunkto: fendo_finpunkta,
+        uzata: true,
+    };
+    Ok(tenilo)
+}
+
+/// Fermu unu lokan kapablofendon. La finpunkto restas viva se aliaj referencoj
+/// ekzistas; ĝi nur malaperas kiam la lasta tenilo fermiĝas (`FERMI` neniam
+/// revokas, C14).
+pub fn fermi(procezo: ProcezaId, tenilo: Tenilo) -> Result<(), IpcEraro> {
+    let _gardo = InterrompaGardo::nova();
+    let tabelo = kapabloj(procezo).ok_or(IpcEraro::NevalidaTenilo)?;
+    let eniro = &mut tabelo.eroj[tenilo.indekso() as usize];
+    if !eniro.uzata || eniro.tenilo != tenilo {
+        return Err(IpcEraro::NevalidaTenilo);
+    }
+    let fendo = eniro.finpunkto as usize;
+    *eniro = KapabloEniro::libera();
+    let objekto = &mut finpunktoj()[fendo];
+    if !objekto.aktiva() || objekto.generacio != tenilo.generacio() {
+        return Err(IpcEraro::NevalidaTenilo);
+    }
+    objekto.referencoj = forprenu_referencon(objekto.referencoj);
+    if objekto.referencoj == 0 {
+        objekto.liberigu();
+    }
+    Ok(())
+}
+
+/// Ring 0-memtesto de la finpunktaj tabeloj, rulata antaŭ la unua `lanĉi()`.
+///
+/// La testo uzas la kapablolinion de la rezervita proceza identigilo `6`; la
+/// kerna linio `0` devas resti malplena. Ĉiuj kreitaj finpunktoj fermiĝas, do
+/// la stato revenas al la komenca (krom la generacioj).
+pub fn testi_tabelojn() {
+    let procezo: ProcezaId = 6;
+    let mut teniloj = [Tenilo::MALVALIDA; MAKSAJ_KAPABLOJ];
+    let mut nombro = 0;
+    while nombro < teniloj.len() {
+        match krei_finpunkton(procezo, Permesoj::PLENAJ) {
+            Ok(tenilo) => {
+                teniloj[nombro] = tenilo;
+                nombro += 1;
+            }
+            Err(IpcEraro::TabeloPlena) => break,
+            Err(eraro) => {
+                crate::skribu!("[ipc] tabeloj (MALBONE): neatendita eraro {:?}\n", eraro);
+                return;
+            }
+        }
+    }
+    let plena = matches!(
+        krei_finpunkton(procezo, Permesoj::PLENAJ),
+        Err(IpcEraro::TabeloPlena)
+    );
+    let unua = teniloj[0];
+    let mut fermitaj = 0;
+    for tenilo in &teniloj[..nombro] {
+        if fermi(procezo, *tenilo).is_ok() {
+            fermitaj += 1;
+        }
+    }
+    let duobla = matches!(fermi(procezo, unua), Err(IpcEraro::NevalidaTenilo));
+    let rekrea = krei_finpunkton(procezo, Permesoj::SENDI);
+    let nova_generacio = rekrea
+        .as_ref()
+        .is_ok_and(|tenilo| tenilo.indekso() == unua.indekso());
+    let malnova = matches!(fermi(procezo, unua), Err(IpcEraro::NevalidaTenilo));
+    if let Ok(tenilo) = rekrea {
+        let _ = fermi(procezo, tenilo);
+    }
+    let kerno = matches!(
+        krei_finpunkton(0, Permesoj::PLENAJ),
+        Err(IpcEraro::TabeloPlena)
+    );
+    let bone = nombro > 0
+        && nombro < MAKSAJ_FINPUNKTOJ
+        && plena
+        && fermitaj == nombro
+        && duobla
+        && nova_generacio
+        && malnova
+        && kerno;
+    crate::skribu!(
+        "[ipc] tabeloj ({}): kreitaj={}, plena={}, fermitaj={}, duobla_fermo={}, nova_generacio={}, malnova_tenilo={}, kerno={}\n",
+        if bone { "bone" } else { "MALBONE" },
+        nombro,
+        plena,
+        fermitaj,
+        duobla,
+        nova_generacio,
+        malnova,
+        kerno
+    );
 }
 
 #[cfg(kani)]
@@ -345,6 +706,77 @@ mod kani_tenilo {
                 let indekso = (kruda & 0xFF) as u8;
                 assert!(indekso > Tenilo::MAKSA_INDEKSO || kruda >> 8 == 0);
             }
+        }
+    }
+}
+
+#[cfg(kani)]
+mod kani_finpunktoj {
+    //! Pruvoj por la generacia kaj referenca aritmetiko kaj por la elekto de
+    //! libera finpunkta fendo.
+
+    use libmikerno::Tenilo;
+
+    use super::{
+        FinaPunktaStato, MAKSAJ_FINPUNKTOJ, elekti_liberan, forprenu_referencon, pliigita_generacio,
+    };
+
+    /// La sekva generacio estas strikte pli granda, neniam nula, kaj la fendo
+    /// emeritiĝas ekzakte ĉe la eluziĝo de la 24 bitoj.
+    #[kani::proof]
+    fn generacio_emeritigas() {
+        let generacio: u32 = kani::any();
+        match pliigita_generacio(generacio) {
+            Some(sekva) => {
+                assert!(generacio >= 1 && generacio < Tenilo::MAKSA_GENERACIO);
+                assert_eq!(sekva, generacio + 1);
+                assert!(sekva > generacio);
+                assert!(sekva <= Tenilo::MAKSA_GENERACIO);
+            }
+            None => assert!(generacio == 0 || generacio >= Tenilo::MAKSA_GENERACIO),
+        }
+    }
+
+    /// La referenckalkulo malaltiĝas per unu kaj saturiĝas ĉe nulo.
+    #[kani::proof]
+    fn referenco_saturigas() {
+        let referencoj: u16 = kani::any();
+        let post = forprenu_referencon(referencoj);
+        if referencoj == 0 {
+            assert_eq!(post, 0);
+        } else {
+            assert_eq!(post, referencoj - 1);
+        }
+    }
+
+    /// Se la elekto trovas fendon, ĝi estas la unua libera; se ĝi redonas
+    /// `None`, neniu fendo estas libera.
+    #[kani::proof]
+    #[kani::unwind(20)]
+    fn libera_fendo_elektita() {
+        let mut statoj = [FinaPunktaStato::Emerita; MAKSAJ_FINPUNKTOJ];
+        let mut indekso = 0;
+        while indekso < MAKSAJ_FINPUNKTOJ {
+            let valoro: u8 = kani::any();
+            statoj[indekso] = match valoro % 3 {
+                0 => FinaPunktaStato::Libera,
+                1 => FinaPunktaStato::Aktiva,
+                _ => FinaPunktaStato::Emerita,
+            };
+            indekso += 1;
+        }
+
+        let ekzistas = statoj.iter().any(|stato| *stato == FinaPunktaStato::Libera);
+        match elekti_liberan(&statoj) {
+            Some(fendo) => {
+                assert_eq!(statoj[fendo as usize], FinaPunktaStato::Libera);
+                let mut antaŭa = 0;
+                while antaŭa < fendo as usize {
+                    assert_ne!(statoj[antaŭa], FinaPunktaStato::Libera);
+                    antaŭa += 1;
+                }
+            }
+            None => assert!(!ekzistas),
         }
     }
 }

@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-13 · Versio de la workspace: 0.4.0
+> Stato: 2026-11-13 · Versio de la workspace: 0.4.1
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -26,7 +26,7 @@
 | M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj (0.1.5) |
 | M12 | Per-procesaj adresspacoj | Plenumita | Fazo 6: W^X laŭ sekcioj, `CR0.WP`, foliaj permesoj en sistemvokoj; Fazo 5: samtempaj procezoj `4`/`5`, sama sekreta adreso `0x200000000`, spiono `#PF` ĉe `0x200001000`, viktimo pluvivas; kadroj egalaj (0.2.5) |
 | M13 | Kerna memoro-firmigo: SMEP, SMAP, KASLR | Plenumita | Fazo 1 (0.3.0): `CR4.SMEP`, Ring 0-provo `#PF` (`erarkodo=0x11`); Fazo 2 (0.3.1): `CR4.SMAP`, `STAC`/`CLAC`, `SMAP-malobservo` (`erarkodo=0x1`); Fazo 3 (0.3.2): ET_DYN + `R_X86_64_RELATIVE`, hazarda bazo (`0x5400000`, `0xd200000`, `0x3000000` en tri startoj), ĉiuj scenaroj verdaj |
-| M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Parta | Fazo 1 (0.4.0): ABI 2 — `Tenilo`, `REVOKI`/`PLENAJ`, erar-kodoj `-9/-11/-28/-32/-90/-110`, vokoj 6–11 rezervitaj, A1-identeco, 13 Kani-pruvoj |
+| M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Parta | Fazo 1 (0.4.0): ABI 2 — `Tenilo`, `REVOKI`/`PLENAJ`, erar-kodoj `-9/-11/-28/-32/-90/-110`, vokoj 6–11 rezervitaj, A1-identeco, 13 Kani-pruvoj. Fazo 2 (0.4.1): `FinaPunktoObjekto`-tabelo, generacioj, referenckalkulo, kapablotabelo, `KREI_FINPUNKTON`/`FERMI`, defaŭlta finpunkto, 16 Kani-pruvoj |
 | M15 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
 | M16 | Konservado, dosiersistemo, ŝelo | Venonta | — |
 | M17 | CI, testoj, plena pruvaro | Venonta | — |
@@ -553,7 +553,7 @@ ekspluaton de konataj kernaj adresoj.
 - `cargo fmt --all -- --check` — pura.
 - `cargo clippy --workspace --release` — sen avertoj.
 - `cargo build --workspace --release` — sukcesa.
-- 13 Kani-pruvoj: 6 en `memoro/kadro.rs`, 7 en `kerno/ipc.rs`; ĉiuj maŝine
+- 16 Kani-pruvoj: 6 en `memoro/kadro.rs`, 10 en `kerno/ipc.rs`; ĉiuj maŝine
   pruvitaj per Kani 0.68.0 (CBMC 6.11.0) en WSL2 Ubuntu; vidu §4.6.
 - `just verify` difinas la formalan pordegon.
 
@@ -574,6 +574,9 @@ ekspluaton de konataj kernaj adresoj.
 | `kerno/ipc.rs` | `fifo_ordo_inter_fontoj` | 8 |
 | `kerno/ipc.rs` | `malplena_mesagujo_ricevas_nenion` | — |
 | `kerno/ipc.rs` | `tenilo_kodigo_roundtrip` | — |
+| `kerno/ipc.rs` | `generacio_emeritigas` | — |
+| `kerno/ipc.rs` | `referenco_saturigas` | — |
+| `kerno/ipc.rs` | `libera_fendo_elektita` | 20 |
 
 **Mankanta.**
 
@@ -768,10 +771,13 @@ Medio: WSL2 Ubuntu, deponejo kopiita al la hejma dosierujo (ext4; `/mnt/d` estas
 preterlasas la tutmondan `asm!`-eniron de la 64-bita starto, kiun CBMC ne
 modelas.
 
-Rezulto: `Complete - 13 successfully verified harnesses, 0 failures, 13 total.`
-La unuopaj `unwind`-limoj estas en la tabelo de §3 (M9). La nova pruvo
+Rezulto: `Complete - 16 successfully verified harnesses, 0 failures, 16 total.`
+La unuopaj `unwind`-limoj estas en la tabelo de §3 (M9). La pruvo
 `tenilo_kodigo_roundtrip` kovras la `Tenilo`-kodigon: valida paro revenas
-senŝanĝe, dum generacio `0` kaj indekso super `15` estas rifuzataj.
+senŝanĝe, dum generacio `0` kaj indekso super `15` estas rifuzataj. Ekde Fazo 2
+de M14 tri pliaj pruvoj kovras la finpunktajn generaciojn
+(`generacio_emeritigas`), la referenckalkulon (`referenco_saturigas`) kaj la
+elekton de libera fendo (`libera_fendo_elektita`).
 
 **Kial la pruvoj estas skribitaj tiel.** La unua plena rulo malsukcesis per
 «CBMC appears to have run out of memory» ĉe `fifo_ordo_inter_fontoj` — ne per
@@ -856,6 +862,7 @@ pli ol 3 GB al malpli ol 1 GB, kaj la tuta pordo fariĝas verda.
 | Dato | Fazo | Versio | Pruvo |
 | --- | --- | --- | --- |
 | 2026-11-13 | 1. ABI 2: `Tenilo`, permesoj, erar-kodoj, rezervitaj vokoj, A1-testo | 0.4.0 | `[ring3] procezo 4/5: idento (bone): sendinto=4/5 (uzanto asertis 999), ricevonto=4/5, resto_nula=jes`; `tenilo_kodigo_roundtrip`; 13 Kani-pruvoj; `size -A`: `.text` 76159, `.rodata` 50212, `.data` 4496, `.bss` 380928 B (bazo por la buĝeto C3) |
+| 2026-11-13 | 2. `FinaPunktoObjekto`, generacioj, referencoj, kapablotabelo, `KREI_FINPUNKTON`(6)/`FERMI`(11), defaŭlta finpunkto | 0.4.1 | `[ipc] tabeloj (bone): kreitaj=13, plena=true, fermitaj=13, duobla_fermo=true, nova_generacio=true, malnova_tenilo=true, kerno=true`; `[ring3] procezo 4: finpunktoj (bone): tenilo=1025, fermo=0, duobla=-9, malvalida=-9, nulaj_permesoj=-1, nekonataj_permesoj=-1, rekrea=1281, malnova=-9`; `[ring3] negativaj (F2): celo6=-3, celo0=-3`; `[fadeno 2] ricevis mesaĝon: tipo 1, ricevonto 2 (finpunkta id)`; A1 senŝanĝa; 16 Kani-pruvoj; `size -A`: `.text` 89871, `.rodata` 50724, `.data` 34808, `.bss` 364544 B — RAM-kresko (`.data`+`.bss`) 13928 B ≤ 20 KiB (C3) |
 
 **Akceptkriterioj.** Mesaĝo portas `sendinto`/`ricevonto`; revoko malvalidigas
 kapablon; plena vico ne perdas mesaĝojn; tempolimo vekas la ricevanton.

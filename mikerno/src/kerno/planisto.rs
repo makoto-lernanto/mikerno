@@ -307,6 +307,15 @@ pub fn veki(id: FadenoId) {
     planisto().veki(id);
 }
 
+/// Ĉu la identigilo apartenas al registrita, ankoraŭ viva fadeno? La ripoza
+/// kunteksto (`0`) ne estas mesaĝcelo. Vokata de IPC kun interrompoj malŝaltitaj.
+pub fn vivas(id: FadenoId) -> bool {
+    if id == RIPAZA_ID || id as usize > MAKSAJ_FADENOJ {
+        return false;
+    }
+    planisto().fadenoj[id as usize].is_some_and(|fadeno| fadeno.stato != FadenoStato::Mortinta)
+}
+
 /// Finu la nunan fadenon; la voko neniam revenas.
 ///
 /// Vokata de `SYS_FINI` kaj de la escepta dispetĉo por mortiginda uzanta

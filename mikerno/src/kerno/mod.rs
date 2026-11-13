@@ -28,7 +28,7 @@ pub fn kadra_alokilo() -> &'static mut KadraAlokilo {
 }
 
 pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.4.0!\n");
+    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.4.1!\n");
     if bazo == origino {
         crate::skribu!(
             "[kerno] KASLR malŝaltita: la bildo restas ĉe 0x{:x}\n",
@@ -157,6 +157,8 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         crate::skribu!("[kerno] fadena kreado malsukcesis: {:?}\n", eraro);
         return;
     }
+    registri_testajn_finpunktojn();
+    ipc::testi_tabelojn();
 
     let kapablo: ipc::Kapablo = ipc::FinaPunkto::nova(2, ipc::Permesoj::ĈIUJ).kapablo();
     if kapablo.permesoj.posedas(ipc::Permesoj::SENDI) {
@@ -356,6 +358,20 @@ fn krei_testajn_fadenojn() -> Result<(), planisto::PlanistaEraro> {
     Ok(())
 }
 
+/// Donu al ĉiu kerna testfadeno defaŭltan finpunkton, do la malnova IPC-vojo
+/// funkcias ankaŭ antaŭ ol ekzistas procezoj.
+fn registri_testajn_finpunktojn() {
+    for id in 1..=TESTAJ_FADENOJ as u64 {
+        if let Err(eraro) = ipc::registri_fadenon(id, 0) {
+            crate::skribu!(
+                "[ipc] fadeno {}: defaŭlta finpunkto malsukcesis: {:?}\n",
+                id,
+                eraro
+            );
+        }
+    }
+}
+
 /// Kreu kaj detruu la saman procezan spacon dek fojojn. Ĉiu ciklo muntas la
 /// bildon kaj preparas la stakon; la nombro de liberaj kadroj devas resti
 /// egala antaŭ kaj post la provo, do la detruo vere resorbas ĉion.
@@ -460,6 +476,19 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
         return false;
     }
 
+    // La defaŭlta finpunkto ekzistas antaŭ ol la fadeno eniras la planiston, do
+    // la malnova `SENDI`/`RICEVI`-vojo kaj la kapabla fendo `0` pretas ekde la
+    // unua Ring 3-instrukcio.
+    if let Err(eraro) = ipc::registri_fadenon(id, id) {
+        crate::skribu!(
+            "[uzanto] {}: defaŭlta finpunkto malsukcesis: {:?}\n",
+            id,
+            eraro
+        );
+        let _ = procezo::detrui(id, kadra_alokilo());
+        return false;
+    }
+
     let (stato, kerna_pinto, radiko, enirpunkto, kerna_mapo, privata, sekreta) = {
         let Some(procezo) = procezo::akiri(id) else {
             crate::skribu!("[procezo] {}: registro mankas\n", id);
@@ -533,13 +562,18 @@ fn testa_fadeno(id: u64) {
     } else if id == 2 {
         let mesago = ipc::ricevi_mesagon(0);
         crate::skribu!(
-            "[fadeno 2] ricevis mesaĝon: tipo {}, \"{}\"\n",
+            "[fadeno 2] ricevis mesaĝon: tipo {}, ricevonto {} (finpunkta id), \"{}\"\n",
             mesago.tipo,
+            mesago.ricevonto,
             teksto(&mesago)
         );
     } else if id == 3 {
         let mesago = ipc::ricevi_mesagon(1);
-        crate::skribu!("[fadeno 3] vekiĝis: \"{}\"\n", teksto(&mesago));
+        crate::skribu!(
+            "[fadeno 3] vekiĝis: ricevonto {}, \"{}\"\n",
+            mesago.ricevonto,
+            teksto(&mesago)
+        );
     }
 
     for fojo in 1..=10 {

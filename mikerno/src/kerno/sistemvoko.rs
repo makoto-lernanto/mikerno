@@ -7,10 +7,11 @@
 
 use core::mem::size_of;
 
-use libmikerno::Mesago;
 use libmikerno::syscall::{
-    SYS_CEDI, SYS_FERMI, SYS_FINI, SYS_KREI_FINPUNKTON, SYS_RICEVI, SYS_SENDI, SYS_SKRIBI,
+    SYS_CEDI, SYS_DONI, SYS_FERMI, SYS_FINI, SYS_KREI_FINPUNKTON, SYS_RICEVI, SYS_SENDI,
+    SYS_SENDI_TEMPO, SYS_SKRIBI,
 };
+use libmikerno::{Mesago, Permesoj, Tenilo};
 
 use crate::interrompo::{InterrompaKadro, InterrompaTraktilo, SISTEMVOKA_VEKTORO};
 use crate::kunhavigita::Kunhavigita;
@@ -26,6 +27,15 @@ pub const NEKONATA_VOKO: u64 = (-2i64) as u64;
 pub const NEVALIDA_CELLOKO: u64 = (-3i64) as u64;
 /// `-4`: la mesaĝujo de la celo estas plena.
 pub const MESAGUJO_PLENA: u64 = (-4i64) as u64;
+/// `-9`: la tenilo ne validas, la generacio malakordas aŭ la fendo fermiĝis.
+pub const NEVALIDA_TENILO: u64 = (-9i64) as u64;
+/// `-28`: la kapabla aŭ finpunkta tabelo estas plena.
+pub const TABELO_PLENA: u64 = (-28i64) as u64;
+
+const _: () = {
+    assert!(NEVALIDA_TENILO == libmikerno::syscall::NEVALIDA_TENILO as u64);
+    assert!(TABELO_PLENA == libmikerno::syscall::TABELO_PLENA as u64);
+};
 
 /// Maksimuma longo de unu `SYS_SKRIBI`-bufro.
 const MAKS_SKRIBO: usize = 4096;
@@ -47,9 +57,10 @@ pub fn voki(numero: usize, a0: u64, a1: u64, _a2: u64, _a3: u64, el_ring3: bool)
         SYS_CEDI => cedi(),
         SYS_SENDI => sendi(a0, a1, el_ring3),
         SYS_RICEVI => ricevi(a0, a1, el_ring3),
-        // La numeroj 6–11 apartenas al ABI-versio 2, sed la unua fazo de M14
-        // nur fiksas ilin: la efektivigo venas en la sekvaj fazoj.
-        SYS_KREI_FINPUNKTON..=SYS_FERMI => NEKONATA_VOKO,
+        SYS_KREI_FINPUNKTON => krei_finpunkton(a0),
+        SYS_FERMI => fermi(a0),
+        // `DONI`, `REVOKI` kaj la tempaj vokoj venas en la sekvaj fazoj de M14.
+        SYS_DONI..=SYS_SENDI_TEMPO => NEKONATA_VOKO,
         _ => NEKONATA_VOKO,
     }
 }
@@ -119,6 +130,41 @@ fn sendi(destinacio: u64, montrilo: u64, el_ring3: bool) -> u64 {
         Ok(()) => 0,
         Err(ipc::IpcEraro::NevalidaCelloko) => NEVALIDA_CELLOKO,
         Err(ipc::IpcEraro::MesagujoPlena) => MESAGUJO_PLENA,
+        Err(ipc::IpcEraro::NevalidaTenilo) => NEVALIDA_TENILO,
+        Err(ipc::IpcEraro::TabeloPlena) => TABELO_PLENA,
+    }
+}
+
+/// `rdi` = permesoj; `0` aŭ nekonata bito estas malĝusta argumento.
+fn krei_finpunkton(permesoj: u64) -> u64 {
+    if permesoj >> 8 != 0 {
+        return MALĜUSTA_ARG;
+    }
+    let Some(permesoj) = Permesoj::el_bitoj(permesoj as u8) else {
+        return MALĜUSTA_ARG;
+    };
+    if permesoj.bitoj() == 0 {
+        return MALĜUSTA_ARG;
+    }
+    match ipc::krei_finpunkton(planisto::nuna_procezo(), permesoj) {
+        Ok(tenilo) => tenilo.nombro() as u64,
+        Err(ipc::IpcEraro::NevalidaTenilo) => NEVALIDA_TENILO,
+        Err(_) => TABELO_PLENA,
+    }
+}
+
+/// `rdi` = tenilo; fermas nur la lokan kapablofendon de la nuna procezo.
+fn fermi(tenilo: u64) -> u64 {
+    if tenilo > u32::MAX as u64 {
+        return NEVALIDA_TENILO;
+    }
+    let Some(tenilo) = Tenilo::el_nombro(tenilo as u32) else {
+        return NEVALIDA_TENILO;
+    };
+    match ipc::fermi(planisto::nuna_procezo(), tenilo) {
+        Ok(()) => 0,
+        Err(ipc::IpcEraro::NevalidaTenilo) => NEVALIDA_TENILO,
+        Err(_) => MALĜUSTA_ARG,
     }
 }
 
@@ -228,13 +274,22 @@ pub fn testi_ring0() {
         [teksto.as_ptr() as u64, (MAKS_SKRIBO + 1) as u64, 0, 0],
     );
     let cedo = invoki(SYS_CEDI, [0; 4]);
+    // La kerno ne havas kapablolinion (C8), do `KREI_FINPUNKTON` rifuzas per
+    // `-28`; la nula tenilo estas ĉiam malvalida, do `FERMI` redonas `-9`.
+    let krei = invoki(
+        SYS_KREI_FINPUNKTON,
+        [Permesoj::PLENAJ.bitoj() as u64, 0, 0, 0],
+    );
+    let fermi = invoki(SYS_FERMI, [0; 4]);
     crate::skribu!(
-        "[sistemvoko] Ring 0-memtesto: skribo={}, nekonata={}, nula={}, troa={}, cedo={}\n",
+        "[sistemvoko] Ring 0-memtesto: skribo={}, nekonata={}, nula={}, troa={}, cedo={}, krei={}, fermi={}\n",
         skribo as i64,
         nekonata as i64,
         nula as i64,
         troa as i64,
-        cedo as i64
+        cedo as i64,
+        krei as i64,
+        fermi as i64
     );
 }
 

@@ -20,7 +20,9 @@ use crate::memoro::virtuala::{AdresaSpaco, FizikaAdreso, PaĝaEraro};
 
 pub type ProcezaId = u64;
 
-const MAKSAJ_PROCEZOJ: usize = 8;
+/// La proceza tabelo havas 8 liniojn: `0` estas la kerno kaj `1..=7` estas
+/// uzantaj procezoj (C8).
+pub const MAKSAJ_PROCEZOJ: usize = 8;
 const KERNA_STAKO_GRANDE: usize = 16 * 1024;
 
 #[repr(align(16))]

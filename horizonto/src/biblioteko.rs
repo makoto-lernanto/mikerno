@@ -7,7 +7,7 @@
 
 use core::fmt::{self, Write};
 
-pub use libmikerno::kapablo::Kapablo;
+pub use libmikerno::kapablo::{Kapablo, Permesoj, Tenilo};
 pub use libmikerno::mesago::Mesago;
 
 /// Skribu tekston al la kerna konzolo.
@@ -64,6 +64,16 @@ pub fn sendi(kapablo: Kapablo, mesago: &Mesago) -> isize {
 /// Ricevu mesaĝon tra la kapablo en `celo`.
 pub fn ricevi(kapablo: Kapablo, celo: &mut Mesago) -> isize {
     libmikerno::syscall::ricevi(kapablo, celo)
+}
+
+/// Kreu finpunkton kun la donitaj permesoj; `> 0` estas la tenila nombro.
+pub fn krei_finpunkton(permesoj: Permesoj) -> isize {
+    libmikerno::syscall::krei_finpunkton(permesoj)
+}
+
+/// Fermu la lokan tenilon de finpunkto.
+pub fn fermi(tenilo: Tenilo) -> isize {
+    libmikerno::syscall::fermi(tenilo)
 }
 
 /// Cedu la procesoron al la planisto.

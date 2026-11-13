@@ -22,6 +22,19 @@ impl Permesoj {
     pub const fn posedas(&self, permeso: Self) -> bool {
         self.0 & permeso.0 == permeso.0
     }
+
+    /// La krudaj permes-bitoj, uzataj sur la sistemvoka limo.
+    pub const fn bitoj(&self) -> u8 {
+        self.0
+    }
+
+    /// Kunmetu permesojn el krudaj bitoj; `None` se iu bito estas nekonata.
+    pub const fn el_bitoj(bitoj: u8) -> Option<Self> {
+        if bitoj & !Self::PLENAJ.0 != 0 {
+            return None;
+        }
+        Some(Self(bitoj))
+    }
 }
 
 /// 32-bita kapabla tenilo: 8 bitoj da indekso kaj 24 bitoj da generacio.
