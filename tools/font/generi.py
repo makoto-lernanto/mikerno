@@ -37,13 +37,10 @@ ALDONAJ = "ĉĈĝĜĥĤĵĴŝŜŭŬ«»‹›"
 SIGNOJ = [chr(kodo) for kodo in range(0x20, 0x7F)] + list(ALDONAJ)
 
 KANDIDATOJ = [
-    Path.home()
-    / "AppData/Local/Python/pythoncore-3.15-64/Lib/site-packages"
-    / "matplotlib/mpl-data/fonts/ttf/DejaVuSansMono.ttf",
     Path("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf"),
     Path("/usr/share/fonts/dejavu/DejaVuSansMono.ttf"),
     Path("/usr/share/fonts/TTF/DejaVuSansMono.ttf"),
-    Path("C:/Windows/Fonts/DejaVuSansMono.ttf"),
+    Path.home() / ".local/share/fonts/DejaVuSansMono.ttf",
 ]
 DEFAULT_FONT = next((p for p in KANDIDATOJ if p.is_file()), KANDIDATOJ[0])
 

@@ -99,15 +99,47 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
 ## Rapida starto
 
+### Windows: antaŭkondiĉo — WSL2
+
+La projekto estas konstruata kaj rulata nur ene de WSL2 (Ubuntu). Windows servas
+nur kiel gastiganto: `cmd`, PowerShell, Git Bash kaj la Windows-eldonoj de QEMU
+kaj xorriso ne estas uzataj de la konstruo.
+
+En PowerShell kun administraj rajtoj, unufoje agordu WSL2 kaj Ubuntu:
+
+```powershell
+wsl --install -d Ubuntu
+```
+
+Post restarto kaj la unua agordo de Ubuntu, ene de la WSL-terminalo:
+
+```sh
+sudo apt update
+sudo apt install -y build-essential qemu-system-x86 xorriso
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
+rustup target add x86_64-unknown-none
+cargo install just          # opcia
+```
+
+- **Grafikaĵo.** Por vidi la QEMU-fenestron necesas WSLg (Windows 11, aŭ
+  ĝisdatigita Windows 10). Sen WSLg uzu `QEMU_DISPLAY=none` por senhoma rulado.
+- **Loko de la deponejo.** Klonu en la Linuksan dosiersistemon (ekz.
+  `~/mikerno`), ne en `/mnt/c/…`: la 9p-muntado estas multe pli malrapida, kaj
+  Kani/CBMC povas elĉerpi la memoron dum la konstruo.
+- **Kani** (nur por `just verify`) instaliĝas aparte per
+  `cargo install --locked kani-verifier` kaj `cargo kani setup`.
+
 ### Postuloj
 
 | Ilo | Versio / noto |
 | --- | --- |
 | Rust | 1.100 aŭ pli nova (eldono 2024); projekto kontrolita per 1.100.0 |
 | Cela triopo | `x86_64-unknown-none` |
-| QEMU | `qemu-system-x86_64` (Windows: `C:\Program Files\qemu`) |
+| QEMU | `qemu-system-x86_64` (`sudo apt install qemu-system-x86`) |
+| xorriso | Nur por `just iso` (`sudo apt install xorriso`) |
 | `just` | Opcia, sed rekomendata por la difinitaj taskoj |
-| Git Bash | Bezonata sur Windows por `tools/run-qemu.sh` |
+| bash | Lanĉilo de `tools/run-qemu.sh` |
 | Kani | Nur por `just verify` (`cargo kani`) |
 
 Instalu la celan triopon:
@@ -135,8 +167,8 @@ cargo build -p mikerno --release
 cargo run -p mikerno --release          # uzas la `runner`-on el .cargo/config.toml
 ```
 
-`.cargo/config.toml` fiksas la celon `x86_64-unknown-none` kaj, sur Windows,
-lanĉas QEMU per `tools\run-qemu.cmd`. Sur Linux vi povas voki rekte:
+`.cargo/config.toml` fiksas la celon `x86_64-unknown-none` kaj lanĉas QEMU per
+`bash tools/run-qemu.sh`. Vi povas voki la lanĉilon ankaŭ rekte:
 
 ```sh
 tools/run-qemu.sh release
@@ -145,8 +177,9 @@ QEMU_DISPLAY=none tools/run-qemu.sh iso   # senkapa ISO-starto
 ```
 
 En la QEMU-konzolo: `Ctrl+A x` tuj finas QEMU, `Ctrl+A c` malfermas la
-monitoron (tie `quit`). La `-serial mon:stdio` muntado estas necesa ĉar
-Windows-QEMU forprenas `ENABLE_PROCESSED_INPUT` de la konzolo.
+monitoron (tie `quit`). La `-serial mon:stdio` muntado estas necesa ĉar `Ctrl+C`
+alie sendiĝas al la guest kiel bajto `0x03`. En WSL2 sen WSLg uzu
+`QEMU_DISPLAY=none` por la ISO-vojo.
 
 > **Atentu:** `mikerno.iso` kaj `iso_root/` estas ignorataj de git. Post ĉiu
 > kerna ŝanĝo rerulu `just iso`; alie la ISO enhavos malnovan bildon. Tio
@@ -618,7 +651,7 @@ tie vere cedas la procesoron).
 ## Konstruado kaj kontrolado
 
 Kontrolo farita la **2026-11-13** per Rust 1.100.0 (la minimuma subtenata
-versio) sur Windows:
+versio) en WSL2 (Ubuntu):
 
 ```sh
 cargo build --workspace --release
@@ -825,10 +858,9 @@ horizonto: procezo vekis en Ring 3.
 │   ├── build.rs, linker.ld     # 0x1_0000_0000 (4 GiB)
 │   └── src/{main,biblioteko}.rs
 ├── tools/
-│   ├── run-qemu.sh / .cmd
+│   ├── run-qemu.sh             # QEMU-lanĉilo por WSL2/Linux
 │   ├── font/generi.py          # DejaVu → bitmapaj strekoj
-│   ├── limine/                 # praŝarĝilo (binaraj dosieroj)
-│   └── xorriso/                # ISO-kreado sur Windows
+│   └── limine/                 # praŝarĝilo (binaraj dosieroj)
 ├── third_party/dejavu/         # permesilo de la fonto
 └── docs/
     ├── MEJLOSTONOJ.md          # mejloŝtonoj kaj pruvaro
@@ -913,9 +945,11 @@ Enigitaj triaj komponantoj:
 | Komponanto | Loko | Noto |
 | --- | --- | --- |
 | Limine | `tools/limine/` | Praŝarĝilo por la ISO (Multiboot2) |
-| xorriso | `tools/xorriso/` | Nur por krei la ISO-on sur Windows |
 | DejaVu Sans Mono (bitmapaj strekoj) | `mikerno/src/ekrano/fonto/` | Rasterigita el DejaVu Sans Mono; permesilo Bitstream Vera + Arev en `third_party/dejavu/LICENSE.txt` |
 | `tools/font/generi.py` | `tools/font/` | Generilo por la kvar strekoj; postulas Python 3 kaj Pillow |
+
+`xorriso` ne estas enigita en la deponejon; `just iso` uzas la sisteman
+pakaĵon (vidu [Postuloj](#postuloj)).
 
 La bitaj tabeloj estas derivaĵoj de DejaVu Sans Mono. La permesilo postulas,
 ke la kopirajtaj kaj permesaj tekstoj estu kunigitaj kun la fontprogramaro —

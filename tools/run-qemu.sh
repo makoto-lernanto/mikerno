@@ -8,14 +8,12 @@
 #   tools/run-qemu.sh <vojo-al-iso>
 #
 # Por ISO la fenestro de QEMU montras la Limine-menuon; QEMU_DISPLAY=none
-# ebligas senkapan ruladon.
+# ebligas senkapan ruladon (necesa en WSL2 sen WSLg).
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ARG="${1:-debug}"
-# `cargo run` pasigas Windows-stilan vojon; normaligu ĝin por Git Bash.
-ARG="${ARG//\\//}"
 
 ISO=""
 if [[ "$ARG" == "iso" ]]; then
@@ -65,10 +63,8 @@ QEMU="${QEMU:-}"
 if [[ -z "$QEMU" ]]; then
     if command -v qemu-system-x86_64 >/dev/null 2>&1; then
         QEMU="qemu-system-x86_64"
-    elif [[ -x "/c/Program Files/qemu/qemu-system-x86_64.exe" ]]; then
-        QEMU="/c/Program Files/qemu/qemu-system-x86_64.exe"
     else
-        echo "qemu-system-x86_64 ne trovita; agordu QEMU=/vojo/al/qemu-system-x86_64" >&2
+        echo "qemu-system-x86_64 ne trovita; instalu ĝin (sudo apt install qemu-system-x86) aŭ agordu QEMU=/vojo/al/qemu-system-x86_64" >&2
         exit 1
     fi
 fi
@@ -79,13 +75,13 @@ fi
 CPU_ARGS=(-cpu "${QEMU_CPU:-qemu64,+smep,+smap}")
 
 # `mon:stdio` muxas la serian konzolon kaj la QEMU-monitoron sur la sama
-# terminalo. Tio necesas ĉar Windows-QEMU forprenas `ENABLE_PROCESSED_INPUT`
-# de la konzolo: Ctrl+C ne plu finas la procezon, ĝi nur sendiĝas al la guest
-# kiel bajto 0x03. Por eliri uzu:
+# terminalo. Ctrl+C tiam sendiĝas al la guest kiel bajto 0x03 anstataŭ fini
+# QEMU. Por eliri uzu:
 #   Ctrl+A x   — tuj fini QEMU
 #   Ctrl+A c   — ŝalti la monitoron (tie: `quit`)
 if [[ -n "$ISO" ]]; then
-    # SDL evitas la GTK-temajn SVG-avertojn de la Windows-eldono de QEMU.
+    # SDL-fenestro funkcias en WSLg kaj sur ordinara Linux-labortablo; sen
+    # grafika medio uzu QEMU_DISPLAY=none.
     DISPLAY_ARGS=(-display "${QEMU_DISPLAY:-sdl}")
     exec "$QEMU" \
         -cdrom "$ISO" \

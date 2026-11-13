@@ -13,4 +13,4 @@ rustflags = [
 ]
 
 [target.'cfg(all(target_arch = "x86_64", target_os = "none"))']
-runner = 'cmd /c tools\run-qemu.cmd'
+runner = 'bash tools/run-qemu.sh'

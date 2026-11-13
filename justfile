@@ -1,4 +1,5 @@
 # MiKerno: konstruado, PVH-rulado kaj ISO-rulado.
+# Postulas bash, QEMU (`qemu-system-x86`) kaj, por `iso`, la sisteman `xorriso`.
 
 kerno := "target/x86_64-unknown-none/release/mikerno"
 bildo := "mikerno.iso"
@@ -22,6 +23,7 @@ run: build-kerno
 
 # Kunmetu praŝarĝeblan ISO-on (Limine + Multiboot2).
 iso: build-kerno
+    @command -v xorriso >/dev/null || { echo "xorriso ne trovita; instalu ĝin: sudo apt install xorriso" >&2; exit 1; }
     cargo build -p horizonto --release
     rm -rf iso_root
     mkdir -p iso_root
@@ -33,7 +35,7 @@ iso: build-kerno
     cp tools/limine/limine-uefi-cd.bin iso_root/
     mkdir -p iso_root/EFI/BOOT
     cp tools/limine/EFI/BOOT/BOOTX64.EFI iso_root/EFI/BOOT/
-    tools/xorriso/xorriso.exe -as mkisofs -b limine-bios-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table --efi-boot limine-uefi-cd.bin -efi-boot-part --efi-boot-image --protective-msdos-label iso_root -o {{bildo}}
+    xorriso -as mkisofs -b limine-bios-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table --efi-boot limine-uefi-cd.bin -efi-boot-part --efi-boot-image --protective-msdos-label iso_root -o {{bildo}}
 
 # Rulu la ISO-on en QEMU; la fenestro montras la Limine-menuon.
 run-iso: iso

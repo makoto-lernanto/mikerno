@@ -47,7 +47,7 @@ uzantspaco, riproduktebla per unu komando.
   `edition = "2024"`, `rust-version = "1.85"` (altigita al `1.100` la
   2026-11-13; vidu §4.5), `resolver = "2"`.
 - `.cargo/config.toml` — cela triopo `x86_64-unknown-none`, `rust-lld`,
-  `relocation-model=static`, kaj Windows-runner al `tools\run-qemu.cmd`.
+  `relocation-model=pic`, kaj runner al `bash tools/run-qemu.sh` (WSL2/Linux).
 - `justfile` — `build-all`, `build-kerno`, `build`, `run`, `iso`, `run-iso`,
   `verify`.
 - `build.rs` en la kerno kaj en `horizonto` — ĉiu crate liveras sian propran
@@ -589,7 +589,8 @@ etaj abstraktaĵoj, kaj aldoni testojn por la arkitekture sendependaj partoj
 
 ## 4. Pruvprotokolo de 2026-11-12
 
-Medio: Windows, Rust 1.99.1, QEMU 256 MiB, Git Bash.
+Medio: WSL2 Ubuntu, Rust 1.99.1, QEMU 256 MiB. (La protokolo estis unue
+farita sur Windows per Git Bash; la komandoj samas en WSL2.)
 
 ### 4.1 Statika kontrolo
 
@@ -833,7 +834,7 @@ procezon.
 
 **Celo.** Ripetebla, pruvita kaj dokumentita projekto.
 
-**Taskoj.** CI (Linux + Windows), Kani en CI, testoj por arkitekture sendependaj
+**Taskoj.** CI (Linux), Kani en CI, testoj por arkitekture sendependaj
 moduloj, QEMU-matrico (BIOS/UEFI, diversaj memorkvantoj), `cargo-deny` /
 permesila kontrolo, `LICENSE`, regenerado de la ISO en CI.
 
