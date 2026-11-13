@@ -243,7 +243,7 @@ pub trait PaĝaTablo {
         alokilo: &mut KadraAlokilo,
     ) -> Result<(), PaĝaEraro> {
         kontroli_fenestron(komenco.adreso(), longo)?;
-        if komenco.adreso() % KADRA_GRANDO != 0 {
+        if !komenco.adreso().is_multiple_of(KADRA_GRANDO) {
             return Err(PaĝaEraro::NevalidaAdreso);
         }
         let paĝoj = longo.div_ceil(KADRA_GRANDO as usize);
@@ -356,7 +356,7 @@ pub trait AdresaSpaco: PaĝaTablo {
         permesoj: PaĝaPermesoj,
         alokilo: &mut KadraAlokilo,
     ) -> Result<(), PaĝaEraro> {
-        if komenco.adreso() % KADRA_GRANDO != 0 {
+        if !komenco.adreso().is_multiple_of(KADRA_GRANDO) {
             return Err(PaĝaEraro::NevalidaAdreso);
         }
         if longo == 0 {

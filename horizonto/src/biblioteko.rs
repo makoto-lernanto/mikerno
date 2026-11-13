@@ -49,10 +49,10 @@ impl Write for Bufro {
 /// alia procezo inter du linioj.
 pub fn skribi_formaton(argumentoj: fmt::Arguments<'_>) {
     let mut bufro = Bufro::nova();
-    if bufro.write_fmt(argumentoj).is_ok() {
-        if let Ok(teksto) = core::str::from_utf8(&bufro.bajtoj[..bufro.longo]) {
-            skribi(teksto);
-        }
+    if bufro.write_fmt(argumentoj).is_ok()
+        && let Ok(teksto) = core::str::from_utf8(&bufro.bajtoj[..bufro.longo])
+    {
+        skribi(teksto);
     }
 }
 

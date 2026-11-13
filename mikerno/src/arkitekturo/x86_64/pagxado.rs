@@ -201,7 +201,9 @@ impl PaĝaTablo for X86AdresaSpaco {
         permesoj: PaĝaPermesoj,
         alokilo: &mut KadraAlokilo,
     ) -> Result<(), PaĝaEraro> {
-        if virtuala.adreso() % KADRA_GRANDO != 0 || fizika.adreso() % KADRA_GRANDO != 0 {
+        if !virtuala.adreso().is_multiple_of(KADRA_GRANDO)
+            || !fizika.adreso().is_multiple_of(KADRA_GRANDO)
+        {
             return Err(PaĝaEraro::NevalidaAdreso);
         }
 

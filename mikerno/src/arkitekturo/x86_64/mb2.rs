@@ -39,7 +39,7 @@ pub fn analizi(informo: *const u8) -> Result<EniraInformo, EniraEraro> {
         return Err(EniraEraro::NevalidaStarto);
     }
     let tuta = unsafe { legi_u32(informo) } as usize;
-    if tuta < KAPA_GRANDO || tuta % 8 != 0 || unsafe { legi_u32(informo.add(4)) } != 0 {
+    if tuta < KAPA_GRANDO || !tuta.is_multiple_of(8) || unsafe { legi_u32(informo.add(4)) } != 0 {
         return Err(EniraEraro::NevalidaMagio);
     }
 

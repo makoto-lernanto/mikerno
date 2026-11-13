@@ -45,16 +45,16 @@ pub fn bazo() -> u64 {
 pub fn hazardigi(starta_informo: *const u8, magio: u32) -> ! {
     let origino = bazo();
     let bildo = bilda_grando();
-    if let Ok(informo) = crate::arkitekturo::analizi_eniron(starta_informo, magio) {
-        if let Some(bazo) = elekti_bazon(&informo, bildo, origino) {
-            kopii(origino, bazo, bildo);
-            if relokigi(bazo, bildo) {
-                // SAFETY: `bazo` estas 2 MiB-aliniiĝinta regiono tute ene de
-                // uzebla RAM, ekster la bildo, la moduloj kaj la praŝarĝaj
-                // strukturoj; la kopio kaj la relokado finiĝis, do la salto en
-                // la kopion trovas plenan bildon kun la ĝusta stako.
-                unsafe { kerna_salto_al_kopio(starta_informo, magio, bazo, origino) }
-            }
+    if let Ok(informo) = crate::arkitekturo::analizi_eniron(starta_informo, magio)
+        && let Some(bazo) = elekti_bazon(&informo, bildo, origino)
+    {
+        kopii(origino, bazo, bildo);
+        if relokigi(bazo, bildo) {
+            // SAFETY: `bazo` estas 2 MiB-aliniiĝinta regiono tute ene de uzebla
+            // RAM, ekster la bildo, la moduloj kaj la praŝarĝaj strukturoj; la
+            // kopio kaj la relokado finiĝis, do la salto en la kopion trovas
+            // plenan bildon kun la ĝusta stako.
+            unsafe { kerna_salto_al_kopio(starta_informo, magio, bazo, origino) }
         }
     }
     // Ankaŭ sen kopio la relokoj devas esti aplikataj: la ligilo lasas la celajn
@@ -177,7 +177,7 @@ fn relokigi(bazo: u64, bildo: u64) -> bool {
     let komenco = &raw const __rela_komenco as u64;
     let fino = &raw const __rela_fino as u64;
     let erogrando = core::mem::size_of::<Elf64Rela>() as u64;
-    if fino < komenco || (fino - komenco) % erogrando != 0 {
+    if fino < komenco || !(fino - komenco).is_multiple_of(erogrando) {
         return false;
     }
     let nombro = ((fino - komenco) / erogrando) as usize;

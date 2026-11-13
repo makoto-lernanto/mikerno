@@ -37,7 +37,7 @@ struct TemporizilaTraktilo;
 impl InterrompaTraktilo for TemporizilaTraktilo {
     fn trakta(&self, _kadro: &mut InterrompaKadro) {
         let tiko = TIKOJ.fetch_add(1, Ordering::Relaxed) + 1;
-        if tiko <= 5 || tiko % 100 == 0 {
+        if tiko <= 5 || tiko.is_multiple_of(100) {
             crate::skribu!("[horloĝo] tiko {}\n", tiko);
         }
         // La aparata EOI jam estis sendita de la dispetĉo.

@@ -44,7 +44,8 @@ uzantspaco, riproduktebla per unu komando.
 **Efektivigo.**
 
 - `Cargo.toml` — workspace kun `mikerno`, `libmikerno`, `horizonto`;
-  `edition = "2024"`, `rust-version = "1.85"`, `resolver = "2"`.
+  `edition = "2024"`, `rust-version = "1.85"` (altigita al `1.100` la
+  2026-11-13; vidu §4.5), `resolver = "2"`.
 - `.cargo/config.toml` — cela triopo `x86_64-unknown-none`, `rust-lld`,
   `relocation-model=static`, kaj Windows-runner al `tools\run-qemu.cmd`.
 - `justfile` — `build-all`, `build-kerno`, `build`, `run`, `iso`, `run-iso`,
@@ -717,6 +718,26 @@ kadroj antaŭ, 63507 post`).
    `.text`, do ili falis en la nurlegan antaŭkodon kaj la unua alvoko trioble
    fuŝis. La riparo kunigas `*(.ltext .ltext.*)` en `.text`; oni kontrolu la
    sekcian aranĝon per `llvm-readobj --sections` post ŝanĝoj de la linker-skripto.
+
+### 4.5 Ripeto per Rust 1.100.0 (2026-11-13)
+
+La minimuma subtenata Rust-versio altiĝis de `1.85` al `1.100`
+(`Cargo.toml`, `workspace.package`). La projekto celas unu aktualan eldonilon
+kaj ne subtenas malnovajn ilojn, kiujn neniu el la testmedioj uzas.
+
+La tuta workspace estis rekompilita de nulo per Rust 1.100.0:
+
+| Kontrolo | Rezulto |
+| --- | --- |
+| `cargo build --workspace --release` | Sukceso en 5.76 s |
+| `cargo clippy --workspace --release` | Sukceso, sen avertoj (post riparo de 12 novaj lintoj) |
+| `cargo fmt --all -- --check` | Neniu diferenco |
+| PVH-starto (`qemu64,+smep,+smap`) | Verda: `KASLR: kerna bazo 0x800000`, `reuzo (bone): 10 cikloj, 64839 kadroj antaŭ, 64839 post`, `izolado (bone): 64839 kadroj antaŭ, 64839 post`, 5 mortintaj fadenoj, `SMAP-malobservo` mortigas nur la Ring 3-procezon |
+
+La novaj lintoj estis `manual_is_multiple_of` (9) kaj `collapsible_if` (3); ili
+estis riparitaj per `is_multiple_of()` kaj `let`-ĉenoj, do la konduto ne
+ŝanĝiĝis. La ISO ne estis regenerita por ĉi tiu ŝanĝo: la aliformigoj estas
+semantike ekvivalentaj kaj la PVH-starto pruvas la novan konstruaĵon.
 
 ---
 

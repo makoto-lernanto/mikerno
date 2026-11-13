@@ -73,7 +73,7 @@ fn elekti_tiparon(larĝo: u32, alto: u32) -> &'static fonto::Tiparo {
 /// Ŝaltu la framebuffer-konzolon; `false` se la framebuffer ne taŭgas.
 pub fn pravalorizi(informo: FramebufferInformo) -> bool {
     if informo.bazo == 0
-        || informo.bazo % 4 != 0
+        || !informo.bazo.is_multiple_of(4)
         || informo.bpp != 32
         || informo.larĝo < MINIMUMA_LARĜO
         || informo.alto < MINIMUMA_ALTO

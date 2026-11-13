@@ -28,7 +28,7 @@ struct KernaStako(#[allow(dead_code)] [u8; KERNA_STAKO_GRANDE]);
 
 // La grando estas multoblo de 16, do ankaŭ la pinto restas 16-bajte
 // aliniiĝinta, kion postulas la x86-64-ABI kaj la interrompa kadro.
-const _: () = assert!(KERNA_STAKO_GRANDE % 16 == 0);
+const _: () = assert!(KERNA_STAKO_GRANDE.is_multiple_of(16));
 
 /// La kernaj stakoj apartenas al la procezaj fenestroj de la tabelo: ili vivas
 /// en `.bss` de la kerna bildo, kiun ĉiu proceza spaco kunhavas.
@@ -181,12 +181,12 @@ pub unsafe fn aktivigi(id: ProcezaId) {
             procezo.radika_adreso()
         })
     };
-    if let Some(radiko) = radiko {
-        if arkitekturo::aktiva_adreso_spaco() != radiko.adreso() {
-            // SAFETY: la alvokanto garantias Ring 0 kun interrompoj malŝaltitaj;
-            // la celo estas viva kerna aŭ proceza `PML4` kun kunhavataj mapoj.
-            unsafe { arkitekturo::ŝalti_adresan_spacon(radiko.adreso()) };
-        }
+    if let Some(radiko) = radiko
+        && arkitekturo::aktiva_adreso_spaco() != radiko.adreso()
+    {
+        // SAFETY: la alvokanto garantias Ring 0 kun interrompoj malŝaltitaj;
+        // la celo estas viva kerna aŭ proceza `PML4` kun kunhavataj mapoj.
+        unsafe { arkitekturo::ŝalti_adresan_spacon(radiko.adreso()) };
     }
     arkitekturo::agordi_kernostakon(pinto);
 }

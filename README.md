@@ -19,7 +19,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 - **Versio:** 0.3.2 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
-- **Eldono de Rust:** 2024, `rust-version = 1.85`
+- **Eldono de Rust:** 2024, `rust-version = 1.100`
 - **Statuso:** funkcianta prototipo — vidu [Mejloŝtonoj](docs/MEJLOSTONOJ.md)
 
 ---
@@ -103,7 +103,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
 | Ilo | Versio / noto |
 | --- | --- |
-| Rust | 1.85 aŭ pli nova (eldono 2024); projekto kontrolita per 1.99.1 |
+| Rust | 1.100 aŭ pli nova (eldono 2024); projekto kontrolita per 1.100.0 |
 | Cela triopo | `x86_64-unknown-none` |
 | QEMU | `qemu-system-x86_64` (Windows: `C:\Program Files\qemu`) |
 | `just` | Opcia, sed rekomendata por la difinitaj taskoj |
@@ -617,11 +617,12 @@ tie vere cedas la procesoron).
 
 ## Konstruado kaj kontrolado
 
-Kontrolo farita la **2026-11-12** per Rust 1.99.1 sur Windows:
+Kontrolo farita la **2026-11-13** per Rust 1.100.0 (la minimuma subtenata
+versio) sur Windows:
 
 ```sh
 cargo build --workspace --release
-#   Finished `release` profile [optimized] target(s) in 6.55s
+#   Finished `release` profile [optimized] target(s) in 5.76s
 
 cargo clippy --workspace --release
 #   Finished `release` profile ... (neniu averto)
@@ -630,7 +631,10 @@ cargo fmt --all -- --check
 #   (neniu diferenco)
 ```
 
-Ĉiuj tri praŝarĝaj vojoj estis praktike testitaj per QEMU 256 MiB:
+Ĉiuj tri praŝarĝaj vojoj estis praktike testitaj per QEMU 256 MiB (matrico de
+la 2026-11-12 per Rust 1.99.1; la PVH-vojo ripetiĝis la 2026-11-13 per
+1.100.0 kun samaj rezultoj, `KASLR: kerna bazo 0x800000`, `izolado (bone):
+64839 kadroj antaŭ, 64839 post`):
 
 | Vojo | Rezulto |
 | --- | --- |
