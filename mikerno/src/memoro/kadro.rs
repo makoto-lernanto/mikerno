@@ -219,6 +219,8 @@ mod kani_proofs {
                 modelo.marki(indekso, true);
                 indekso += 1;
             }
+            // Produktaj `aloki`-vokoj ankaŭ antaŭenigus `sekva`.
+            modelo.sekva = uzataj;
             modelo
         }
 

@@ -166,6 +166,9 @@ mod kani_proofs {
     //! interrompoj kaj de tutmonda stato, kiuj ne estas modeligeblaj per Kani
     //! sen eliri la no_std-medion. La pruvoj do celas la enan `Mesagujo`-kodon,
     //! kiun ambaŭ funkcioj rekte uzas.
+    //!
+    //! La `unwind`-limo 70 kovras la 64-bajan kopion de `Mesago::nova` kaj la
+    //! 16-ŝtupan vicon.
 
     use crate::kerno::objekto::FadenoId;
 
@@ -197,7 +200,7 @@ mod kani_proofs {
 
     /// Plena mesaĝujo rifuzas pliajn mesaĝojn sen ŝanĝi `nombro`.
     #[kani::proof]
-    #[kani::unwind(20)]
+    #[kani::unwind(70)]
     fn plena_mesagujo_rifuzas() {
         let mut ujo = Mesagujo::nova();
         let fonto: FadenoId = kani::any();
@@ -221,7 +224,7 @@ mod kani_proofs {
 
     /// FIFO: de la sama fonto, la unue sendita mesaĝo unue revenas.
     #[kani::proof]
-    #[kani::unwind(10)]
+    #[kani::unwind(70)]
     fn fifo_ordo() {
         let mut ujo = Mesagujo::nova();
         let fonto: FadenoId = kani::any();
@@ -253,7 +256,7 @@ mod kani_proofs {
     /// FIFO restas valida ankaŭ inter malsamaj fontoj: forpreno de unu fonto
     /// ne renversas la ordon de la aliaj.
     #[kani::proof]
-    #[kani::unwind(10)]
+    #[kani::unwind(70)]
     fn fifo_ordo_inter_fontoj() {
         let mut ujo = Mesagujo::nova();
         let fonto_a: FadenoId = kani::any();
@@ -304,7 +307,7 @@ mod kani_proofs {
     /// Forpreno konservas la invariantojn: `nombro` restas en limoj kaj ĉiuj
     /// fendoj ekster `nombro` restas malplenaj.
     #[kani::proof]
-    #[kani::unwind(20)]
+    #[kani::unwind(70)]
     fn preno_konservas_la_invarianton() {
         let mut ujo = Mesagujo::nova();
         let fonto: FadenoId = kani::any();
