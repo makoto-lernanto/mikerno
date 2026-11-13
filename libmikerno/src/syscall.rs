@@ -6,7 +6,7 @@
 //! Registra ABI: `rax` = numero, `rdi`/`rsi`/`rdx`/`r10` = argumentoj,
 //! `rax` = rezulto. La kerno konservas la ceterajn ĝeneralajn registreojn.
 
-use crate::kapablo::{Kapablo, Permesoj, Tenilo};
+use crate::kapablo::{Permesoj, Tenilo};
 use crate::mesago::Mesago;
 
 pub const SYS_SENDI: usize = 1;
@@ -15,9 +15,9 @@ pub const SYS_SKRIBI: usize = 3;
 pub const SYS_FINI: usize = 4;
 pub const SYS_CEDI: usize = 5;
 
-/// La sekvaj numeroj apartenas al ABI-versio `2`. `KREI_FINPUNKTON` kaj
-/// `FERMI` estas efektivaj ekde Fazo 2 de M14; `DONI`, `REVOKI` kaj la
-/// tempaj vokoj ankoraŭ respondas `-2` (nekonata voko) ĝis la sekvaj fazoj.
+/// La sekvaj numeroj apartenas al ABI-versio `2`. `KREI_FINPUNKTON`, `DONI` kaj
+/// `FERMI` estas efektivaj ekde la Fazoj 2–3 de M14; `REVOKI` kaj la tempaj
+/// vokoj ankoraŭ respondas `-2` (nekonata voko) ĝis la sekvaj fazoj.
 pub const SYS_KREI_FINPUNKTON: usize = 6;
 pub const SYS_DONI: usize = 7;
 pub const SYS_REVOKI: usize = 8;
@@ -69,13 +69,13 @@ pub unsafe fn invoki(_numero: usize, _argumentoj: [usize; 4]) -> isize {
     -1
 }
 
-/// Sendu mesaĝon tra la kapablo.
-pub fn sendi(kapablo: Kapablo, mesago: &Mesago) -> isize {
+/// Sendu mesaĝon al la finpunkto de la kapablo `tenilo`.
+pub fn sendi(tenilo: Tenilo, mesago: &Mesago) -> isize {
     unsafe {
         invoki(
             SYS_SENDI,
             [
-                kapablo.objekto_id as usize,
+                tenilo.nombro() as usize,
                 mesago as *const Mesago as usize,
                 0,
                 0,
@@ -84,15 +84,28 @@ pub fn sendi(kapablo: Kapablo, mesago: &Mesago) -> isize {
     }
 }
 
-/// Ricevu mesaĝon tra la kapablo en `celo`.
-pub fn ricevi(kapablo: Kapablo, celo: &mut Mesago) -> isize {
+/// Ricevu mesaĝon el la finpunkto de la kapablo `tenilo` en `celo`.
+pub fn ricevi(tenilo: Tenilo, celo: &mut Mesago) -> isize {
     unsafe {
         invoki(
             SYS_RICEVI,
+            [tenilo.nombro() as usize, celo as *mut Mesago as usize, 0, 0],
+        )
+    }
+}
+
+/// Donu la kapablon `fonto` al la procezo `celo`, kun la permesoj `permesoj`.
+///
+/// La petitaj permesoj devas esti subaro de la fontaj; alie la voko malakceptas
+/// per `-1`. Sukceso redonas la tenilon en la celo-tabelo.
+pub fn doni(fonto: Tenilo, celo: u64, permesoj: Permesoj) -> isize {
+    unsafe {
+        invoki(
+            SYS_DONI,
             [
-                kapablo.objekto_id as usize,
-                celo as *mut Mesago as usize,
-                0,
+                fonto.nombro() as usize,
+                celo as usize,
+                permesoj.bitoj() as usize,
                 0,
             ],
         )

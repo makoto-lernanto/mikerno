@@ -7,7 +7,7 @@
 
 use core::fmt::{self, Write};
 
-pub use libmikerno::kapablo::{Kapablo, Permesoj, Tenilo};
+pub use libmikerno::kapablo::{Permesoj, Tenilo};
 pub use libmikerno::mesago::Mesago;
 
 /// Skribu tekston al la kerna konzolo.
@@ -56,14 +56,19 @@ pub fn skribi_formaton(argumentoj: fmt::Arguments<'_>) {
     }
 }
 
-/// Sendu mesaĝon tra la kapablo.
-pub fn sendi(kapablo: Kapablo, mesago: &Mesago) -> isize {
-    libmikerno::syscall::sendi(kapablo, mesago)
+/// Sendu mesaĝon tra la tenilo.
+pub fn sendi(tenilo: Tenilo, mesago: &Mesago) -> isize {
+    libmikerno::syscall::sendi(tenilo, mesago)
 }
 
-/// Ricevu mesaĝon tra la kapablo en `celo`.
-pub fn ricevi(kapablo: Kapablo, celo: &mut Mesago) -> isize {
-    libmikerno::syscall::ricevi(kapablo, celo)
+/// Ricevu mesaĝon tra la tenilo en `celo`.
+pub fn ricevi(tenilo: Tenilo, celo: &mut Mesago) -> isize {
+    libmikerno::syscall::ricevi(tenilo, celo)
+}
+
+/// Donu la tenilon al la procezo `celo` kun la permesoj `permesoj`.
+pub fn doni(fonto: Tenilo, celo: u64, permesoj: Permesoj) -> isize {
+    libmikerno::syscall::doni(fonto, celo, permesoj)
 }
 
 /// Kreu finpunkton kun la donitaj permesoj; `> 0` estas la tenila nombro.

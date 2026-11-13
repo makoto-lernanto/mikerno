@@ -28,7 +28,7 @@ pub fn kadra_alokilo() -> &'static mut KadraAlokilo {
 }
 
 pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.4.1!\n");
+    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.4.2!\n");
     if bazo == origino {
         crate::skribu!(
             "[kerno] KASLR malŝaltita: la bildo restas ĉe 0x{:x}\n",
@@ -159,14 +159,12 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
     }
     registri_testajn_finpunktojn();
     ipc::testi_tabelojn();
+    ipc::testi_kapablojn();
 
-    let kapablo: ipc::Kapablo = ipc::FinaPunkto::nova(2, ipc::Permesoj::ĈIUJ).kapablo();
-    if kapablo.permesoj.posedas(ipc::Permesoj::SENDI) {
-        let mesago = ipc::Mesago::nova(1, 0, 2, "saluton el la praŝarĝo".as_bytes());
-        match ipc::sendi_mesagon(kapablo.objekto_id, &mesago) {
-            Ok(()) => crate::skribu!("[kerno] IPC: mesaĝo sendita al fadeno 2\n"),
-            Err(eraro) => crate::skribu!("[kerno] IPC: sendado malsukcesis: {:?}\n", eraro),
-        }
+    let mesago = ipc::Mesago::nova(1, 0, 2, "saluton el la praŝarĝo".as_bytes());
+    match ipc::sendi_mesagon(2, &mesago) {
+        Ok(()) => crate::skribu!("[kerno] IPC: mesaĝo sendita al fadeno 2\n"),
+        Err(eraro) => crate::skribu!("[kerno] IPC: sendado malsukcesis: {:?}\n", eraro),
     }
 
     crate::skribu!("[kerno] planisto ekas: 3 fadenoj, antaŭokupo ĉiu 10 ms\n");
@@ -358,8 +356,8 @@ fn krei_testajn_fadenojn() -> Result<(), planisto::PlanistaEraro> {
     Ok(())
 }
 
-/// Donu al ĉiu kerna testfadeno defaŭltan finpunkton, do la malnova IPC-vojo
-/// funkcias ankaŭ antaŭ ol ekzistas procezoj.
+/// Donu al ĉiu kerna testfadeno defaŭltan finpunkton; la kernaj fadenoj uzas
+/// la internan `sendi_mesagon`/`ricevi_mesagon`-vojon (sen kapablotabelo).
 fn registri_testajn_finpunktojn() {
     for id in 1..=TESTAJ_FADENOJ as u64 {
         if let Err(eraro) = ipc::registri_fadenon(id, 0) {

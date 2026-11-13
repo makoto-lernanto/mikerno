@@ -18,7 +18,7 @@ use libmikerno::starto::{
     SEKRETA_ID_DEŜOVO,
 };
 use libmikerno::syscall::{SYS_KREI_FINPUNKTON, SYS_RICEVI, SYS_SENDI, SYS_SKRIBI, invoki};
-use libmikerno::{Mesago, Permesoj, Tenilo};
+use libmikerno::{BOOTSTRAP_TENILO, Mesago, Permesoj, Tenilo};
 
 /// La mesaĝa aranĝo devas kongrui bajte kun la kerno (kun `libmikerno`).
 const _: () = {
@@ -40,6 +40,7 @@ pub extern "C" fn horizonto_start(reĝimo: u64, identigilo: u64) -> ! {
     biblioteko::skribi(SALUTO);
     testi_identon(identigilo);
     testi_finpunktojn(identigilo);
+    testi_rajtojn(identigilo);
     testi_negativajn();
     match reĝimo {
         REĜIMO_SEKRETO => sekreta_provo(identigilo),
@@ -128,13 +129,13 @@ fn spioni(identigilo: u64) -> ! {
 
 /// A1: la kerno, ne la uzanto, plenigas `sendinto`/`ricevonto`.
 ///
-/// La procezo sendas al si mem mesaĝon, kies du identigiloj estas intence
-/// falsitaj (`999`). Post la sendo la kerno anstataŭigas ilin per la vera
-/// sendinto kaj la celo; la neuzata resto de la datumaro devas resti nula.
+/// La procezo sendas al si mem tra sia defaŭlta kapablo (`BOOTSTRAP_TENILO`,
+/// fendo `0`). La du identigiloj estas intence falsitaj (`999`); post la sendo
+/// la kerno anstataŭigas ilin per la vera sendinto kaj la celo; la neuzata
+/// resto de la datumaro devas resti nula.
 fn testi_identon(identigilo: u64) {
-    let kapablo = libmikerno::FinaPunkto::nova(identigilo, Permesoj::ĈIUJ).kapablo();
     let sendata = Mesago::nova(0x4901, 999, 999, b"idento");
-    let sendo = biblioteko::sendi(kapablo, &sendata);
+    let sendo = biblioteko::sendi(BOOTSTRAP_TENILO, &sendata);
     if sendo != 0 {
         biblioteko::skribi_formaton(format_args!(
             "[ring3] procezo {}: idento (MALBONE): sendo={}\n",
@@ -143,7 +144,7 @@ fn testi_identon(identigilo: u64) {
         return;
     }
     let mut ricevita = Mesago::malplena();
-    let ricevo = biblioteko::ricevi(kapablo, &mut ricevita);
+    let ricevo = biblioteko::ricevi(BOOTSTRAP_TENILO, &mut ricevita);
     let resto_nula = ricevita.datumaro()[sendata.longo()..]
         .iter()
         .all(|bajto| *bajto == 0);
@@ -220,6 +221,40 @@ fn testi_finpunktojn(identigilo: u64) {
     ));
 }
 
+/// C10/C11: la permes-bitoj de la kapablo limigas la operacion.
+///
+/// Finpunkto kreita nur kun `RICEVI` rifuzas `SENDI` per `-1`, kaj finpunkto
+/// kun nur `SENDI` rifuzas `RICEVI` per `-1`. La montriloj estas validaj, do la
+/// rifuzo venas de la permesa kontrolo, ne de la argumenta kontrolo.
+fn testi_rajtojn(identigilo: u64) {
+    let riceva = biblioteko::krei_finpunkton(Permesoj::RICEVI);
+    let senda = biblioteko::krei_finpunkton(Permesoj::SENDI);
+    let (Some(riceva), Some(senda)) = (
+        Tenilo::el_nombro(riceva as u32),
+        Tenilo::el_nombro(senda as u32),
+    ) else {
+        biblioteko::skribi_formaton(format_args!(
+            "[ring3] procezo {}: rajtoj (MALBONE): kreo={}, {}\n",
+            identigilo, riceva, senda
+        ));
+        return;
+    };
+    let mesaĝo = Mesago::nova(0x4A01, 0, 0, b"rajtoj");
+    let sendo = biblioteko::sendi(riceva, &mesaĝo);
+    let mut celo = Mesago::malplena();
+    let ricevo = biblioteko::ricevi(senda, &mut celo);
+    let fermo_riceva = biblioteko::fermi(riceva);
+    let fermo_senda = biblioteko::fermi(senda);
+    let bone = sendo == -1 && ricevo == -1 && fermo_riceva == 0 && fermo_senda == 0;
+    biblioteko::skribi_formaton(format_args!(
+        "[ring3] procezo {}: rajtoj ({}): sendi_per_ricevi={}, ricevi_per_sendi={}\n",
+        identigilo,
+        if bone { "bone" } else { "MALBONE" },
+        sendo,
+        ricevo
+    ));
+}
+
 /// Kontrolu, ke la kerno rifuzas malvalidajn Ring 3-argumentojn anstataŭ
 /// dereferenci ilin.
 fn testi_negativajn() {
@@ -246,25 +281,26 @@ fn testi_negativajn() {
         biblioteko::skribi("[ring3] negativaj: MALBONE\n");
     }
 
-    // La celo ne ekzistas kiel viva fadeno: la shim de Fazo 2 devas rifuzi per
-    // `-3` anstataŭ enigi la mesaĝon en la vicon. La montrilo restas valida, do
-    // la kontrolo de la celo estas tiu, kiu rifuzas (C11, C16).
+    // Ekde Fazo 3 `rdi` estas kapablo-tenilo, ne fadeno-identigilo. La valoroj
+    // `6` (fendo kun ne-kongrua generacio) kaj `0` (ĉiam malvalida) devas esti
+    // rifuzataj per `-9`. La montrilo restas valida, do la tenila kontrolo
+    // estas tiu, kiu rifuzas (C11, C16).
     let celo = Mesago::malplena();
     let celo_ptr = &celo as *const Mesago as usize;
-    // SAFETY: `celo` estas valida staka `Mesago`; la celaj identigiloj estas
-    // intence nevivaj.
-    let (fadeno6, fadeno0) = unsafe {
+    // SAFETY: `celo` estas valida staka `Mesago`; la tenilaj valoroj estas
+    // intence nevalidaj.
+    let (tenilo6, tenilo0) = unsafe {
         (
             invoki(SYS_SENDI, [6, celo_ptr, 0, 0]),
             invoki(SYS_SENDI, [0, celo_ptr, 0, 0]),
         )
     };
-    if fadeno6 == -3 && fadeno0 == -3 {
-        biblioteko::skribi("[ring3] negativaj (F2): celo6=-3, celo0=-3\n");
+    if tenilo6 == -9 && tenilo0 == -9 {
+        biblioteko::skribi("[ring3] negativaj (F3): tenilo6=-9, tenilo0=-9\n");
     } else {
         biblioteko::skribi_formaton(format_args!(
-            "[ring3] negativaj (F2): MALBONE (celo6={}, celo0={})\n",
-            fadeno6, fadeno0
+            "[ring3] negativaj (F3): MALBONE (tenilo6={}, tenilo0={})\n",
+            tenilo6, tenilo0
         ));
     }
 }

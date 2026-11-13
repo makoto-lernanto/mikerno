@@ -1,9 +1,11 @@
 //! Minimuma mesaĝa IPC: finpunktaj objektoj, kapabloj, teniloj.
 //!
 //! Ekde Fazo 2 de M14 la mesaĝvico apartenas al la finpunkto, ne al la fadeno.
-//! Ĉiu fadeno havas defaŭltan finpunkton (kreitan ĉe ĝia registrado), kaj la
-//! malnova vojo `sendi_mesagon(fadeno, …)` / `ricevi_mesagon(fonto)` uzas ĝin
-//! ĝis Fazo 3 transdonos veran `Tenilo`-n en `rdi`.
+//! Ĉiu fadeno havas defaŭltan finpunkton (kreitan ĉe ĝia registrado), kaj
+//! ekde Fazo 3 la sistemvokaj vojoj `SENDI`/`RICEVI` uzas veran `Tenilo`-n el
+//! la kapablotabelo de la procezo. La kernaj fadenoj (procezo `0`) ne havas
+//! kapablotabelon; ili uzas la internajn `sendi_mesagon`/`ricevi_mesagon`
+//! funkciojn, kiuj preterpasas la kapablokontrolon.
 //!
 //! Ĉiuj operacioj tenas interrompojn malŝaltitaj.
 
@@ -18,7 +20,7 @@ use super::procezo::{MAKSAJ_PROCEZOJ, ProcezaId};
 /// La mesaĝa aranĝo, la permesoj kaj la kapabloj venas el `libmikerno`, do la
 /// kerno kaj Ring 3 uzas la saman `#[repr(C)]`-strukturon sen konverto kaj sen
 /// duobla difino.
-pub use libmikerno::{FinaPunkto, Kapablo, MAKSA_MESAGA_LONGO, Mesago, Permesoj};
+pub use libmikerno::{MAKSA_MESAGA_LONGO, Mesago, Permesoj};
 
 /// La kongruo kun la komuna ABI estas fiksita je kompila tempo.
 const _: () = {
@@ -48,6 +50,8 @@ pub enum IpcEraro {
     NevalidaCelloko,
     MesagujoPlena,
     NevalidaTenilo,
+    /// La kapablo validas, sed ĝi ne posedas la postulatan permeson.
+    NesufiĉajPermesoj,
     TabeloPlena,
 }
 
@@ -80,8 +84,11 @@ impl Mesagujo {
         Ok(())
     }
 
-    fn preni_de(&mut self, fonto: FadenoId) -> Option<Mesago> {
-        let indekso = (0..self.nombro).find(|&i| self.eroj[i].is_some_and(|e| e.fonto == fonto))?;
+    /// Prenu la unuan mesaĝon; `Some(fonto)` limigas al tiu sendinto, `None`
+    /// akceptas ajnan fonton (la fonta filtro de `RICEVI_TEMPO` venos en Fazo 6).
+    fn preni_de(&mut self, fonto: Option<FadenoId>) -> Option<Mesago> {
+        let indekso = (0..self.nombro)
+            .find(|&i| self.eroj[i].is_some_and(|e| fonto.is_none_or(|f| e.fonto == f)))?;
         let ero = self.eroj[indekso].take()?;
         for movo in indekso..self.nombro - 1 {
             self.eroj[movo] = self.eroj[movo + 1];
@@ -108,6 +115,8 @@ struct FinaPunktoObjekto {
     posedanto: ProcezaId,
     /// La fadeno, kies defaŭlta finpunkto ĉi tio estas; `0` por eksplicitaj.
     fadeno: FadenoId,
+    /// La fadeno blokita en `RICEVI` sur ĉi tiu finpunkto; `0` se neniu.
+    ricevanto: FadenoId,
     referencoj: u16,
     vico: Mesagujo,
 }
@@ -120,6 +129,7 @@ impl FinaPunktoObjekto {
             generacio: 1,
             posedanto: 0,
             fadeno: 0,
+            ricevanto: 0,
             referencoj: 0,
             vico: Mesagujo::nova(),
         }
@@ -137,6 +147,7 @@ impl FinaPunktoObjekto {
         self.id = 0;
         self.posedanto = 0;
         self.fadeno = 0;
+        self.ricevanto = 0;
         match pliigita_generacio(self.generacio) {
             Some(sekva) => {
                 self.generacio = sekva;
@@ -163,6 +174,11 @@ const fn pliigita_generacio(generacio: u32) -> Option<u32> {
 /// Malaltigu referenckalkulon sen suba transfluo.
 const fn forprenu_referencon(referencoj: u16) -> u16 {
     if referencoj == 0 { 0 } else { referencoj - 1 }
+}
+
+/// Ĉu `petitaj` estas subaro de `fontaj`? Transdono nur malpliiĝas.
+const fn dono_permesita(fontaj: Permesoj, petitaj: Permesoj) -> bool {
+    petitaj.bitoj() & !fontaj.bitoj() == 0
 }
 
 /// La unua libera finpunkta fendo, aŭ `None` se ĉiuj estas okupataj aŭ
@@ -195,13 +211,16 @@ fn sekva_finpunkta_id() -> FinaPunktaId {
 }
 
 /// Kapabla fendo de unu procezo: kiu finpunkto kaj kun kiuj permesoj.
+///
+/// La tenilo portas la generacion de la fendo, kaj `fp_generacio` estas la
+/// dua, sendependa generacio de la finpunkta objekto. Ambaŭ devas kongrui, do
+/// malnova tenilo ne reviviĝas eĉ se la fenda indekso reuziĝas.
 #[derive(Clone, Copy)]
 struct KapabloEniro {
     tenilo: Tenilo,
-    /// Legata ekde la permes-kontroloj de Fazo 3.
-    #[allow(dead_code)]
     permesoj: Permesoj,
     finpunkto: u8,
+    fp_generacio: u32,
     uzata: bool,
 }
 
@@ -209,8 +228,9 @@ impl KapabloEniro {
     const fn libera() -> Self {
         Self {
             tenilo: Tenilo::MALVALIDA,
-            permesoj: Permesoj::ĈIUJ,
+            permesoj: Permesoj::NENIU,
             finpunkto: 0,
+            fp_generacio: 0,
             uzata: false,
         }
     }
@@ -219,18 +239,89 @@ impl KapabloEniro {
 #[derive(Clone, Copy)]
 struct Kapablotabelo {
     eroj: [KapabloEniro; MAKSAJ_KAPABLOJ],
+    /// La sekva generacio de ĉiu fendo; `0` signifas emeritan fendon.
+    generacioj: [u32; MAKSAJ_KAPABLOJ],
 }
 
 impl Kapablotabelo {
     const fn nova() -> Self {
         Self {
             eroj: [KapabloEniro::libera(); MAKSAJ_KAPABLOJ],
+            generacioj: [1; MAKSAJ_KAPABLOJ],
         }
     }
 
     fn unua_libera(&self) -> Option<usize> {
-        self.eroj.iter().position(|eniro| !eniro.uzata)
+        self.eroj
+            .iter()
+            .enumerate()
+            .position(|(indekso, eniro)| !eniro.uzata && self.generacioj[indekso] != 0)
     }
+
+    /// Instalu kapablon en la donitan fendon; `None` se ĝi estas okupata aŭ
+    /// emerita.
+    fn instalu_en(
+        &mut self,
+        fendo: usize,
+        finpunkto: u8,
+        fp_generacio: u32,
+        permesoj: Permesoj,
+    ) -> Option<Tenilo> {
+        if fendo >= MAKSAJ_KAPABLOJ || self.eroj[fendo].uzata {
+            return None;
+        }
+        let tenilo = Tenilo::nova(fendo as u8, self.generacioj[fendo])?;
+        self.eroj[fendo] = KapabloEniro {
+            tenilo,
+            permesoj,
+            finpunkto,
+            fp_generacio,
+            uzata: true,
+        };
+        Some(tenilo)
+    }
+
+    /// Malplenigu fendon kaj antaŭenigu ĝian generacion; eluzita generacio
+    /// emeritas la fendon (`0`).
+    fn liberigu_fendon(&mut self, fendo: usize) {
+        self.eroj[fendo] = KapabloEniro::libera();
+        self.generacioj[fendo] = pliigita_generacio(self.generacioj[fendo]).unwrap_or_default();
+    }
+}
+
+/// La unua nivelo de la kapabla validigo: la fendo kongruas kun la tenilo kaj
+/// posedas la postulatajn permesojn.
+fn serĉi_kapablon(
+    tabelo: &Kapablotabelo,
+    tenilo: Tenilo,
+    bezonataj: Permesoj,
+) -> Result<usize, IpcEraro> {
+    let indekso = tenilo.indekso() as usize;
+    let eniro = tabelo.eroj.get(indekso).ok_or(IpcEraro::NevalidaTenilo)?;
+    if !eniro.uzata || eniro.tenilo != tenilo {
+        return Err(IpcEraro::NevalidaTenilo);
+    }
+    if !eniro.permesoj.posedas(bezonataj) {
+        return Err(IpcEraro::NesufiĉajPermesoj);
+    }
+    Ok(indekso)
+}
+
+/// La dua nivelo: la kapabla fendo devas montri al viva finpunkta objekto kun
+/// la generacio, kiun la fendo memoras.
+fn akiri_kapablon(
+    procezo: ProcezaId,
+    tenilo: Tenilo,
+    bezonataj: Permesoj,
+) -> Result<(u8, KapabloEniro), IpcEraro> {
+    let tabelo = kapabloj(procezo).ok_or(IpcEraro::NevalidaTenilo)?;
+    let indekso = serĉi_kapablon(tabelo, tenilo, bezonataj)?;
+    let eniro = tabelo.eroj[indekso];
+    let objekto = &finpunktoj()[eniro.finpunkto as usize];
+    if !objekto.aktiva() || objekto.generacio != eniro.fp_generacio {
+        return Err(IpcEraro::NevalidaTenilo);
+    }
+    Ok((eniro.finpunkto, eniro))
 }
 
 /// La kapablotabeloj de la procezoj `0..=7`; linio `0` (la kerno) restas ĉiam
@@ -298,59 +389,103 @@ pub fn registri_fadenon(fadeno: FadenoId, procezo: ProcezaId) -> Result<(), IpcE
     if procezo == 0 {
         return Ok(());
     }
+    let fp_generacio = finpunktoj()[fendo as usize].generacio;
     let Some(tabelo) = kapabloj(procezo) else {
         finpunktoj()[fendo as usize].liberigu();
         return Err(IpcEraro::TabeloPlena);
     };
-    if tabelo.eroj[0].uzata {
+    if tabelo
+        .instalu_en(0, fendo, fp_generacio, Permesoj::PLENAJ)
+        .is_none()
+    {
         finpunktoj()[fendo as usize].liberigu();
         return Err(IpcEraro::TabeloPlena);
     }
-    let Some(tenilo) = Tenilo::nova(0, finpunktoj()[fendo as usize].generacio) else {
-        finpunktoj()[fendo as usize].liberigu();
-        return Err(IpcEraro::TabeloPlena);
-    };
-    tabelo.eroj[0] = KapabloEniro {
-        tenilo,
-        permesoj: Permesoj::PLENAJ,
-        finpunkto: fendo,
-        uzata: true,
-    };
     finpunktoj()[fendo as usize].referencoj += 1;
     Ok(())
 }
 
+/// Puŝu mesaĝon en la vicon de finpunkta fendo, fiksu la identecon kaj veku la
+/// ricevanton. La alvokanto tenas interrompojn malŝaltitaj.
+fn enmeti(fendo: u8, mesago: Mesago) -> Result<(), IpcEraro> {
+    let nuna = planisto::nuna_id();
+    let objekto = &mut finpunktoj()[fendo as usize];
+    let mut mesago = mesago;
+    mesago.sendinto = nuna;
+    mesago.ricevonto = objekto.id;
+    objekto.vico.pusxi(Ero {
+        fonto: nuna,
+        mesago,
+    })?;
+    let celo = if objekto.ricevanto != 0 {
+        objekto.ricevanto
+    } else {
+        objekto.fadeno
+    };
+    objekto.ricevanto = 0;
+    if celo != 0 {
+        planisto::veki(celo);
+    }
+    Ok(())
+}
+
 /// Sendu mesaĝon al la defaŭlta finpunkto de fadeno; la fonto estas la nuna
-/// fadeno.
+/// fadeno. Ĉi tiu estas la kerna vojo sen kapablokontrolo (procezo `0`).
 ///
 /// La mesaĝo estas kopiata, kaj `sendinto`/`ricevonto` estas fiksitaj de la
 /// kerno: la uzanto ne povas mensogi pri ili. `ricevonto` estas la finpunkta
-/// identigilo, ne plu la celo-fadeno (C1).
+/// identigilo, ne la celo-fadeno (C1).
 ///
 /// # Eraroj
 /// `NevalidaCelloko` se la celo ne estas viva fadeno (C16); `MesagujoPlena`
 /// se la vico de la finpunkto jam enhavas `MAKSAJ_MESAGOJ` mesaĝojn;
-/// `TabeloPlena` se la defaŭlta finpunkto mankas kaj ne plu estas libera fendo.
+/// `TabeloPlena` se la defaŭlta finpunkto mankas.
 pub fn sendi_mesagon(destinacio: FadenoId, mesago: &Mesago) -> Result<(), IpcEraro> {
     let _gardo = InterrompaGardo::nova();
     if !planisto::vivas(destinacio) {
         return Err(IpcEraro::NevalidaCelloko);
     }
     let indekso = defaŭlta_indekso(destinacio).ok_or(IpcEraro::TabeloPlena)?;
-    let nuna = planisto::nuna_id();
-    let mut mesago = *mesago;
-    mesago.sendinto = nuna;
-    mesago.ricevonto = finpunktoj()[indekso].id;
-    finpunktoj()[indekso].vico.pusxi(Ero {
-        fonto: nuna,
-        mesago,
-    })?;
-    planisto::veki(destinacio);
-    Ok(())
+    enmeti(indekso as u8, *mesago)
+}
+
+/// Sendu mesaĝon tra la kapablo `tenilo` de la procezo. Postulas `SENDI`.
+///
+/// Se la finpunkto estas defaŭlta (apartenas al fadeno), la celo devas ankoraŭ
+/// vivi; alie `NevalidaCelloko`.
+pub fn sendi_kapable(procezo: ProcezaId, tenilo: Tenilo, mesago: &Mesago) -> Result<(), IpcEraro> {
+    let _gardo = InterrompaGardo::nova();
+    let (fendo, _) = akiri_kapablon(procezo, tenilo, Permesoj::SENDI)?;
+    let objekto = &finpunktoj()[fendo as usize];
+    if objekto.fadeno != 0 && !planisto::vivas(objekto.fadeno) {
+        return Err(IpcEraro::NevalidaCelloko);
+    }
+    enmeti(fendo, *mesago)
+}
+
+/// Ricevu mesaĝon el la finpunkto de la kapablo `tenilo`; bloku se mankas.
+/// Postulas `RICEVI`; la permeso estas kontrolata ankaŭ post ĉiu veko, do
+/// revoko (Fazo 4) ne lasos la fadenon en la vico.
+pub fn ricevi_kapable(procezo: ProcezaId, tenilo: Tenilo) -> Result<Mesago, IpcEraro> {
+    loop {
+        let _gardo = InterrompaGardo::nova();
+        let (fendo, _) = akiri_kapablon(procezo, tenilo, Permesoj::RICEVI)?;
+        let nuna = planisto::nuna_id();
+        if let Some(mesago) = finpunktoj()[fendo as usize].vico.preni_de(None) {
+            finpunktoj()[fendo as usize].ricevanto = 0;
+            return Ok(mesago);
+        }
+        if nuna == 0 {
+            // La ripoza kunteksto ne havas fadenan vivciklon; ne bloku ĝin.
+            return Err(IpcEraro::NevalidaCelloko);
+        }
+        finpunktoj()[fendo as usize].ricevanto = nuna;
+        planisto::bloki();
+    }
 }
 
 /// Ricevu mesaĝon de la donita fonto el la defaŭlta finpunkto de la nuna
-/// fadeno; bloku se mankas.
+/// fadeno; bloku se mankas. Ĉi tiu estas la kerna vojo sen kapablokontrolo.
 pub fn ricevi_mesagon(fonto: FadenoId) -> Mesago {
     loop {
         let _gardo = InterrompaGardo::nova();
@@ -359,10 +494,12 @@ pub fn ricevi_mesagon(fonto: FadenoId) -> Mesago {
             // La ripoza kunteksto ne havas fadenan vivciklon; ne bloku ĝin.
             return Mesago::malplena();
         }
-        if let Some(indekso) = defaŭlta_indekso(nuna)
-            && let Some(mesago) = finpunktoj()[indekso].vico.preni_de(fonto)
-        {
-            return mesago;
+        if let Some(indekso) = defaŭlta_indekso(nuna) {
+            if let Some(mesago) = finpunktoj()[indekso].vico.preni_de(Some(fonto)) {
+                finpunktoj()[indekso].ricevanto = 0;
+                return mesago;
+            }
+            finpunktoj()[indekso].ricevanto = nuna;
         }
         planisto::bloki();
     }
@@ -378,20 +515,45 @@ pub fn krei_finpunkton(procezo: ProcezaId, permesoj: Permesoj) -> Result<Tenilo,
     let tabelo = kapabloj(procezo).ok_or(IpcEraro::TabeloPlena)?;
     let fendo_kapabla = tabelo.unua_libera().ok_or(IpcEraro::TabeloPlena)?;
     let fendo_finpunkta = rezervi_finpunkton(procezo, 0, sekva_finpunkta_id())?;
-    let Some(tenilo) = Tenilo::nova(
-        fendo_kapabla as u8,
-        finpunktoj()[fendo_finpunkta as usize].generacio,
-    ) else {
+    let fp_generacio = finpunktoj()[fendo_finpunkta as usize].generacio;
+    let Some(tenilo) = tabelo.instalu_en(fendo_kapabla, fendo_finpunkta, fp_generacio, permesoj)
+    else {
         finpunktoj()[fendo_finpunkta as usize].liberigu();
         return Err(IpcEraro::TabeloPlena);
     };
-    tabelo.eroj[fendo_kapabla] = KapabloEniro {
-        tenilo,
-        permesoj,
-        finpunkto: fendo_finpunkta,
-        uzata: true,
-    };
     Ok(tenilo)
+}
+
+/// Donu la kapablon `tenilo` al la procezo `celo` kun la permesoj `permesoj`.
+///
+/// La petitaj permesoj devas esti subaro de la fontaj (transdono nur
+/// malpliiĝas); la fonta kapablo restas valida. La celo ricevas novan tenilon
+/// en sia propra tabelo, kun la generacio de tiu fendo.
+pub fn doni(
+    procezo: ProcezaId,
+    tenilo: Tenilo,
+    celo: ProcezaId,
+    permesoj: Permesoj,
+) -> Result<Tenilo, IpcEraro> {
+    let _gardo = InterrompaGardo::nova();
+    if permesoj.bitoj() == 0 {
+        return Err(IpcEraro::NesufiĉajPermesoj);
+    }
+    if celo == 0 || celo as usize >= MAKSAJ_PROCEZOJ {
+        return Err(IpcEraro::NevalidaCelloko);
+    }
+    let (fendo, eniro) = akiri_kapablon(procezo, tenilo, Permesoj::NENIU)?;
+    if !dono_permesita(eniro.permesoj, permesoj) {
+        return Err(IpcEraro::NesufiĉajPermesoj);
+    }
+    let tabelo = kapabloj(celo).ok_or(IpcEraro::NevalidaCelloko)?;
+    let fendo_kapabla = tabelo.unua_libera().ok_or(IpcEraro::TabeloPlena)?;
+    let Some(nova) = tabelo.instalu_en(fendo_kapabla, fendo, eniro.fp_generacio, permesoj) else {
+        return Err(IpcEraro::TabeloPlena);
+    };
+    let objekto = &mut finpunktoj()[fendo as usize];
+    objekto.referencoj = objekto.referencoj.saturating_add(1);
+    Ok(nova)
 }
 
 /// Fermu unu lokan kapablofendon. La finpunkto restas viva se aliaj referencoj
@@ -400,14 +562,11 @@ pub fn krei_finpunkton(procezo: ProcezaId, permesoj: Permesoj) -> Result<Tenilo,
 pub fn fermi(procezo: ProcezaId, tenilo: Tenilo) -> Result<(), IpcEraro> {
     let _gardo = InterrompaGardo::nova();
     let tabelo = kapabloj(procezo).ok_or(IpcEraro::NevalidaTenilo)?;
-    let eniro = &mut tabelo.eroj[tenilo.indekso() as usize];
-    if !eniro.uzata || eniro.tenilo != tenilo {
-        return Err(IpcEraro::NevalidaTenilo);
-    }
-    let fendo = eniro.finpunkto as usize;
-    *eniro = KapabloEniro::libera();
-    let objekto = &mut finpunktoj()[fendo];
-    if !objekto.aktiva() || objekto.generacio != tenilo.generacio() {
+    let indekso = serĉi_kapablon(tabelo, tenilo, Permesoj::NENIU)?;
+    let eniro = tabelo.eroj[indekso];
+    tabelo.liberigu_fendon(indekso);
+    let objekto = &mut finpunktoj()[eniro.finpunkto as usize];
+    if !objekto.aktiva() || objekto.generacio != eniro.fp_generacio {
         return Err(IpcEraro::NevalidaTenilo);
     }
     objekto.referencoj = forprenu_referencon(objekto.referencoj);
@@ -484,14 +643,106 @@ pub fn testi_tabelojn() {
     );
 }
 
+/// Ring 0-memtesto de la permesoj, de la kapabla izolado kaj de `DONI`.
+///
+/// La testoj uzas la kapabloliniojn de la rezervitaj procezaj identigiloj `6`
+/// kaj `7`; ĉiuj kreitaj kapabloj fermiĝas antaŭ la unua `lanĉi()`, do la
+/// realaj procezoj ne vidas ilin.
+pub fn testi_kapablojn() {
+    fn kodo(eraro: IpcEraro) -> i64 {
+        match eraro {
+            IpcEraro::NesufiĉajPermesoj => -1,
+            IpcEraro::NevalidaCelloko => -3,
+            IpcEraro::MesagujoPlena => -4,
+            IpcEraro::NevalidaTenilo => -9,
+            IpcEraro::TabeloPlena => -28,
+        }
+    }
+
+    let procezo: ProcezaId = 6;
+    let alia: ProcezaId = 7;
+    let mesago = Mesago::malplena();
+
+    // Rajtoj: la kapablo devas posedi la koncernan permeson.
+    let (sendi_per_riceva, ricevi_per_senda) = match (
+        krei_finpunkton(procezo, Permesoj::RICEVI),
+        krei_finpunkton(procezo, Permesoj::SENDI),
+    ) {
+        (Ok(riceva), Ok(senda)) => {
+            let sendi = sendi_kapable(procezo, riceva, &mesago)
+                .err()
+                .map_or(0, kodo);
+            let ricevi = ricevi_kapable(procezo, senda).err().map_or(0, kodo);
+            let _ = fermi(procezo, riceva);
+            let _ = fermi(procezo, senda);
+            (sendi, ricevi)
+        }
+        _ => (0, 0),
+    };
+    let rajtoj = sendi_per_riceva == -1 && ricevi_per_senda == -1;
+    crate::skribu!(
+        "[ipc] rajtoj ({}): sendi per RICEVI-nura → {}, ricevi per SENDI-nura → {}\n",
+        if rajtoj { "bone" } else { "MALBONE" },
+        sendi_per_riceva,
+        ricevi_per_senda
+    );
+
+    // Izolado: tenilo de unu procezo ne validas en la tabelo de alia.
+    let izolado = match krei_finpunkton(procezo, Permesoj::PLENAJ) {
+        Ok(tenilo) => {
+            let kodo = sendi_kapable(alia, tenilo, &mesago).err().map_or(0, kodo);
+            let _ = fermi(procezo, tenilo);
+            kodo
+        }
+        Err(_) => 0,
+    };
+    crate::skribu!(
+        "[ipc] izolado de kapabloj ({}): procezo {} uzas tenilon de procezo {} → {}\n",
+        if izolado == -9 { "bone" } else { "MALBONE" },
+        alia,
+        procezo,
+        izolado
+    );
+
+    // Dono: nur malpliiĝo; la celo ricevas propran tenilon.
+    let mut donitaj = (0u8, 0u8);
+    let mut eskalo = 0;
+    if let Ok(fonto) = krei_finpunkton(procezo, Permesoj::ĈIUJ) {
+        if let Ok(celo) = doni(procezo, fonto, alia, Permesoj::RICEVI) {
+            let sendita = sendi_kapable(procezo, fonto, &mesago).is_ok();
+            let ricevita = sendita && ricevi_kapable(alia, celo).is_ok();
+            let rifuzo = sendi_kapable(alia, celo, &mesago).err().map_or(0, kodo);
+            donitaj = if ricevita && rifuzo == -1 {
+                (Permesoj::ĈIUJ.bitoj(), Permesoj::RICEVI.bitoj())
+            } else {
+                (0, 0)
+            };
+            let _ = fermi(alia, celo);
+        }
+        eskalo = doni(procezo, fonto, alia, Permesoj::REVOKI)
+            .err()
+            .map_or(0, kodo);
+        let _ = fermi(procezo, fonto);
+    }
+    let dono_bone = donitaj == (Permesoj::ĈIUJ.bitoj(), Permesoj::RICEVI.bitoj()) && eskalo == -1;
+    crate::skribu!(
+        "[ipc] dono ({}): rajtoj 0b{:03b} → 0b{:03b}, eskalado 0b{:03b} → {}\n",
+        if dono_bone { "bone" } else { "MALBONE" },
+        donitaj.0,
+        donitaj.1,
+        Permesoj::REVOKI.bitoj(),
+        eskalo
+    );
+}
+
 #[cfg(kani)]
 mod kani_proofs {
     //! Kani-pruvoj por la mesaĝujo.
     //!
-    //! `sendi_mesagon` kaj `ricevi_mesagon` dependas de la planisto, de
-    //! interrompoj kaj de tutmonda stato, kiuj ne estas modeligeblaj per Kani
-    //! sen eliri la no_std-medion. La pruvoj do celas la enan `Mesagujo`-kodon,
-    //! kiun ambaŭ funkcioj rekte uzas.
+    //! `sendi_mesagon`, `ricevi_mesagon`, `sendi_kapable` kaj `ricevi_kapable`
+    //! dependas de la planisto, de interrompoj kaj de tutmonda stato, kiuj ne
+    //! estas modeligeblaj per Kani sen eliri la no_std-medion. La pruvoj do
+    //! celas la enan `Mesagujo`-kodon, kiun la funkcioj rekte uzas.
     //!
     //! La pruvoj uzas la plej malgrandan `unwind`-limon, kiun la koncerna
     //! buklo bezonas: 8 por la FIFO-pruvoj (maksimume tri mesaĝoj kaj tri
@@ -577,16 +828,16 @@ mod kani_proofs {
         );
         assert!(ujo.pusxi(Ero { fonto, mesago: dua }).is_ok());
 
-        let ricevita = ujo.preni_de(fonto).unwrap();
+        let ricevita = ujo.preni_de(Some(fonto)).unwrap();
         assert_eq!(ricevita.tipo, 1);
         assert_eq!(ricevita.longo(), unua.longo());
 
-        let ricevita = ujo.preni_de(fonto).unwrap();
+        let ricevita = ujo.preni_de(Some(fonto)).unwrap();
         assert_eq!(ricevita.tipo, 2);
         assert_eq!(ricevita.longo(), dua.longo());
 
         assert_eq!(ujo.nombro, 0);
-        assert!(ujo.preni_de(fonto).is_none());
+        assert!(ujo.preni_de(Some(fonto)).is_none());
         assert!(ujo.eroj[0].is_none());
     }
 
@@ -622,11 +873,11 @@ mod kani_proofs {
             .is_ok()
         );
 
-        assert_eq!(ujo.preni_de(fonto_a).unwrap().tipo, 1);
-        assert_eq!(ujo.preni_de(fonto_b).unwrap().tipo, 2);
-        assert_eq!(ujo.preni_de(fonto_a).unwrap().tipo, 3);
-        assert!(ujo.preni_de(fonto_a).is_none());
-        assert!(ujo.preni_de(fonto_b).is_none());
+        assert_eq!(ujo.preni_de(Some(fonto_a)).unwrap().tipo, 1);
+        assert_eq!(ujo.preni_de(Some(fonto_b)).unwrap().tipo, 2);
+        assert_eq!(ujo.preni_de(Some(fonto_a)).unwrap().tipo, 3);
+        assert!(ujo.preni_de(Some(fonto_a)).is_none());
+        assert!(ujo.preni_de(Some(fonto_b)).is_none());
         assert_eq!(ujo.nombro, 0);
     }
 
@@ -636,7 +887,7 @@ mod kani_proofs {
         let mut ujo = Mesagujo::nova();
         let fonto: FadenoId = kani::any();
 
-        assert!(ujo.preni_de(fonto).is_none());
+        assert!(ujo.preni_de(Some(fonto)).is_none());
         assert_eq!(ujo.nombro, 0);
         assert!(ujo.eroj[0].is_none());
     }
@@ -650,7 +901,7 @@ mod kani_proofs {
         let fonto: FadenoId = kani::any();
         assert!(ujo.pusxi(iu_ero(1)).is_ok());
 
-        let _ = ujo.preni_de(fonto);
+        let _ = ujo.preni_de(Some(fonto));
         assert!(ujo.nombro <= MAKSAJ_MESAGOJ);
 
         let mut indekso = ujo.nombro;
@@ -778,5 +1029,82 @@ mod kani_finpunktoj {
             }
             None => assert!(!ekzistas),
         }
+    }
+}
+
+#[cfg(kani)]
+mod kani_kapabloj {
+    //! Pruvoj por la kapabla tavolo: permesoj, dono nur-malpliiĝa kaj proceza
+    //! izolado. La tutmondaj tabeloj ne estas modeligeblaj, do la pruvoj uzas
+    //! malgrandajn lokajn `Kapablotabelo`-ojn.
+
+    use libmikerno::{Permesoj, Tenilo};
+
+    use super::{IpcEraro, Kapablotabelo, dono_permesita, serĉi_kapablon};
+
+    fn iuj_permesoj() -> Permesoj {
+        let bitoj: u8 = kani::any();
+        Permesoj::el_bitoj(bitoj & Permesoj::PLENAJ.bitoj()).unwrap()
+    }
+
+    /// Sen `SENDI` la kapablo ne permesas sendi.
+    #[kani::proof]
+    fn rajtoj_devigas_sendon() {
+        let permesoj = iuj_permesoj();
+        let mut tabelo = Kapablotabelo::nova();
+        let tenilo = tabelo.instalu_en(0, 0, 1, permesoj).unwrap();
+        let rezulto = serĉi_kapablon(&tabelo, tenilo, Permesoj::SENDI);
+        if permesoj.posedas(Permesoj::SENDI) {
+            assert_eq!(rezulto, Ok(0));
+        } else {
+            assert_eq!(rezulto, Err(IpcEraro::NesufiĉajPermesoj));
+        }
+    }
+
+    /// Sen `RICEVI` la kapablo ne permesas ricevi.
+    #[kani::proof]
+    fn rajtoj_devigas_ricevon() {
+        let permesoj = iuj_permesoj();
+        let mut tabelo = Kapablotabelo::nova();
+        let tenilo = tabelo.instalu_en(0, 0, 1, permesoj).unwrap();
+        let rezulto = serĉi_kapablon(&tabelo, tenilo, Permesoj::RICEVI);
+        if permesoj.posedas(Permesoj::RICEVI) {
+            assert_eq!(rezulto, Ok(0));
+        } else {
+            assert_eq!(rezulto, Err(IpcEraro::NesufiĉajPermesoj));
+        }
+    }
+
+    /// `DONI` akceptas nur subaron de la fontaj permesoj.
+    #[kani::proof]
+    fn dono_nur_malpligrandigas_rajtajn() {
+        let fontaj = iuj_permesoj();
+        let petitaj = iuj_permesoj();
+        let permesita = dono_permesita(fontaj, petitaj);
+        if permesita {
+            assert_eq!(petitaj.bitoj() & !fontaj.bitoj(), 0);
+        } else {
+            assert_ne!(petitaj.bitoj() & !fontaj.bitoj(), 0);
+        }
+        assert!(dono_permesita(fontaj, fontaj));
+    }
+
+    /// Tenilo el la tabelo de unu procezo ne validas en la tabelo de alia.
+    #[kani::proof]
+    fn transproceza_tenilo_nevalidas() {
+        let mut unua = Kapablotabelo::nova();
+        let dua = Kapablotabelo::nova();
+        let tenilo = unua.instalu_en(0, 0, 1, Permesoj::PLENAJ).unwrap();
+        assert_eq!(serĉi_kapablon(&unua, tenilo, Permesoj::NENIU), Ok(0));
+        assert_eq!(
+            serĉi_kapablon(&dua, tenilo, Permesoj::NENIU),
+            Err(IpcEraro::NevalidaTenilo)
+        );
+        // La sama fenda indekso kun alia generacio ankaŭ estas rifuzata.
+        let malnova = Tenilo::nova(0, 2).unwrap();
+        assert_eq!(
+            serĉi_kapablon(&unua, malnova, Permesoj::NENIU),
+            Err(IpcEraro::NevalidaTenilo)
+        );
     }
 }

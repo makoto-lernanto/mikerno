@@ -8,8 +8,8 @@
 use core::mem::size_of;
 
 use libmikerno::syscall::{
-    SYS_CEDI, SYS_DONI, SYS_FERMI, SYS_FINI, SYS_KREI_FINPUNKTON, SYS_RICEVI, SYS_SENDI,
-    SYS_SENDI_TEMPO, SYS_SKRIBI,
+    SYS_CEDI, SYS_DONI, SYS_FERMI, SYS_FINI, SYS_KREI_FINPUNKTON, SYS_REVOKI, SYS_RICEVI,
+    SYS_SENDI, SYS_SENDI_TEMPO, SYS_SKRIBI,
 };
 use libmikerno::{Mesago, Permesoj, Tenilo};
 
@@ -17,6 +17,7 @@ use crate::interrompo::{InterrompaKadro, InterrompaTraktilo, SISTEMVOKA_VEKTORO}
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::virtuala::{PaĝaTablo, UZANTA_STAKO_GRANDE, UZANTA_STAKO_SUPRO};
 
+use super::procezo::MAKSAJ_PROCEZOJ;
 use super::{ipc, planisto};
 
 /// `-1`: la argumentoj estas malvalidaj.
@@ -50,7 +51,7 @@ static SKRIBA_BUFRO: Kunhavigita<[u8; MAKS_SKRIBO]> = Kunhavigita::nova([0; MAKS
 /// `el_ring3` estas vera nur por vokoj el Ring 3: la kerno mem estas fidinda
 /// kaj rajtas uzi kernajn montrilojn, dum uzantaj montriloj estas limigitaj al
 /// la anoncitaj bildaj kaj stakaj regionoj.
-pub fn voki(numero: usize, a0: u64, a1: u64, _a2: u64, _a3: u64, el_ring3: bool) -> u64 {
+pub fn voki(numero: usize, a0: u64, a1: u64, a2: u64, _a3: u64, el_ring3: bool) -> u64 {
     match numero {
         SYS_SKRIBI => skribi(a0, a1, el_ring3),
         SYS_FINI => fini(),
@@ -58,9 +59,10 @@ pub fn voki(numero: usize, a0: u64, a1: u64, _a2: u64, _a3: u64, el_ring3: bool)
         SYS_SENDI => sendi(a0, a1, el_ring3),
         SYS_RICEVI => ricevi(a0, a1, el_ring3),
         SYS_KREI_FINPUNKTON => krei_finpunkton(a0),
+        SYS_DONI => doni(a0, a1, a2),
         SYS_FERMI => fermi(a0),
-        // `DONI`, `REVOKI` kaj la tempaj vokoj venas en la sekvaj fazoj de M14.
-        SYS_DONI..=SYS_SENDI_TEMPO => NEKONATA_VOKO,
+        // `REVOKI` kaj la tempaj vokoj venas en la sekvaj fazoj de M14.
+        SYS_REVOKI..=SYS_SENDI_TEMPO => NEKONATA_VOKO,
         _ => NEKONATA_VOKO,
     }
 }
@@ -112,7 +114,9 @@ fn cedi() -> u64 {
     0
 }
 
-fn sendi(destinacio: u64, montrilo: u64, el_ring3: bool) -> u64 {
+fn sendi(tenilo: u64, montrilo: u64, el_ring3: bool) -> u64 {
+    // La montrila kontrolo venas antaŭ la tenila (C11): malnova Ring 3-provo
+    // kun malvalida celo devas ankoraŭ redoni `-1`, ne `-9`.
     if !kontroli_mesagon(montrilo, false, el_ring3) {
         return MALĜUSTA_ARG;
     }
@@ -126,13 +130,83 @@ fn sendi(destinacio: u64, montrilo: u64, el_ring3: bool) -> u64 {
     if mesago.longo() > ipc::MAKSA_MESAGA_LONGO {
         return MALĜUSTA_ARG;
     }
-    match ipc::sendi_mesagon(destinacio, &mesago) {
+    let Some(tenilo) = el_tenilo(tenilo) else {
+        return NEVALIDA_TENILO;
+    };
+    match ipc::sendi_kapable(planisto::nuna_procezo(), tenilo, &mesago) {
         Ok(()) => 0,
+        Err(ipc::IpcEraro::NesufiĉajPermesoj) => MALĜUSTA_ARG,
         Err(ipc::IpcEraro::NevalidaCelloko) => NEVALIDA_CELLOKO,
         Err(ipc::IpcEraro::MesagujoPlena) => MESAGUJO_PLENA,
         Err(ipc::IpcEraro::NevalidaTenilo) => NEVALIDA_TENILO,
         Err(ipc::IpcEraro::TabeloPlena) => TABELO_PLENA,
     }
+}
+
+/// `rdi` = fonta tenilo; `rsi` = celo-procezo; `rdx` = novaj permesoj.
+///
+/// La novaj permesoj devas esti subaro de la fontaj; `0` aŭ nekonata bito estas
+/// malĝusta argumento.
+fn doni(fonto: u64, celo: u64, permesoj: u64) -> u64 {
+    if permesoj >> 8 != 0 {
+        return MALĜUSTA_ARG;
+    }
+    let Some(permesoj) = Permesoj::el_bitoj(permesoj as u8) else {
+        return MALĜUSTA_ARG;
+    };
+    if permesoj.bitoj() == 0 {
+        return MALĜUSTA_ARG;
+    }
+    let Some(fonto) = el_tenilo(fonto) else {
+        return NEVALIDA_TENILO;
+    };
+    if celo == 0 || celo as usize >= MAKSAJ_PROCEZOJ {
+        return NEVALIDA_CELLOKO;
+    }
+    match ipc::doni(planisto::nuna_procezo(), fonto, celo, permesoj) {
+        Ok(tenilo) => tenilo.nombro() as u64,
+        Err(ipc::IpcEraro::NesufiĉajPermesoj) => MALĜUSTA_ARG,
+        Err(ipc::IpcEraro::NevalidaCelloko) => NEVALIDA_CELLOKO,
+        Err(ipc::IpcEraro::NevalidaTenilo) => NEVALIDA_TENILO,
+        Err(_) => TABELO_PLENA,
+    }
+}
+
+fn ricevi(tenilo: u64, celo: u64, el_ring3: bool) -> u64 {
+    // C11: la celo-montrilo estas kontrolata antaŭ la tenilo.
+    if !kontroli_mesagon(celo, true, el_ring3) {
+        return MALĜUSTA_ARG;
+    }
+    let Some(tenilo) = el_tenilo(tenilo) else {
+        return NEVALIDA_TENILO;
+    };
+    // `ricevi_kapable` rajtas bloki kaj cedi la procesoron, do ĝi restas
+    // ekster la `STAC`-fenestro.
+    let mesago = match ipc::ricevi_kapable(planisto::nuna_procezo(), tenilo) {
+        Ok(mesago) => mesago,
+        Err(ipc::IpcEraro::NesufiĉajPermesoj) => return MALĜUSTA_ARG,
+        Err(ipc::IpcEraro::NevalidaCelloko) => return NEVALIDA_CELLOKO,
+        Err(ipc::IpcEraro::MesagujoPlena) => return MESAGUJO_PLENA,
+        Err(ipc::IpcEraro::NevalidaTenilo) => return NEVALIDA_TENILO,
+        Err(ipc::IpcEraro::TabeloPlena) => return TABELO_PLENA,
+    };
+    {
+        let _gardo = el_ring3.then(crate::arkitekturo::StacGardo::nova);
+        // SAFETY: `celo` estas ne-nula kaj (por Ring 3) en la anoncita regiono;
+        // `Mesago` estas `Copy` kaj la skribo okazas unufoje, sen referenco
+        // restanta. La fenestro kovras nur la skribon.
+        unsafe {
+            core::ptr::write_unaligned(celo as *mut Mesago, mesago);
+        }
+    }
+    0
+}
+
+/// Malpakigu tenilon el la sistemvoka argumento; `None` se ĝi ne eniras 32
+/// bitojn aŭ se la kodigo estas malvalida.
+fn el_tenilo(valoro: u64) -> Option<Tenilo> {
+    let valoro = u32::try_from(valoro).ok()?;
+    Tenilo::el_nombro(valoro)
 }
 
 /// `rdi` = permesoj; `0` aŭ nekonata bito estas malĝusta argumento.
@@ -155,10 +229,7 @@ fn krei_finpunkton(permesoj: u64) -> u64 {
 
 /// `rdi` = tenilo; fermas nur la lokan kapablofendon de la nuna procezo.
 fn fermi(tenilo: u64) -> u64 {
-    if tenilo > u32::MAX as u64 {
-        return NEVALIDA_TENILO;
-    }
-    let Some(tenilo) = Tenilo::el_nombro(tenilo as u32) else {
+    let Some(tenilo) = el_tenilo(tenilo) else {
         return NEVALIDA_TENILO;
     };
     match ipc::fermi(planisto::nuna_procezo(), tenilo) {
@@ -166,25 +237,6 @@ fn fermi(tenilo: u64) -> u64 {
         Err(ipc::IpcEraro::NevalidaTenilo) => NEVALIDA_TENILO,
         Err(_) => MALĜUSTA_ARG,
     }
-}
-
-fn ricevi(fonto: u64, celo: u64, el_ring3: bool) -> u64 {
-    if fonto > planisto::MAKSAJ_FADENOJ as u64 || !kontroli_mesagon(celo, true, el_ring3) {
-        return MALĜUSTA_ARG;
-    }
-    // `ricevi_mesagon` rajtas bloki kaj cedi la procesoron, do ĝi restas
-    // ekster la `STAC`-fenestro.
-    let mesago = ipc::ricevi_mesagon(fonto);
-    {
-        let _gardo = el_ring3.then(crate::arkitekturo::StacGardo::nova);
-        // SAFETY: `celo` estas ne-nula kaj (por Ring 3) en la anoncita regiono;
-        // `Mesago` estas `Copy` kaj la skribo okazas unufoje, sen referenco
-        // restanta. La fenestro kovras nur la skribon.
-        unsafe {
-            core::ptr::write_unaligned(celo as *mut Mesago, mesago);
-        }
-    }
-    0
 }
 
 /// Ne-nula, limigita kaj (por Ring 3) ene de la anoncita uzanta regiono.
@@ -275,20 +327,22 @@ pub fn testi_ring0() {
     );
     let cedo = invoki(SYS_CEDI, [0; 4]);
     // La kerno ne havas kapablolinion (C8), do `KREI_FINPUNKTON` rifuzas per
-    // `-28`; la nula tenilo estas ĉiam malvalida, do `FERMI` redonas `-9`.
+    // `-28`, kaj `DONI`/`FERMI` kun valida-aspekta tenilo redonas `-9`.
     let krei = invoki(
         SYS_KREI_FINPUNKTON,
         [Permesoj::PLENAJ.bitoj() as u64, 0, 0, 0],
     );
+    let doni = invoki(SYS_DONI, [0x100, 1, Permesoj::RICEVI.bitoj() as u64, 0]);
     let fermi = invoki(SYS_FERMI, [0; 4]);
     crate::skribu!(
-        "[sistemvoko] Ring 0-memtesto: skribo={}, nekonata={}, nula={}, troa={}, cedo={}, krei={}, fermi={}\n",
+        "[sistemvoko] Ring 0-memtesto: skribo={}, nekonata={}, nula={}, troa={}, cedo={}, krei={}, doni={}, fermi={}\n",
         skribo as i64,
         nekonata as i64,
         nula as i64,
         troa as i64,
         cedo as i64,
         krei as i64,
+        doni as i64,
         fermi as i64
     );
 }

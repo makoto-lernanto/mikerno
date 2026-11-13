@@ -5,12 +5,10 @@ pub const MAKSA_MESAGA_LONGO: usize = 64;
 
 /// Enlinia mesaĝo inter du finpunktoj.
 ///
-/// `sendinto` estas la fadena identigilo de la sendanto. `ricevonto` estas
-/// hodiaŭ la celo-fadeno, sed ekde la finpunktaj objektoj (Fazo 2 de M14) ĝi
-/// estos la finpunkta identigilo; la aranĝo restas 96 bajtoj. La kerno
-/// plenigas ambaŭ kampojn dum la sendo, do la uzanto ne povas mensogi pri ili.
-/// La datumaro estas kopiata, do la sendanto rajtas reuzi sian bufron tuj post
-/// la voko.
+/// `sendinto` estas la fadena identigilo de la sendanto. `ricevonto` estas la
+/// finpunkta identigilo; la kerno plenigas ambaŭ kampojn dum la sendo, do la
+/// uzanto ne povas mensogi pri ili. La datumaro estas kopiata, do la sendanto
+/// rajtas reuzi sian bufron tuj post la voko.
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Mesago {

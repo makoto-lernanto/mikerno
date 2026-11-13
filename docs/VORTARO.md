@@ -84,7 +84,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `indekso` | index | `Tenilo::indekso`, `0..=15`; `Tenilo` rifuzas pli grandan valoron. |
 | `finpunkta objekto` | endpoint object | `FinaPunktoObjekto` (Fazo 2); posedas la vicon kaj la atendoliston. |
 | `revoki` | revoke | `REVOKI`: finpunkta generacio +1, ĉiuj teniloj malvalidiĝas. |
-| `doni` | grant / transfer | `DONI`: permesoj nur malpliiĝas dum transdono. |
+| `doni` | grant | `DONI` (7): la celo ricevas propran `Tenilo`; la petitaj permesoj devas esti subaro de la fontaj kaj la fonta kapablo restas valida. |
 | `fermi` | close | `FERMI`: fermas unu lokan kapablofendon. |
 | `finpunkta identigilo` | endpoint id | `FinaPunktaId` (`u64`); defaŭltaj finpunktoj uzas la fadenan id, eksplicitaj komenciĝas ĉe `UNUA_FINPUNKTA_ID = 16`. |
 | `defaŭlta finpunkto` | default endpoint | Implica finpunkto de fadeno; `registri_fadenon` tenas ĝin vivan por la malnova vojo. |
@@ -92,8 +92,14 @@ kaj protokolaj nomoj sekvu ĝin.
 | `referenckalkulo` | reference counting | `referencoj: u16`; saturiĝas anstataŭ subflui, kaj la objekto liberiĝas ĉe `0`. |
 | `emerita` | retired | `FinaPunktaStato::Emerita`: la generacio eluziĝis, la fendo neniam plu atribuiĝas (C12). |
 | `kapablotabelo` | capability table | `KAPABLOJ: [[KapabloEniro; 16]; 8]`; linio `0` (kerno) restas ĉiam malplena (C8). |
-| `kapablofendo` | capability slot | `KapabloEniro`: `tenilo`, `permesoj`, `finpunkto`, `uzata`. |
-| `registri fadenon` | register thread | `registri_fadenon(fadeno, procezo)`: idempotenta; rezervas la defaŭltan finpunkton kaj la unuan kapablofendon. |
+| `kapablofendo` | capability slot | `KapabloEniro`: `tenilo`, `permesoj`, `finpunkto`, `fp_generacio`, `uzata`. |
+| `kapabla fenda generacio` | capability slot generation | `Kapablotabelo.generacioj[fendo]`: `0` = emerita; la `Tenilo` portas ĝin. |
+| `akiri kapablon` | acquire capability | `akiri_kapablon(procezo, tenilo, bezonataj)`: unua nivelo (fendo + tenilo + permesoj), dua nivelo (aktiva finpunkto kaj `fp_generacio`). |
+| `rajtoj-subaro` | rights subset | `dono_permesita`: `petitaj & !fontaj == 0`; malobservo redonas `-1`. |
+| `permesa malakcepto` | permission denial | La kapablo validas sed mankas la bito: `-1` (ne `-9`). |
+| `bootstrap-tenilo` | bootstrap handle | `BOOTSTRAP_TENILO = 0x100`: fendo `0`, unua generacio; transira distribuo antaŭ M16. |
+| `ricevanto` | receiver | `FinaPunktoObjekto.ricevanto`: la fadeno blokita en `RICEVI` sur la finpunkto; la sendinto ĝin vekas. |
+| `registri fadenon` | register thread | `registri_fadenon(fadeno, procezo)`: idempotenta; rezervas la defaŭltan finpunkton kaj instalas la bootstrap-tenilon en fendon `0`. |
 | `krei finpunkton` | create endpoint | `KREI_FINPUNKTON` (6); redonas novan `Tenilo`. |
 | `vivas` | is alive | `planisto::vivas(id)`: la celo ekzistas kaj ne estas `Mortinta`; la shim rifuzas per `-3`. |
 | `tempolimo` | timeout | `RICEVI_TEMPO`/`SENDI_TEMPO`; `TEMPOLIMO = -110`. |

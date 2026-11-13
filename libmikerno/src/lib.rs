@@ -15,7 +15,7 @@ pub mod syscall;
 /// erar-kodojn `-9/-11/-28/-32/-90/-110` kaj la sistemvokojn 6–11.
 pub const ABI_VERSIO: u32 = 2;
 
-pub use kapablo::{FinaPunkto, Kapablo, Permesoj, Tenilo};
+pub use kapablo::{BOOTSTRAP_TENILO, FinaPunkto, Kapablo, Permesoj, Tenilo};
 pub use mesago::{MAKSA_MESAGA_LONGO, Mesago};
 pub use starto::{
     MAGIA_NUMERO, REĜIMO_SEKRETO, REĜIMO_SPIONO, SEKRETA_ADRESO, SEKRETA_DUA_ADRESO,

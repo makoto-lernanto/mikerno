@@ -9,6 +9,9 @@
 pub struct Permesoj(u8);
 
 impl Permesoj {
+    /// Neniu permeso; `posedas(NENIU)` ĉiam veras. Uzata por legi kapablon sen
+    /// postuli rajton (ekz. `FERMI` aŭ la fonto de `DONI`).
+    pub const NENIU: Self = Self(0);
     pub const SENDI: Self = Self(1);
     pub const RICEVI: Self = Self(2);
     /// Revoki la finan punkton entute; ĝi estas aparta de la sendaj kaj
@@ -87,6 +90,14 @@ impl Tenilo {
         self.0 >> 8
     }
 }
+
+/// La defaŭlta kapablo de ĉiu procezo: fendo `0`, unua generacio (`0x100`).
+///
+/// La kerno instalas ĝin ĉe la proceza registrado (`registri_fadenon`), do
+/// `horizonto` povas uzi sian propran finpunkton sen antaŭa `KREI_FINPUNKTON`.
+/// Ĉi tio estas la transira kapabla distribuo antaŭ `fork`/`exec` (M16), ne
+/// ĝenerala API.
+pub const BOOTSTRAP_TENILO: Tenilo = Tenilo(1 << 8);
 
 /// Nomita finpunkto, de kiu oni derivas kapablon.
 #[repr(C)]
