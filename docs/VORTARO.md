@@ -196,6 +196,88 @@ kaj protokolaj nomoj sekvu ĝin.
 | `grandega paĝo` | huge page | |
 | `aliniiĝinta` | aligned | |
 
+## FluoU — grafika uzinterfaco
+
+| Esperanto | Angla | Rimarko |
+| --- | --- | --- |
+| `FluoU` | FluoU | Propra nomo: Fluo + Uzinterfaco; la deviga GUI-kadro de Horizonto. |
+| `uzinterfaco` | user interface | Neniam uzu `UI` en identigiloj. |
+| `grafika uzinterfaco` | graphical user interface (GUI) | Nur `FluoU` rajtas ĝin provizi. |
+| `fenestro` | window | Ĉiu fenestro posedas `FENESTRO`-tenilon. |
+| `titolstrio` | title bar | 32 DIP alta; samtempe trenareo. |
+| `fenestra regilo` | caption button | Tri: malgrandigi, pligrandigi/restarigi, fermi. |
+| `malgrandigi` | minimize | Windows-modela regilo. |
+| `pligrandigi` | maximize | La ikono ŝanĝiĝas al `restarigi`. |
+| `restarigi` | restore | Revenigas la antaŭan grandecon. |
+| `fermi` | close | Fenestra ago; ne konfuzu kun `FERMI` de kapabloj. Ruĝa nur en la ŝveba stato de la ferma regilo. |
+| `trafiklumo` | traffic light | La macOS-regilo; malpermesita en FluoU. |
+| `komponanto` | component | Publika API de FluoU. |
+| `ĵetono` | design token | Koloro, mezuro, movo aŭ denseco. |
+| `materialo` | material | Nur `Mika`, `Akrila` kaj `Revelo`. |
+| `Mika` | Mica | Propra materiala nomo; netravidebla bazo. |
+| `Akrila` | Acrylic | Propra materiala nomo; fona nebulo. |
+| `Revelo` | Reveal | Propra materiala nomo; montrilsekva brilo. |
+| `kompozitoro` | compositor | Izolita servo; sola aliras la frambufon. |
+| `akcento` | accent | Unu el ses antaŭagordoj aŭ propra valoro. |
+| `temo` | theme | `malluma` aŭ `hela`. |
+| `denseco` | density | `kompakta`, `norma` aŭ `komforta`. |
+| `elevacio` | elevation | Ombraj niveloj `0`–`4`. |
+| `radiuso` | corner radius | Defaŭlte 8 DIP. |
+| `grajno` | grain | Subtila brua teksturo. |
+| `komanda paletro` | command palette | Eniro. |
+| `helpa surfaco` | auxiliary surface | Eniro kaj Ligo; titolstrio laŭ §3.5 de FLUOU.md. |
+| `objekta ŝelo` | object shell | Ligo. |
+| `objekta fluo` | object stream | Rekordoj, ne teksto. |
+| `rekordo` | record | Unuo de la objekta fluo. |
+| `kampo` | field | Kolumno de rekordo. |
+| `stadio` | pipeline stage | `filtri`, `ordigi`, `montri`, … |
+| `dukto` | pipeline | Sinsekvo de stadioj. |
+| `projekcio` | projection | Elekti kolumnojn per `montri`. |
+| `skalaro` | scalar | Rezulto de `sumi` aŭ `nombri`. |
+| `fulmomesaĝo` | toast notification | Maksimume kvar samtempe. |
+| `informa strio` | info bar | Kvar semantikoj; fermebla. |
+| `langeto` | tab | |
+| `ŝaltilo` | switch | |
+| `glitilo` | slider | |
+| `ŝildeto` | badge | |
+| `tenila ŝildeto` | handle badge | Montras `TENILO`. |
+| `protekta procezo` | protected process | `pid ≤ 3`; `mortigi` rifuzas. |
+| `piksela egaleco` | pixel parity | Inter `x86_64` kaj `arm64`. |
+| `aplikaja manifesto` | application manifest | Enhavas `gui = "fluoU"`. |
+| `izolita aplikaĵo` | sandboxed application | Minimumaj kapabloj. |
+| `kapabla renderado` | capability-based rendering | Sen tenilo ne ekzistas pikseloj. |
+| `rekta frambufa aliro` | direct framebuffer access | Malpermesita al aplikaĵoj. |
+| `vida montro` | visual demo | `docs/FLUOU-montro.html`; nur Esperanta, derivita el la ĵetonoj de tiu ĉi gvidilo. |
+| `sceno` | scene | Sekcio de la vida montro: fenestro, Eniro, Ligo. |
+| `enira tavolo` | palette overlay | Eniro levita super la paĝo per `Ctrl+K`. |
+| `malantaŭa kurteno` | backdrop | Mallumigita fono sub la enira tavolo; klako fermas. |
+
+## Komandoj de Ligo
+
+Ĉiuj komandnomoj estas Esperantaj; la anglaj formoj estas malpermesitaj, ankaŭ
+kiel kaŝitaj aliasoj.
+
+| Esperanto | Angla (malpermesita) | Signifo |
+| --- | --- | --- |
+| `helpu` | `help` | Montri la helpon |
+| `listi` | `ls` | Listigi dosierojn |
+| `legi` | `cat` | Legi dosieron |
+| `procezoj` | `ps` | Montri procezojn |
+| `mortigi` | `kill` | Mortigi procezon |
+| `eldiri` | `echo` | Krei mesaĝan rekordon |
+| `pri` | — | Sistemaj informoj |
+| `temo` | `theme` | Ŝanĝi la temon |
+| `akcento` | `accent` | Ŝanĝi la akcenton |
+| `eniro` | — | Malfermi Eniron |
+| `filtri` | `grep` | Filtri rekordojn |
+| `ordigi` | `sort` | Ordigi rekordojn |
+| `unua` | `head` | Preni la unuajn rekordojn |
+| `sumi` | `sum` | Sumi kampon |
+| `nombri` | `wc` | Nombri rekordojn |
+| `montri` | — | Projekcii kolumnojn |
+| `teksto` | — | Teksta limo |
+| `purigi` | `clear` | Malplenigi la terminalon |
+
 ## Protokolaj kaj aparataraj nomoj
 
 La jenaj nomoj restas en sia originala formo, ĉar ili estas aparataj aŭ
@@ -218,3 +300,17 @@ eksteraj protokolaj nomoj:
 4. Kiam necesas mencii anglan mallongigon, skribu unue la Esperantan nomon kaj
    poste la mallongigon en parentezo: `la tutmonda priskriba tabelo (GDT)`.
 5. Registraj nomoj, instrukcioj kaj eksteraj protokoloj restas netuŝitaj.
+6. Ĉiuj komandnomoj de Ligo estas Esperantaj kaj sen diakritaj signoj; anglaj
+   aliasoj estas malpermesitaj, ankaŭ kaŝe.
+7. La fenestraj regiloj sekvas la Windows-modelon: dekstre, en la ordo
+   `malgrandigi`, `pligrandigi`/`restarigi`, `fermi`. La titolo estas
+   horizontale centrita, la aplika ikono staras maldekstre. La koloraj rondaj
+   `trafiklumoj` de macOS estas malpermesitaj.
+8. Ĉiuj koloroj, mezuroj kaj daŭroj venas el la ĵetonoj de FluoU; ne fiksu
+   ilin rekte en komponantoj.
+9. `docs/FLUOU-montro.html` estas nur Esperanta kaj spegulas la regulojn de
+   `docs/FLUOU.md`; kiam la gvidilo ŝanĝiĝas, ĝisdatigu ankaŭ la montron.
+10. La helpaj surfacoj `Eniro` kaj `Ligo` uzas 32-DIP-an titolstrian skemon:
+    ikono maldekstre, titolo centre. `Ligo` estas vera fenestro, do ĝi montras
+    la tri regilojn dekstre (stato antaŭ ili); `Eniro` ne havas fenestrajn
+    regilojn kaj fermiĝas per `Esc` aŭ klako sur la malantaŭa kurteno.

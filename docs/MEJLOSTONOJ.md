@@ -907,7 +907,8 @@ malsatigas fadenojn; la ripoza kunteksto restas senŝanĝa.
 **Celo.** Uzebla sistemo, ne nur demonstracio.
 
 **Taskoj.** `virtio-blk`-pelilo, simpla dosiersistemo (ekz. FAT aŭ propra
-read-only), ŝelo kun `echo`, `ls`, `cat`, `ps`, `kill`.
+read-only), ŝelo kun la devigaj Esperantaj komandnomoj `eldiri`, `listi`,
+`legi`, `procezoj` kaj `mortigi` (FluoU §2.1); anglaj formoj ne ekzistas.
 
 **Akceptkriterioj.** La ŝelo rulas en Ring 3, legas dosieron kaj lanĉas duan
 procezon.
@@ -920,7 +921,7 @@ procezon.
 
 **Taskoj.** CI (Linux), Kani en CI, testoj por arkitekture sendependaj
 moduloj, QEMU-matrico (BIOS/UEFI, diversaj memorkvantoj), `cargo-deny` /
-permesila kontrolo, `LICENSE`, regenerado de la ISO en CI.
+permesila kontrolo, regenerado de la ISO en CI.
 
 **Akceptkriterioj.** Ĉiu PR plenumas `fmt`, `clippy`, `build`, `kani` kaj la
 QEMU-smokan teston; la ISO estas artefakto de CI, ne permana dosiero.
@@ -976,7 +977,6 @@ mejloŝtono venas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo el M16.
 | Meza | Framebuffer sen rulumo | Malbona uzsperto | M6-poste |
 | Malalta | `Kunhavigita::akiri` prenas `&self` | Facila misuzo | revizio |
 | Malalta | Kani-modelo ≠ produkta kodo | Pruvoj ne rekte aplikeblas | M9 |
-| Malalta | Neniu `LICENSE` | Jura neklaro | M17 |
 
 ---
 

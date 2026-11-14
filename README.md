@@ -21,6 +21,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
 - **Statuso:** funkcianta prototipo — vidu [Mejloŝtonoj](docs/MEJLOSTONOJ.md)
+- **GUI:** deviga kadro FluoU — vidu [docs/FLUOU.md](docs/FLUOU.md)
 
 ---
 
@@ -905,7 +906,7 @@ horizonto: procezo vekis en Ring 3.
 │       │   ├── objekto.rs      # Fadeno, Kunteksto, stato
 │       │   ├── procezo.rs      # Procezo, proceza stato, privata spaco
 │       │   ├── planisto.rs    # rondiga planisto
-│       │   ├── sistemvoko.rs   # SKRIBI/FINI/CEDI/SENDI/RICEVI/KREI_FINPUNKTON/DONI/FERMI
+│       │   ├── sistemvoko.rs   # SKRIBI/FINI/CEDI/SENDI/RICEVI/KREI_FINPUNKTON/DONI/REVOKI/FERMI
 │       │   ├── uzantspaco.rs   # ELF64-ŝargo, stako, U-kontrolo
 │       │   └── ipc.rs          # mesaĝoj, kapabloj + Kani-pruvoj
 │       └── ekrano/
@@ -923,6 +924,8 @@ horizonto: procezo vekis en Ring 3.
 │   └── limine/                 # praŝarĝilo (binaraj dosieroj)
 ├── third_party/dejavu/         # permesilo de la fonto
 └── docs/
+    ├── FLUOU.md                # deviga GUI-gvidilo (FluoU)
+    ├── FLUOU-montro.html       # vida montro de la gvidilo
     ├── MEJLOSTONOJ.md          # mejloŝtonoj kaj pruvaro
     └── VORTARO.md              # Esperanta terminologio
 ```
