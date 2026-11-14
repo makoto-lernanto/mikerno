@@ -81,6 +81,11 @@ pub fn fermi(tenilo: Tenilo) -> isize {
     libmikerno::syscall::fermi(tenilo)
 }
 
+/// Revoku la tutan finpunkton de la tenilo.
+pub fn revoki(tenilo: Tenilo) -> isize {
+    libmikerno::syscall::revoki(tenilo)
+}
+
 /// Cedu la procesoron al la planisto.
 pub fn cedi() -> isize {
     libmikerno::syscall::cedi()

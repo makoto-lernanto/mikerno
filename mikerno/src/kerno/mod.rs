@@ -28,7 +28,10 @@ pub fn kadra_alokilo() -> &'static mut KadraAlokilo {
 }
 
 pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
-    crate::skribu!("[MiKerno] Saluton, mi estas MiKerno v0.4.2!\n");
+    crate::skribu!(
+        "[MiKerno] Saluton, mi estas MiKerno v{}!\n",
+        env!("CARGO_PKG_VERSION")
+    );
     if bazo == origino {
         crate::skribu!(
             "[kerno] KASLR malŝaltita: la bildo restas ĉe 0x{:x}\n",
@@ -160,6 +163,7 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
     registri_testajn_finpunktojn();
     ipc::testi_tabelojn();
     ipc::testi_kapablojn();
+    ipc::testi_revokon();
 
     let mesago = ipc::Mesago::nova(1, 0, 2, "saluton el la praŝarĝo".as_bytes());
     match ipc::sendi_mesagon(2, &mesago) {
@@ -423,6 +427,13 @@ fn testi_procezan_reuzon(kerna: &Spaco, modulo: &Modulo) {
     }
 }
 
+/// Detruu uzantan procezon kaj purigu ĝian IPC-staton; la finpunktoj, kiujn
+/// ĝi posedas, estas revokitaj antaŭ ol la adresa spaco malaperas.
+fn detrui_uzantan(id: u64) {
+    ipc::purigi_procezon(id);
+    let _ = procezo::detrui(id, kadra_alokilo());
+}
+
 /// Kreu la procezon, ŝarĝu la bildon, mapu la sekretajn paĝojn kaj registru
 /// ĝian fadenon. La procezo restas `Preta`; la alvokanto lanĉas ĉiujn uzantajn
 /// procezojn per unu `planisto::lanĉi()`, por ke la planisto interplektu ilin.
@@ -447,7 +458,7 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
         Ok(bildo) => bildo,
         Err(eraro) => {
             crate::skribu!("[uzanto] ŝargo malsukcesis: {}\n", eraro);
-            let _ = procezo::detrui(id, kadra_alokilo());
+            detrui_uzantan(id);
             return false;
         }
     };
@@ -470,7 +481,7 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
     };
     if let Err(eraro) = sekreta {
         crate::skribu!("[procezo] {} sekreta paĝo malsukcesis: {}\n", id, eraro);
-        let _ = procezo::detrui(id, kadra_alokilo());
+        detrui_uzantan(id);
         return false;
     }
 
@@ -483,7 +494,7 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
             id,
             eraro
         );
-        let _ = procezo::detrui(id, kadra_alokilo());
+        detrui_uzantan(id);
         return false;
     }
 
@@ -509,7 +520,7 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
     };
     let Some(enirpunkto) = enirpunkto else {
         crate::skribu!("[uzanto] enirpunkto mankas; Ring 3 ne ekas\n");
-        let _ = procezo::detrui(id, kadra_alokilo());
+        detrui_uzantan(id);
         return false;
     };
     crate::skribu!(
@@ -526,7 +537,7 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
     let fadeno = planisto::pretigi_fadenon(id, id, VirtuaAdreso::nova(kerna_pinto), uzanta_fadeno);
     if let Err(eraro) = planisto::aldoni_fadenon(fadeno) {
         crate::skribu!("[procezo] {} fadena kreado malsukcesis: {:?}\n", id, eraro);
-        let _ = procezo::detrui(id, kadra_alokilo());
+        detrui_uzantan(id);
         return false;
     }
     crate::skribu!(
@@ -558,20 +569,38 @@ fn testa_fadeno(id: u64) {
     if id == 1 {
         sistemvoko::testi_ring0();
     } else if id == 2 {
-        let mesago = ipc::ricevi_mesagon(0);
-        crate::skribu!(
-            "[fadeno 2] ricevis mesaĝon: tipo {}, ricevonto {} (finpunkta id), \"{}\"\n",
-            mesago.tipo,
-            mesago.ricevonto,
-            teksto(&mesago)
-        );
+        match ipc::ricevi_mesagon(0) {
+            Ok(mesago) => crate::skribu!(
+                "[fadeno 2] ricevis mesaĝon: tipo {}, ricevonto {} (finpunkta id), \"{}\"\n",
+                mesago.tipo,
+                mesago.ricevonto,
+                teksto(&mesago)
+            ),
+            Err(eraro) => crate::skribu!(
+                "[fadeno 2] ricevo malsukcesis: {:?} ({})\n",
+                eraro,
+                eraro.kodo()
+            ),
+        }
     } else if id == 3 {
-        let mesago = ipc::ricevi_mesagon(1);
-        crate::skribu!(
-            "[fadeno 3] vekiĝis: ricevonto {}, \"{}\"\n",
-            mesago.ricevonto,
-            teksto(&mesago)
-        );
+        // Fadeno 1 revokas ĉi tiun defaŭltan finpunkton dum la blokado; la
+        // revoka veko devas liveri `-32`, ne pendigi aŭ redoni `-9`.
+        match ipc::ricevi_mesagon(1) {
+            Ok(mesago) => crate::skribu!(
+                "[fadeno 3] neatendita mesaĝo: ricevonto {}, \"{}\"\n",
+                mesago.ricevonto,
+                teksto(&mesago)
+            ),
+            Err(eraro) => crate::skribu!(
+                "[fadeno 3] revoka veko ({}): kodo {}\n",
+                if eraro == ipc::IpcEraro::Revokita {
+                    "bone"
+                } else {
+                    "MALBONE"
+                },
+                eraro.kodo()
+            ),
+        }
     }
 
     for fojo in 1..=10 {
@@ -580,12 +609,13 @@ fn testa_fadeno(id: u64) {
             core::hint::black_box(n);
         }
         if id == 1 && fojo == 3 {
-            match ipc::sendi_mesagon(
-                3,
-                &ipc::Mesago::nova(2, 1, 3, "vekiĝu, fadeno 3".as_bytes()),
-            ) {
-                Ok(()) => crate::skribu!("[fadeno 1] sendis mesaĝon al fadeno 3\n"),
-                Err(eraro) => crate::skribu!("[fadeno 1] IPC: {:?}\n", eraro),
+            match ipc::revoki_defaŭltan(3) {
+                Ok(()) => {
+                    crate::skribu!("[fadeno 1] revokis la defaŭltan finpunkton de fadeno 3\n")
+                }
+                Err(eraro) => {
+                    crate::skribu!("[fadeno 1] revoko de fadeno 3 malsukcesis: {:?}\n", eraro)
+                }
             }
         }
         planisto::cedi();

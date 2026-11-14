@@ -9,7 +9,7 @@ use core::mem::size_of;
 
 use libmikerno::syscall::{
     SYS_CEDI, SYS_DONI, SYS_FERMI, SYS_FINI, SYS_KREI_FINPUNKTON, SYS_REVOKI, SYS_RICEVI,
-    SYS_SENDI, SYS_SENDI_TEMPO, SYS_SKRIBI,
+    SYS_RICEVI_TEMPO, SYS_SENDI, SYS_SENDI_TEMPO, SYS_SKRIBI,
 };
 use libmikerno::{Mesago, Permesoj, Tenilo};
 
@@ -26,17 +26,23 @@ pub const MALĜUSTA_ARG: u64 = (-1i64) as u64;
 pub const NEKONATA_VOKO: u64 = (-2i64) as u64;
 /// `-3`: la celo de mesaĝo ne estas fadeno.
 pub const NEVALIDA_CELLOKO: u64 = (-3i64) as u64;
-/// `-4`: la mesaĝujo de la celo estas plena.
-pub const MESAGUJO_PLENA: u64 = (-4i64) as u64;
 /// `-9`: la tenilo ne validas, la generacio malakordas aŭ la fendo fermiĝis.
 pub const NEVALIDA_TENILO: u64 = (-9i64) as u64;
 /// `-28`: la kapabla aŭ finpunkta tabelo estas plena.
 pub const TABELO_PLENA: u64 = (-28i64) as u64;
+/// `-32`: la finpunkto estis revokita aŭ ĝia posedanto finiĝis.
+pub const FINPUNKTO_REVOKITA: u64 = (-32i64) as u64;
 
 const _: () = {
     assert!(NEVALIDA_TENILO == libmikerno::syscall::NEVALIDA_TENILO as u64);
     assert!(TABELO_PLENA == libmikerno::syscall::TABELO_PLENA as u64);
+    assert!(FINPUNKTO_REVOKITA == libmikerno::syscall::FINPUNKTO_REVOKITA as u64);
 };
+
+/// La sistemvoka erar-kodo por IPC-mal sukceso.
+fn kodo(eraro: ipc::IpcEraro) -> u64 {
+    eraro.kodo() as u64
+}
 
 /// Maksimuma longo de unu `SYS_SKRIBI`-bufro.
 const MAKS_SKRIBO: usize = 4096;
@@ -60,9 +66,10 @@ pub fn voki(numero: usize, a0: u64, a1: u64, a2: u64, _a3: u64, el_ring3: bool) 
         SYS_RICEVI => ricevi(a0, a1, el_ring3),
         SYS_KREI_FINPUNKTON => krei_finpunkton(a0),
         SYS_DONI => doni(a0, a1, a2),
+        SYS_REVOKI => revoki(a0, a1),
         SYS_FERMI => fermi(a0),
-        // `REVOKI` kaj la tempaj vokoj venas en la sekvaj fazoj de M14.
-        SYS_REVOKI..=SYS_SENDI_TEMPO => NEKONATA_VOKO,
+        // La tempaj vokoj venas en la Fazoj 5–6 de M14.
+        SYS_RICEVI_TEMPO..=SYS_SENDI_TEMPO => NEKONATA_VOKO,
         _ => NEKONATA_VOKO,
     }
 }
@@ -135,11 +142,7 @@ fn sendi(tenilo: u64, montrilo: u64, el_ring3: bool) -> u64 {
     };
     match ipc::sendi_kapable(planisto::nuna_procezo(), tenilo, &mesago) {
         Ok(()) => 0,
-        Err(ipc::IpcEraro::NesufiĉajPermesoj) => MALĜUSTA_ARG,
-        Err(ipc::IpcEraro::NevalidaCelloko) => NEVALIDA_CELLOKO,
-        Err(ipc::IpcEraro::MesagujoPlena) => MESAGUJO_PLENA,
-        Err(ipc::IpcEraro::NevalidaTenilo) => NEVALIDA_TENILO,
-        Err(ipc::IpcEraro::TabeloPlena) => TABELO_PLENA,
+        Err(eraro) => kodo(eraro),
     }
 }
 
@@ -165,10 +168,7 @@ fn doni(fonto: u64, celo: u64, permesoj: u64) -> u64 {
     }
     match ipc::doni(planisto::nuna_procezo(), fonto, celo, permesoj) {
         Ok(tenilo) => tenilo.nombro() as u64,
-        Err(ipc::IpcEraro::NesufiĉajPermesoj) => MALĜUSTA_ARG,
-        Err(ipc::IpcEraro::NevalidaCelloko) => NEVALIDA_CELLOKO,
-        Err(ipc::IpcEraro::NevalidaTenilo) => NEVALIDA_TENILO,
-        Err(_) => TABELO_PLENA,
+        Err(eraro) => kodo(eraro),
     }
 }
 
@@ -184,11 +184,7 @@ fn ricevi(tenilo: u64, celo: u64, el_ring3: bool) -> u64 {
     // ekster la `STAC`-fenestro.
     let mesago = match ipc::ricevi_kapable(planisto::nuna_procezo(), tenilo) {
         Ok(mesago) => mesago,
-        Err(ipc::IpcEraro::NesufiĉajPermesoj) => return MALĜUSTA_ARG,
-        Err(ipc::IpcEraro::NevalidaCelloko) => return NEVALIDA_CELLOKO,
-        Err(ipc::IpcEraro::MesagujoPlena) => return MESAGUJO_PLENA,
-        Err(ipc::IpcEraro::NevalidaTenilo) => return NEVALIDA_TENILO,
-        Err(ipc::IpcEraro::TabeloPlena) => return TABELO_PLENA,
+        Err(eraro) => return kodo(eraro),
     };
     {
         let _gardo = el_ring3.then(crate::arkitekturo::StacGardo::nova);
@@ -222,8 +218,7 @@ fn krei_finpunkton(permesoj: u64) -> u64 {
     }
     match ipc::krei_finpunkton(planisto::nuna_procezo(), permesoj) {
         Ok(tenilo) => tenilo.nombro() as u64,
-        Err(ipc::IpcEraro::NevalidaTenilo) => NEVALIDA_TENILO,
-        Err(_) => TABELO_PLENA,
+        Err(eraro) => kodo(eraro),
     }
 }
 
@@ -234,8 +229,21 @@ fn fermi(tenilo: u64) -> u64 {
     };
     match ipc::fermi(planisto::nuna_procezo(), tenilo) {
         Ok(()) => 0,
-        Err(ipc::IpcEraro::NevalidaTenilo) => NEVALIDA_TENILO,
-        Err(_) => MALĜUSTA_ARG,
+        Err(eraro) => kodo(eraro),
+    }
+}
+
+/// `rdi` = tenilo; `rsi` devas esti `0` (C14). Revoko estas ĉiam tutfinpunkta.
+fn revoki(tenilo: u64, rezervita: u64) -> u64 {
+    if rezervita != 0 {
+        return MALĜUSTA_ARG;
+    }
+    let Some(tenilo) = el_tenilo(tenilo) else {
+        return NEVALIDA_TENILO;
+    };
+    match ipc::revoki(planisto::nuna_procezo(), tenilo) {
+        Ok(()) => 0,
+        Err(eraro) => kodo(eraro),
     }
 }
 
@@ -327,15 +335,18 @@ pub fn testi_ring0() {
     );
     let cedo = invoki(SYS_CEDI, [0; 4]);
     // La kerno ne havas kapablolinion (C8), do `KREI_FINPUNKTON` rifuzas per
-    // `-28`, kaj `DONI`/`FERMI` kun valida-aspekta tenilo redonas `-9`.
+    // `-28`, kaj `DONI`/`FERMI`/`REVOKI` kun valida-aspekta tenilo redonas
+    // `-9`; ne-nula `rsi` ĉe `REVOKI` estas malĝusta argumento (`-1`).
     let krei = invoki(
         SYS_KREI_FINPUNKTON,
         [Permesoj::PLENAJ.bitoj() as u64, 0, 0, 0],
     );
     let doni = invoki(SYS_DONI, [0x100, 1, Permesoj::RICEVI.bitoj() as u64, 0]);
     let fermi = invoki(SYS_FERMI, [0; 4]);
+    let revoki = invoki(SYS_REVOKI, [0x100, 0, 0, 0]);
+    let revok_argumento = invoki(SYS_REVOKI, [0x100, 1, 0, 0]);
     crate::skribu!(
-        "[sistemvoko] Ring 0-memtesto: skribo={}, nekonata={}, nula={}, troa={}, cedo={}, krei={}, doni={}, fermi={}\n",
+        "[sistemvoko] Ring 0-memtesto: skribo={}, nekonata={}, nula={}, troa={}, cedo={}, krei={}, doni={}, fermi={}, revoki={}, revok_argumento={}\n",
         skribo as i64,
         nekonata as i64,
         nula as i64,
@@ -343,7 +354,9 @@ pub fn testi_ring0() {
         cedo as i64,
         krei as i64,
         doni as i64,
-        fermi as i64
+        fermi as i64,
+        revoki as i64,
+        revok_argumento as i64
     );
 }
 

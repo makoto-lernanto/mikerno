@@ -83,7 +83,15 @@ kaj protokolaj nomoj sekvu ĝin.
 | `generacio` | generation | 24 bitoj, komenciĝas ĉe `1`; altiĝas ĉe reuzo de fendo (kontraŭ-ABA). |
 | `indekso` | index | `Tenilo::indekso`, `0..=15`; `Tenilo` rifuzas pli grandan valoron. |
 | `finpunkta objekto` | endpoint object | `FinaPunktoObjekto` (Fazo 2); posedas la vicon kaj la atendoliston. |
-| `revoki` | revoke | `REVOKI`: finpunkta generacio +1, ĉiuj teniloj malvalidiĝas. |
+| `revoki` | revoke | `REVOKI` (8): ĉiam tutfinpunkta (C14); `rsi` devas esti `0`; finpunkta generacio +1, ĉiuj teniloj malvalidiĝas; blokita ricevanto vekiĝas per `-32`. |
+| `revokita` | revoked | `IpcEraro::Revokita`: la finpunkto revokiĝis aŭ ĝia posedanto finiĝis; `-32`. |
+| `revoka veko` | revocation wake | `REVOKAJ_VEKOJ[fadeno]`: unufoja marko por blokita ricevanto; `ricevi_kapable`/`ricevi_mesagon` ĝin konsumas kaj redonas `-32`. |
+| `revoki la defaŭltan finpunkton` | revoke the default endpoint | `revoki_defaŭltan(fadeno)`: kerna vojo sen kapabla kontrolo (C8). |
+| `forigi finpunkton` | remove endpoint | `forigu_finpunkton(fendo)`: liberigas ĉiujn kongruajn kapablofendojn en ĉiuj tabeloj, la finpunktan objekton, kaj vekas la ricevanton. |
+| `purigi procezon` | clean up a process | `purigi_procezon(procezo)`: ĉe `SYS_FINI`, mortiga escepto kaj prepar-eraroj; liberigas la kapablojn kaj revokas la posedatajn finpunktojn. |
+| `detrui uzanton` | destroy a user process | `detrui_uzantan(id)`: `purigi_procezon` + `procezo::detrui`. |
+| `kodo de IPC-eraro` | IPC error code | `IpcEraro::kodo()`: `-1/-3/-4/-9/-28/-32`; la sistemvoko nur konvertas ĝin al `u64`. |
+| `akordi` | match | `akordas(aktiva, objekta_generacio, kapabla_generacio)`: la dua validiga nivelo; revoko aŭ emeritiĝo malakordigas ĝin. |
 | `doni` | grant | `DONI` (7): la celo ricevas propran `Tenilo`; la petitaj permesoj devas esti subaro de la fontaj kaj la fonta kapablo restas valida. |
 | `fermi` | close | `FERMI`: fermas unu lokan kapablofendon. |
 | `finpunkta identigilo` | endpoint id | `FinaPunktaId` (`u64`); defaŭltaj finpunktoj uzas la fadenan id, eksplicitaj komenciĝas ĉe `UNUA_FINPUNKTA_ID = 16`. |
@@ -105,6 +113,8 @@ kaj protokolaj nomoj sekvu ĝin.
 | `tempolimo` | timeout | `RICEVI_TEMPO`/`SENDI_TEMPO`; `TEMPOLIMO = -110`. |
 | `nebloka` | non-blocking | `r10 = 0`; malplena vico redonas `PROVU_DENOVE = -11`. |
 | `ABI-versio` | ABI version | `ABI_VERSIO = 2` ekde M14 Fazo 1. |
+| `versio de la pakaĵo` | package version | `env!("CARGO_PKG_VERSION")`: la saluta linio legas ĝin dum kompilado. |
+| `kontroli version` / `ĝisdatigi version` | check / update the version | `tools/versio.sh --kontroli` / `--ĝisdatigi`; la sola fonto estas `Cargo.toml`. |
 | `nevalida tenilo` | invalid handle (`EBADF`) | `NEVALIDA_TENILO = -9`. |
 | `provu denove` | try again (`EAGAIN`) | `PROVU_DENOVE = -11`. |
 | `tabelo plena` | table full (`ENOSPC`) | `TABELO_PLENA = -28`. |

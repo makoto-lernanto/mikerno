@@ -24,22 +24,28 @@ La versio havas la formon `0.x.y` kaj rilatas al la mejloŝtonoj:
 Ekzemple: la Fazoj 1/2/3 de M13 respondas al `0.3.0` / `0.3.1` / `0.3.2`.
 La formo `0.x.y` validas ekde M10; M0–M9 apartenas al la historio `0.0.x`.
 
-Nuna versio: `0.4.2` (M14, Fazo 3).
+Nuna versio: `0.4.3` (M14, Fazo 4).
 
-Lokoj, kie la versio devas resti kongrua:
+La sola fonto de la versio estas `[workspace.package] version` en `Cargo.toml`.
+La kerno legas ĝin per `env!("CARGO_PKG_VERSION")`, do `just run` kaj la ISO
+montras ĝin aŭtomate; `limine.conf` ne portas version.
 
-- `Cargo.toml` — `[workspace.package] version`
-- `mikerno/src/kerno/mod.rs` — la saluta linio `Saluton, mi estas MiKerno v0.x.y`
+Lokoj, kie la versio devas resti kongrua (kontrolataj de `tools/versio.sh`):
+
 - `README.md` — `**Versio:** 0.x.y (workspace)`
-- `docs/MEJLOSTONOJ.md` — `Versio de la workspace` en la kapo kaj la koncerna
-  mejloŝtona ero
+- `docs/MEJLOSTONOJ.md` — `Versio de la workspace` en la kapo
+- `AGENTS.md` — `Nuna versio`
+
+Post versio-ŝanĝo rulu `bash tools/versio.sh --ĝisdatigi`; `just verify`
+rulas `--kontroli`.
 
 ## Laborfluo por unu Fazo
 
 1. Efektivigu nur la Fazon indikitan de la uzanto; ne komencu la sekvan.
 2. Post la efektivigo rulu la taŭgajn kontrolojn (`just verify` aŭ tiujn
    indikitajn de la uzanto) kaj certigu, ke ili pasas.
-3. Ĝisdatigu la version (laŭ la supra mapado), `docs/MEJLOSTONOJ.md` kaj
+3. Ĝisdatigu la version (laŭ la supra mapado; `bash tools/versio.sh
+   --ĝisdatigi` por la dokumentoj), `docs/MEJLOSTONOJ.md` kaj
    `docs/VORTARO.md`.
 4. **Haltu tuj**, raportu la rezulton al la uzanto kaj atendu pluajn
    instrukciojn.

@@ -15,9 +15,9 @@ pub const SYS_SKRIBI: usize = 3;
 pub const SYS_FINI: usize = 4;
 pub const SYS_CEDI: usize = 5;
 
-/// La sekvaj numeroj apartenas al ABI-versio `2`. `KREI_FINPUNKTON`, `DONI` kaj
-/// `FERMI` estas efektivaj ekde la Fazoj 2–3 de M14; `REVOKI` kaj la tempaj
-/// vokoj ankoraŭ respondas `-2` (nekonata voko) ĝis la sekvaj fazoj.
+/// La sekvaj numeroj apartenas al ABI-versio `2`. `KREI_FINPUNKTON`, `DONI`,
+/// `REVOKI` kaj `FERMI` estas efektivaj ekde la Fazoj 2–4 de M14; la tempaj
+/// vokoj ankoraŭ respondas `-2` (nekonata voko) ĝis la Fazoj 5–6.
 pub const SYS_KREI_FINPUNKTON: usize = 6;
 pub const SYS_DONI: usize = 7;
 pub const SYS_REVOKI: usize = 8;
@@ -136,4 +136,11 @@ pub fn krei_finpunkton(permesoj: Permesoj) -> isize {
 /// Fermu la lokan tenilon de finpunkto; `0` aŭ negativa eraro.
 pub fn fermi(tenilo: Tenilo) -> isize {
     unsafe { invoki(SYS_FERMI, [tenilo.nombro() as usize, 0, 0, 0]) }
+}
+
+/// Revoku la tutan finpunkton: ĉiuj teniloj malvalidiĝas kaj blokita
+/// ricevanto vekiĝas per `FINPUNKTO_REVOKITA`. `0` aŭ negativa eraro; la dua
+/// argumento estas rezervita kaj devas esti `0`.
+pub fn revoki(tenilo: Tenilo) -> isize {
+    unsafe { invoki(SYS_REVOKI, [tenilo.nombro() as usize, 0, 0, 0]) }
 }

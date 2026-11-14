@@ -328,6 +328,17 @@ pub fn morti() -> ! {
         crate::skribu!("[planisto] FINI sen fadeno; haltas\n");
         crate::arkitekturo::halti()
     }
+    // La IPC-purigo bezonas la pretan vicon (revokaj vekoj), do ĝi okazas
+    // antaŭ ol `morti` prunteprenas la planiston.
+    let proceza = {
+        let planisto = planisto();
+        planisto.fadenoj[id as usize]
+            .as_ref()
+            .map_or(0, |fadeno| fadeno.procezo)
+    };
+    if proceza != 0 {
+        super::ipc::purigi_procezon(proceza);
+    }
     planisto().morti(id)
 }
 

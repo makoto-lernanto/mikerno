@@ -41,7 +41,11 @@ iso: build-kerno
 run-iso: iso
     bash tools/run-qemu.sh iso
 
+# Kontrolu, ke la dokumenta versio kongruas kun `Cargo.toml`.
+kontroli-version:
+    bash tools/versio.sh --kontroli
+
 # Pruvu la kernajn algoritmojn per Kani (formala verifikado).
 # Kani ne subtenas tutmondan asemblaĵon; la pruvoj ne atingas ĝin.
-verify:
+verify: kontroli-version
     cargo kani -p mikerno -Z unstable-options --ignore-global-asm

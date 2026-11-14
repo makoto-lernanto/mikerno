@@ -16,7 +16,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.4.2 (workspace)
+- **Versio:** 0.4.3 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -65,8 +65,8 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 | SMAP: Ring 0 legas/skribas uzantajn foliojn nur en `STAC`/`CLAC`-fenestroj (`CR4.SMAP`), kun RAII-gardo | Funkcias | `arkitekturo/x86_64/firmigo.rs`, `kerno/sistemvoko.rs` |
 | GDT, 256-vektora IDT, escepta raportado | Funkcias | `gdt.rs`, `idt.rs`, `interrompo/mod.rs` |
 | Uzantaj DPL3-segmentoj kaj `int 0x80`-pordego (interrompa, `0xEE`) | Funkcias | `gdt.rs`, `idt.rs`, `kerno/sistemvoko.rs` |
-| Ok sistemvokoj per `int 0x80`: `SKRIBI`/`FINI`/`CEDI`/`SENDI`/`RICEVI`/`KREI_FINPUNKTON`/`DONI`/`FERMI`, unueca `Mesago`, montrila kontrolo | Funkcias (Ring 0 kaj 3) | `kerno/sistemvoko.rs`, `arkitekturo/x86_64/sistemvoko.rs` |
-| ABI 2: `Tenilo` kun du-nivela generacia kontrolo, kapablotabelo, `KREI_FINPUNKTON`/`DONI`/`FERMI`, permesa malakcepto, erar-kodoj | Funkcias (0.4.2) | `libmikerno/`, `kerno/ipc.rs` |
+| Naŭ sistemvokoj per `int 0x80`: `SKRIBI`/`FINI`/`CEDI`/`SENDI`/`RICEVI`/`KREI_FINPUNKTON`/`DONI`/`REVOKI`/`FERMI`, unueca `Mesago`, montrila kontrolo | Funkcias (Ring 0 kaj 3) | `kerno/sistemvoko.rs`, `arkitekturo/x86_64/sistemvoko.rs` |
+| ABI 2: `Tenilo` kun du-nivela generacia kontrolo, kapablotabelo, `KREI_FINPUNKTON`/`DONI`/`REVOKI`/`FERMI`, revokaj vekoj `-32`, purigo ĉe proceza detruo | Funkcias (ekde 0.4.3) | `libmikerno/`, `kerno/ipc.rs` |
 | TSS kun `RSP0` por Ring 3 → Ring 0 | Funkcias | `tss.rs` |
 | xAPIC (MMIO), malŝalto de 8259-PIC, spuria vektoro `0xFF` | Funkcias | `apic.rs` |
 | 100 Hz perioda temporizilo, kalibrita kontraŭ la PIT | Funkcias | `temporizilo.rs` |
@@ -80,7 +80,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 | Ring 3-escepta kapto: `#PF`/`#GP` mortigas la procezon kaj la sistemo daŭras | Funkcias | `interrompo/mod.rs` |
 | Samtempaj procezoj `4`/`5` kun sama sekreta adreso sed malsamaj kadroj | Funkcias | `kerno/mod.rs`, `kerno/uzantspaco.rs` |
 | Izolado de adresa spaco: spiono `#PF` ĉe nur-viktima paĝo, viktimo pluvivas | Funkcias | `horizonto/`, `interrompo/mod.rs` |
-| 20 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ipc.rs` |
+| 21 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ipc.rs` |
 
 > `horizonto` estas liverata kiel praŝarĝa modulo, muntata super 4 GiB kun la
 > bito `U` tra ĉiuj paĝtabelaj niveloj, kaj ekzekutas en Ring 3 per `iretq`.
@@ -439,19 +439,29 @@ kunhavas.
 - `SENDI`/`RICEVI` prenas veran `Tenilo`-n en `rdi`; la dua nivelo de la
   validigo kontrolas, ke la finpunkta objekto estas aktiva kaj havas la
   generacion, kiun la kapablofendo memoras — malnova tenilo ne reviviĝas;
+- `REVOKI` (8) estas **tutfinpunkta** (C14): ĝi postulas la biton `REVOKI`,
+  forigas la finpunktan objekton kaj ĉiujn ĝiajn kapablofendojn en ĉiu procezo;
+  blokita ricevanto estas vekata per `-32`; `FERMI` nur fermas la lokan
+  tenilon;
 - malplena permeso aŭ manko de la koncerna bito redonas `-1`, nevalida aŭ
   eksdata tenilo `-9`; la montrila kontrolo venas antaŭ la tenila (C11);
+- la finpunkta generacio estas pliigata ĉe revoko kaj ĉe proceza detruo, do
+  neniu malnova tenilo reviviĝas;
 - `registri_fadenon` instalas la transiran `BOOTSTRAP_TENILO` (`0x100`: fendo
   `0`, unua generacio) por ĉiu procezo, do `horizonto` povas uzi sian
   defaŭltan finpunkton sen antaŭa `KREI_FINPUNKTON`;
+- proceza detruo (ankaŭ la antaŭaj erarvojoj de `prepari_uzantan_procezon`)
+  vokas `ipc::purigi_procezon`: ĝi malpliigas la referencojn de fremdaj
+  finpunktoj, liberigas ĉiujn kapablofendojn de la procezo kaj revokas la
+  finpunktojn, kiujn ĝi posedis;
 - la kernaj fadenoj (procezo `0`) ne havas kapablotabelon; ili uzas la
   internajn `sendi_mesagon`/`ricevi_mesagon` (C8).
 
 Ĉiuj operacioj tenas interrompojn malŝaltitaj per `InterrompaGardo`, kiu
 restarigas la antaŭan `RFLAGS.IF`-staton ĉe `Drop`.
 
-Nuna limigo: unu finpunkto memoras nur unu blokitan ricevanton, kaj `REVOKI`,
-tempolimoj kaj `fork`/`exec`-distribuo de kapabloj venas en la sekvaj fazoj.
+Nuna limigo: unu finpunkto memoras nur unu blokitan ricevanton; tempolimoj,
+sendblokado kaj `fork`/`exec`-distribuo de kapabloj venas en la sekvaj fazoj.
 
 ---
 
@@ -489,8 +499,8 @@ tempolimoj kaj `fork`/`exec`-distribuo de kapabloj venas en la sekvaj fazoj.
 - `FinaPunkto`, `Kapablo`, `Permesoj`, `Tenilo`, `BOOTSTRAP_TENILO`,
 - sistemvokaj numeroj: `SYS_SENDI = 1`, `SYS_RICEVI = 2`, `SYS_SKRIBI = 3`,
   `SYS_FINI = 4`, `SYS_CEDI = 5`, `SYS_KREI_FINPUNKTON = 6`, `SYS_DONI = 7`,
-  `SYS_FERMI = 11`; `SYS_REVOKI` (8) kaj la tempaj vokoj 9–10 ankoraŭ
-  respondas `-2`,
+  `SYS_REVOKI = 8`, `SYS_FERMI = 11`; la tempaj vokoj 9–10 ankoraŭ respondas
+  `-2`,
 - `Tenilo` — 32-bita kapabla tenilo (8 bitoj da indekso + 24 bitoj da
   generacio, generacio ekde `1`); la novaj erar-kodoj estas `-9`, `-11`, `-28`,
   `-32`, `-90` kaj `-110`,
@@ -650,7 +660,9 @@ respektive `-2` aŭ `-1`; se iu ajn sukcessus, la uzanta programo printus
 plenumeblan enirpaĝon ankaŭ lasas la kernan protokolon
 `… ne havas la postulatan folian permeson`. Ekde Fazo 3 la sama procezo ankaŭ
 sendas per du malvalidaj teniloj (`6` kun ne-kongrua generacio kaj `0`), kaj
-ambaŭ devas redoni `-9`.
+ambaŭ devas redoni `-9`. Ekde Fazo 4 ĝi krome revokas finpunkton: `REVOKI` kun
+ne-nula `rsi` redonas `-1`, finpunkto sen la bito `REVOKI` redonas `-1`, kaj
+post revoko la sama tenilo redonas `-9` por `SENDI`, `FERMI` kaj dua `REVOKI`.
 
 ### Dispetĉilo
 
@@ -660,10 +672,10 @@ skribas la rezulton reen en `kadro.rax`. La mesaĝa aranĝo venas el
 `libmikerno::Mesago`, do la kerno kaj Ring 3 kopias la saman `#[repr(C)]`
 strukturon; la kongruo estas fiksita per kompila-tempaj asertoj.
 `kerno/sistemvoko.rs` efektivigas `SENDI`, `RICEVI`, `SKRIBI`, `FINI`, `CEDI`,
-`KREI_FINPUNKTON`, `DONI` kaj `FERMI`: Ring 3-bufroj estas ne-nulaj, limigitaj
-kaj ene de la anoncitaj bilda kaj stakaj regionoj (la limoj venas el la nuna
-procezo mem, `Procezo::bildaj_limoj()`); la tenilaj vokoj validigas la kapablon
-en du niveloj (fendo + finpunkta generacio); `SYS_FINI` vokas
+`KREI_FINPUNKTON`, `DONI`, `REVOKI` kaj `FERMI`: Ring 3-bufroj estas ne-nulaj,
+limigitaj kaj ene de la anoncitaj bilda kaj stakaj regionoj (la limoj venas el
+la nuna procezo mem, `Procezo::bildaj_limoj()`); la tenilaj vokoj validigas la
+kapablon en du niveloj (fendo + finpunkta generacio); `SYS_FINI` vokas
 `planisto::morti()` kaj neniam revenas.
 Ring 0-memtesto pruvas la vojon per `int 0x80` en la unua fadeno (`SYS_CEDI`
 tie vere cedas la procesoron).
@@ -672,30 +684,33 @@ tie vere cedas la procesoron).
 
 ## Konstruado kaj kontrolado
 
-Kontrolo farita la **2026-11-13** per Rust 1.100.0 (la minimuma subtenata
+Kontrolo farita la **2026-11-14** per Rust 1.100.0 (la minimuma subtenata
 versio) en WSL2 (Ubuntu):
 
 ```sh
 cargo build --workspace --release
-#   Finished `release` profile [optimized] target(s) in 5.76s
+#   Finished `release` profile [optimized] target(s) in 1.41s
 
 cargo clippy --workspace --release
 #   Finished `release` profile ... (neniu averto)
 
 cargo fmt --all -- --check
 #   (neniu diferenco)
+
+bash tools/versio.sh --kontroli
+#   (neniu malkongruo)
 ```
 
 Ĉiuj tri praŝarĝaj vojoj estis praktike testitaj per QEMU 256 MiB (matrico de
 la 2026-11-12 per Rust 1.99.1; la PVH- kaj ISO-BIOS-vojoj ripetiĝis la
-2026-11-13 per 1.100.0 kun samaj rezultoj: PVH `KASLR: kerna bazo 0x800000`,
-`izolado (bone): 64839 kadroj antaŭ, 64839 post`; ISO BIOS `KASLR: kerna bazo
-0x7800000`, `izolado (bone): 64837 kadroj antaŭ, 64837 post`):
+2026-11-14 per 1.100.0 kun la sama scenaro: PVH `KASLR: kerna bazo 0x1200000`,
+`izolado (bone): 64823 kadroj antaŭ, 64823 post`; ISO BIOS `KASLR: kerna bazo
+0x7a00000`, `izolado (bone): 64821 kadroj antaŭ, 64821 post`):
 
 | Vojo | Rezulto |
 | --- | --- |
-| PVH (`-kernel` + `-initrd`) | 7 regionoj, 255 MiB uzeblaj, sen framebuffer, `KASLR: kerna bazo 0x…` (malsama ĉiu starto), reuzoprovo `10 cikloj, 64839 kadroj antaŭ, 64839 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `32`/`33` kadroj liberigitaj, `izolado (bone): 64839 kadroj antaŭ, 64839 post`, 1000 tikoj, 5 fadenoj mortintaj |
-| Limine/Multiboot2 (ISO, BIOS) | framebuffer `1280x800, 32 bpp`, `KASLR: kerna bazo 0x…`, reuzoprovo `10 cikloj, 64837 kadroj antaŭ, 64837 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `32`/`33` kadroj liberigitaj, `izolado (bone): 64837 kadroj antaŭ, 64837 post`, 1000 tikoj, 5 fadenoj mortintaj |
+| PVH (`-kernel` + `-initrd`) | 7 regionoj, 255 MiB uzeblaj, sen framebuffer, `KASLR: kerna bazo 0x…` (malsama ĉiu starto), reuzoprovo `10 cikloj, 64823 kadroj antaŭ, 64823 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `[ipc] purigo de procezo 5/4`, `34`/`35` kadroj liberigitaj, `izolado (bone): 64823 kadroj antaŭ, 64823 post`, 1000 tikoj, 5 fadenoj mortintaj |
+| Limine/Multiboot2 (ISO, BIOS) | framebuffer `1280x800, 32 bpp`, `KASLR: kerna bazo 0x…`, reuzoprovo `10 cikloj, 64821 kadroj antaŭ, 64821 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `[ipc] purigo de procezo 5/4`, `34`/`35` kadroj liberigitaj, `izolado (bone): 64821 kadroj antaŭ, 64821 post`, 1000 tikoj, 5 fadenoj mortintaj |
 | Limine (ISO, UEFI/OVMF) | sama scenaro; `KASLR: kerna bazo 0x…`, liberaj kadroj `63367` antaŭ/post, framebuffer `1280x800, 32 bpp`, 1000 tikoj, 5 fadenoj mortintaj |
 
 Por M13 Fazo 2 la sama scenaro ruliĝis kun `-cpu qemu64,+smep,+smap`: la
@@ -713,16 +728,17 @@ bazon: tri sinsekvaj PVH-startoj montris `0x5400000`, `0xd200000` kaj
 restis verdaj, inkluzive de `W^X` kaj de la izolado. Kun `-cpu qemu64` la
 KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 
-`just verify` vokas `cargo kani -p mikerno -Z unstable-options --ignore-global-asm`;
-la 20 pruvoj (6 pri la kadro-alokilo, 14 pri la IPC) pruviĝis verde per Kani
-0.68.0.
+`just verify` unue kontrolas la dokumentan version per `tools/versio.sh
+--kontroli` kaj poste vokas
+`cargo kani -p mikerno -Z unstable-options --ignore-global-asm`; la 21 pruvoj
+(6 pri la kadro-alokilo, 15 pri la IPC) pruviĝis verde per Kani 0.68.0.
 
 ### Kion vi devus vidi
 
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.4.2!
+[MiKerno] Saluton, mi estas MiKerno v0.4.3!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
@@ -730,63 +746,72 @@ la 20 pruvoj (6 pri la kadro-alokilo, 14 pri la IPC) pruviĝis verde per Kani
 [kerno] SMAP ŝaltita; Ring 0 legas uzantajn bufrojn nur en STAC-fenestroj.
 [sistemvoko] pordego 0x80 (DPL3) instalita
 [kerno] memoro: 7 regionoj, 255 MiB uzeblaj
-[memoro] liberigo (bone): 65112 kadroj antaŭ, 65112 post
+[memoro] liberigo (bone): 64956 kadroj antaŭ, 64956 post
 [memoro] W^X (bone): .text RX, .rodata R NX, .data/.bss RW NX, modulo R NX
 [kerno] framebuffer ne havebla; nur COM1    (PVH; ISO montras 1280x800)
-[tss] TR ŝargita; kernostako pinto 0x148d90
+[tss] TR ŝargita; kernostako pinto 0x123ce10
 [temporizilo] kalibrado: ... kalkuloj/s, komenca ...
 [kerno] APIC 0 kaj paĝado pretaj; temporizilo 100 Hz
-[procezo] 6 detruita: 1 privataj PDPT-oj, PML4 0x207000, 25 kadroj liberigitaj
+[procezo] 6 detruita: 1 privataj PDPT-oj, PML4 0x213000, 27 kadroj liberigitaj
 ... (10 reuzaj cikloj)
-[memoro] reuzo (bone): 10 cikloj, 64979 kadroj antaŭ, 64979 post
+[memoro] reuzo (bone): 10 cikloj, 64823 kadroj antaŭ, 64823 post
 [ipc] tabeloj (bone): kreitaj=13, plena=true, fermitaj=13, duobla_fermo=true, nova_generacio=true, malnova_tenilo=true, kerno=true
 [ipc] rajtoj (bone): sendi per RICEVI-nura → -1, ricevi per SENDI-nura → -1
 [ipc] izolado de kapabloj (bone): procezo 7 uzas tenilon de procezo 6 → -9
 [ipc] dono (bone): rajtoj 0b011 → 0b010, eskalado 0b100 → -1
+[ipc] revoko (bone): sen_revoki=-1, revoko=0, donita=-9, fermo=-9, duobla=-9
 [kerno] IPC: mesaĝo sendita al fadeno 2
 [kerno] planisto ekas: 3 fadenoj, antaŭokupo ĉiu 10 ms
 saluton el Ring 0 tra int 0x80
-[sistemvoko] Ring 0-memtesto: skribo=0, nekonata=-2, nula=-1, troa=-1, cedo=0, krei=-28, doni=-9, fermi=-9
+[sistemvoko] Ring 0-memtesto: skribo=0, nekonata=-2, nula=-1, troa=-1, cedo=0, krei=-28, doni=-9, fermi=-9, revoki=-9, revok_argumento=-1
+...
+[fadeno 1] revokis la defaŭltan finpunkton de fadeno 3
+[fadeno 3] revoka veko (bone): kodo -32
 ...
 [planisto] fadeno 3 finiĝis
-[uzanto] horizonto: bildo 0x100000000..0x100003028, enirpunkto 0x100001840
+[uzanto] horizonto: bildo 0x100000000..0x100005158, enirpunkto 0x1000020f0
 [uzanto] stako 0x100ff0000..0x101000000 (64 KiB), pinto 0x101000000
 [uzanto] kontrolo (bone): skriba=true lega=true nurlega_skribo=false kerna=false nemapita=false translima=false eksterfenestra=false enirpunkta=true enir_rx=true stako_rw=true
 [uzanto] memoro: marko 0x4d694b65726e6f21, legita 0x4d694b65726e6f21
-[procezo] 4: Preta, kerna stako 0x138d90, PML4 0x207000, kerna mapo kunhavata, bildo nur en la proceza spaco jes, sekreta paĝo 0x200000000
-[kerno] horizonto 4 pretas: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x100001840
+[procezo] 4: Preta, kerna stako 0x1254e10, PML4 0x213000, kerna mapo kunhavata, bildo nur en la proceza spaco jes, sekreta paĝo 0x200000000
+[kerno] horizonto 4 pretas: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x1000020f0
 [uzanto] ... kontrolo (bone) ...
-[procezo] 5: Preta, kerna stako 0x13cd90, PML4 0x228000, kerna mapo kunhavata, bildo nur en la proceza spaco jes, sekreta paĝo 0x200000000
-[kerno] horizonto 5 pretas: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x100001840
+[procezo] 5: Preta, kerna stako 0x1258e10, PML4 0x236000, kerna mapo kunhavata, bildo nur en la proceza spaco jes, sekreta paĝo 0x200000000
+[kerno] horizonto 5 pretas: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x1000020f0
 [kerno] du procezoj pretaj; unu planista voko
 horizonto: procezo vekis en Ring 3.
 [ring3] procezo 5: idento (bone): sendinto=5 (uzanto asertis 999), ricevonto=5, resto_nula=jes
 [ring3] procezo 5: finpunktoj (bone): tenilo=257, fermo=0, duobla=-9, malvalida=-9, nulaj_permesoj=-1, nekonataj_permesoj=-1, rekrea=513, malnova=-9
 [ring3] procezo 5: rajtoj (bone): sendi_per_ricevi=-1, ricevi_per_sendi=-1
+[ring3] procezo 5: revoko (bone): argumento=-1, sen_revoki=-1, fermo_sen=0, revoko=0, sendo=-9, fermo=-9, duobla=-9
 [eraro] procezo 5: montrilo 0x1000 (longo 8) estas ekster la anoncita regiono
-[eraro] procezo 5: montrilo 0x100001840 (longo 96, skriba true) ne havas la postulatan folian permeson
+[eraro] procezo 5: montrilo 0x1000020f0 (longo 96, skriba true) ne havas la postulatan folian permeson
 [ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1, nurlega=-1
 [ring3] negativaj (F3): tenilo6=-9, tenilo0=-9
 [ring3] procezo 5: sekreta paĝo kongruas (magio 0x4d694b65726e6f21, id 5)
 [ring3] procezo 5: spionas la viktimon
 horizonto: procezo vekis en Ring 3.
+[ring3] procezo 4: rajtoj (bone): sendi_per_ricevi=-1, ricevi_per_sendi=-1
+[ring3] procezo 4: revoko (bone): argumento=-1, sen_revoki=-1, fermo_sen=0, revoko=0, sendo=-9, fermo=-9, duobla=-9
 [eraro] procezo 4: montrilo 0x1000 (longo 8) estas ekster la anoncita regiono
-[eraro] procezo 4: montrilo 0x100001840 (longo 96, skriba true) ne havas la postulatan folian permeson
+[eraro] procezo 4: montrilo 0x1000020f0 (longo 96, skriba true) ne havas la postulatan folian permeson
 [ring3] negativaj: nekonata=-2, nula=-1, kerna=-1, troa=-1, nurlega=-1
 [ring3] procezo 4: sekreta paĝo kongruas (magio 0x4d694b65726e6f21, id 4)
 [ring3] procezo 4: laboras (fojo 1)
 [ring3] procezo 5: legas la duan sekretan paĝon ĉe 0x200001000
 
-[eraro] procezo 5: paĝa eraro ĉe rip=0x00000001000014ce, erarkodo=0x4, CR2=0x0000000200001000; la procezo estas mortigata
+[eraro] procezo 5: paĝa eraro ĉe rip=0x0000000100001cdb, erarkodo=0x4, CR2=0x0000000200001000; la procezo estas mortigata
+[ipc] purigo de procezo 5: 1 kapabloj liberigitaj, 1 finpunktoj revokitaj
 [planisto] fadeno 5 finiĝis
-[procezo] 5 detruita: 1 privataj PDPT-oj, PML4 0x228000, 32 kadroj liberigitaj
+[procezo] 5 detruita: 1 privataj PDPT-oj, PML4 0x236000, 34 kadroj liberigitaj
 [ring3] procezo 4: laboras (fojo 2)
 ...
 [ring3] procezo 4: laboras (fojo 6)
 [ring3] procezo 4: pluvivas post la spiono; finas per SYS_FINI
+[ipc] purigo de procezo 4: 1 kapabloj liberigitaj, 1 finpunktoj revokitaj
 [planisto] fadeno 4 finiĝis
-[procezo] 4 detruita: 1 privataj PDPT-oj, PML4 0x207000, 33 kadroj liberigitaj
-[memoro] izolado (bone): 64979 kadroj antaŭ, 64979 post
+[procezo] 4 detruita: 1 privataj PDPT-oj, PML4 0x213000, 35 kadroj liberigitaj
+[memoro] izolado (bone): 64823 kadroj antaŭ, 64823 post
 [kerno] planisto revenis al la ripoza fadeno
 ...
 [kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
@@ -802,9 +827,11 @@ horizonto: procezo vekis en Ring 3.
 
 1. **Fadeno 2** tuj blokiĝas en `ricevi_mesagon(0)`; la praŝarĝo sendas al ĝi
    mesaĝon `tipo 1` («saluton el la praŝarĝo»), kiu vekas ĝin.
-2. Ĉiuj tri fadenoj dek fojojn printas sian progreson kaj cedas la procesoron.
-3. En la tria fojo **fadeno 1** sendas mesaĝon `tipo 2` al la blokita
-   **fadeno 3**, kiu vekiĝas kaj printas ĝin.
+2. **Fadeno 3** blokiĝas sur sia defaŭlta finpunkto (`ricevi_mesagon(1)`), kaj
+   ĉiuj tri fadenoj dek fojojn printas sian progreson kaj cedas la procesoron.
+3. En la tria fojo **fadeno 1** revokas la defaŭltan finpunkton de fadeno 3 per
+   `revoki_defaŭltan`; la blokita fadeno 3 vekiĝas kun `-32` (`Revokita`) kaj
+   printas `[fadeno 3] revoka veko (bone): kodo -32`.
 4. Post la lasta fojo ĉiu fadeno finiĝas; la planisto revenas al la ripoza
    kunteksto.
 5. Antaŭ la uzantaj procezoj la praŝarĝo rulas la reuzoprovo: ĝi kreas la
@@ -824,8 +851,11 @@ horizonto: procezo vekis en Ring 3.
    printas `[eraro] procezo 5 …`, mortigas la procezon kaj `detruu` liberigas
    ĝian tutan spacon. La planisto elektas procezon `4`; neniu `halti()` okazas.
 9. Procezo `4` pluvivas la spionon, printas la rondojn `2`–`6` kaj eliras per
-   `fini(0)`; `SYS_FINI` detruas ankaŭ ĝian spacon. La praŝarĝo logas
-   `[memoro] izolado (bone)` kaj la liberaj kadroj egalas antaŭ kaj post.
+   `fini(0)`; `SYS_FINI` detruas ankaŭ ĝian spacon. Antaŭ la detruo
+   `ipc::purigi_procezon` liberigas ĝiajn kapablojn kaj revokas ĝian
+   finpunkton (`[ipc] purigo de procezo 4 …`); la sama okazas por la spiono.
+   La praŝarĝo logas `[memoro] izolado (bone)` kaj la liberaj kadroj egalas
+   antaŭ kaj post.
 10. La praŝarĝo observas la ceterajn 1000 tikojn (≈10 s ĉe 100 Hz), printas la
     finan staton `5 mortintaj` kaj haltas per `hlt`.
 
@@ -923,20 +953,25 @@ horizonto: procezo vekis en Ring 3.
 - **Fiksaj limoj**: 8 fadenoj, 16 mesaĝoj po fadeno, 64 bajtoj po mesaĝo,
   4 GiB fizika memoro.
 - **IPC**: la finpunktaj objektoj havas generaciojn kaj referenckalkulon, kaj
-  `SENDI`/`RICEVI` jam uzas kapablo-tenilojn kun permesa kaj du-nivela
-  generacia kontrolo; mankas `REVOKI`, tempolimoj, sendblokado kaj
-  `fork`/`exec`-distribuo de kapabloj (Fazoj 4–6).
+  `SENDI`/`RICEVI` uzas kapablo-tenilojn kun permesa kaj du-nivela generacia
+  kontrolo; `REVOKI` estas tutfinpunkta kaj proceza detruo purigas la
+  kapablojn; mankas tempolimoj, sendblokado kaj `fork`/`exec`-distribuo de
+  kapabloj (Fazoj 5–6).
 - **Ring 3-esceptoj nur `#PF`/`#GP`**: tiuj du mortigas la procezon; aliaj
   esceptoj — ankaŭ el Ring 3 — restas fatalaj, kaj demando-paĝado ne
   ekzistas.
 - **Framebuffer**: nur 32 bpp, kvar fiksaj strekoj (8×16 … 32×64), 111 glifoj
   (95 ASCII + Esperanto + citiloj), malplenigo anstataŭ rulumo.
-- **Pruvoj**: 20 Kani-pruvoj spegulas la bitan logikon sur 64 kadroj kaj
+- **Pruvoj**: 21 Kani-pruvoj spegulas la bitan logikon sur 64 kadroj kaj
   malgrandaj lokaj kapablotabeloj; la produkta kodo mem ne estas pruvita.
   `just verify` postulas apartan Kani-instalon.
 - **Neniu CI nek testoharness**: la kontrolo estas `build` + `clippy` + `fmt` +
   QEMU-smoka testo.
-- **Versio hardkodita** en `kerno/mod.rs`, `limine.conf` kaj `Cargo.toml`.
+- **Versio**: la sola fonto estas `Cargo.toml`; la saluta linio legas
+  `env!("CARGO_PKG_VERSION")` dum kompilado, do `just run` kaj la ISO montras
+  la saman version, kaj `limine.conf` ne portas version. La dokumentojn
+  kontrolas `tools/versio.sh --kontroli` (parto de `just verify`), kaj
+  `--ĝisdatigi` ilin reskribas.
 - **ISO povas malaktualiĝi** (vidita dum la kontrolo); ĉiam `just iso` post
   kerna ŝanĝo.
 

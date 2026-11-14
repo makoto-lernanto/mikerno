@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-13 · Versio de la workspace: 0.4.2
+> Stato: 2026-11-14 · Versio de la workspace: 0.4.3
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -21,12 +21,12 @@
 | M6 | Framebuffer-konzolo kaj COM1 | Plenumita | `1280x800, 32 bpp` (ISO) |
 | M7 | Antaŭokupa planisto kaj kuntekstŝanĝo | Plenumita | 3 fadenoj interplektitaj kaj finitaj |
 | M8 | Mesaĝa IPC kun kapabloj | Plenumita | mesaĝoj liveritaj, fadeno 3 vekita |
-| M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 20 pruvoj maŝine plenumitaj kaj verdaj |
+| M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 21 pruvoj maŝine plenumitaj kaj verdaj |
 | M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Plenumita | ABI difinita; `horizonto` plenumiĝas en Ring 3 |
 | M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj (0.1.5) |
 | M12 | Per-procesaj adresspacoj | Plenumita | Fazo 6: W^X laŭ sekcioj, `CR0.WP`, foliaj permesoj en sistemvokoj; Fazo 5: samtempaj procezoj `4`/`5`, sama sekreta adreso `0x200000000`, spiono `#PF` ĉe `0x200001000`, viktimo pluvivas; kadroj egalaj (0.2.5) |
 | M13 | Kerna memoro-firmigo: SMEP, SMAP, KASLR | Plenumita | Fazo 1 (0.3.0): `CR4.SMEP`, Ring 0-provo `#PF` (`erarkodo=0x11`); Fazo 2 (0.3.1): `CR4.SMAP`, `STAC`/`CLAC`, `SMAP-malobservo` (`erarkodo=0x1`); Fazo 3 (0.3.2): ET_DYN + `R_X86_64_RELATIVE`, hazarda bazo (`0x5400000`, `0xd200000`, `0x3000000` en tri startoj), ĉiuj scenaroj verdaj |
-| M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Parta | Fazo 1 (0.4.0): ABI 2 — `Tenilo`, `REVOKI`/`PLENAJ`, erar-kodoj `-9/-11/-28/-32/-90/-110`, vokoj 6–11 rezervitaj, A1-identeco, 13 Kani-pruvoj. Fazo 2 (0.4.1): `FinaPunktoObjekto`-tabelo, generacioj, referenckalkulo, kapablotabelo, `KREI_FINPUNKTON`/`FERMI`, defaŭlta finpunkto, 16 Kani-pruvoj. Fazo 3 (0.4.2): permes-kontroloj, `DONI`(7), `SENDI`/`RICEVI` per `Tenilo` en `rdi`, du-nivela generacia kontrolo, `BOOTSTRAP_TENILO`, 20 Kani-pruvoj |
+| M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Parta | Fazo 1 (0.4.0): ABI 2 — `Tenilo`, `REVOKI`/`PLENAJ`, erar-kodoj `-9/-11/-28/-32/-90/-110`, vokoj 6–11 rezervitaj, A1-identeco, 13 Kani-pruvoj. Fazo 2 (0.4.1): `FinaPunktoObjekto`-tabelo, generacioj, referenckalkulo, kapablotabelo, `KREI_FINPUNKTON`/`FERMI`, defaŭlta finpunkto, 16 Kani-pruvoj. Fazo 3 (0.4.2): permes-kontroloj, `DONI`(7), `SENDI`/`RICEVI` per `Tenilo` en `rdi`, du-nivela generacia kontrolo, `BOOTSTRAP_TENILO`, 20 Kani-pruvoj. Fazo 4 (0.4.3): `REVOKI`(8) tutfinpunkta, revokaj vekoj `-32`, purigo ĉe proceza detruo, `Result<Mesago, IpcEraro>`, 21 Kani-pruvoj |
 | M15 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
 | M16 | Konservado, dosiersistemo, ŝelo | Venonta | — |
 | M17 | CI, testoj, plena pruvaro | Venonta | — |
@@ -553,7 +553,7 @@ ekspluaton de konataj kernaj adresoj.
 - `cargo fmt --all -- --check` — pura.
 - `cargo clippy --workspace --release` — sen avertoj.
 - `cargo build --workspace --release` — sukcesa.
-- 20 Kani-pruvoj: 6 en `memoro/kadro.rs`, 14 en `kerno/ipc.rs`; ĉiuj maŝine
+- 21 Kani-pruvoj: 6 en `memoro/kadro.rs`, 15 en `kerno/ipc.rs`; ĉiuj maŝine
   pruvitaj per Kani 0.68.0 (CBMC 6.11.0) en WSL2 Ubuntu; vidu §4.6.
 - `just verify` difinas la formalan pordegon.
 
@@ -581,6 +581,7 @@ ekspluaton de konataj kernaj adresoj.
 | `kerno/ipc.rs` | `rajtoj_devigas_ricevon` | — |
 | `kerno/ipc.rs` | `dono_nur_malpligrandigas_rajtajn` | — |
 | `kerno/ipc.rs` | `transproceza_tenilo_nevalidas` | — |
+| `kerno/ipc.rs` | `revoko_malvalidigas_tenilojn` | — |
 
 **Mankanta.**
 
@@ -726,9 +727,11 @@ kadroj antaŭ, 63507 post`).
 3. **Malaktuala ISO (grava).** Historia trovaĵo de 0.1.x: `iso_root/` kaj
    `mikerno.iso` estas git-ignoritaj, do malnova ISO povas montri malnovan
    version. Oni ĉiam rulu `just iso` post kerna aŭ dokumenta ŝanĝo.
-4. **Versio hardkodita.** `kerno/mod.rs`, `mikerno/boot/limine.conf` kaj
-   `Cargo.toml` enhavas la nunan version (`0.3.2`) sendepende. Oni devus derivi
-   ĝin per `env!("CARGO_PKG_VERSION")` kaj `build.rs`.
+4. **Versio hardkodita (riparita en 0.4.3).** `kerno/mod.rs` kaj
+   `mikerno/boot/limine.conf` iam portis la nunan version sendepende. Nun la
+   kerno legas `env!("CARGO_PKG_VERSION")`, la menuo ne plu montras version,
+   kaj `tools/versio.sh` kontrolas la dokumentojn; la sola fonto restas
+   `Cargo.toml`.
 5. **Piksela kontrolo nur per `screendump`.** La framebuffer estis vidita per
    QEMU `screendump` (2026-11-12): la titolo, la ĉapelitaj literoj kaj la
    citiloj desegniĝas ĝuste. La alta distingivo (16×32/32×64) ne estis provita
@@ -775,7 +778,7 @@ Medio: WSL2 Ubuntu, deponejo kopiita al la hejma dosierujo (ext4; `/mnt/d` estas
 preterlasas la tutmondan `asm!`-eniron de la 64-bita starto, kiun CBMC ne
 modelas.
 
-Rezulto: `Complete - 20 successfully verified harnesses, 0 failures, 20 total.`
+Rezulto: `Complete - 21 successfully verified harnesses, 0 failures, 21 total.`
 La unuopaj `unwind`-limoj estas en la tabelo de §3 (M9). La pruvo
 `tenilo_kodigo_roundtrip` kovras la `Tenilo`-kodigon: valida paro revenas
 senŝanĝe, dum generacio `0` kaj indekso super `15` estas rifuzataj. Ekde Fazo 2
@@ -787,7 +790,10 @@ koncernan operacion nur ĉe la responda bito (`rajtoj_devigas_sendon`,
 `rajtoj_devigas_ricevon`), `DONI` akceptas nur subaron de la fontaj permesoj
 (`dono_nur_malpligrandigas_rajtajn`) kaj tenilo el unu proceza tabelo ne
 validas en alia, eĉ kun la sama fenda indekso
-(`transproceza_tenilo_nevalidas`).
+(`transproceza_tenilo_nevalidas`). Fazo 4 aldonas unu pruvon pri la revoka
+invarianto: tenilo kongruas nur kun aktiva finpunkto de la sama generacio
+(`revoko_malvalidigas_tenilojn`), do revoko aŭ emeritiĝo de la generacio
+malvalidigas ĉiujn ĝiajn tenilojn.
 
 **Kial la pruvoj estas skribitaj tiel.** La unua plena rulo malsukcesis per
 «CBMC appears to have run out of memory» ĉe `fifo_ordo_inter_fontoj` — ne per
@@ -843,9 +849,10 @@ pli ol 3 GB al malpli ol 1 GB, kaj la tuta pordo fariĝas verda.
 - **C5.** La kerno re-exportas `Permesoj`/`Kapablo` el `libmikerno`; la finpunkta
   objekto nomiĝas `FinaPunktoObjekto`, la tabelo `FINAJ_PUNKTOJ`. Oni ne
   enkonduku sinonimon `Rajtoj`.
-- **C6.** La versio estas sinkronigata en ĉiuj konataj lokoj (Cargo,
-  `kerno/mod.rs`, README, MEJLOSTONOJ, `limine.conf`, AGENTS.md); `env!` +
-  `build.rs` restas aparta tasko.
+- **C6.** La versio havas unu fonton, `[workspace.package] version`; la kerno
+  legas ĝin per `env!("CARGO_PKG_VERSION")`, `limine.conf` ne portas version,
+  kaj `tools/versio.sh --kontroli` (parto de `just verify`) kontrolas la
+  dokumentojn.
 - **C7.** `switch` jam konservas `RFLAGS` (inkl. AC); la AC-aserto restas
   disciplina kaj la kialo estas la `STAC`-vivo, ne la kuntekstŝanĝo.
 - **C8.** La kapablotabelo havas 8 liniojn (`[[KapabloEniro; 16]; 8]`); linio
@@ -874,9 +881,12 @@ pli ol 3 GB al malpli ol 1 GB, kaj la tuta pordo fariĝas verda.
 | 2026-11-13 | 1. ABI 2: `Tenilo`, permesoj, erar-kodoj, rezervitaj vokoj, A1-testo | 0.4.0 | `[ring3] procezo 4/5: idento (bone): sendinto=4/5 (uzanto asertis 999), ricevonto=4/5, resto_nula=jes`; `tenilo_kodigo_roundtrip`; 13 Kani-pruvoj; `size -A`: `.text` 76159, `.rodata` 50212, `.data` 4496, `.bss` 380928 B (bazo por la buĝeto C3) |
 | 2026-11-13 | 2. `FinaPunktoObjekto`, generacioj, referencoj, kapablotabelo, `KREI_FINPUNKTON`(6)/`FERMI`(11), defaŭlta finpunkto | 0.4.1 | `[ipc] tabeloj (bone): kreitaj=13, plena=true, fermitaj=13, duobla_fermo=true, nova_generacio=true, malnova_tenilo=true, kerno=true`; `[ring3] procezo 4: finpunktoj (bone): tenilo=1025, fermo=0, duobla=-9, malvalida=-9, nulaj_permesoj=-1, nekonataj_permesoj=-1, rekrea=1281, malnova=-9`; `[ring3] negativaj (F2): celo6=-3, celo0=-3`; `[fadeno 2] ricevis mesaĝon: tipo 1, ricevonto 2 (finpunkta id)`; A1 senŝanĝa; 16 Kani-pruvoj; `size -A`: `.text` 89871, `.rodata` 50724, `.data` 34808, `.bss` 364544 B — RAM-kresko (`.data`+`.bss`) 13928 B ≤ 20 KiB (C3) |
 | 2026-11-13 | 3. Permes-kontroloj, `DONI`(7), `SENDI`/`RICEVI` per tenilo, du-nivela kontrolo, `BOOTSTRAP_TENILO` | 0.4.2 | `[ipc] rajtoj (bone): sendi per RICEVI-nura → -1, ricevi per SENDI-nura → -1`; `[ipc] izolado de kapabloj (bone): procezo 7 uzas tenilon de procezo 6 → -9`; `[ipc] dono (bone): rajtoj 0b011 → 0b010, eskalado 0b100 → -1`; `[ring3] procezo 4: rajtoj (bone): sendi_per_ricevi=-1, ricevi_per_sendi=-1`; `[ring3] negativaj (F3): tenilo6=-9, tenilo0=-9`; `[sistemvoko] Ring 0-memtesto: skribo=0, nekonata=-2, nula=-1, troa=-1, cedo=0, krei=-28, doni=-9, fermi=-9`; `[ipc] tabeloj`, A1 kaj `finpunktoj` senŝanĝaj; 20 Kani-pruvoj; `size -A`: `.text` 86431, `.rodata` 51288, `.data` 36056, `.bss` 364544 B — RAM-kresko (`.data`+`.bss`) 1248 B (C3) |
+| 2026-11-14 | 4. `REVOKI`(8) tutfinpunkta, revokaj vekoj `-32`, purigo ĉe proceza detruo, `Result<Mesago, IpcEraro>` | 0.4.3 | `[ipc] revoko (bone): sen_revoki=-1, revoko=0, donita=-9, fermo=-9, duobla=-9`; `[fadeno 1] revokis la defaŭltan finpunkton de fadeno 3`; `[fadeno 3] revoka veko (bone): kodo -32`; `[ipc] purigo de procezo 4/5: 1 kapabloj liberigitaj, 1 finpunktoj revokitaj`; `[ring3] procezo 4: revoko (bone): argumento=-1, sen_revoki=-1, fermo_sen=0, revoko=0, sendo=-9, fermo=-9, duobla=-9`; `[sistemvoko] Ring 0-memtesto: …, revoki=-9, revok_argumento=-1`; 21 Kani-pruvoj; `size -A`: `.text` 92799, `.rodata` 51808, `.data` 36104, `.bss` 364544 B — RAM-kresko (`.data`+`.bss`) 48 B (C3) |
 
 **Akceptkriterioj.** Mesaĝo portas `sendinto`/`ricevonto`; revoko malvalidigas
-kapablon; plena vico ne perdas mesaĝojn; tempolimo vekas la ricevanton.
+kapablon kaj vekas la blokitan ricevanton per `-32`; proceza detruo liberigas
+ĝiajn kapablojn kaj forprenas ĝiajn finpunktojn; plena vico ne perdas mesaĝojn;
+tempolimo vekas la ricevanton.
 
 ---
 
@@ -959,7 +969,7 @@ mejloŝtono venas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo el M16.
 | Alta | Ring 3-esceptoj krom `#PF`/`#GP` haltigas la sistemon | Ne rekaptebla eraro (ekz. `#UD`) | M12/M17 |
 | Alta | Neniu CI nek testoj | Regresoj nerimarkeblaj | M17 |
 | Alta | Malaktuala ISO | Konfuzaj testrezultoj | CI + versio |
-| Meza | Versio hardkodita en 3 lokoj | Malkongruaj eldonoj | `env!` + `build.rs` |
+| Malalta | Dokumentoj kaj `Cargo.toml` povas malkongrui | Konfuzaj eldonoj | `tools/versio.sh --kontroli` en `just verify` |
 | Meza | IPC finpunkto = fadeno | Ne eblas sendependaj objektoj | M14 |
 | Meza | Sekreta paĝo estas unu fiksa mapado por procezo | Neniu ĝenerala `mmap`/`brk` por uzantaj datumoj | M16 |
 | Meza | Neniu IOMMU | Aparata DMA ne estas izolita | M18 |

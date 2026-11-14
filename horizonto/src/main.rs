@@ -17,7 +17,9 @@ use libmikerno::starto::{
     MAGIA_NUMERO, REĜIMO_SEKRETO, REĜIMO_SPIONO, SEKRETA_ADRESO, SEKRETA_DUA_ADRESO,
     SEKRETA_ID_DEŜOVO,
 };
-use libmikerno::syscall::{SYS_KREI_FINPUNKTON, SYS_RICEVI, SYS_SENDI, SYS_SKRIBI, invoki};
+use libmikerno::syscall::{
+    SYS_KREI_FINPUNKTON, SYS_REVOKI, SYS_RICEVI, SYS_SENDI, SYS_SKRIBI, invoki,
+};
 use libmikerno::{BOOTSTRAP_TENILO, Mesago, Permesoj, Tenilo};
 
 /// La mesaĝa aranĝo devas kongrui bajte kun la kerno (kun `libmikerno`).
@@ -41,6 +43,7 @@ pub extern "C" fn horizonto_start(reĝimo: u64, identigilo: u64) -> ! {
     testi_identon(identigilo);
     testi_finpunktojn(identigilo);
     testi_rajtojn(identigilo);
+    testi_revokon(identigilo);
     testi_negativajn();
     match reĝimo {
         REĜIMO_SEKRETO => sekreta_provo(identigilo),
@@ -252,6 +255,54 @@ fn testi_rajtojn(identigilo: u64) {
         if bone { "bone" } else { "MALBONE" },
         sendo,
         ricevo
+    ));
+}
+
+/// D1/C14: `REVOKI` revokas la tutan finpunkton kaj postulas la biton.
+///
+/// Finpunkto kun `PLENAJ` revokiĝas; ĉiuj ĝiaj teniloj fariĝas malvalidaj
+/// (`-9`), ĉu por sendo, fermo aŭ dua revoko. Finpunkto sen la `REVOKI`-bito
+/// rifuzas la vokon per `-1`, kaj ne-nula rezervita `rsi` same per `-1`.
+fn testi_revokon(identigilo: u64) {
+    let revokebla = biblioteko::krei_finpunkton(Permesoj::PLENAJ);
+    let senrevoka = biblioteko::krei_finpunkton(Permesoj::ĈIUJ);
+    let (Some(revokebla), Some(senrevoka)) = (
+        Tenilo::el_nombro(revokebla as u32),
+        Tenilo::el_nombro(senrevoka as u32),
+    ) else {
+        biblioteko::skribi_formaton(format_args!(
+            "[ring3] procezo {}: revoko (MALBONE): kreo={}, {}\n",
+            identigilo, revokebla, senrevoka
+        ));
+        return;
+    };
+    // SAFETY: neniuj montriloj; `rsi` intence ne estas nula.
+    let argumento = unsafe { invoki(SYS_REVOKI, [senrevoka.nombro() as usize, 1, 0, 0]) };
+    let rifuzo = biblioteko::revoki(senrevoka);
+    let fermo_sen = biblioteko::fermi(senrevoka);
+    let revoko = biblioteko::revoki(revokebla);
+    let mesaĝo = Mesago::nova(0x4B01, 0, 0, b"revoko");
+    let sendo = biblioteko::sendi(revokebla, &mesaĝo);
+    let fermo = biblioteko::fermi(revokebla);
+    let duobla = biblioteko::revoki(revokebla);
+    let bone = argumento == -1
+        && rifuzo == -1
+        && fermo_sen == 0
+        && revoko == 0
+        && sendo == -9
+        && fermo == -9
+        && duobla == -9;
+    biblioteko::skribi_formaton(format_args!(
+        "[ring3] procezo {}: revoko ({}): argumento={}, sen_revoki={}, fermo_sen={}, revoko={}, sendo={}, fermo={}, duobla={}\n",
+        identigilo,
+        if bone { "bone" } else { "MALBONE" },
+        argumento,
+        rifuzo,
+        fermo_sen,
+        revoko,
+        sendo,
+        fermo,
+        duobla
     ));
 }
 
