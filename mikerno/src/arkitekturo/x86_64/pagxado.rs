@@ -122,6 +122,24 @@ impl X86AdresaSpaco {
     fn ĉu_privata(&self, indekso: usize) -> bool {
         self.privataj_pdptoj[indekso / 64] & (1 << (indekso % 64)) != 0
     }
+
+    /// La folia ero, kiu tradukas `virtuala`, kaj ĝia nivelo (1 = 2 MiB-folio,
+    /// 0 = 4 KiB-folio).
+    fn folia_ero(&self, virtuala: VirtuaAdreso) -> Option<(u64, u32)> {
+        let mut tabelo = self.radiko();
+        for nivelo in (1..=3).rev() {
+            let valoro = ero(tabelo, indico(virtuala, nivelo));
+            if valoro & PREZENTA == 0 {
+                return None;
+            }
+            if nivelo == 1 && valoro & GRANDA != 0 {
+                return Some((valoro, 1));
+            }
+            tabelo = FizikaAdreso::nova(valoro & ADRESO_MASKO);
+        }
+        let folio = ero(tabelo, indico(virtuala, 0));
+        (folio & PREZENTA != 0).then_some((folio, 0))
+    }
 }
 
 impl AdresaSpaco for X86AdresaSpaco {
@@ -249,53 +267,19 @@ impl PaĝaTablo for X86AdresaSpaco {
     }
 
     fn permesoj(&self, virtuala: VirtuaAdreso) -> Option<PaĝaPermesoj> {
-        let pml4 = ero(self.radiko(), indico(virtuala, 3));
-        if pml4 & PREZENTA == 0 {
-            return None;
-        }
-        let pdpt = ero(FizikaAdreso::nova(pml4 & ADRESO_MASKO), indico(virtuala, 2));
-        if pdpt & PREZENTA == 0 {
-            return None;
-        }
-        let pd = ero(FizikaAdreso::nova(pdpt & ADRESO_MASKO), indico(virtuala, 1));
-        if pd & PREZENTA == 0 {
-            return None;
-        }
-        if pd & GRANDA != 0 {
-            return Some(permesoj_el_ero(pd));
-        }
-        let pt = ero(FizikaAdreso::nova(pd & ADRESO_MASKO), indico(virtuala, 0));
-        if pt & PREZENTA == 0 {
-            return None;
-        }
-        Some(permesoj_el_ero(pt))
+        self.folia_ero(virtuala)
+            .map(|(ero, _)| permesoj_el_ero(ero))
     }
 
     fn traduki(&self, virtuala: VirtuaAdreso) -> Option<FizikaAdreso> {
-        let pdpt = ero(self.radiko(), indico(virtuala, 3));
-        if pdpt & PREZENTA == 0 {
-            return None;
-        }
-        let pd = ero(FizikaAdreso::nova(pdpt & ADRESO_MASKO), indico(virtuala, 2));
-        if pd & PREZENTA == 0 {
-            return None;
-        }
-        if pd & GRANDA != 0 {
+        let (ero, nivelo) = self.folia_ero(virtuala)?;
+        if nivelo == 1 {
             return Some(FizikaAdreso::nova(
-                (pd & DU_MIB_BAZA_MASKO) | (virtuala.adreso() & 0x1F_FFFF),
+                (ero & DU_MIB_BAZA_MASKO) | (virtuala.adreso() & 0x1F_FFFF),
             ));
         }
-
-        let pt = ero(FizikaAdreso::nova(pd & ADRESO_MASKO), indico(virtuala, 1));
-        if pt & PREZENTA == 0 {
-            return None;
-        }
-        let folio = ero(FizikaAdreso::nova(pt & ADRESO_MASKO), indico(virtuala, 0));
-        if folio & PREZENTA == 0 {
-            return None;
-        }
         Some(FizikaAdreso::nova(
-            (folio & ADRESO_MASKO) | (virtuala.adreso() & 0xFFF),
+            (ero & ADRESO_MASKO) | (virtuala.adreso() & 0xFFF),
         ))
     }
 }

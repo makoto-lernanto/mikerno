@@ -106,9 +106,12 @@ impl KadraAlokilo {
 
     /// Kiom da kadroj restas liberaj.
     pub fn liberaj(&self) -> usize {
-        (0..MAKSA_KADROJ)
-            .filter(|indekso| !self.kadro_uzata(*indekso))
-            .count()
+        let uzataj: usize = self
+            .bitmapo
+            .iter()
+            .map(|bajto| bajto.count_ones() as usize)
+            .sum();
+        MAKSA_KADROJ - uzataj
     }
 
     fn kadro_uzata(&self, indekso: usize) -> bool {
