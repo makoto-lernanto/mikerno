@@ -47,7 +47,8 @@ rulas `--kontroli`.
 
 1. Efektivigu nur la Fazon indikitan de la uzanto; ne komencu la sekvan.
 2. Post la efektivigo rulu la taŭgajn kontrolojn (`just verify` aŭ tiujn
-   indikitajn de la uzanto) kaj certigu, ke ili pasas.
+   indikitajn de la uzanto) kaj certigu, ke ili pasas. Rekonstruu la ISO-on
+   (`just iso`) kaj kontrolu ĝian praŝarĝon antaŭ la raporto.
 3. Ĝisdatigu la version (laŭ la supra mapado; `bash tools/versio.sh
    --ĝisdatigi` por la dokumentoj), `docs/MEJLOSTONOJ.md` kaj
    `docs/VORTARO.md`.
