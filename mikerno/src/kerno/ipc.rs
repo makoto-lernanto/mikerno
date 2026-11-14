@@ -12,6 +12,13 @@
 //! Ĉe la detruo de procezo la sama purigo forigas ĝiajn kapablojn kaj la
 //! finpunktojn, kiujn ĝi posedas.
 //!
+//! Ekde Fazo 5 plena mesaĝvico premegas la sendanton: `SENDI` blokas ĝis la
+//! ricevanto liberigas lokon (aŭ la finpunkto revokiĝas, kio redonas `-32`).
+//! Nur la ripoza kunteksto (`0`) ne povas bloki kaj ricevas `-4`; la mesaĝoj
+//! restas identecaj — la kerno ĉiam anstataŭigas `sendinto` per la nuna fadeno
+//! kaj `ricevonto` per la finpunkta identigilo — kaj `IpcStatistiko` nombras
+//! la liverojn, la premregojn kaj la revokojn.
+//!
 //! Ĉiuj operacioj tenas interrompojn malŝaltitaj.
 
 use crate::interrompo::InterrompaGardo;
@@ -38,7 +45,8 @@ const _: () = {
     assert!(core::mem::offset_of!(Mesago, longo) == 24);
 };
 
-const MAKSAJ_MESAGOJ: usize = 16;
+/// La mesaĝvica kapacito; la testa premrega scenaro uzas `+ 1` mesaĝojn.
+pub const MAKSAJ_MESAGOJ: usize = 16;
 /// La finpunkta tabelo kaj la kapablotabelo havas po 16 fendojn; `Tenilo`
 /// povas adresi nur `0..=15`.
 pub const MAKSAJ_FINPUNKTOJ: usize = 16;
@@ -58,9 +66,11 @@ pub enum IpcEraro {
     /// La kapablo validas, sed ĝi ne posedas la postulatan permeson.
     NesufiĉajPermesoj,
     TabeloPlena,
-    /// La finpunkto estis revokita dum la ricevanto atendis; la objekto kaj
-    /// ĉiuj teniloj malaperis (`FINPUNKTO_REVOKITA`).
+    /// La finpunkto estis revokita dum la ricevanto aŭ sendanto atendis; la
+    /// objekto kaj ĉiuj teniloj malaperis (`FINPUNKTO_REVOKITA`).
     Revokita,
+    /// La mesaĝa `longo` superas `MAKSA_MESAGA_LONGO` (`TRO_LONGA_MESAGO`).
+    TroLongaMesago,
 }
 
 impl IpcEraro {
@@ -73,6 +83,7 @@ impl IpcEraro {
             Self::NevalidaTenilo => -9,
             Self::TabeloPlena => -28,
             Self::Revokita => -32,
+            Self::TroLongaMesago => -90,
         }
     }
 }
@@ -84,6 +95,7 @@ const _: () = {
     assert!(IpcEraro::NevalidaTenilo.kodo() == libmikerno::syscall::NEVALIDA_TENILO as i64);
     assert!(IpcEraro::TabeloPlena.kodo() == libmikerno::syscall::TABELO_PLENA as i64);
     assert!(IpcEraro::Revokita.kodo() == libmikerno::syscall::FINPUNKTO_REVOKITA as i64);
+    assert!(IpcEraro::TroLongaMesago.kodo() == libmikerno::syscall::TRO_LONGA_MESAGO as i64);
 };
 
 #[derive(Clone, Copy)]
@@ -106,8 +118,12 @@ impl Mesagujo {
         }
     }
 
+    fn plena(&self) -> bool {
+        self.nombro >= MAKSAJ_MESAGOJ
+    }
+
     fn pusxi(&mut self, ero: Ero) -> Result<(), IpcEraro> {
-        if self.nombro >= MAKSAJ_MESAGOJ {
+        if self.plena() {
             return Err(IpcEraro::MesagujoPlena);
         }
         self.eroj[self.nombro] = Some(ero);
@@ -130,6 +146,59 @@ impl Mesagujo {
     }
 }
 
+/// La decido de unu sendprovo antaŭ ol tuŝi la vicon.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SendaDecido {
+    Enmetu,
+    /// La vico estas plena, sed la sendanto povas bloki (ĝi ne estas la
+    /// ripoza kunteksto).
+    Atendu,
+    /// La vico estas plena kaj la sendanto ne povas bloki.
+    Rifuzi,
+}
+
+/// La premrega politiko kiel pura funkcio, por ke Kani povu pruvi ĝin.
+const fn senda_decido(enmetitaj: usize, maks: usize, povas_bloki: bool) -> SendaDecido {
+    if enmetitaj < maks {
+        SendaDecido::Enmetu
+    } else if povas_bloki {
+        SendaDecido::Atendu
+    } else {
+        SendaDecido::Rifuzi
+    }
+}
+
+/// Nombrilo de la IPC-trafiko ekde la starto; `Copy` por ke la raporto ne
+/// pruntedonu la tutmondan staton.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct IpcStatistiko {
+    /// Mesaĝoj sukcese enmetitaj en vicon.
+    pub senditaj: u64,
+    /// Mesaĝoj sukcese prenitaj el vico.
+    pub ricevitaj: u64,
+    /// Sendprovoj, kiuj trovis plenan vicon kaj atendis liberan lokon.
+    pub premregoj: u64,
+    /// Finpunktoj revokitaj (inkluzive de proceza purigo).
+    pub revokoj: u64,
+}
+
+static STATISTIKO: Kunhavigita<IpcStatistiko> = Kunhavigita::nova(IpcStatistiko {
+    senditaj: 0,
+    ricevitaj: 0,
+    premregoj: 0,
+    revokoj: 0,
+});
+
+fn statistiko() -> &'static mut IpcStatistiko {
+    STATISTIKO.akiri()
+}
+
+/// Kopio de la nuna statistiko; la vokanto tenas interrompojn malŝaltitajn aŭ
+/// akceptas malstrikte kongruan legadon.
+pub fn nuna_statistiko() -> IpcStatistiko {
+    *STATISTIKO.akiri()
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum FinaPunktaStato {
     Libera,
@@ -148,6 +217,8 @@ struct FinaPunktoObjekto {
     fadeno: FadenoId,
     /// La fadeno blokita en `RICEVI` sur ĉi tiu finpunkto; `0` se neniu.
     ricevanto: FadenoId,
+    /// Bitmasko de la fadenoj blokitaj en `SENDI` pro plena vico; bito `id − 1`.
+    sendantoj: u16,
     referencoj: u16,
     vico: Mesagujo,
 }
@@ -161,6 +232,7 @@ impl FinaPunktoObjekto {
             posedanto: 0,
             fadeno: 0,
             ricevanto: 0,
+            sendantoj: 0,
             referencoj: 0,
             vico: Mesagujo::nova(),
         }
@@ -179,6 +251,7 @@ impl FinaPunktoObjekto {
         self.posedanto = 0;
         self.fadeno = 0;
         self.ricevanto = 0;
+        self.sendantoj = 0;
         match pliigita_generacio(self.generacio) {
             Some(sekva) => {
                 self.generacio = sekva;
@@ -268,6 +341,43 @@ fn preni_revokan_vekon(fadeno: FadenoId) -> bool {
         .akiri()
         .get_mut(fadeno as usize)
         .is_some_and(core::mem::take)
+}
+
+/// La bito de fadeno en `FinaPunktoObjekto::sendantoj`: la identigiloj estas
+/// `1..=8`, do la plej malalta bito apartenas al fadeno `1`.
+const fn senda_bito(fadeno: FadenoId) -> u16 {
+    1 << (fadeno - 1)
+}
+
+/// Veku la sendantojn, kiuj atendis lokon en plena vico; la voko okazas post
+/// `preni_de`, do almenaŭ unu loko estas libera kaj la vekitoj rajtas reprovi.
+fn veki_sendantojn(fendo: u8) {
+    let objekto = &mut finpunktoj()[fendo as usize];
+    let mut bitoj = objekto.sendantoj;
+    objekto.sendantoj = 0;
+    let mut id = 1;
+    while bitoj != 0 {
+        if bitoj & 1 != 0 {
+            planisto::veki(id);
+        }
+        bitoj >>= 1;
+        id += 1;
+    }
+}
+
+/// Veku la blokitajn sendantojn per la revoka marko (`-32`), ĉar la finpunkto
+/// malaperas kaj ilia atendo neniam plenumiĝos.
+fn revoku_sendantojn(sendantoj: u16) {
+    let mut bitoj = sendantoj;
+    let mut id = 1;
+    while bitoj != 0 {
+        if bitoj & 1 != 0 {
+            marki_revokan_vekon(id);
+            planisto::veki(id);
+        }
+        bitoj >>= 1;
+        id += 1;
+    }
 }
 
 /// Kapabla fendo de unu procezo: kiu finpunkto kaj kun kiuj permesoj.
@@ -421,6 +531,7 @@ fn forigu_finpunkton(fendo: u8) -> bool {
         return false;
     }
     let generacio = objekto.generacio;
+    let sendantoj = objekto.sendantoj;
     let celo = if objekto.ricevanto != 0 {
         objekto.ricevanto
     } else {
@@ -443,10 +554,13 @@ fn forigu_finpunkton(fendo: u8) -> bool {
     }
 
     finpunktoj()[fendo as usize].liberigu();
+    revoku_sendantojn(sendantoj);
     if celo != 0 {
         marki_revokan_vekon(celo);
         planisto::veki(celo);
     }
+    let stat = statistiko();
+    stat.revokoj = stat.revokoj.saturating_add(1);
     true
 }
 
@@ -516,6 +630,8 @@ fn enmeti(fendo: u8, mesago: Mesago) -> Result<(), IpcEraro> {
         fonto: nuna,
         mesago,
     })?;
+    let stat = statistiko();
+    stat.senditaj = stat.senditaj.saturating_add(1);
     let celo = if objekto.ricevanto != 0 {
         objekto.ricevanto
     } else {
@@ -537,29 +653,67 @@ fn enmeti(fendo: u8, mesago: Mesago) -> Result<(), IpcEraro> {
 ///
 /// # Eraroj
 /// `NevalidaCelloko` se la celo ne estas viva fadeno (C16); `MesagujoPlena`
-/// se la vico de la finpunkto jam enhavas `MAKSAJ_MESAGOJ` mesaĝojn;
+/// se la vico estas plena kaj la vokanto ne povas bloki (la ripoza
+/// kunteksto); `Revokita` se la finpunkto malaperas dum la atendo;
 /// `TabeloPlena` se la defaŭlta finpunkto mankas.
 pub fn sendi_mesagon(destinacio: FadenoId, mesago: &Mesago) -> Result<(), IpcEraro> {
-    let _gardo = InterrompaGardo::nova();
-    if !planisto::vivas(destinacio) {
-        return Err(IpcEraro::NevalidaCelloko);
+    let nuna = planisto::nuna_id();
+    loop {
+        let _gardo = InterrompaGardo::nova();
+        if !planisto::vivas(destinacio) {
+            return Err(IpcEraro::NevalidaCelloko);
+        }
+        let indekso = defaŭlta_indekso(destinacio).ok_or(IpcEraro::TabeloPlena)?;
+        match senda_decido(finpunktoj()[indekso].vico.nombro, MAKSAJ_MESAGOJ, nuna != 0) {
+            SendaDecido::Enmetu => return enmeti(indekso as u8, *mesago),
+            SendaDecido::Rifuzi => return Err(IpcEraro::MesagujoPlena),
+            SendaDecido::Atendu => {
+                finpunktoj()[indekso].sendantoj |= senda_bito(nuna);
+                let stat = statistiko();
+                stat.premregoj = stat.premregoj.saturating_add(1);
+                planisto::bloki();
+                if preni_revokan_vekon(nuna) {
+                    return Err(IpcEraro::Revokita);
+                }
+            }
+        }
     }
-    let indekso = defaŭlta_indekso(destinacio).ok_or(IpcEraro::TabeloPlena)?;
-    enmeti(indekso as u8, *mesago)
 }
 
 /// Sendu mesaĝon tra la kapablo `tenilo` de la procezo. Postulas `SENDI`.
 ///
 /// Se la finpunkto estas defaŭlta (apartenas al fadeno), la celo devas ankoraŭ
-/// vivi; alie `NevalidaCelloko`.
+/// vivi; alie `NevalidaCelloko`. Plena vico atendigas la sendanton (`Atendu`)
+/// kaj vekas ĝin per `-32`, se la finpunkto revokiĝas.
 pub fn sendi_kapable(procezo: ProcezaId, tenilo: Tenilo, mesago: &Mesago) -> Result<(), IpcEraro> {
-    let _gardo = InterrompaGardo::nova();
-    let (fendo, _) = akiri_kapablon(procezo, tenilo, Permesoj::SENDI)?;
-    let objekto = &finpunktoj()[fendo as usize];
-    if objekto.fadeno != 0 && !planisto::vivas(objekto.fadeno) {
-        return Err(IpcEraro::NevalidaCelloko);
+    let nuna = planisto::nuna_id();
+    loop {
+        let _gardo = InterrompaGardo::nova();
+        let (fendo, _) = akiri_kapablon(procezo, tenilo, Permesoj::SENDI)?;
+        {
+            let objekto = &finpunktoj()[fendo as usize];
+            if objekto.fadeno != 0 && !planisto::vivas(objekto.fadeno) {
+                return Err(IpcEraro::NevalidaCelloko);
+            }
+        }
+        match senda_decido(
+            finpunktoj()[fendo as usize].vico.nombro,
+            MAKSAJ_MESAGOJ,
+            nuna != 0,
+        ) {
+            SendaDecido::Enmetu => return enmeti(fendo, *mesago),
+            SendaDecido::Rifuzi => return Err(IpcEraro::MesagujoPlena),
+            SendaDecido::Atendu => {
+                finpunktoj()[fendo as usize].sendantoj |= senda_bito(nuna);
+                let stat = statistiko();
+                stat.premregoj = stat.premregoj.saturating_add(1);
+                planisto::bloki();
+                if preni_revokan_vekon(nuna) {
+                    return Err(IpcEraro::Revokita);
+                }
+            }
+        }
     }
-    enmeti(fendo, *mesago)
 }
 
 /// Ricevu mesaĝon el la finpunkto de la kapablo `tenilo`; bloku se mankas.
@@ -573,6 +727,9 @@ pub fn ricevi_kapable(procezo: ProcezaId, tenilo: Tenilo) -> Result<Mesago, IpcE
         let nuna = planisto::nuna_id();
         if let Some(mesago) = finpunktoj()[fendo as usize].vico.preni_de(None) {
             finpunktoj()[fendo as usize].ricevanto = 0;
+            let stat = statistiko();
+            stat.ricevitaj = stat.ricevitaj.saturating_add(1);
+            veki_sendantojn(fendo);
             return Ok(mesago);
         }
         if nuna == 0 {
@@ -608,6 +765,9 @@ pub fn ricevi_mesagon(fonto: FadenoId) -> Result<Mesago, IpcEraro> {
         };
         if let Some(mesago) = finpunktoj()[indekso].vico.preni_de(Some(fonto)) {
             finpunktoj()[indekso].ricevanto = 0;
+            let stat = statistiko();
+            stat.ricevitaj = stat.ricevitaj.saturating_add(1);
+            veki_sendantojn(indekso as u8);
             return Ok(mesago);
         }
         finpunktoj()[indekso].ricevanto = nuna;
@@ -681,6 +841,8 @@ pub fn fermi(procezo: ProcezaId, tenilo: Tenilo) -> Result<(), IpcEraro> {
     }
     objekto.referencoj = forprenu_referencon(objekto.referencoj);
     if objekto.referencoj == 0 {
+        // La finpunkto malaperas: blokitaj sendantoj ne plu atendu lokon.
+        revoku_sendantojn(objekto.sendantoj);
         objekto.liberigu();
     }
     Ok(())
@@ -1193,10 +1355,38 @@ mod kani_finpunktoj {
 
     use libmikerno::Tenilo;
 
+    use crate::kerno::objekto::FadenoId;
+    use crate::kerno::planisto::MAKSAJ_FADENOJ;
+
     use super::{
-        FinaPunktaStato, MAKSAJ_FINPUNKTOJ, akordas, elekti_liberan, forprenu_referencon,
-        pliigita_generacio,
+        FinaPunktaStato, MAKSAJ_FINPUNKTOJ, SendaDecido, akordas, elekti_liberan,
+        forprenu_referencon, pliigita_generacio, senda_bito, senda_decido,
     };
+
+    /// La sendanta bito estas unu-uma kaj kongruas kun la vek-buklo, kiu traktas
+    /// la plej malaltan biton kiel fadenon `1`.
+    #[kani::proof]
+    fn senda_bito_unuuma() {
+        let fadeno: FadenoId = kani::any();
+        kani::assume(fadeno >= 1 && fadeno <= MAKSAJ_FADENOJ as FadenoId);
+        let bito = senda_bito(fadeno);
+        assert_eq!(bito.count_ones(), 1);
+        assert_eq!(bito.trailing_zeros() + 1, fadeno as u32);
+    }
+
+    /// La premrega politiko: plena vico nur atendigas sendanton, kiu povas
+    /// bloki, kaj neniam rifuzas mesaĝon dum loko restas.
+    #[kani::proof]
+    fn premrego_postulas_plenan_vicon() {
+        let enmetitaj: usize = kani::any();
+        let maks: usize = kani::any();
+        let povas_bloki: bool = kani::any();
+        match senda_decido(enmetitaj, maks, povas_bloki) {
+            SendaDecido::Enmetu => assert!(enmetitaj < maks),
+            SendaDecido::Atendu => assert!(enmetitaj >= maks && povas_bloki),
+            SendaDecido::Rifuzi => assert!(enmetitaj >= maks && !povas_bloki),
+        }
+    }
 
     /// La sekva generacio estas strikte pli granda, neniam nula, kaj la fendo
     /// emeritiĝas ekzakte ĉe la eluziĝo de la 24 bitoj.

@@ -208,6 +208,20 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
     crate::arkitekturo::malebligi_interrompojn();
     crate::skribu!("[kerno] planisto revenis al la ripoza fadeno\n");
 
+    let stat = ipc::nuna_statistiko();
+    crate::skribu!(
+        "[ipc] statistiko ({}): senditaj={}, ricevitaj={}, premregoj={}, revokoj={}\n",
+        if stat.premregoj >= 2 && stat.revokoj >= 2 {
+            "bone"
+        } else {
+            "MALBONE"
+        },
+        stat.senditaj,
+        stat.ricevitaj,
+        stat.premregoj,
+        stat.revokoj
+    );
+
     // Observu la sistemon dek sekundojn (1000 tikoj) post la fadenoj.
     crate::interrompo::ebligi_interrompojn();
     let tikoj = loop {
@@ -570,6 +584,7 @@ fn uzanta_fadeno(id: u64) {
 fn testa_fadeno(id: u64) {
     if id == 1 {
         sistemvoko::testi_ring0();
+        premrega_sendo();
     } else if id == 2 {
         match ipc::ricevi_mesagon(0) {
             Ok(mesago) => crate::skribu!(
@@ -584,6 +599,29 @@ fn testa_fadeno(id: u64) {
                 eraro.kodo()
             ),
         }
+        premrega_ricevo();
+        // Plenigu la vicon de fadeno 1 kaj bloku sur la 17-a sendo; fadeno 3
+        // revokas tiun finpunkton post la revoka veko de fadeno 1.
+        let mesago = ipc::Mesago::nova(78, 0, 0, &[]);
+        let mut enmetitaj = 0;
+        for _ in 0..ipc::MAKSAJ_MESAGOJ {
+            if ipc::sendi_mesagon(1, &mesago).is_ok() {
+                enmetitaj += 1;
+            }
+        }
+        let kodo = ipc::sendi_mesagon(1, &mesago)
+            .err()
+            .map_or(0, ipc::IpcEraro::kodo);
+        crate::skribu!(
+            "[fadeno 2] sendblokada revoko ({}): enmetitaj={}, kodo={}\n",
+            if enmetitaj == ipc::MAKSAJ_MESAGOJ && kodo == -32 {
+                "bone"
+            } else {
+                "MALBONE"
+            },
+            enmetitaj,
+            kodo
+        );
     } else if id == 3 {
         // Fadeno 1 revokas ĉi tiun defaŭltan finpunkton dum la blokado; la
         // revoka veko devas liveri `-32`, ne pendigi aŭ redoni `-9`.
@@ -593,15 +631,31 @@ fn testa_fadeno(id: u64) {
                 mesago.ricevonto,
                 teksto(&mesago)
             ),
-            Err(eraro) => crate::skribu!(
-                "[fadeno 3] revoka veko ({}): kodo {}\n",
+            Err(eraro) => {
+                crate::skribu!(
+                    "[fadeno 3] revoka veko ({}): kodo {}\n",
+                    if eraro == ipc::IpcEraro::Revokita {
+                        "bone"
+                    } else {
+                        "MALBONE"
+                    },
+                    eraro.kodo()
+                );
                 if eraro == ipc::IpcEraro::Revokita {
-                    "bone"
-                } else {
-                    "MALBONE"
-                },
-                eraro.kodo()
-            ),
+                    // Fadeno 2 atendas lokon en la plena vico de finpunkto 1;
+                    // revoko redonas al ĝi `-32` anstataŭ eterna atendo.
+                    match ipc::revoki_defaŭltan(1) {
+                        Ok(()) => crate::skribu!(
+                            "[fadeno 3] revokis finpunkton 1; vekas la blokitan sendanton\n"
+                        ),
+                        Err(eraro) => crate::skribu!(
+                            "[fadeno 3] revoko de finpunkto 1 malsukcesis: {:?} ({})\n",
+                            eraro,
+                            eraro.kodo()
+                        ),
+                    }
+                }
+            }
         }
     }
 
@@ -623,6 +677,53 @@ fn testa_fadeno(id: u64) {
         planisto::cedi();
     }
     crate::skribu!("[fadeno {}] finas sian laboron\n", id);
+}
+
+/// Fadeno 1 plenigas la vicon de fadeno 2 per `MAKSAJ_MESAGOJ` mesaĝoj; la
+/// sekva sendo blokas ĝis la ricevanto liberigas lokon. La mesaĝo mem portas
+/// falsan `sendinto` (`999`), kiun la kerno devas anstataŭigi.
+fn premrega_sendo() {
+    let mesago = ipc::Mesago::nova(77, 999, 0, "premrego".as_bytes());
+    let mut senditaj = 0;
+    for _ in 0..=ipc::MAKSAJ_MESAGOJ {
+        if ipc::sendi_mesagon(2, &mesago).is_ok() {
+            senditaj += 1;
+        }
+    }
+    crate::skribu!(
+        "[fadeno 1] premrego ({}): {} mesaĝoj senditaj; la lasta atendis liberan lokon\n",
+        if senditaj == ipc::MAKSAJ_MESAGOJ + 1 {
+            "bone"
+        } else {
+            "MALBONE"
+        },
+        senditaj
+    );
+}
+
+/// Fadeno 2 malplenigas la vicon; la identecon fiksas la kerno, do `sendinto`
+/// estas la senda fadeno (`1`), ne la `999` de la mesaĝo, kaj `ricevonto` estas
+/// la finpunkta identigilo (`2`).
+fn premrega_ricevo() {
+    let mut nombro = 0;
+    let mut idento = (0u64, 0u64);
+    for _ in 0..=ipc::MAKSAJ_MESAGOJ {
+        match ipc::ricevi_mesagon(1) {
+            Ok(mesago) => {
+                nombro += 1;
+                idento = (mesago.sendinto, mesago.ricevonto);
+            }
+            Err(_) => break,
+        }
+    }
+    let bone = nombro == ipc::MAKSAJ_MESAGOJ + 1 && idento == (1, 2);
+    crate::skribu!(
+        "[fadeno 2] premrego ({}): {} mesaĝoj, idento sendinto={}, ricevonto={}\n",
+        if bone { "bone" } else { "MALBONE" },
+        nombro,
+        idento.0,
+        idento.1
+    );
 }
 
 fn teksto(mesago: &ipc::Mesago) -> &str {

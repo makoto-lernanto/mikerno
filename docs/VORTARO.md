@@ -90,7 +90,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `forigi finpunkton` | remove endpoint | `forigu_finpunkton(fendo)`: liberigas ĉiujn kongruajn kapablofendojn en ĉiuj tabeloj, la finpunktan objekton, kaj vekas la ricevanton. |
 | `purigi procezon` | clean up a process | `purigi_procezon(procezo)`: ĉe `SYS_FINI`, mortiga escepto kaj prepar-eraroj; liberigas la kapablojn kaj revokas la posedatajn finpunktojn. |
 | `detrui uzanton` | destroy a user process | `detrui_uzantan(id)`: `purigi_procezon` + `procezo::detrui`. |
-| `kodo de IPC-eraro` | IPC error code | `IpcEraro::kodo()`: `-1/-3/-4/-9/-28/-32`; la sistemvoko nur konvertas ĝin al `u64`. |
+| `kodo de IPC-eraro` | IPC error code | `IpcEraro::kodo()`: `-1/-3/-4/-9/-28/-32/-90`; la sistemvoko nur konvertas ĝin al `u64`. |
 | `akordi` | match | `akordas(aktiva, objekta_generacio, kapabla_generacio)`: la dua validiga nivelo; revoko aŭ emeritiĝo malakordigas ĝin. |
 | `doni` | grant | `DONI` (7): la celo ricevas propran `Tenilo`; la petitaj permesoj devas esti subaro de la fontaj kaj la fonta kapablo restas valida. |
 | `fermi` | close | `FERMI`: fermas unu lokan kapablofendon. |
@@ -107,6 +107,12 @@ kaj protokolaj nomoj sekvu ĝin.
 | `permesa malakcepto` | permission denial | La kapablo validas sed mankas la bito: `-1` (ne `-9`). |
 | `bootstrap-tenilo` | bootstrap handle | `BOOTSTRAP_TENILO = 0x100`: fendo `0`, unua generacio; transira distribuo antaŭ M16. |
 | `ricevanto` | receiver | `FinaPunktoObjekto.ricevanto`: la fadeno blokita en `RICEVI` sur la finpunkto; la sendinto ĝin vekas. |
+| `sendantoj` | blocked senders | `FinaPunktoObjekto.sendantoj: u16`: bitmasko de la fadenoj blokitaj en `SENDI` pro plena vico; bito `id − 1`. |
+| `senda bito` | sender bit | `senda_bito(fadeno) = 1 << (fadeno − 1)`; la vek-buklo traktas la plej malaltan biton kiel fadenon `1`. |
+| `premrego` | back-pressure | La sendanto atendas lokon en plena vico anstataŭ perdi la mesaĝon; nombrata en `IpcStatistiko.premregoj`. |
+| `sendblokado` | send blocking | `SENDI` blokas ĝis `preni_de` liberigas lokon aŭ la finpunkto revokiĝas (`-32`); nur la ripoza kunteksto ricevas `-4`. |
+| `senda decido` | send decision | `senda_decido(enmetitaj, maks, povas_bloki)`: pura funkcio kun `Enmetu`/`Atendu`/`Rifuzi`, pruvita per Kani. |
+| `IPC-statistiko` | IPC statistics | `IpcStatistiko`: `senditaj`, `ricevitaj`, `premregoj`, `revokoj`; `nuna_statistiko()` redonas kopion. |
 | `registri fadenon` | register thread | `registri_fadenon(fadeno, procezo)`: idempotenta; rezervas la defaŭltan finpunkton kaj instalas la bootstrap-tenilon en fendon `0`. |
 | `krei finpunkton` | create endpoint | `KREI_FINPUNKTON` (6); redonas novan `Tenilo`. |
 | `vivas` | is alive | `planisto::vivas(id)`: la celo ekzistas kaj ne estas `Mortinta`; la shim rifuzas per `-3`. |
@@ -119,7 +125,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `provu denove` | try again (`EAGAIN`) | `PROVU_DENOVE = -11`. |
 | `tabelo plena` | table full (`ENOSPC`) | `TABELO_PLENA = -28`. |
 | `finpunkto revokita` | endpoint revoked (`EPIPE`) | `FINPUNKTO_REVOKITA = -32`. |
-| `tro longa mesaĝo` | oversize message (`EMSGSIZE`) | `TRO_LONGA_MESAGO = -90`. |
+| `tro longa mesaĝo` | oversize message (`EMSGSIZE`) | `TRO_LONGA_MESAGO = -90`; `IpcEraro::TroLongaMesago`; ekde Fazo 5 `SENDI` ĝin redonas, se `Mesago.longo > MAKSA_MESAGA_LONGO`. |
 | `folia permeso` | leaf permission | `permesoj(adreso)` legas la realajn PTE-bitojn de folio. |
 | `W^X` | write-xor-execute | Skribebla paĝo neniam estas plenumebla samtempe. |
 | `sekcia limo` | section boundary | `__kerna_kodo_komenco`, `__kerna_rodata_fino`, … el `linker.ld`. |

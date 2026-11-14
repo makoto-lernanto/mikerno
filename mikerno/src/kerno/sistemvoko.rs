@@ -134,7 +134,9 @@ fn sendi(tenilo: u64, montrilo: u64, el_ring3: bool) -> u64 {
         unsafe { core::ptr::read_unaligned(montrilo as *const Mesago) }
     };
     if mesago.longo() > ipc::MAKSA_MESAGA_LONGO {
-        return MALĜUSTA_ARG;
+        // C2: `MesagujoPlena` (-4) restas nur por la ne-blokebla kerna vojo;
+        // tro longa mesaĝo havas sian propran kodon ekde Fazo 5.
+        return kodo(ipc::IpcEraro::TroLongaMesago);
     }
     let Some(tenilo) = el_tenilo(tenilo) else {
         return NEVALIDA_TENILO;
@@ -318,6 +320,11 @@ pub fn testi_ring0() {
         [teksto.as_ptr() as u64, (MAKS_SKRIBO + 1) as u64, 0, 0],
     );
     let cedo = invoki(SYS_CEDI, [0; 4]);
+    // Mesaĝo, kies `longo` mensoge superas la buferon; nur la longa kontrolo
+    // antaŭas la tenilan, do `-90` (ne `-1` aŭ `-9`).
+    let mut tro_longa_mesago = ipc::Mesago::malplena();
+    tro_longa_mesago.longo = ipc::MAKSA_MESAGA_LONGO + 1;
+    let tro_longa = invoki(SYS_SENDI, [0, &tro_longa_mesago as *const _ as u64, 0, 0]);
     // La kerno ne havas kapablolinion (C8), do `KREI_FINPUNKTON` rifuzas per
     // `-28`, kaj `DONI`/`FERMI`/`REVOKI` kun valida-aspekta tenilo redonas
     // `-9`; ne-nula `rsi` ĉe `REVOKI` estas malĝusta argumento (`-1`).
@@ -330,7 +337,7 @@ pub fn testi_ring0() {
     let revoki = invoki(SYS_REVOKI, [0x100, 0, 0, 0]);
     let revok_argumento = invoki(SYS_REVOKI, [0x100, 1, 0, 0]);
     crate::skribu!(
-        "[sistemvoko] Ring 0-memtesto: skribo={}, nekonata={}, nula={}, troa={}, cedo={}, krei={}, doni={}, fermi={}, revoki={}, revok_argumento={}\n",
+        "[sistemvoko] Ring 0-memtesto: skribo={}, nekonata={}, nula={}, troa={}, cedo={}, krei={}, doni={}, fermi={}, revoki={}, revok_argumento={}, tro_longa={}\n",
         skribo as i64,
         nekonata as i64,
         nula as i64,
@@ -340,7 +347,8 @@ pub fn testi_ring0() {
         doni as i64,
         fermi as i64,
         revoki as i64,
-        revok_argumento as i64
+        revok_argumento as i64,
+        tro_longa as i64
     );
 }
 
