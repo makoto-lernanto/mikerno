@@ -56,6 +56,12 @@ pub struct Planisto {
     fadenoj: [Option<Fadeno>; MAKSAJ_FADENOJ + 1],
     preta_vico: PretaVico,
     nuna_fadeno: Option<FadenoId>,
+    /// La absoluta temporizila tiko, ĉe kiu blokita fadeno tempolimiĝos; `0`
+    /// signifas sen limdato.
+    limdatoj: [u64; MAKSAJ_FADENOJ + 1],
+    /// La fadeno vekiĝis pro sia limdato, ne pro operacio; la markon konsumas
+    /// la atendanta voko.
+    tempolimoj: [bool; MAKSAJ_FADENOJ + 1],
 }
 
 impl Planisto {
@@ -66,6 +72,8 @@ impl Planisto {
             fadenoj,
             preta_vico: PretaVico::nova(),
             nuna_fadeno: None,
+            limdatoj: [0; MAKSAJ_FADENOJ + 1],
+            tempolimoj: [false; MAKSAJ_FADENOJ + 1],
         }
     }
 
@@ -77,6 +85,8 @@ impl Planisto {
         if self.fadenoj[indekso].is_some() {
             return Err(PlanistaEraro::JamRegistrita);
         }
+        self.limdatoj[indekso] = 0;
+        self.tempolimoj[indekso] = false;
         self.preta_vico.pusxi(fadeno.id);
         self.fadenoj[indekso] = Some(fadeno);
         Ok(())
@@ -120,9 +130,11 @@ impl Planisto {
         }
     }
 
-    /// Vokata el la temporizila interrompo: rotaciu la nunan fadenon aŭ,
-    /// se la ripoza kunteksto regas, planu vekitajn fadenojn.
+    /// Vokata el la temporizila interrompo: veku la fadenojn, kies limdato
+    /// pasis, poste rotaciu la nunan fadenon aŭ, se la ripoza kunteksto regas,
+    /// planu la pretajn fadenojn.
     pub fn planumi(&mut self) {
+        self.venkigi_tempolimojn();
         let Some(nuna) = self.nuna_fadeno else {
             return;
         };
@@ -153,7 +165,39 @@ impl Planisto {
         unsafe { self.switch(nuna, sekva) };
     }
 
+    /// Veku ĉiujn blokitajn fadenojn, kies limdato jam pasis. La vekito vidas
+    /// la tempoliman markon anstataŭ la normalan operacian vekon.
+    fn venkigi_tempolimojn(&mut self) {
+        let nuna = crate::arkitekturo::temporizilaj_tikoj();
+        let mut id = 1;
+        while id <= MAKSAJ_FADENOJ {
+            let limdato = self.limdatoj[id];
+            if limdato != 0
+                && nuna >= limdato
+                && self.fadenoj[id].is_some_and(|fadeno| fadeno.stato == FadenoStato::Blokitaj)
+            {
+                self.limdatoj[id] = 0;
+                self.tempolimoj[id] = true;
+                self.veki(id as FadenoId);
+            }
+            id += 1;
+        }
+    }
+
     pub fn bloki(&mut self, id: FadenoId) {
+        self.bloki_kun_limdato(id, 0);
+    }
+
+    /// Bloku la fadenon ĝis la absoluta tiko `limdato`; `0` signifas sen
+    /// limdato. La marko de antaŭa tempolimo ĉiam malpleniĝas.
+    pub fn bloki_kun_limdato(&mut self, id: FadenoId, limdato: u64) {
+        let indekso = id as usize;
+        if let Some(celo) = self.limdatoj.get_mut(indekso) {
+            *celo = limdato;
+        }
+        if let Some(marko) = self.tempolimoj.get_mut(indekso) {
+            *marko = false;
+        }
         if let Some(fadeno) = self.fadenoj[id as usize].as_mut() {
             fadeno.stato = FadenoStato::Blokitaj;
         }
@@ -165,6 +209,9 @@ impl Planisto {
     }
 
     pub fn veki(&mut self, id: FadenoId) {
+        if let Some(limdato) = self.limdatoj.get_mut(id as usize) {
+            *limdato = 0;
+        }
         let Some(fadeno) = self.fadenoj[id as usize].as_mut() else {
             return;
         };
@@ -175,8 +222,22 @@ impl Planisto {
         self.preta_vico.pusxi(id);
     }
 
+    /// Konsumu la tempoliman markon de fadeno; `true` nur unufoje por ĉiu
+    /// limdato.
+    pub fn preni_tempolimon(&mut self, id: FadenoId) -> bool {
+        self.tempolimoj
+            .get_mut(id as usize)
+            .is_some_and(core::mem::take)
+    }
+
     pub fn morti(&mut self, id: FadenoId) -> ! {
         crate::arkitekturo::malebligi_interrompojn();
+        if let Some(limdato) = self.limdatoj.get_mut(id as usize) {
+            *limdato = 0;
+        }
+        if let Some(marko) = self.tempolimoj.get_mut(id as usize) {
+            *marko = false;
+        }
         let proceza = self.procezo_de(id);
         if let Some(fadeno) = self.fadenoj[id as usize].as_mut() {
             fadeno.stato = FadenoStato::Mortinta;
@@ -293,6 +354,24 @@ pub fn bloki() {
     if id != RIPAZA_ID {
         planisto().bloki(id);
     }
+}
+
+/// Bloku la nunan fadenon ĝis la absoluta temporizila tiko `limdato`. La
+/// vokanto kalkulas la limdaton unufoje por la tuta voko, do ripeta blokado
+/// post fremda veko ne plilongigas la atendadon. La vokanto tenas interrompojn
+/// malŝaltitaj.
+pub fn bloki_ĝis_absoluta(limdato: u64) {
+    let id = nuna_id();
+    if id != RIPAZA_ID {
+        planisto().bloki_kun_limdato(id, limdato);
+    }
+}
+
+/// Ĉu la antaŭa blokado finiĝis pro tempolimo? La marko konsumiĝas, do ĉiu
+/// limdato raportiĝas unufoje. Vokenda kun interrompoj malŝaltitaj.
+pub fn preni_tempolimon() -> bool {
+    let id = nuna_id();
+    id != RIPAZA_ID && planisto().preni_tempolimon(id)
 }
 
 pub fn veki(id: FadenoId) {

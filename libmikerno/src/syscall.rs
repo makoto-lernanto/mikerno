@@ -16,14 +16,18 @@ pub const SYS_FINI: usize = 4;
 pub const SYS_CEDI: usize = 5;
 
 /// La sekvaj numeroj apartenas al ABI-versio `2`. `KREI_FINPUNKTON`, `DONI`,
-/// `REVOKI` kaj `FERMI` estas efektivaj ekde la Fazoj 2–4 de M14; la tempaj
-/// vokoj ankoraŭ respondas `-2` (nekonata voko) ĝis la Fazoj 5–6.
+/// `REVOKI`, `FERMI` kaj la tempaj vokoj estas efektivaj ekde la Fazoj 2–6 de
+/// M14.
 pub const SYS_KREI_FINPUNKTON: usize = 6;
 pub const SYS_DONI: usize = 7;
 pub const SYS_REVOKI: usize = 8;
 pub const SYS_RICEVI_TEMPO: usize = 9;
 pub const SYS_SENDI_TEMPO: usize = 10;
 pub const SYS_FERMI: usize = 11;
+
+/// Senfina tempolimo (`r10`): la voko blokas ĝis la operacio eblas aŭ la
+/// finpunkto revokiĝas.
+pub const SENFINA_TEMPOLIMO: u64 = u32::MAX as u64;
 
 /// `-9`: la tenilo ne validas, la generacio malakordas aŭ la kapablo estas
 /// revokita (`EBADF`).
@@ -90,6 +94,46 @@ pub fn ricevi(tenilo: Tenilo, celo: &mut Mesago) -> isize {
         invoki(
             SYS_RICEVI,
             [tenilo.nombro() as usize, celo as *mut Mesago as usize, 0, 0],
+        )
+    }
+}
+
+/// Ricevu mesaĝon kun fonta filtro kaj tempolimo.
+///
+/// `fonto = 0` akceptas ajnan sendinton. `tempolimo_ms = SENFINA_TEMPOLIMO`
+/// blokas sen limdato, `0` estas nebloka (`PROVU_DENOVE`), kaj alia valoro
+/// estas tempolimo en milisekundoj (`TEMPOLIMO`).
+pub fn ricevi_kun_tempolimo(
+    tenilo: Tenilo,
+    celo: &mut Mesago,
+    fonto: u64,
+    tempolimo_ms: u64,
+) -> isize {
+    unsafe {
+        invoki(
+            SYS_RICEVI_TEMPO,
+            [
+                tenilo.nombro() as usize,
+                celo as *mut Mesago as usize,
+                fonto as usize,
+                tempolimo_ms as usize,
+            ],
+        )
+    }
+}
+
+/// Sendu mesaĝon kun tempolimo; `tempolimo_ms` havas la saman signifon kiel
+/// ĉe `ricevi_kun_tempolimo`.
+pub fn sendi_kun_tempolimo(tenilo: Tenilo, mesago: &Mesago, tempolimo_ms: u64) -> isize {
+    unsafe {
+        invoki(
+            SYS_SENDI_TEMPO,
+            [
+                tenilo.nombro() as usize,
+                mesago as *const Mesago as usize,
+                0,
+                tempolimo_ms as usize,
+            ],
         )
     }
 }

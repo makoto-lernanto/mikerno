@@ -66,6 +66,21 @@ pub fn ricevi(tenilo: Tenilo, celo: &mut Mesago) -> isize {
     libmikerno::syscall::ricevi(tenilo, celo)
 }
 
+/// Ricevu mesaĝon kun fonta filtro (`0` = ajna) kaj tempolimo.
+pub fn ricevi_kun_tempolimo(
+    tenilo: Tenilo,
+    celo: &mut Mesago,
+    fonto: u64,
+    tempolimo_ms: u64,
+) -> isize {
+    libmikerno::syscall::ricevi_kun_tempolimo(tenilo, celo, fonto, tempolimo_ms)
+}
+
+/// Sendu mesaĝon tra la tenilo kun tempolimo.
+pub fn sendi_kun_tempolimo(tenilo: Tenilo, mesago: &Mesago, tempolimo_ms: u64) -> isize {
+    libmikerno::syscall::sendi_kun_tempolimo(tenilo, mesago, tempolimo_ms)
+}
+
 /// Donu la tenilon al la procezo `celo` kun la permesoj `permesoj`.
 pub fn doni(fonto: Tenilo, celo: u64, permesoj: Permesoj) -> isize {
     libmikerno::syscall::doni(fonto, celo, permesoj)

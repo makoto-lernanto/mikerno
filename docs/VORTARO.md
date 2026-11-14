@@ -117,7 +117,15 @@ kaj protokolaj nomoj sekvu ĝin.
 | `krei finpunkton` | create endpoint | `KREI_FINPUNKTON` (6); redonas novan `Tenilo`. |
 | `vivas` | is alive | `planisto::vivas(id)`: la celo ekzistas kaj ne estas `Mortinta`; la shim rifuzas per `-3`. |
 | `tempolimo` | timeout | `RICEVI_TEMPO`/`SENDI_TEMPO`; `TEMPOLIMO = -110`. |
-| `nebloka` | non-blocking | `r10 = 0`; malplena vico redonas `PROVU_DENOVE = -11`. |
+| `atendo` | wait mode | `Atendo::{Senfina, Nebloka, Tempa(tikoj)}`; `el_tempolimo(r10)` faras la decidon (C15). |
+| `senfina tempolimo` | infinite wait | `SENFINA_TEMPOLIMO = u32::MAX`; `Atendo::Senfina` blokas ĝis mesaĝo aŭ revoko (`-32`). |
+| `nebloka` | non-blocking | `r10 = 0` → `Atendo::Nebloka`; malplena vico redonas `PROVU_DENOVE = -11` sen cedi. |
+| `tempolima politiko` | timeout policy | `el_tempolimo`: `(r10 as u32).div_ceil(10)` tikoj; 1–9 ms restas unu tiko, neniam nulo. |
+| `absoluta limdato` | absolute deadline | `absoluta_limdato(atendo)` fiksas la limdaton ĉe la voko; `bloki_ĝis_absoluta` ne rekalkulas ĝin en la atenda buklo. |
+| `tempolima veko` | timeout wakeup | `venkigi_tempolimojn()` vekas ĉe `limdatoj[fadeno]`; `preni_tempolimon()` konsumas la markon; `IpcStatistiko.tempolimoj`. |
+| `fonta filtro` | source filter | `RICEVI_TEMPO.rdx`: fadena id aŭ `0` (ajna); `ricevi_mesagon_atenda(fonto, atendo)` preterlasas fremdajn sendintojn. |
+| `ricevi kun tempolimo` / `sendi kun tempolimo` | receive / send with timeout | `ricevi_kun_tempolimo(tenilo, celo, fonto, ms)`, `sendi_kun_tempolimo(tenilo, mesago, ms)`. |
+| `restarigi procezon` | reset process tables | `inicialigi_procezon(id)`: la kapablotabelo estas statika laŭ identigilo, do `krei` restarigas ĝin por ke `BOOTSTRAP_TENILO` validu ankaŭ post reuzo. |
 | `ABI-versio` | ABI version | `ABI_VERSIO = 2` ekde M14 Fazo 1. |
 | `versio de la pakaĵo` | package version | `env!("CARGO_PKG_VERSION")`: la saluta linio legas ĝin dum kompilado. |
 | `kontroli version` / `ĝisdatigi version` | check / update the version | `tools/versio.sh --kontroli` / `--ĝisdatigi`; la sola fonto estas `Cargo.toml`. |

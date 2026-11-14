@@ -14,6 +14,7 @@ pub fn sistemvoka_dispetĉo(kadro: &mut InterrompaKadro) {
         kadro.argumento(0),
         kadro.argumento(1),
         kadro.argumento(2),
+        kadro.argumento(3),
         el_ring3,
     );
     // NE FORGESU: `iretq` restarigas la rezultregistron el ĉi tiu kadro; sen la

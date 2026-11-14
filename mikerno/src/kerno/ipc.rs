@@ -19,6 +19,13 @@
 //! kaj `ricevonto` per la finpunkta identigilo — kaj `IpcStatistiko` nombras
 //! la liverojn, la premregojn kaj la revokojn.
 //!
+//! Ekde Fazo 6 `RICEVI_TEMPO`/`SENDI_TEMPO` aldonas la atendantan politikon:
+//! `r10 = u32::MAX` blokas sen limdato, `0` estas nebloka (`-11`), kaj alia
+//! valoro estas tempolimo en milisekundoj, kiun la planisto mezuras en
+//! `ceil(ms/10)` tikoj (`-110`). `RICEVI_TEMPO.rdx` limigas la fonton al unu
+//! fadeno. Revoko (`-32`) havas prioritaton antaŭ la tempolimo, kaj mesaĝo,
+//! kiu alvenas samtempe, antaŭas ambaŭ.
+//!
 //! Ĉiuj operacioj tenas interrompojn malŝaltitaj.
 
 use crate::interrompo::InterrompaGardo;
@@ -71,6 +78,11 @@ pub enum IpcEraro {
     Revokita,
     /// La mesaĝa `longo` superas `MAKSA_MESAGA_LONGO` (`TRO_LONGA_MESAGO`).
     TroLongaMesago,
+    /// La nebloka voko trovis malplenan vicon aŭ plenan mesaĝujon
+    /// (`PROVU_DENOVE`).
+    ProvuDenove,
+    /// La tempolimo pasis antaŭ ol la operacio eblis (`TEMPOLIMO`).
+    Tempolimo,
 }
 
 impl IpcEraro {
@@ -81,9 +93,11 @@ impl IpcEraro {
             Self::NevalidaCelloko => -3,
             Self::MesagujoPlena => -4,
             Self::NevalidaTenilo => -9,
+            Self::ProvuDenove => -11,
             Self::TabeloPlena => -28,
             Self::Revokita => -32,
             Self::TroLongaMesago => -90,
+            Self::Tempolimo => -110,
         }
     }
 }
@@ -93,10 +107,49 @@ const _: () = {
     assert!(IpcEraro::NevalidaCelloko.kodo() == -3);
     assert!(IpcEraro::MesagujoPlena.kodo() == -4);
     assert!(IpcEraro::NevalidaTenilo.kodo() == libmikerno::syscall::NEVALIDA_TENILO as i64);
+    assert!(IpcEraro::ProvuDenove.kodo() == libmikerno::syscall::PROVU_DENOVE as i64);
     assert!(IpcEraro::TabeloPlena.kodo() == libmikerno::syscall::TABELO_PLENA as i64);
     assert!(IpcEraro::Revokita.kodo() == libmikerno::syscall::FINPUNKTO_REVOKITA as i64);
     assert!(IpcEraro::TroLongaMesago.kodo() == libmikerno::syscall::TRO_LONGA_MESAGO as i64);
+    assert!(IpcEraro::Tempolimo.kodo() == libmikerno::syscall::TEMPOLIMO as i64);
 };
+
+/// La atenda politiko de IPC-voko (`r10` en la sistemvoka ABI, C15).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Atendo {
+    /// `u32::MAX`: bloku sen limdato.
+    Senfina,
+    /// `0`: ne bloku; malplena vico aŭ plena mesaĝujo redonas `-11`.
+    Nebloka,
+    /// La nombro da temporizilaj tikoj ĝis la tempolimo (`ceil(ms/10) ≥ 1`).
+    Tempa(u64),
+}
+
+/// Konvertu la tempoliman argumenton (`r10`) al atenda politiko. `None` por
+/// valoro super `u32::MAX`; `u32::MAX` mem signifas senfinan atendo.
+pub const fn el_tempolimo(valoro: u64) -> Option<Atendo> {
+    if valoro == u32::MAX as u64 {
+        Some(Atendo::Senfina)
+    } else if valoro == 0 {
+        Some(Atendo::Nebloka)
+    } else if valoro > u32::MAX as u64 {
+        None
+    } else {
+        Some(Atendo::Tempa((valoro as u32).div_ceil(10) as u64))
+    }
+}
+
+/// La absoluta temporizila tiko, ĉe kiu la voko tempolimiĝos. Ĝi estas fiksata
+/// je la eniro, do ripeta blokado (ekzemple post veko pro mesaĝo el alia fonto)
+/// ne plilongigas la atendadon.
+fn absoluta_limdato(atendo: Atendo) -> Option<u64> {
+    match atendo {
+        Atendo::Tempa(tikoj) => {
+            Some(crate::arkitekturo::temporizilaj_tikoj().saturating_add(tikoj))
+        }
+        _ => None,
+    }
+}
 
 #[derive(Clone, Copy)]
 struct Ero {
@@ -132,7 +185,7 @@ impl Mesagujo {
     }
 
     /// Prenu la unuan mesaĝon; `Some(fonto)` limigas al tiu sendinto, `None`
-    /// akceptas ajnan fonton (la fonta filtro de `RICEVI_TEMPO` venos en Fazo 6).
+    /// akceptas ajnan fonton (la fonta filtro de `RICEVI_TEMPO`, C4).
     fn preni_de(&mut self, fonto: Option<FadenoId>) -> Option<Mesago> {
         let indekso = (0..self.nombro)
             .find(|&i| self.eroj[i].is_some_and(|e| fonto.is_none_or(|f| e.fonto == f)))?;
@@ -180,6 +233,8 @@ pub struct IpcStatistiko {
     pub premregoj: u64,
     /// Finpunktoj revokitaj (inkluzive de proceza purigo).
     pub revokoj: u64,
+    /// Atendoj, kiuj finiĝis per la tempolimo `-110`.
+    pub tempolimoj: u64,
 }
 
 static STATISTIKO: Kunhavigita<IpcStatistiko> = Kunhavigita::nova(IpcStatistiko {
@@ -187,6 +242,7 @@ static STATISTIKO: Kunhavigita<IpcStatistiko> = Kunhavigita::nova(IpcStatistiko 
     ricevitaj: 0,
     premregoj: 0,
     revokoj: 0,
+    tempolimoj: 0,
 });
 
 fn statistiko() -> &'static mut IpcStatistiko {
@@ -378,6 +434,31 @@ fn revoku_sendantojn(sendantoj: u16) {
         bitoj >>= 1;
         id += 1;
     }
+}
+
+/// Forigu la fadenon el la premrega bitmasko post tempolimo; la finpunkto
+/// restas aktiva, do ĝi ne plu atendu la vekon de `veki_sendantojn`.
+fn forigu_sendanton(fendo: u8, fadeno: FadenoId) {
+    if fadeno == 0 {
+        return;
+    }
+    let objekto = &mut finpunktoj()[fendo as usize];
+    if objekto.aktiva() {
+        objekto.sendantoj &= !senda_bito(fadeno);
+    }
+}
+
+/// Malplenigu la ricevantan fadenon post tempolimo, se ĝi ankoraŭ estas tiu.
+fn forigu_ricevanton(fendo: u8, fadeno: FadenoId) {
+    let objekto = &mut finpunktoj()[fendo as usize];
+    if objekto.aktiva() && objekto.ricevanto == fadeno {
+        objekto.ricevanto = 0;
+    }
+}
+
+fn nombri_tempolimon() {
+    let stat = statistiko();
+    stat.tempolimoj = stat.tempolimoj.saturating_add(1);
 }
 
 /// Kapabla fendo de unu procezo: kiu finpunkto kaj kun kiuj permesoj.
@@ -680,10 +761,18 @@ pub fn sendi_mesagon(destinacio: FadenoId, mesago: &Mesago) -> Result<(), IpcEra
 /// Sendu mesaĝon tra la kapablo `tenilo` de la procezo. Postulas `SENDI`.
 ///
 /// Se la finpunkto estas defaŭlta (apartenas al fadeno), la celo devas ankoraŭ
-/// vivi; alie `NevalidaCelloko`. Plena vico atendigas la sendanton (`Atendu`)
-/// kaj vekas ĝin per `-32`, se la finpunkto revokiĝas.
-pub fn sendi_kapable(procezo: ProcezaId, tenilo: Tenilo, mesago: &Mesago) -> Result<(), IpcEraro> {
+/// vivi; alie `NevalidaCelloko`. Plena vico atendigas la sendanton laŭ
+/// `atendo`: senfine, nebloke (`-11`) aŭ kun tempolimo (`-110`); revoko de la
+/// finpunkto vekas ĝin per `-32`.
+pub fn sendi_kapable(
+    procezo: ProcezaId,
+    tenilo: Tenilo,
+    mesago: &Mesago,
+    atendo: Atendo,
+) -> Result<(), IpcEraro> {
     let nuna = planisto::nuna_id();
+    let limdato = absoluta_limdato(atendo);
+    let mut tempolimita = false;
     loop {
         let _gardo = InterrompaGardo::nova();
         let (fendo, _) = akiri_kapablon(procezo, tenilo, Permesoj::SENDI)?;
@@ -701,10 +790,24 @@ pub fn sendi_kapable(procezo: ProcezaId, tenilo: Tenilo, mesago: &Mesago) -> Res
             SendaDecido::Enmetu => return enmeti(fendo, *mesago),
             SendaDecido::Rifuzi => return Err(IpcEraro::MesagujoPlena),
             SendaDecido::Atendu => {
+                if tempolimita {
+                    forigu_sendanton(fendo, nuna);
+                    nombri_tempolimon();
+                    return Err(IpcEraro::Tempolimo);
+                }
+                if atendo == Atendo::Nebloka {
+                    return Err(IpcEraro::ProvuDenove);
+                }
                 finpunktoj()[fendo as usize].sendantoj |= senda_bito(nuna);
                 let stat = statistiko();
                 stat.premregoj = stat.premregoj.saturating_add(1);
-                planisto::bloki();
+                match limdato {
+                    Some(limdato) => planisto::bloki_ĝis_absoluta(limdato),
+                    None => planisto::bloki(),
+                }
+                if planisto::preni_tempolimon() {
+                    tempolimita = true;
+                }
                 if preni_revokan_vekon(nuna) {
                     return Err(IpcEraro::Revokita);
                 }
@@ -713,29 +816,52 @@ pub fn sendi_kapable(procezo: ProcezaId, tenilo: Tenilo, mesago: &Mesago) -> Res
     }
 }
 
-/// Ricevu mesaĝon el la finpunkto de la kapablo `tenilo`; bloku se mankas.
-/// Postulas `RICEVI`; la permeso estas kontrolata ankaŭ post ĉiu veko, do
-/// revoko ne lasos la fadenon en la vico. Revoko de la atendata finpunkto
-/// vekas la ricevanton per `-32`.
-pub fn ricevi_kapable(procezo: ProcezaId, tenilo: Tenilo) -> Result<Mesago, IpcEraro> {
+/// Ricevu mesaĝon el la finpunkto de la kapablo `tenilo`; `fonto` limigas la
+/// sendinton (`None` akceptas ajnan). Postulas `RICEVI`; la permeso estas
+/// kontrolata ankaŭ post ĉiu veko, do revoko ne lasos la fadenon en la vico.
+/// Revoko de la atendata finpunkto vekas la ricevanton per `-32`; tempolimo
+/// redonas `-110`, kaj mesaĝo, kiu alvenas samtempe, havas prioritaton.
+pub fn ricevi_kapable(
+    procezo: ProcezaId,
+    tenilo: Tenilo,
+    fonto: Option<FadenoId>,
+    atendo: Atendo,
+) -> Result<Mesago, IpcEraro> {
+    let limdato = absoluta_limdato(atendo);
+    let mut tempolimita = false;
     loop {
         let _gardo = InterrompaGardo::nova();
         let (fendo, _) = akiri_kapablon(procezo, tenilo, Permesoj::RICEVI)?;
         let nuna = planisto::nuna_id();
-        if let Some(mesago) = finpunktoj()[fendo as usize].vico.preni_de(None) {
+        if let Some(mesago) = finpunktoj()[fendo as usize].vico.preni_de(fonto) {
             finpunktoj()[fendo as usize].ricevanto = 0;
             let stat = statistiko();
             stat.ricevitaj = stat.ricevitaj.saturating_add(1);
             veki_sendantojn(fendo);
             return Ok(mesago);
         }
+        if tempolimita {
+            forigu_ricevanton(fendo, nuna);
+            nombri_tempolimon();
+            return Err(IpcEraro::Tempolimo);
+        }
+        if atendo == Atendo::Nebloka {
+            return Err(IpcEraro::ProvuDenove);
+        }
         if nuna == 0 {
             // La ripoza kunteksto ne havas fadenan vivciklon; ne bloku ĝin.
             return Err(IpcEraro::NevalidaCelloko);
         }
         finpunktoj()[fendo as usize].ricevanto = nuna;
-        planisto::bloki();
+        match limdato {
+            Some(limdato) => planisto::bloki_ĝis_absoluta(limdato),
+            None => planisto::bloki(),
+        }
+        if planisto::preni_tempolimon() {
+            tempolimita = true;
+        }
         if preni_revokan_vekon(nuna) {
+            forigu_ricevanton(fendo, nuna);
             return Err(IpcEraro::Revokita);
         }
     }
@@ -747,6 +873,15 @@ pub fn ricevi_kapable(procezo: ProcezaId, tenilo: Tenilo) -> Result<Mesago, IpcE
 /// Revoko de la defaŭlta finpunkto vekas la fadenon per `-32`, do la voko
 /// redonas `Err` anstataŭ pendi porĉiame.
 pub fn ricevi_mesagon(fonto: FadenoId) -> Result<Mesago, IpcEraro> {
+    ricevi_mesagon_atenda(Some(fonto), Atendo::Senfina)
+}
+
+/// Kerna vojo kun eksplicita fonta filtro kaj atenda politiko; ĝi ne havas
+/// kapablokontrolon, ĉar la kernaj fadenoj ne posedas kapablotabelon (C8).
+/// La tempolimo uzas la saman planistan vekon kiel `RICEVI_TEMPO`.
+pub fn ricevi_mesagon_atenda(fonto: Option<FadenoId>, atendo: Atendo) -> Result<Mesago, IpcEraro> {
+    let limdato = absoluta_limdato(atendo);
+    let mut tempolimita = false;
     loop {
         let _gardo = InterrompaGardo::nova();
         let nuna = planisto::nuna_id();
@@ -760,15 +895,29 @@ pub fn ricevi_mesagon(fonto: FadenoId) -> Result<Mesago, IpcEraro> {
         let Some(indekso) = defaŭlta_indekso(nuna) else {
             return Err(IpcEraro::TabeloPlena);
         };
-        if let Some(mesago) = finpunktoj()[indekso].vico.preni_de(Some(fonto)) {
+        if let Some(mesago) = finpunktoj()[indekso].vico.preni_de(fonto) {
             finpunktoj()[indekso].ricevanto = 0;
             let stat = statistiko();
             stat.ricevitaj = stat.ricevitaj.saturating_add(1);
             veki_sendantojn(indekso as u8);
             return Ok(mesago);
         }
+        if tempolimita {
+            forigu_ricevanton(indekso as u8, nuna);
+            nombri_tempolimon();
+            return Err(IpcEraro::Tempolimo);
+        }
+        if atendo == Atendo::Nebloka {
+            return Err(IpcEraro::ProvuDenove);
+        }
         finpunktoj()[indekso].ricevanto = nuna;
-        planisto::bloki();
+        match limdato {
+            Some(limdato) => planisto::bloki_ĝis_absoluta(limdato),
+            None => planisto::bloki(),
+        }
+        if planisto::preni_tempolimon() {
+            tempolimita = true;
+        }
     }
 }
 
@@ -868,6 +1017,18 @@ pub fn revoki_defaŭltan(fadeno: FadenoId) -> Result<(), IpcEraro> {
         Ok(())
     } else {
         Err(IpcEraro::NevalidaTenilo)
+    }
+}
+
+/// Restarigu la kapablotabelon de ĵus kreita procezo.
+///
+/// La tabeloj estas statikaj laŭ proceza identigilo, do sen restarigo nova
+/// procezo heredus la generaciojn de antaŭa procezo kun la sama identigilo
+/// (aŭ de la Ring 0-memtestoj). Tiam la fenda `0` ne havus la unuan generacion
+/// kaj la fiksa `BOOTSTRAP_TENILO` (`0x100`) ne plu validus.
+pub fn inicialigi_procezon(procezo: ProcezaId) {
+    if let Some(tabelo) = kapabloj(procezo) {
+        *tabelo = Kapablotabelo::nova();
     }
 }
 
@@ -999,10 +1160,10 @@ pub fn testi_kapablojn() {
         krei_finpunkton(procezo, Permesoj::SENDI),
     ) {
         (Ok(riceva), Ok(senda)) => {
-            let sendi = sendi_kapable(procezo, riceva, &mesago)
+            let sendi = sendi_kapable(procezo, riceva, &mesago, Atendo::Senfina)
                 .err()
                 .map_or(0, IpcEraro::kodo);
-            let ricevi = ricevi_kapable(procezo, senda)
+            let ricevi = ricevi_kapable(procezo, senda, None, Atendo::Senfina)
                 .err()
                 .map_or(0, IpcEraro::kodo);
             let _ = fermi(procezo, riceva);
@@ -1022,7 +1183,7 @@ pub fn testi_kapablojn() {
     // Izolado: tenilo de unu procezo ne validas en la tabelo de alia.
     let izolado = match krei_finpunkton(procezo, Permesoj::PLENAJ) {
         Ok(tenilo) => {
-            let kodo = sendi_kapable(alia, tenilo, &mesago)
+            let kodo = sendi_kapable(alia, tenilo, &mesago, Atendo::Senfina)
                 .err()
                 .map_or(0, IpcEraro::kodo);
             let _ = fermi(procezo, tenilo);
@@ -1043,9 +1204,9 @@ pub fn testi_kapablojn() {
     let mut eskalo = 0;
     if let Ok(fonto) = krei_finpunkton(procezo, Permesoj::ĈIUJ) {
         if let Ok(celo) = doni(procezo, fonto, alia, Permesoj::RICEVI) {
-            let sendita = sendi_kapable(procezo, fonto, &mesago).is_ok();
-            let ricevita = sendita && ricevi_kapable(alia, celo).is_ok();
-            let rifuzo = sendi_kapable(alia, celo, &mesago)
+            let sendita = sendi_kapable(procezo, fonto, &mesago, Atendo::Senfina).is_ok();
+            let ricevita = sendita && ricevi_kapable(alia, celo, None, Atendo::Senfina).is_ok();
+            let rifuzo = sendi_kapable(alia, celo, &mesago, Atendo::Senfina)
                 .err()
                 .map_or(0, IpcEraro::kodo);
             donitaj = if ricevita && rifuzo == -1 {
@@ -1098,7 +1259,7 @@ pub fn testi_revokon() {
         {
             revokita = true;
             post = (
-                sendi_kapable(alia, donita, &mesago)
+                sendi_kapable(alia, donita, &mesago, Atendo::Senfina)
                     .err()
                     .map_or(0, IpcEraro::kodo),
                 fermi(alia, donita).err().map_or(0, IpcEraro::kodo),
@@ -1263,6 +1424,47 @@ mod kani_proofs {
         assert!(ujo.preni_de(Some(fonto_a)).is_none());
         assert!(ujo.preni_de(Some(fonto_b)).is_none());
         assert_eq!(ujo.nombro, 0);
+    }
+
+    /// Fonta filtro: fremdaj mesaĝoj restas en la vico, la unua kongrua
+    /// mesaĝo forpreniĝas, kaj senfiltra preno ankoraŭ redonas la fremdan.
+    #[kani::proof]
+    #[kani::unwind(8)]
+    fn fonta_filtro_konservas_fremdajn() {
+        let mut ujo = Mesagujo::nova();
+        let fonto_a: FadenoId = kani::any();
+        let fonto_b: FadenoId = kani::any();
+        kani::assume(fonto_a != fonto_b);
+
+        assert!(
+            ujo.pusxi(Ero {
+                fonto: fonto_a,
+                mesago: iu_mesago(1),
+            })
+            .is_ok()
+        );
+        assert!(
+            ujo.pusxi(Ero {
+                fonto: fonto_b,
+                mesago: iu_mesago(2),
+            })
+            .is_ok()
+        );
+        assert!(
+            ujo.pusxi(Ero {
+                fonto: fonto_a,
+                mesago: iu_mesago(3),
+            })
+            .is_ok()
+        );
+
+        assert_eq!(ujo.preni_de(Some(fonto_a)).unwrap().tipo, 1);
+        assert_eq!(ujo.nombro, 2);
+        assert_eq!(ujo.preni_de(Some(fonto_a)).unwrap().tipo, 3);
+        assert_eq!(ujo.nombro, 1);
+        assert_eq!(ujo.preni_de(None).unwrap().tipo, 2);
+        assert_eq!(ujo.nombro, 0);
+        assert!(ujo.preni_de(Some(fonto_b)).is_none());
     }
 
     /// Malplena mesaĝujo redonas `None` sen subtrahi de nulo.
@@ -1455,6 +1657,48 @@ mod kani_finpunktoj {
                 }
             }
             None => assert!(!ekzistas),
+        }
+    }
+}
+
+#[cfg(kani)]
+mod kani_tempolimoj {
+    //! Pruvoj por la `r10`-politiko: la du specialaj valoroj, la rifuzo super
+    //! `u32::MAX` kaj la suprenrondigita konverto al tikoj (C15).
+
+    use super::{Atendo, el_tempolimo};
+
+    /// Ĉiu valoro havas ekzakte unu signifon, kaj `Tempa` neniam estas nula
+    /// nek malsuprenrondigita.
+    #[kani::proof]
+    fn tempolima_politiko() {
+        let valoro: u64 = kani::any();
+        match el_tempolimo(valoro) {
+            Some(Atendo::Senfina) => assert_eq!(valoro, u32::MAX as u64),
+            Some(Atendo::Nebloka) => assert_eq!(valoro, 0),
+            Some(Atendo::Tempa(tikoj)) => {
+                assert!(valoro >= 1 && valoro < u32::MAX as u64);
+                assert!(tikoj >= 1);
+                assert!(tikoj <= u32::MAX.div_ceil(10) as u64);
+                assert!(tikoj * 10 >= valoro);
+                assert!((tikoj - 1) * 10 < valoro);
+            }
+            None => assert!(valoro > u32::MAX as u64),
+        }
+    }
+
+    /// Pozitiva tempolimo sub `u32::MAX` ĉiam fariĝas `Tempa` kun almenaŭ unu
+    /// tiko; 1–9 ms do ne fariĝas tuja `-110`.
+    #[kani::proof]
+    fn tempolimo_ne_nuligas() {
+        let ms: u32 = kani::any();
+        kani::assume(ms >= 1 && ms < u32::MAX);
+        match el_tempolimo(ms as u64) {
+            Some(Atendo::Tempa(tikoj)) => {
+                assert!(tikoj >= 1);
+                assert!(tikoj * 10 >= ms as u64);
+            }
+            _ => panic!("pozitiva tempolimo devas esti Tempa"),
         }
     }
 }

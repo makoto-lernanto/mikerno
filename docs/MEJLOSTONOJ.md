@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-14 · Versio de la workspace: 0.4.4
+> Stato: 2026-11-14 · Versio de la workspace: 0.4.5
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -21,12 +21,12 @@
 | M6 | Framebuffer-konzolo kaj COM1 | Plenumita | `1280x800, 32 bpp` (ISO) |
 | M7 | Antaŭokupa planisto kaj kuntekstŝanĝo | Plenumita | 3 fadenoj interplektitaj kaj finitaj |
 | M8 | Mesaĝa IPC kun kapabloj | Plenumita | mesaĝoj liveritaj, fadeno 3 vekita |
-| M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 21 pruvoj maŝine plenumitaj kaj verdaj |
+| M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 26 pruvoj maŝine plenumitaj kaj verdaj |
 | M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Plenumita | ABI difinita; `horizonto` plenumiĝas en Ring 3 |
-| M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj (0.1.5) |
-| M12 | Per-procesaj adresspacoj | Plenumita | Fazo 6: W^X laŭ sekcioj, `CR0.WP`, foliaj permesoj en sistemvokoj; Fazo 5: samtempaj procezoj `4`/`5`, sama sekreta adreso `0x200000000`, spiono `#PF` ĉe `0x200001000`, viktimo pluvivas; kadroj egalaj (0.2.5) |
-| M13 | Kerna memoro-firmigo: SMEP, SMAP, KASLR | Plenumita | Fazo 1 (0.3.0): `CR4.SMEP`, Ring 0-provo `#PF` (`erarkodo=0x11`); Fazo 2 (0.3.1): `CR4.SMAP`, `STAC`/`CLAC`, `SMAP-malobservo` (`erarkodo=0x1`); Fazo 3 (0.3.2): ET_DYN + `R_X86_64_RELATIVE`, hazarda bazo (`0x5400000`, `0xd200000`, `0x3000000` en tri startoj), ĉiuj scenaroj verdaj |
-| M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Parta | Fazo 1 (0.4.0): ABI 2 — `Tenilo`, `REVOKI`/`PLENAJ`, erar-kodoj `-9/-11/-28/-32/-90/-110`, vokoj 6–11 rezervitaj, A1-identeco, 13 Kani-pruvoj. Fazo 2 (0.4.1): `FinaPunktoObjekto`-tabelo, generacioj, referenckalkulo, kapablotabelo, `KREI_FINPUNKTON`/`FERMI`, defaŭlta finpunkto, 16 Kani-pruvoj. Fazo 3 (0.4.2): permes-kontroloj, `DONI`(7), `SENDI`/`RICEVI` per `Tenilo` en `rdi`, du-nivela generacia kontrolo, `BOOTSTRAP_TENILO`, 20 Kani-pruvoj. Fazo 4 (0.4.3): `REVOKI`(8) tutfinpunkta, revokaj vekoj `-32`, purigo ĉe proceza detruo, `Result<Mesago, IpcEraro>`, 21 Kani-pruvoj. Fazo 5 (0.4.4): sendblokado ĉe plena vico, sender-bita masko kaj vekado post `preni_de`, `-90` por tro longa mesaĝo, `IpcStatistiko`, 23 Kani-pruvoj |
+| M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj |
+| M12 | Per-procesaj adresspacoj | Plenumita | W^X laŭ sekcioj, `CR0.WP`, proceza izolado (spiono `#PF`, viktimo pluvivas), egalaj kadroj |
+| M13 | Kerna memoro-firmigo: SMEP, SMAP, KASLR | Plenumita | SMEP, SMAP kaj KASLR pruvitaj per Ring 0-provoj kaj tri startoj |
+| M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Parta | Ring 0/Ring 3-scenaroj kaj Kani-pruvoj verdaj (ABI 2) |
 | M15 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
 | M16 | Konservado, dosiersistemo, ŝelo | Venonta | — |
 | M17 | CI, testoj, plena pruvaro | Venonta | — |
@@ -567,37 +567,21 @@ ekspluaton de konataj kernaj adresoj.
 - `cargo fmt --all -- --check` — pura.
 - `cargo clippy --workspace --release` — sen avertoj.
 - `cargo build --workspace --release` — sukcesa.
-- 23 Kani-pruvoj: 6 en `memoro/kadro.rs`, 17 en `kerno/ipc.rs`; ĉiuj maŝine
+- 26 Kani-pruvoj: 6 en `memoro/kadro.rs`, 20 en `kerno/ipc.rs`; ĉiuj maŝine
   pruvitaj per Kani 0.68.0 (CBMC 6.11.0) en WSL2 Ubuntu; vidu §4.6.
 - `just verify` difinas la formalan pordegon.
 
-**Pruvoj kaj `unwind`-limoj.**
+**Pruvoj kaj `unwind`-limoj.** La pruvoj grupiĝas laŭ la pruvata tavolo; `—`
+signifas la defaŭltan `unwind`-valoron.
 
-| Dosiero | Pruvo | `unwind` |
+| Dosiero | Pruvoj | `unwind` |
 | --- | --- | --- |
-| `memoro/kadro.rs` | `agordi_intervalon_sen_paniko` | 70 |
-| `memoro/kadro.rs` | `aloki_preterpasas_uzatajn_kadrojn` | 70 |
-| `memoro/kadro.rs` | `duobla_liberigo_estas_senefika` | 70 |
-| `memoro/kadro.rs` | `liberigo_lasas_la_kadron_reuzebla` | 70 |
-| `memoro/kadro.rs` | `neniom_da_duobla_alokado` | 70 |
-| `memoro/kadro.rs` | `marki_kaj_malmarki_sen_paniko` | — |
-| `kerno/ipc.rs` | `mesaĝa_enhavo_en_limoj` | 70 |
-| `kerno/ipc.rs` | `plena_mesagujo_rifuzas` | 20 |
-| `kerno/ipc.rs` | `preno_konservas_la_invarianton` | 20 |
-| `kerno/ipc.rs` | `fifo_ordo` | 8 |
-| `kerno/ipc.rs` | `fifo_ordo_inter_fontoj` | 8 |
-| `kerno/ipc.rs` | `malplena_mesagujo_ricevas_nenion` | — |
-| `kerno/ipc.rs` | `tenilo_kodigo_roundtrip` | — |
-| `kerno/ipc.rs` | `generacio_emeritigas` | — |
-| `kerno/ipc.rs` | `referenco_saturigas` | — |
-| `kerno/ipc.rs` | `libera_fendo_elektita` | 20 |
-| `kerno/ipc.rs` | `rajtoj_devigas_sendon` | — |
-| `kerno/ipc.rs` | `rajtoj_devigas_ricevon` | — |
-| `kerno/ipc.rs` | `dono_nur_malpligrandigas_rajtajn` | — |
-| `kerno/ipc.rs` | `transproceza_tenilo_nevalidas` | — |
-| `kerno/ipc.rs` | `revoko_malvalidigas_tenilojn` | — |
-| `kerno/ipc.rs` | `premrego_postulas_plenan_vicon` | — |
-| `kerno/ipc.rs` | `senda_bito_unuuma` | — |
+| `memoro/kadro.rs` | intervalo, preterpaso de uzataj kadroj, duobla liberigo, reuzo, sen duobla alokado, marki/malmarki | 70 (krom la lasta) |
+| `kerno/ipc.rs` | mesaĝujo: ena longo, pleneco, preno, FIFO, FIFO inter fontoj, malpleno | 70/20/20/8/8/— |
+| `kerno/ipc.rs` | teniloj kaj finpunktoj: kodigo, generacioj, referencoj, libera fendo | —/—/—/20 |
+| `kerno/ipc.rs` | kapabloj: rajtoj de `SENDI`/`RICEVI`, `DONI`, transproceza izolado | — |
+| `kerno/ipc.rs` | revoko, premrego, senda bito, fonta filtro | —/—/—/8 |
+| `kerno/ipc.rs` | tempolimoj: politiko de `r10`, minimuma tiko | — |
 
 **Mankanta.**
 
@@ -794,26 +778,13 @@ Medio: WSL2 Ubuntu, deponejo kopiita al la hejma dosierujo (ext4; `/mnt/d` estas
 preterlasas la tutmondan `asm!`-eniron de la 64-bita starto, kiun CBMC ne
 modelas.
 
-Rezulto: `Complete - 23 successfully verified harnesses, 0 failures, 23 total.`
-La unuopaj `unwind`-limoj estas en la tabelo de §3 (M9). La pruvo
-`tenilo_kodigo_roundtrip` kovras la `Tenilo`-kodigon: valida paro revenas
-senŝanĝe, dum generacio `0` kaj indekso super `15` estas rifuzataj. Ekde Fazo 2
-de M14 tri pliaj pruvoj kovras la finpunktajn generaciojn
-(`generacio_emeritigas`), la referenckalkulon (`referenco_saturigas`) kaj la
-elekton de libera fendo (`libera_fendo_elektita`). Fazo 3 aldonas kvar pruvojn
-super lokaj `Kapablotabelo`-oj: la permeso `SENDI`/`RICEVI` malfermas la
-koncernan operacion nur ĉe la responda bito (`rajtoj_devigas_sendon`,
-`rajtoj_devigas_ricevon`), `DONI` akceptas nur subaron de la fontaj permesoj
-(`dono_nur_malpligrandigas_rajtajn`) kaj tenilo el unu proceza tabelo ne
-validas en alia, eĉ kun la sama fenda indekso
-(`transproceza_tenilo_nevalidas`). Fazo 4 aldonas unu pruvon pri la revoka
-invarianto: tenilo kongruas nur kun aktiva finpunkto de la sama generacio
-(`revoko_malvalidigas_tenilojn`), do revoko aŭ emeritiĝo de la generacio
-malvalidigas ĉiujn ĝiajn tenilojn. Fazo 5 aldonas du pruvojn: la premrega
-politiko `senda_decido` nur enmetas dum loko restas kaj nur atendigas aŭ
-rifuzas plenan vicon laŭ la blokkapablo de la sendanto
-(`premrego_postulas_plenan_vicon`), kaj la sendanta bito estas unu-uma kaj
-kongruas kun la vek-buklo (`senda_bito_unuuma`).
+Rezulto: `Complete - 26 successfully verified harnesses, 0 failures, 26 total.`
+La kovrado spegulas la mesaĝujon (ena longo, pleneco, FIFO, malpleno), la
+tenilan kodigon kaj finpunktajn generaciojn, la kapablajn permesojn kaj
+transprocezan izoladon, la revokan invarianton, la premregan politikon kun la
+senda bito, la fontan filtron kaj la tempoliman politikon (`u32::MAX` → senfina,
+`0` → nebloka, alie `ceil(ms/10)` kun almenaŭ unu tiko). La unuopaj
+`unwind`-limoj estas en la tabelo de §3.
 
 **Kial la pruvoj estas skribitaj tiel.** La unua plena rulo malsukcesis per
 «CBMC appears to have run out of memory» ĉe `fifo_ordo_inter_fontoj` — ne per
@@ -851,7 +822,7 @@ pli ol 3 GB al malpli ol 1 GB, kaj la tuta pordo fariĝas verda.
 | 3 | 0.4.2 | Permes-kontroloj, `DONI`(7), `SENDI`/`RICEVI` transiras al `rdi` = tenilo, du-nivela generacia kontrolo, `BOOTSTRAP_TENILO`; la fonta filtro venas kun `RICEVI_TEMPO` en Fazo 6 |
 | 4 | 0.4.3 | `REVOKI`(8) tutfinpunkta, revokaj vekoj `-32`, purigo ĉe proceza detruo, `Result<Mesago, IpcEraro>` |
 | 5 | 0.4.4 | Plen-vica premrego (sendblokado), identeco, `-90`, `IpcStatistiko` |
-| 6 | 0.4.5 | `RICEVI_TEMPO`(9)/`SENDI_TEMPO`(10), `-110`, `-11` |
+| 6 | 0.4.5 | `RICEVI_TEMPO`(9)/`SENDI_TEMPO`(10), `Atendo::{Senfina, Nebloka, Tempa}`, absoluta limdato por ĉiu voko, `-110`, `-11` |
 | 7 | 0.4.6 | AC/CR3/EOI/ellasa revizio, pruva kompletigo, eldono |
 
 **Decidoj (C1–C16, arbitracio de Fazo 1).**
@@ -903,12 +874,14 @@ pli ol 3 GB al malpli ol 1 GB, kaj la tuta pordo fariĝas verda.
 | 2026-11-13 | 3. Permes-kontroloj, `DONI`(7), `SENDI`/`RICEVI` per tenilo, du-nivela kontrolo, `BOOTSTRAP_TENILO` | 0.4.2 | `[ipc] rajtoj (bone): sendi per RICEVI-nura → -1, ricevi per SENDI-nura → -1`; `[ipc] izolado de kapabloj (bone): procezo 7 uzas tenilon de procezo 6 → -9`; `[ipc] dono (bone): rajtoj 0b011 → 0b010, eskalado 0b100 → -1`; `[ring3] procezo 4: rajtoj (bone): sendi_per_ricevi=-1, ricevi_per_sendi=-1`; `[ring3] negativaj (F3): tenilo6=-9, tenilo0=-9`; `[sistemvoko] Ring 0-memtesto: skribo=0, nekonata=-2, nula=-1, troa=-1, cedo=0, krei=-28, doni=-9, fermi=-9`; `[ipc] tabeloj`, A1 kaj `finpunktoj` senŝanĝaj; 20 Kani-pruvoj; `size -A`: `.text` 86431, `.rodata` 51288, `.data` 36056, `.bss` 364544 B — RAM-kresko (`.data`+`.bss`) 1248 B (C3) |
 | 2026-11-14 | 4. `REVOKI`(8) tutfinpunkta, revokaj vekoj `-32`, purigo ĉe proceza detruo, `Result<Mesago, IpcEraro>` | 0.4.3 | `[ipc] revoko (bone): sen_revoki=-1, revoko=0, donita=-9, fermo=-9, duobla=-9`; `[fadeno 1] revokis la defaŭltan finpunkton de fadeno 3`; `[fadeno 3] revoka veko (bone): kodo -32`; `[ipc] purigo de procezo 4/5: 1 kapabloj liberigitaj, 1 finpunktoj revokitaj`; `[ring3] procezo 4: revoko (bone): argumento=-1, sen_revoki=-1, fermo_sen=0, revoko=0, sendo=-9, fermo=-9, duobla=-9`; `[sistemvoko] Ring 0-memtesto: …, revoki=-9, revok_argumento=-1`; 21 Kani-pruvoj; `size -A`: `.text` 92799, `.rodata` 51808, `.data` 36104, `.bss` 364544 B — RAM-kresko (`.data`+`.bss`) 48 B (C3) |
 | 2026-11-14 | 5. Sendblokado ĉe plena vico, sender-bita masko, `-90`, `IpcStatistiko` | 0.4.4 | `[fadeno 1] premrego (bone): 17 mesaĝoj senditaj; la lasta atendis liberan lokon`; `[fadeno 2] premrego (bone): 17 mesaĝoj, idento sendinto=1, ricevonto=2`; `[fadeno 2] sendblokada revoko (bone): enmetitaj=16, kodo=-32`; `[fadeno 3] revokis finpunkton 1; vekas la blokitan sendanton`; `[sistemvoko] Ring 0-memtesto: …, tro_longa=-90`; `[ipc] statistiko (bone): senditaj=37, ricevitaj=21, premregoj=2, revokoj=7`; `[kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj`; 23 Kani-pruvoj; `size -A`: `.text` 99551, `.rodata` 52336, `.data` 36424, `.bss` 364544 B — RAM-kresko (`.data`+`.bss`) 320 B (C3) |
+| 2026-11-14 | 6. `RICEVI_TEMPO`(9)/`SENDI_TEMPO`(10), `-110`, `-11`, absoluta limdato | 0.4.5 | `[fadeno 4] tempolimoj (bone): nebloka=-11 (0 tikoj), tempolimo=-110 (5 tikoj), mesaĝo=0/tipo 90, senfina=0/tipo 91`; `[ring3] procezo 5: tempolimoj (bone): nebloka=-11, tempolimo=-110, sendo=0, senfina=0, troa=-1`; `[ring3] procezo 6: tempolimoj (bone): nebloka=-11, tempolimo=-110, sendo=0, senfina=0, troa=-1`; `[memoro] izolado (bone): 64809 kadroj antaŭ, 64809 post`; `[ipc] statistiko (bone): senditaj=41, ricevitaj=25, premregoj=2, revokoj=7, tempolimoj=3`; `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj`; 26 Kani-pruvoj; `size -A`: `.text` 102719, `.rodata` 52908, `.data` 36488, `.bss` 380928 B — RAM-kresko (`.data`+`.bss`) 16448 B ≤ 20 KiB (C3) |
 
 **Akceptkriterioj.** Mesaĝo portas `sendinto`/`ricevonto`; revoko malvalidigas
 kapablon kaj vekas la blokitan ricevanton per `-32`; proceza detruo liberigas
 ĝiajn kapablojn kaj forprenas ĝiajn finpunktojn; plena vico premegas la
 sendanton anstataŭ perdi mesaĝon (nur la ripoza kunteksto ricevas `-4`);
-tro longa mesaĝo redonas `-90`; tempolimo vekas la ricevanton.
+tro longa mesaĝo redonas `-90`; tempolimo vekas la ricevanton per `-110`, nebloka
+voko redonas `-11` sen cedi, kaj `r10 = u32::MAX` blokas ĝis mesaĝo aŭ revoko.
 
 ---
 

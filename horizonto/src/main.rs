@@ -18,7 +18,8 @@ use libmikerno::starto::{
     SEKRETA_ID_DEŜOVO,
 };
 use libmikerno::syscall::{
-    SYS_KREI_FINPUNKTON, SYS_REVOKI, SYS_RICEVI, SYS_SENDI, SYS_SKRIBI, invoki,
+    SENFINA_TEMPOLIMO, SYS_KREI_FINPUNKTON, SYS_REVOKI, SYS_RICEVI, SYS_RICEVI_TEMPO, SYS_SENDI,
+    SYS_SKRIBI, invoki,
 };
 use libmikerno::{BOOTSTRAP_TENILO, Mesago, Permesoj, Tenilo};
 
@@ -44,6 +45,7 @@ pub extern "C" fn horizonto_start(reĝimo: u64, identigilo: u64) -> ! {
     testi_finpunktojn(identigilo);
     testi_rajtojn(identigilo);
     testi_revokon(identigilo);
+    testi_tempolimojn(identigilo);
     testi_negativajn();
     match reĝimo {
         REĜIMO_SEKRETO => sekreta_provo(identigilo),
@@ -303,6 +305,52 @@ fn testi_revokon(identigilo: u64) {
         sendo,
         fermo,
         duobla
+    ));
+}
+
+/// E2: la tempolima politiko de `RICEVI_TEMPO`/`SENDI_TEMPO` el Ring 3.
+///
+/// `r10 = 0` ne blokas (`-11`), `50 ms` tempolimas post `ceil(50/10) = 5`
+/// tikoj (`-110`), `u32::MAX` estas senfina atendo, kaj valoro super `u32::MAX`
+/// estas malĝusta argumento (`-1`). Mesaĝo, kiu jam atendas, venkas la
+/// tempolimon.
+fn testi_tempolimojn(identigilo: u64) {
+    let mut celo = Mesago::malplena();
+    let nebloka = biblioteko::ricevi_kun_tempolimo(BOOTSTRAP_TENILO, &mut celo, 1, 0);
+    let tempolimo = biblioteko::ricevi_kun_tempolimo(BOOTSTRAP_TENILO, &mut celo, 1, 50);
+    let mesaĝo = Mesago::nova(0x4C01, 0, 0, b"tempolimo");
+    let sendo = biblioteko::sendi_kun_tempolimo(BOOTSTRAP_TENILO, &mesaĝo, 0);
+    let mut ricevita = Mesago::malplena();
+    let senfina =
+        biblioteko::ricevi_kun_tempolimo(BOOTSTRAP_TENILO, &mut ricevita, 0, SENFINA_TEMPOLIMO);
+    // SAFETY: la tenilo kaj la celo estas validaj; la tempolimo intence superas
+    // `u32::MAX`, do la kerno rifuzas ĝin antaŭ ol legi aŭ skribi la mesaĝon.
+    let troa = unsafe {
+        invoki(
+            SYS_RICEVI_TEMPO,
+            [
+                BOOTSTRAP_TENILO.nombro() as usize,
+                &mut celo as *mut Mesago as usize,
+                0,
+                u32::MAX as usize + 1,
+            ],
+        )
+    };
+    let bone = nebloka == -11
+        && tempolimo == -110
+        && sendo == 0
+        && senfina == 0
+        && ricevita.tipo == mesaĝo.tipo
+        && troa == -1;
+    biblioteko::skribi_formaton(format_args!(
+        "[ring3] procezo {}: tempolimoj ({}): nebloka={}, tempolimo={}, sendo={}, senfina={}, troa={}\n",
+        identigilo,
+        if bone { "bone" } else { "MALBONE" },
+        nebloka,
+        tempolimo,
+        sendo,
+        senfina,
+        troa
     ));
 }
 

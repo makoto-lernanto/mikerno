@@ -215,6 +215,9 @@ pub fn krei(
     }
     let procezo = Procezo::nova(id, kerna_spaco, alokilo)?;
     tabelo()[id as usize] = Some(procezo);
+    // La kapablotabelo estas statika laŭ identigilo; restarigu ĝin por ke la
+    // defaŭlta tenilo `0x100` validu ankaŭ post reuzo de la identigilo.
+    super::ipc::inicialigi_procezon(id);
     Ok(id)
 }
 

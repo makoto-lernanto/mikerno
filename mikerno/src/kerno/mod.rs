@@ -173,13 +173,20 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         Err(eraro) => crate::skribu!("[kerno] IPC: sendado malsukcesis: {:?}\n", eraro),
     }
 
-    crate::skribu!("[kerno] planisto ekas: 3 fadenoj, antaŭokupo ĉiu 10 ms\n");
+    crate::skribu!(
+        "[kerno] planisto ekas: {} fadenoj, antaŭokupo ĉiu 10 ms\n",
+        TESTAJ_FADENOJ
+    );
     planisto::lanĉi();
 
     // La du `horizonto`-procezoj estas registritaj kune; unu `lanĉi()` lasas la
     // planiston interplekti ilin kaj ŝalti `CR3` inter iliaj fadenoj. La
     // spionprocezo legas paĝon, kiu ekzistas nur en la viktima spaco: la `#PF`
-    // mortigas nur ĝin, kaj la viktimo pluvivas ĝis `SYS_FINI`.
+    // mortigas nur ĝin, kaj la viktimo pluvivas ĝis `SYS_FINI`. La viktimo
+    // povas esti blokita (tempolimo) kiam la spiono mortas, do `lanĉi()`
+    // revenas antaŭ ĝia fino; la kadrokontrolo kaj la statistiko sekvas post
+    // la observa periodo, kiam ambaŭ procezoj jam malaperis.
+    let mut izolado_antaŭ = None;
     if let Some(modulo) = modulo {
         let antaŭ = {
             let alokilo = kadra_alokilo();
@@ -189,17 +196,8 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         let spiono = prepari_uzantan_procezon(&spaco, modulo, SPIONA_FADENO_ID);
         if viktimo && spiono {
             crate::skribu!("[kerno] du procezoj pretaj; unu planista voko\n");
+            izolado_antaŭ = Some(antaŭ);
             planisto::lanĉi();
-            let post = {
-                let alokilo = kadra_alokilo();
-                alokilo.liberaj()
-            };
-            crate::skribu!(
-                "[memoro] izolado ({}): {} kadroj antaŭ, {} post\n",
-                if post == antaŭ { "bone" } else { "MALBONE" },
-                antaŭ,
-                post
-            );
         } else {
             crate::skribu!("[kerno] uzantaj procezoj ne pretiĝis; scenaro ne ekas\n");
         }
@@ -207,20 +205,6 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
 
     crate::arkitekturo::malebligi_interrompojn();
     crate::skribu!("[kerno] planisto revenis al la ripoza fadeno\n");
-
-    let stat = ipc::nuna_statistiko();
-    crate::skribu!(
-        "[ipc] statistiko ({}): senditaj={}, ricevitaj={}, premregoj={}, revokoj={}\n",
-        if stat.premregoj >= 2 && stat.revokoj >= 2 {
-            "bone"
-        } else {
-            "MALBONE"
-        },
-        stat.senditaj,
-        stat.ricevitaj,
-        stat.premregoj,
-        stat.revokoj
-    );
 
     // Observu la sistemon dek sekundojn (1000 tikoj) post la fadenoj.
     crate::interrompo::ebligi_interrompojn();
@@ -232,6 +216,34 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         crate::arkitekturo::atendi_interrompon();
     };
     crate::interrompo::malebligi_interrompojn();
+
+    if let Some(antaŭ) = izolado_antaŭ {
+        let post = {
+            let alokilo = kadra_alokilo();
+            alokilo.liberaj()
+        };
+        crate::skribu!(
+            "[memoro] izolado ({}): {} kadroj antaŭ, {} post\n",
+            if post == antaŭ { "bone" } else { "MALBONE" },
+            antaŭ,
+            post
+        );
+    }
+
+    let stat = ipc::nuna_statistiko();
+    crate::skribu!(
+        "[ipc] statistiko ({}): senditaj={}, ricevitaj={}, premregoj={}, revokoj={}, tempolimoj={}\n",
+        if stat.premregoj >= 2 && stat.revokoj >= 2 && stat.tempolimoj >= 3 {
+            "bone"
+        } else {
+            "MALBONE"
+        },
+        stat.senditaj,
+        stat.ricevitaj,
+        stat.premregoj,
+        stat.revokoj,
+        stat.tempolimoj
+    );
 
     let (mortintaj, pretaj, blokitaj) = planisto::raporto();
     crate::skribu!(
@@ -258,14 +270,14 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
 }
 
 const STAKA_GRANDE: usize = 16 * 1024;
-const TESTAJ_FADENOJ: usize = 3;
+const TESTAJ_FADENOJ: usize = 4;
 /// La fadeno — kaj samnoma procezo — de la viktima `horizonto`.
 const UZANTA_FADENO_ID: u64 = TESTAJ_FADENOJ as u64 + 1;
 /// La spionprocezo: ĝi legas la duan sekretan paĝon, kiu ekzistas nur en la
 /// viktima spaco.
 const SPIONA_FADENO_ID: u64 = UZANTA_FADENO_ID + 1;
 /// Ripeta ciklo de la reuzoprovo; libera identigilo, ne fadeno.
-const PROVA_PROCEZA_ID: u64 = 6;
+const PROVA_PROCEZA_ID: u64 = 7;
 const REUZOJ: usize = 10;
 
 /// La scenaro, kiun `horizonto` plenumas: kontrolo de la propra sekreta paĝo
@@ -578,6 +590,13 @@ fn uzanta_fadeno(id: u64) {
 fn testa_fadeno(id: u64) {
     if id == 1 {
         sistemvoko::testi_ring0();
+        // La unua tempomesaĝo por fadeno 4 venas antaŭ la premrego, do ĝi estas
+        // en la vico antaŭ ol fadeno 4 ekatendas; la dua venas poste kaj devas
+        // veki la senfinan atendo.
+        let unua = ipc::Mesago::nova(90, 0, 0, b"tempo-1");
+        if let Err(eraro) = ipc::sendi_mesagon(4, &unua) {
+            crate::skribu!("[fadeno 1] unua tempomesaĝo malsukcesis: {:?}\n", eraro);
+        }
         premrega_sendo();
     } else if id == 2 {
         match ipc::ricevi_mesagon(0) {
@@ -651,12 +670,20 @@ fn testa_fadeno(id: u64) {
                 }
             }
         }
+    } else if id == 4 {
+        tempolima_provo(id);
     }
 
     for fojo in 1..=10 {
         crate::skribu!("[fadeno {}] kuranta (fojo {})\n", id, fojo);
         for n in 0..300_000u64 {
             core::hint::black_box(n);
+        }
+        if id == 1 && fojo == 5 {
+            let dua = ipc::Mesago::nova(91, 0, 0, b"tempo-2");
+            if let Err(eraro) = ipc::sendi_mesagon(4, &dua) {
+                crate::skribu!("[fadeno 1] dua tempomesaĝo malsukcesis: {:?}\n", eraro);
+            }
         }
         if id == 1 && fojo == 3 {
             match ipc::revoki_defaŭltan(3) {
@@ -717,6 +744,58 @@ fn premrega_ricevo() {
         nombro,
         idento.0,
         idento.1
+    );
+}
+
+/// Fadeno 4: la tempolima politiko de la kerna vojo.
+///
+/// Ne-bloka ricevo sen konvena mesaĝo redonas `-11` tuj; tempolimo de 5 tikoj
+/// (50 ms) redonas `-110` ĝuste ĉe la limdato; mesaĝo, kiu jam atendas aŭ
+/// alvenas dum la atendo, venkas la tempolimon. La fonta filtro pruvas, ke
+/// fremda mesaĝo ne kontentigas la vokon.
+fn tempolima_provo(id: u64) {
+    let t0 = crate::arkitekturo::temporizilaj_tikoj();
+    let nebloka = ipc::ricevi_mesagon_atenda(Some(3), ipc::Atendo::Nebloka)
+        .err()
+        .map_or(0, ipc::IpcEraro::kodo);
+    let nebloka_daŭro = crate::arkitekturo::temporizilaj_tikoj() - t0;
+
+    let t1 = crate::arkitekturo::temporizilaj_tikoj();
+    let tempolimo = ipc::ricevi_mesagon_atenda(Some(3), ipc::Atendo::Tempa(5))
+        .err()
+        .map_or(0, ipc::IpcEraro::kodo);
+    let tempolima_daŭro = crate::arkitekturo::temporizilaj_tikoj() - t1;
+
+    let (tempa_kodo, tempa_tipo) = match ipc::ricevi_mesagon_atenda(None, ipc::Atendo::Tempa(200)) {
+        Ok(mesago) => (0, mesago.tipo),
+        Err(eraro) => (eraro.kodo(), 0),
+    };
+    let (senfina_kodo, senfina_tipo) = match ipc::ricevi_mesagon_atenda(None, ipc::Atendo::Senfina)
+    {
+        Ok(mesago) => (0, mesago.tipo),
+        Err(eraro) => (eraro.kodo(), 0),
+    };
+
+    let bone = nebloka == -11
+        && nebloka_daŭro == 0
+        && tempolimo == -110
+        && (5..=6).contains(&tempolima_daŭro)
+        && tempa_kodo == 0
+        && tempa_tipo == 90
+        && senfina_kodo == 0
+        && senfina_tipo == 91;
+    crate::skribu!(
+        "[fadeno {}] tempolimoj ({}): nebloka={} ({} tikoj), tempolimo={} ({} tikoj), mesaĝo={}/tipo {}, senfina={}/tipo {}\n",
+        id,
+        if bone { "bone" } else { "MALBONE" },
+        nebloka,
+        nebloka_daŭro,
+        tempolimo,
+        tempolima_daŭro,
+        tempa_kodo,
+        tempa_tipo,
+        senfina_kodo,
+        senfina_tipo
     );
 }
 
