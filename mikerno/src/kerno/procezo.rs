@@ -243,7 +243,7 @@ pub fn detrui(id: ProcezaId, alokilo: &mut KadraAlokilo) -> Result<(), ProcezaEr
         return Ok(());
     };
 
-    let privataj = procezo.adresa_spaco.privataj_pdptoj();
+    let privataj = procezo.adresa_spaco.privataj_subtabeloj();
     let radiko = procezo.radika_adreso();
     if arkitekturo::aktiva_adreso_spaco() == radiko.adreso() {
         let Some(kerna) = kerna_radiko() else {

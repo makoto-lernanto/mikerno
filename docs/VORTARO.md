@@ -155,7 +155,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `liberigi` | free / release | Redoni kadron al la alokilo; duobla liberigo estas senefika. |
 | `detruu` | destroy | Malmapu kaj liberigu la tutan adresan spacon. |
 | `detruo` | destruction / teardown | La substantivo de `detruu`; `detrui` estas la transitiva formo. |
-| `privata PDPT` | private PDPT | `privataj_pdptoj`: la `PML4`-eroj, kiujn `krei_kunhavantan` privatigis. |
+| `privata PDPT` | private PDPT | Kampo `privataj_pdptoj`; trajta aliro `privataj_subtabeloj`. |
 | `reuzo` | reuse | `testi_procezan_reuzon`; la alokilo reuzas liberigitajn kadrojn. |
 | `ciklo` | cycle | Unu krea-detrua ripeto en la reuzoprovo. |
 | `komenca reĝimo` | start mode | `REĜIMO_SEKRETO`, `REĜIMO_SPIONO`; transdonata en `RDI`. |
@@ -195,6 +195,17 @@ kaj protokolaj nomoj sekvu ĝin.
 | `ĉeesta` | present | |
 | `grandega paĝo` | huge page | |
 | `aliniiĝinta` | aligned | |
+| `ŝpuro` | track | Aparta disvolva linio; la ARM-ŝpuro ne anstataŭas M15–M17. |
+| `platforma malantaŭo` | platform backend | `malantaŭo` en `arkitekturo`; `x86_64` aŭ `arm64`. |
+| `interrompa kadro` | interrupt frame | `InterrompaKadro`: platforma tipo en `x86_64/interrompo.rs`. |
+| `sistemvoka kadro` | system-call frame | `SistemvokaKadro`; la komuna kodo legas la registrojn per ĝi. |
+| `escepta speco` | exception kind | `EsceptoTipo`: `PaĝaEraro`, `ProtektaEraro`, `Nekonata`. |
+| `instali sistemvokon` | install system calls | `instali_sistemvokon()`; la malantaŭo registras sian enirmekanismon. |
+| `eniri uzanton` | enter user mode | `eniri_uzanton()`: `iretq` al Ring 3 aŭ `eret` al EL0. |
+| `ELF-maŝino` | ELF machine | `ELF_MAŜINO`: `62` (`x86_64`) aŭ `183` (`arm64`). |
+| `firmiga raporto` | hardening report | `FirmigaRaporto`; SMEP/SMAP aŭ PXN/UXN/PAN. |
+| `privata subtabelo` | private subtable | Anstataŭas `privataj_pdptoj`: PDPT aŭ L1/L2-subtabeloj. |
+| `antaŭeldono` | pre-release | `0.4.3-arm.N` dum la ARM-ŝpuro. |
 
 ## FluoU — grafika uzinterfaco
 
@@ -289,7 +300,11 @@ eksteraj protokolaj nomoj:
 `Limine`, `QEMU`, `int 0x80`, `iretq`, `syscall`, `sysret`, `W^X`, `CR0.WP`,
 `SMEP`, `SMAP`, `KASLR`, `IOMMU`, `DMA`, `PCI`, `DMAR`, `IVRS`, `STAC`, `CLAC`,
 `KREI_FINPUNKTON`, `DONI`, `REVOKI`, `RICEVI_TEMPO`, `SENDI_TEMPO`, `FERMI`,
-`EBADF`, `EAGAIN`, `ENOSPC`, `EPIPE`, `EMSGSIZE`, `ETIMEDOUT`.
+`EBADF`, `EAGAIN`, `ENOSPC`, `EPIPE`, `EMSGSIZE`, `ETIMEDOUT`, `arm64`,
+`AArch64`, `EL0`, `EL1`, `EL2`, `SVC`, `GIC`, `GICv2`, `GICv3`, `PL011`, `FDT`,
+`DTB`, `Image`, `TTBR0_EL1`, `TCR_EL1`, `MAIR_EL1`, `SCTLR_EL1`, `VBAR_EL1`,
+`ESR_EL1`, `FAR_EL1`, `ELR_EL1`, `SPSR_EL1`, `DAIF`, `CNTFRQ_EL0`,
+`CNTP_TVAL_EL0`, `CNTP_CTL_EL0`, `PXN`, `UXN`, `PAN`, `PSCI`, `WFI`, `HCR_EL2`.
 
 ## Reguloj
 

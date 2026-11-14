@@ -4,6 +4,7 @@ pub mod firmigo;
 pub mod gdt;
 pub mod hazardigo;
 pub mod idt;
+pub mod interrompo;
 pub mod mb2;
 pub mod pagxado;
 pub mod planado;

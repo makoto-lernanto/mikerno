@@ -13,6 +13,9 @@ const UZANTA_SS: u64 = 0x1B;
 /// `IF=1` kaj la ĉiama rezervita bito 1.
 const UZANTA_RFLAGS: u64 = 0x202;
 
+/// La ELF-maŝina identigilo de `x86_64` (norma `EM_X86_64`).
+pub const ELF_MAŜINO: u16 = 62;
+
 /// Transiru al Ring 3 kaj neniam revenu.
 ///
 /// `reĝimo` kaj `identigilo` estas transdonataj en `RDI` kaj `RSI`, do
@@ -23,12 +26,7 @@ const UZANTA_RFLAGS: u64 = 0x202;
 /// `stakpinto` devas esti la pinto de mapita, skribebla uzanta stako. La
 /// alvokanto devas esti en Ring 0 kun la TSS ŝargita, ĉar la unua reveno al la
 /// kerno uzos `RSP0`.
-pub unsafe fn transiri_al_ring3(
-    enirpunkto: u64,
-    stakpinto: u64,
-    reĝimo: u64,
-    identigilo: u64,
-) -> ! {
+pub unsafe fn eniri_uzanton(enirpunkto: u64, stakpinto: u64, reĝimo: u64, identigilo: u64) -> ! {
     // La x86-64-ABI atendas `rsp % 16 == 8` ĉe funkcia eniro (kvazaŭ `call`
     // ĵus puŝus revenadreson); `iretq` ne puŝas unu, do ni mem malaltigas la
     // stakpinton.

@@ -32,6 +32,20 @@
 | M17 | CI, testoj, plena pruvaro | Venonta | — |
 | M18 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 
+### 1.1. Aparta ŝpuro: MiKerno-ARM
+
+`arm64` estos konstruata kiel aparta ŝpuro kun fazoj A0–A4; ĝi ne anstataŭas
+nek antaŭenigas M15–M17. La plano, la nuna kouplingo al `x86_64` kaj la cela
+dosieruja strukturo estas en [ARM.md](ARM.md). Dum la ŝpuro la versio estas
+antaŭeldono (`0.4.3-arm.N`); la kunfanda numero estos elektita laŭ la tiama
+stato.
+
+A0 (arkitektura refaktoro, sen kondutŝanĝo) estas plenumita la 2026-11-14 en
+`0.4.3`: `Kunteksto`, `InterrompaKadro` kaj la escepta klasifiko translokiĝis
+al la malantaŭo; `SistemvokaKadro`, `FirmigaRaporto` kaj `ELF_MAŜINO` eniris la
+fasadon; `privataj_pdptoj` fariĝis `privataj_subtabeloj`. `just verify`, la
+PVH-vojo kaj la ISO-vojo restas verdaj.
+
 ---
 
 ## 2. Plenumitaj mejloŝtonoj

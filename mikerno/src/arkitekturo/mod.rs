@@ -2,16 +2,23 @@
 
 use core::fmt;
 
-use crate::kerno::objekto::Kunteksto;
 use crate::memoro::kadro::KadraAlokilo;
 use crate::memoro::virtuala::{AdresaSpaco, FizikaAdreso, PaĝaEraro};
 use crate::memoro::{EniraEraro, EniraInformo};
+
+pub mod komuna;
+
+pub use komuna::{EsceptoTipo, FirmigaRaporto, SistemvokaKadro};
 
 #[cfg(target_arch = "x86_64")]
 mod x86_64;
 
 #[cfg(target_arch = "x86_64")]
 use x86_64 as malantaŭo;
+
+pub use malantaŭo::interrompo::{InterrompaKadro, escepto_speco};
+pub use malantaŭo::planado::Kunteksto;
+pub use malantaŭo::uzanta::ELF_MAŜINO;
 
 pub fn pravalorizi() {
     malantaŭo::pravalorizi();
@@ -32,11 +39,20 @@ pub fn hazardo() -> u64 {
 pub use malantaŭo::firmigo::{
     StacGardo, aktiva as smep_aktiva, clac, smap_aktiva, testi_smap, testi_smep,
 };
-pub use malantaŭo::procesoro::Trajtoj as ProcesorajTrajtoj;
 
-/// Legu la procesorajn trajtojn uzatajn de la kerna firmigo.
-pub fn procesoraj_trajtoj() -> ProcesorajTrajtoj {
-    malantaŭo::procesoro::trajtoj()
+/// La firmigaj trajtoj faritaj de la platformo, por la starta raporto.
+pub fn firmiga_raporto() -> FirmigaRaporto {
+    malantaŭo::firmigo::raporto()
+}
+
+/// Malŝaltu la uzantaliran fenestron de Ring 0 se la platformo havas unu.
+///
+/// Vokata de la interrompa dispetĉo: la uzanto povas lasi `RFLAGS.AC=1`, kaj
+/// la kerno devas fermi la fenestron antaŭ ol tuŝi uzantajn montrilojn.
+pub fn malŝalti_ac() {
+    if smap_aktiva() {
+        clac();
+    }
 }
 
 pub fn halti() -> ! {
@@ -125,30 +141,25 @@ pub fn defaŭlta_kernostako() -> u64 {
     malantaŭo::tss::defaŭlta_pinto()
 }
 
-/// Transiru al Ring 3 per `iretq`; la voko neniam revenas.
+/// Transiru al la uzanta reĝimo; la voko neniam revenas.
 ///
-/// `reĝimo` kaj `identigilo` estas transdonataj en `RDI` kaj `RSI` kiel la
-/// unuaj du argumentoj de la enirpunkto.
+/// `reĝimo` kaj `identigilo` estas transdonataj kiel la unuaj du argumentoj
+/// de la enirpunkto.
 ///
 /// # Sekureco
 /// La enirpunkto kaj la stakpinto devas aparteni al mapita uzanta bildo kaj
-/// stako (vidu `uzanta::transiri_al_ring3`).
-pub unsafe fn transiri_al_ring3(
-    enirpunkto: u64,
-    stakpinto: u64,
-    reĝimo: u64,
-    identigilo: u64,
-) -> ! {
-    unsafe { malantaŭo::uzanta::transiri_al_ring3(enirpunkto, stakpinto, reĝimo, identigilo) }
+/// stako (vidu `uzanta::eniri_uzanton`).
+pub unsafe fn eniri_uzanton(enirpunkto: u64, stakpinto: u64, reĝimo: u64, identigilo: u64) -> ! {
+    unsafe { malantaŭo::uzanta::eniri_uzanton(enirpunkto, stakpinto, reĝimo, identigilo) }
 }
 
 pub fn temporizilaj_tikoj() -> u64 {
     malantaŭo::temporizilo::tikoj()
 }
 
-/// Dispetĉu sistemvokon el la interrompa kadro.
-pub fn sistemvoka_dispetĉo(kadro: &mut crate::interrompo::InterrompaKadro) {
-    malantaŭo::sistemvoko::sistemvoka_dispetĉo(kadro);
+/// Instalu la platforman enirmekanismon de sistemvokoj kaj ĝian traktilon.
+pub fn instali_sistemvokon() {
+    malantaŭo::sistemvoko::instali();
 }
 
 pub fn prepari_kuntekston(konteksto: &mut Kunteksto, stako_pinto: u64) {

@@ -394,9 +394,9 @@ ciferpremo kaj ŝaltas `U` ĉe la folio kaj ĉiuj gepatraj niveloj.
 - la temporizila traktilo vokas `planumi()` ĉiun 10 ms; fadeno povas cedi
   (`cedi`), blokiĝi (`bloki`) aŭ finiĝi (`morti`);
 - kuntekstŝanĝo (`planado.rs`) konservas 18 registreojn (`rax`…`r15`, `rsp`,
-  `rip`, `rflags`) per `#[repr(C)]` `Kunteksto`; la unua eniro uzas artefaritan
-  stakon kun `fadeno_trampolino`, kiu ŝaltas interrompojn kaj transdonas la
-  fadenan identigilon en `rax` → `rdi`;
+  `rip`, `rflags`) per `#[repr(C)]` `arkitekturo::Kunteksto`; la unua eniro
+  uzas artefaritan stakon kun `fadeno_trampolino`, kiu ŝaltas interrompojn kaj
+  transdonas la fadenan identigilon en la unua argumento;
 - ĉiu fadeno havas 16 KiB stakon; la testaj stakoj estas statikaj;
 - antaŭ ĉiu `switch` la planisto aktivigas la celan procezon: se la fizika
   radiko diferencas de la aktiva `CR3`, ĝi ŝaltas `CR3` al la proceza `PML4`;
@@ -591,7 +591,8 @@ ekzistas nur en la propra spaco). Dum planado `aktivigi(id)` komparas la aktivan
 stako de la elektita procezo.
 
 `krei_kunhavantan` registras en `X86AdresaSpaco` kiujn `PML4`-indeksojn ĝi
-privatigis (`privataj_pdptoj`). La indekso `0` ĉiam estas privata: ĝi portas
+privatigis (kampo `privataj_pdptoj`, trajta aliro `privataj_subtabeloj`). La
+indekso `0` ĉiam estas privata: ĝi portas
 kaj la identecan mapon de la unuaj 4 GiB kaj la uzantan fenestron. `detruu`
 tial unue malmapas la fenestron (folioj, poste malplenaj `PT`/`PD`), poste
 liberigas **nur la registritajn privatajn `PDPT`-ojn** — neniam la kunhavatajn
@@ -880,6 +881,7 @@ horizonto: procezo vekis en Ring 3.
 │       ├── kunhavigita.rs      # UnsafeCell + Sync (unuprocesora)
 │       ├── arkitekturo/
 │       │   ├── mod.rs          # platforma fasado
+│       │   ├── komuna.rs       # SistemvokaKadro, EsceptoTipo, FirmigaRaporto
 │       │   └── x86_64/
 │       │       ├── mod.rs      # pravalorizi (seria, gdt, idt, nxe)
 │       │       ├── eniro.rs    # 32→64-bita ŝelko, MB2-kapo, PVH-noto
@@ -887,6 +889,7 @@ horizonto: procezo vekis en Ring 3.
 │       │       ├── pvh.rs      # Xen-PVH-analizo
 │       │       ├── gdt.rs      # GDT + TSS-priskribo
 │       │       ├── idt.rs      # IDT kaj interrompaj ŝablonoj
+│       │       ├── interrompo.rs # InterrompaKadro, escepta klasifiko
 │       │       ├── tss.rs      # RSP0, 16 KiB kerna stako
 │       │       ├── apic.rs     # xAPIC MMIO
 │       │       ├── temporizilo.rs # PIT-kalibrita 100 Hz
@@ -900,10 +903,10 @@ horizonto: procezo vekis en Ring 3.
 │       │   ├── mod.rs          # regionoj, mapo, EniraInformo, Modulo
 │       │   ├── kadro.rs        # bitmapa alokilo + Kani-pruvoj
 │       │   └── virtuala.rs     # adresoj, permesoj, uzanta fenestro
-│       ├── interrompo/mod.rs   # kadro, traktiloj, RAII-gardo
+│       ├── interrompo/mod.rs   # traktiloj, RAII-gardo
 │       ├── kerno/
 │       │   ├── mod.rs          # ĉefa sekvenco, testaj fadenoj
-│       │   ├── objekto.rs      # Fadeno, Kunteksto, stato
+│       │   ├── objekto.rs      # Fadeno, stato, konteksta posedo
 │       │   ├── procezo.rs      # Procezo, proceza stato, privata spaco
 │       │   ├── planisto.rs    # rondiga planisto
 │       │   ├── sistemvoko.rs   # SKRIBI/FINI/CEDI/SENDI/RICEVI/KREI_FINPUNKTON/DONI/REVOKI/FERMI
@@ -924,6 +927,7 @@ horizonto: procezo vekis en Ring 3.
 │   └── limine/                 # praŝarĝilo (binaraj dosieroj)
 ├── third_party/dejavu/         # permesilo de la fonto
 └── docs/
+    ├── ARM.md                  # plano por la arm64-ŝpuro
     ├── FLUOU.md                # deviga GUI-gvidilo (FluoU)
     ├── FLUOU-montro.html       # vida montro de la gvidilo
     ├── MEJLOSTONOJ.md          # mejloŝtonoj kaj pruvaro

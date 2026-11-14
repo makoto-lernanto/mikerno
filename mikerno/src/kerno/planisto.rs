@@ -4,12 +4,12 @@
 //! vokas `planumi`; fadeno povas cedi per `cedi`, blokiĝi per `bloki` aŭ
 //! finiĝi per `morti`. La ripoza fadeno (id 0) portas la praŝarĝan kuntekston.
 
-use crate::arkitekturo;
+use crate::arkitekturo::{self, Kunteksto};
 use crate::interrompo::InterrompaGardo;
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::virtuala::VirtuaAdreso;
 
-use super::objekto::{Fadeno, FadenoEnirpunkto, FadenoId, FadenoStato, Kunteksto};
+use super::objekto::{Fadeno, FadenoEnirpunkto, FadenoId, FadenoStato};
 use super::procezo::{ProcezaEstado, ProcezaId, marki};
 
 pub const MAKSAJ_FADENOJ: usize = 8;
@@ -275,8 +275,8 @@ pub fn pretigi_fadenon(
 ) -> Fadeno {
     let mut fadeno = Fadeno::nova(id, proceza_id, stako_pinto, enirpunkto);
     arkitekturo::prepari_kuntekston(&mut fadeno.konteksto, fadeno.stako_pinto.adreso());
-    // La trampolino transdonas `rax` al Rust kiel la unuan argumenton.
-    fadeno.konteksto.rax = id;
+    // La trampolino transdonas la unuan argumenton al Rust.
+    fadeno.konteksto.agordi_unuan_argumenton(id);
     fadeno
 }
 

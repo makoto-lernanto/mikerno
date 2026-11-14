@@ -10,6 +10,7 @@ use core::arch::asm;
 
 use super::pagxado::X86AdresaSpaco;
 use super::procesoro;
+use crate::arkitekturo::komuna::{FirmigaRaporto, FirmigaTrajto};
 use crate::memoro::KADRA_GRANDO;
 use crate::memoro::kadro::KadraAlokilo;
 use crate::memoro::virtuala::{AdresaSpaco, PaĝaPermesoj, PaĝaTablo, UZANTA_BAZO, VirtuaAdreso};
@@ -52,6 +53,25 @@ pub fn aktiva() -> bool {
 /// Ĉu `CR4.SMAP` estas efektive ŝaltita?
 pub fn smap_aktiva() -> bool {
     cr4_aktiva(SMAP_BITO)
+}
+
+/// La firmigaj trajtoj de la procesoro por la starta raporto.
+pub fn raporto() -> FirmigaRaporto {
+    let trajtoj = procesoro::trajtoj();
+    let mut raporto = FirmigaRaporto::nova();
+    raporto.aldonu(FirmigaTrajto {
+        nomo: "SMEP",
+        subtenata: trajtoj.smep,
+        aktiva: aktiva(),
+        priskribo: "Ring 0 ne povas plenumi uzantajn paĝojn.",
+    });
+    raporto.aldonu(FirmigaTrajto {
+        nomo: "SMAP",
+        subtenata: trajtoj.smap,
+        aktiva: smap_aktiva(),
+        priskribo: "Ring 0 legas uzantajn bufrojn nur en STAC-fenestroj.",
+    });
+    raporto
 }
 
 fn cr4_aktiva(bito: u64) -> bool {

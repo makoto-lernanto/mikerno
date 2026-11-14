@@ -2,7 +2,7 @@
 //!
 //! Registra ABI (vidu `libmikerno::syscall`): `rax` = numero,
 //! `rdi`/`rsi`/`rdx`/`r10` = argumentoj, `rax` = rezulto. La arkitektura
-//! tavolo legas la registrojn el `InterrompaKadro` kaj skribas la rezulton
+//! tavolo legas la registrojn per `SistemvokaKadro` kaj skribas la rezulton
 //! reen; ĉi tiu modulo nur decidas, kion la voko signifas.
 
 use core::mem::size_of;
@@ -13,7 +13,6 @@ use libmikerno::syscall::{
 };
 use libmikerno::{Mesago, Permesoj, Tenilo};
 
-use crate::interrompo::{InterrompaKadro, InterrompaTraktilo, SISTEMVOKA_VEKTORO};
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::virtuala::{PaĝaTablo, UZANTA_STAKO_GRANDE, UZANTA_STAKO_SUPRO};
 
@@ -300,21 +299,6 @@ fn kontroli_regionon(montrilo: u64, longo: usize, skriba: bool, el_ring3: bool) 
         return false;
     }
     true
-}
-
-struct SistemvokaTraktilo;
-
-impl InterrompaTraktilo for SistemvokaTraktilo {
-    fn trakta(&self, kadro: &mut InterrompaKadro) {
-        crate::arkitekturo::sistemvoka_dispetĉo(kadro);
-    }
-}
-
-static TRAKTILO: SistemvokaTraktilo = SistemvokaTraktilo;
-
-pub fn pravalorizi() {
-    crate::interrompo::registri(SISTEMVOKA_VEKTORO, &TRAKTILO);
-    crate::skribu!("[sistemvoko] pordego 0x80 (DPL3) instalita\n");
 }
 
 /// Ring 0-memtesto de la dispetĉo kaj de la argumenta kontrolo.

@@ -7,7 +7,8 @@
 use core::arch::asm;
 use core::sync::atomic::{AtomicU64, Ordering};
 
-use crate::interrompo::{InterrompaKadro, InterrompaTraktilo};
+use crate::arkitekturo::InterrompaKadro;
+use crate::interrompo::InterrompaTraktilo;
 
 use super::apic;
 

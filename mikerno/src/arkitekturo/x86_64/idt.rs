@@ -7,7 +7,8 @@
 use core::arch::{asm, global_asm};
 use core::mem::{offset_of, size_of};
 
-use crate::interrompo::{InterrompaKadro, SISTEMVOKA_VEKTORO, VEKTOROJ};
+use crate::arkitekturo::InterrompaKadro;
+use crate::interrompo::{SISTEMVOKA_VEKTORO, VEKTOROJ};
 
 const ERARKODAJ: [u8; 10] = [8, 10, 11, 12, 13, 14, 17, 21, 29, 30];
 const STRIDO: u64 = 32;

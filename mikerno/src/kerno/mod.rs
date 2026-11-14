@@ -45,18 +45,20 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
             origino
         );
     }
-    let trajtoj = crate::arkitekturo::procesoraj_trajtoj();
-    crate::skribu!("[kerno] SMEP subtenata: {}\n", jes_ne(trajtoj.smep));
-    crate::skribu!("[kerno] SMAP subtenata: {}\n", jes_ne(trajtoj.smap));
-    if crate::arkitekturo::smep_aktiva() {
-        crate::skribu!("[kerno] SMEP ŝaltita; Ring 0 ne povas plenumi uzantajn paĝojn.\n");
-    }
-    if crate::arkitekturo::smap_aktiva() {
+    let firmigo = crate::arkitekturo::firmiga_raporto();
+    for trajto in firmigo.trajtoj() {
         crate::skribu!(
-            "[kerno] SMAP ŝaltita; Ring 0 legas uzantajn bufrojn nur en STAC-fenestroj.\n"
+            "[kerno] {} subtenata: {}\n",
+            trajto.nomo,
+            jes_ne(trajto.subtenata)
         );
     }
-    sistemvoko::pravalorizi();
+    for trajto in firmigo.trajtoj() {
+        if trajto.aktiva {
+            crate::skribu!("[kerno] {} ŝaltita; {}\n", trajto.nomo, trajto.priskribo);
+        }
+    }
+    crate::arkitekturo::instali_sistemvokon();
     crate::skribu!(
         "[kerno] memoro: {} regionoj, {} MiB uzeblaj\n",
         informo.memora_mapo.regionoj().len(),
@@ -562,7 +564,7 @@ fn uzanta_fadeno(id: u64) {
     // SAFETY: `pravalorizi` muntis la bildon kun bito `U` kaj registris ĝian
     // enirpunkton en la proceza ero; la stako estas la mapita 64 KiB-a regiono,
     // kaj `id` estas la proceza identigilo skribita en la sekretan paĝon.
-    unsafe { crate::arkitekturo::transiri_al_ring3(enirpunkto, UZANTA_STAKO_SUPRO, reĝimo, id) }
+    unsafe { crate::arkitekturo::eniri_uzanton(enirpunkto, UZANTA_STAKO_SUPRO, reĝimo, id) }
 }
 
 fn testa_fadeno(id: u64) {

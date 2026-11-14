@@ -1,6 +1,7 @@
-//! Arkitekture sendependa interrompa tavolo: la konservita kadro, la traktila
-//! registrejo kaj la RAII-gardo por `RFLAGS.IF`.
+//! Arkitekture sendependa interrompa tavolo: la traktila registrejo, la
+//! komuna escepta politiko kaj la RAII-gardo por la interrompa flago.
 
+use crate::arkitekturo::{EsceptoTipo, InterrompaKadro, SistemvokaKadro};
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::virtuala::{UZANTA_BAZO, UZANTA_FINO};
 
@@ -12,34 +13,6 @@ pub const SISTEMVOKA_VEKTORO: u8 = 0x80;
 /// `RFLAGS.AC` (bito 18): kun `CR4.SMAP` ŝaltita, Ring 0 povas aliri uzantajn
 /// paĝojn nur kiam ĉi tiu bito estas 1.
 const FLAGO_AC: u64 = 1 << 18;
-
-/// La stako, kiun la enira ŝelko konservas antaŭ ol voki Rust.
-#[repr(C)]
-#[derive(Clone, Copy)]
-#[allow(dead_code)]
-pub struct InterrompaKadro {
-    pub rsp: u64,
-    pub rax: u64,
-    pub rbx: u64,
-    pub rcx: u64,
-    pub rdx: u64,
-    pub rsi: u64,
-    pub rdi: u64,
-    pub rbp: u64,
-    pub r8: u64,
-    pub r9: u64,
-    pub r10: u64,
-    pub r11: u64,
-    pub r12: u64,
-    pub r13: u64,
-    pub r14: u64,
-    pub r15: u64,
-    pub vektoro: u64,
-    pub erarkodo: u64,
-    pub rip: u64,
-    pub cs: u64,
-    pub rflags: u64,
-}
 
 pub trait InterrompaTraktilo {
     /// La kadro estas ŝanĝebla, ĉar sistemvoko skribas sian rezulton en `rax`.
@@ -81,10 +54,8 @@ pub extern "C" fn interrompa_dispetcho(kadro: *mut InterrompaKadro) {
     // Ring 3 rajtas ŝalti `RFLAGS.AC` per `popfq`, kaj la interrompa pordego
     // konservas ĝin. La kerno devas malŝalti ĝin antaŭ ol tuŝi ajnan uzantan
     // montrilon; `iretq` restarigas la konservitan kredaron, do la uzanto
-    // revidas sian propran `AC`. Sen `SMAP` la instrukcio kaŭzus `#UD`.
-    if crate::arkitekturo::smap_aktiva() {
-        crate::arkitekturo::clac();
-    }
+    // revidas sian propran `AC`.
+    crate::arkitekturo::malŝalti_ac();
 
     let kadro = unsafe { &mut *kadro };
     let vektoro = kadro.vektoro as usize;
@@ -122,11 +93,12 @@ fn estas_apic_vektoro(vektoro: usize) -> bool {
 }
 
 fn trakti_escepton(kadro: &mut InterrompaKadro) -> ! {
+    let speco = crate::arkitekturo::escepto_speco(kadro.vektoro());
     // `#GP` kaj `#PF` el Ring 3 apartenas al la uzanta procezo, ne al la
     // kerno: la procezo estas mortigata kaj la planisto daŭrigas. Ĉiuj aliaj
     // esceptoj — ankaŭ la samaj vektoroj el Ring 0 — restas fatalaj.
-    if kadro.cs & 3 == 3 && matches!(kadro.vektoro, 13 | 14) {
-        let nomo = if kadro.vektoro == 14 {
+    if kadro.el_uzanto() && matches!(speco, EsceptoTipo::PaĝaEraro | EsceptoTipo::ProtektaEraro) {
+        let nomo = if speco == EsceptoTipo::PaĝaEraro {
             "paĝa eraro"
         } else {
             "ĝenerala protekta eraro"
@@ -135,10 +107,10 @@ fn trakti_escepton(kadro: &mut InterrompaKadro) -> ! {
             "\n[eraro] procezo {}: {} ĉe rip=0x{:016x}, erarkodo=0x{:x}",
             crate::kerno::planisto::nuna_procezo(),
             nomo,
-            kadro.rip,
-            kadro.erarkodo
+            kadro.instrukcipunkto(),
+            kadro.erarkodo()
         );
-        if kadro.vektoro == 14 {
+        if speco == EsceptoTipo::PaĝaEraro {
             crate::skribu!(", CR2=0x{:016x}", crate::arkitekturo::fuŝa_adreso());
         }
         crate::skribu!("; la procezo estas mortigata\n");
@@ -150,26 +122,26 @@ fn trakti_escepton(kadro: &mut InterrompaKadro) -> ! {
     // Ring 0 `#PF` ĉe uzanta adreso estas firmiga malobservo. SMEP rifuzas
     // plenumon (`I=1`); SMAP rifuzas datumaliron (`I=0`) dum `RFLAGS.AC=0`.
     // `U/S` estas 0 en ambaŭ kazoj, ĉar la fuŝo okazis en Ring 0.
-    if kadro.vektoro == 14 && kadro.cs & 3 == 0 {
+    if speco == EsceptoTipo::PaĝaEraro && !kadro.el_uzanto() {
         let adreso = crate::arkitekturo::fuŝa_adreso();
         if (UZANTA_BAZO..UZANTA_FINO).contains(&adreso) {
-            if kadro.erarkodo & 0x10 != 0 && crate::arkitekturo::smep_aktiva() {
+            if kadro.erarkodo() & 0x10 != 0 && crate::arkitekturo::smep_aktiva() {
                 crate::skribu!(
                     "\n[eraro] SMEP-malobservo: Ring 0 provis plenumi uzantan paĝon ĉe 0x{:016x} (erarkodo=0x{:x})\n",
                     adreso,
-                    kadro.erarkodo
+                    kadro.erarkodo()
                 );
                 crate::arkitekturo::halti();
             }
-            if kadro.erarkodo & 0x10 == 0
-                && kadro.rflags & FLAGO_AC == 0
+            if kadro.erarkodo() & 0x10 == 0
+                && kadro.stato() & FLAGO_AC == 0
                 && crate::arkitekturo::smap_aktiva()
             {
                 crate::skribu!(
                     "\n[eraro] procezo {}: SMAP-malobservo ĉe 0x{:016x} (erarkodo=0x{:x})\n",
                     crate::kerno::planisto::nuna_procezo(),
                     adreso,
-                    kadro.erarkodo
+                    kadro.erarkodo()
                 );
                 crate::arkitekturo::halti();
             }
@@ -178,13 +150,13 @@ fn trakti_escepton(kadro: &mut InterrompaKadro) -> ! {
 
     crate::skribu!(
         "\n[kerno] escepto {} (erarkodo 0x{:x}) rip=0x{:016x} rsp=0x{:016x} rflags=0x{:x}\n",
-        kadro.vektoro,
-        kadro.erarkodo,
-        kadro.rip,
-        kadro.rsp,
-        kadro.rflags
+        kadro.vektoro(),
+        kadro.erarkodo(),
+        kadro.instrukcipunkto(),
+        kadro.stakmontrilo(),
+        kadro.stato()
     );
-    if kadro.vektoro == 14 {
+    if speco == EsceptoTipo::PaĝaEraro {
         crate::skribu!(
             "[kerno] paĝa eraro ĉe 0x{:016x}\n",
             crate::arkitekturo::fuŝa_adreso()

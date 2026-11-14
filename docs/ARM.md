@@ -1,0 +1,223 @@
+# MiKerno-ARM — plano por la `arm64`-ŝpuro
+
+> Stato: 2026-11-14 · A0 plenumita (refaktoro sen kondutŝanĝo); A1–A4 planitaj
+>
+> Rilataj: [FLUOU.md](FLUOU.md) §9 (A06, A07), [MEJLOSTONOJ.md](MEJLOSTONOJ.md),
+> [VORTARO.md](VORTARO.md).
+
+---
+
+## 1. Celo
+
+MiKerno akiru duan platforman malantaŭon, `arm64` (AArch64), kiu plenumas la
+saman kernan nukleon kaj la saman ABI 2-semantikon kiel la `x86_64`-malantaŭo:
+`Tenilo`, `Mesago`, la voknumeroj 1–11 kaj la erar-kodoj restas senŝanĝaj; nur
+la enirmekanismo kaj la registra aranĝo estas platformaj (`int 0x80` kontraŭ
+`svc #0`). Tio kongruas kun FLUOU A06/A07: sama kompona arbo, sama ABI, piksela
+paritateco.
+
+Ne-celoj por la unuaj fazoj:
+
+- SMP, IOMMU, virtio kaj reto;
+- KASLR sur `arm64` (la bildo restas ĉe fiksa bazo);
+- `arm64`-ISO aŭ UEFI-pakaĵo (la unua artefakto estas plata `Image`);
+- Kani-pruvoj por la `arm64`-malantaŭo (Kani subtenas nur `x86_64`).
+
+## 2. Kial aparta ŝpuro
+
+La nuna nukleo ne estas arkitekture sendependa, malgraŭ la fasado
+`arkitekturo`: ĝi portas `x86_64`-konceptojn en komunaj tipoj kaj en la
+praŝarĝa vojo. Tial la ŝpuro ne anstataŭas M15–M17, sed iras paralele:
+
+- disvolviĝo en branĉo `arm64`;
+- fazoj A0–A4 kun propraj akceptkriterioj;
+- versioj `0.4.3-arm.N` (antaŭeldono) dum la ŝpuro; ĝi ne antaŭenigas la
+  ĉefan `0.x.y`-linion;
+- kunfando nur post kiam A4 estas verda; la numero en la mejloŝtona listo
+  estos elektita laŭ la tiama stato (sugesto: M19 → `0.9.0`, post M18).
+
+`tools/versio.sh` nuntempe akceptas nur `0.x.y`; A1 etendos la esprimojn al
+`0.x.y-arm.N`. La ŝpuro aldonos mallongan paragrafon al `AGENTS.md` pri tiu
+versiado, sed nur kiam la unua fazo komenciĝos.
+
+## 3. Nunaj kouplingoj al `x86_64`
+
+| Dosiero | Nuna stato | Bezono |
+| --- | --- | --- |
+| `mikerno/src/arkitekturo/mod.rs` | fasado ekzistas; A0 re-eksportas `Kunteksto`, `InterrompaKadro`, `ELF_MAŜINO` | ĝeneraligi la restajn nomojn; la semantiko restu en la malantaŭo |
+| `mikerno/src/arkitekturo/x86_64/eniro.rs` | 32-bita PVH/Multiboot2-ŝelko, KASLR | restas; `arm64` ricevas propran `eniro.rs` |
+| `mikerno/src/kerno/objekto.rs` | `Fadeno` uzas `arkitekturo::Kunteksto` (A0) | — |
+| `mikerno/src/interrompo/mod.rs` | komuna registrejo/gardo; la kadro kaj la escepta klasifiko loĝas en `x86_64/interrompo.rs` (A0) | restas |
+| `mikerno/src/kerno/sistemvoko.rs` | nur la kerna efektivigo; `arkitekturo::instali_sistemvokon()` (A0) | restas |
+| `mikerno/src/memoro/virtuala.rs` | `AdresaSpaco`/`PaĝaTablo` preskaŭ neŭtralaj; trajta metodo `privataj_subtabeloj` (A0) | `CR3`-komentoj restas |
+| `mikerno/src/kerno/uzantspaco.rs` | `arkitekturo::ELF_MAŜINO` (A0) | — |
+| `mikerno/src/kerno/mod.rs` | `arkitekturo::firmiga_raporto()` (A0) | — |
+| `libmikerno/src/syscall.rs` | `invoki` jam havas `cfg`-branĉojn; la ne-`x86_64` branĉo redonas `-1` | aldoni `svc #0`-branĉon por `aarch64` |
+| `horizonto/` | `iretq`, `rdi`/`rsi`, ELF ĉe 4 GiB | `eret`, `x0`/`x1`, sama bazo; la ligila skripto reuzeblas |
+| `.cargo/config.toml`, `mikerno/build.rs`, `justfile`, `tools/run-qemu.sh` | nur `x86_64` | elekti ligilon kaj lanĉilon laŭ `CARGO_CFG_TARGET_ARCH` |
+
+## 4. Cela dosieruja strukturo
+
+```text
+mikerno/src/
+├── main.rs                     # enirpunktoj; elekto de la malantaŭo per cfg
+├── arkitekturo/
+│   ├── mod.rs                  # fasado: Kunteksto, Spaco, kadro, trajtoj
+│   ├── komuna.rs               # EsceptoTipo, SistemvokaKadro, FirmigaRaporto
+│   ├── x86_64/                 # nunaj dosieroj, sen esencaj ŝanĝoj
+│   └── arm64/
+│       ├── mod.rs              # pravalorizi: seria → MMU → VBAR → GIC → tempilo
+│       ├── eniro.rs            # Image-kapo, EL2→EL1, stako, .bss
+│       ├── fdt.rs              # minimuma FDT/DTB-analizilo
+│       ├── pagxado.rs          # TTBR0_EL1, TCR_EL1, MAIR_EL1, SCTLR_EL1
+│       ├── interrompo.rs       # VBAR_EL1, ESR_EL1/FAR_EL1, escepta klasifiko
+│       ├── gic.rs              # GICv2: distribuilo + CPU-interfaco
+│       ├── temporizilo.rs      # ĝenerala temporizilo (CNTP)
+│       ├── procesoro.rs        # DAIF, WFI, CurrentEL, PSCI
+│       ├── planado.rs          # kuntekstŝanĝo, eret-trampolino
+│       ├── sistemvoko.rs       # svc #0-kadro → komuna dispetĉo
+│       ├── uzanta.rs           # EL1→EL0 per eret
+│       └── seria.rs            # PL011
+├── interrompo/mod.rs           # registrejo + InterrompaGardo sen platformaj detaloj
+├── kerno/                      # sen x86-specifaj tipoj
+├── memoro/                     # AdresaSpaco restas; nur nomoj ĝeneraliĝas
+└── ekrano/                     # senŝanĝa; framebuffer venas per EniraInformo
+```
+
+Novaj dosieroj ekster la kerna crate:
+
+```text
+mikerno/boot/linker-arm64.ld   # Image ĉe 0x4008_0000, text_offset 0x80000
+tools/run-qemu-arm.sh          # qemu-system-aarch64 -M virt
+```
+
+## 5. Komunaj tipoj kaj trajtoj
+
+- **`arkitekturo::Kunteksto`** — platforma, `#[repr(C)]`. `x86_64` konservas la
+  nunajn kampojn; `arm64` konservas `x19`…`x28`, `x29`, `x30`, `sp` kaj
+  `daif`. `kerno::objekto::Fadeno` uzas la re-eksportitan tipon.
+- **`arkitekturo::InterrompaKadro`** — platforma. Komuna kodo aliras ĝin nur
+  per la trajto `SistemvokaKadro`:
+  `numero()`, `argumento(i)`, `agordi_rezulton()`, `el_uzanto()`.
+- **`arkitekturo::EsceptoTipo`** — `PaĝaEraro`, `ProtektaEraro`, `Nekonata(u64)`.
+  La komuna politiko (mortigi la uzantan procezon, raporti, `halti`) restas en
+  `interrompo`; la malantaŭo nur klasifikas (`#PF`/`#GP` aŭ data abort/undef).
+- **`arkitekturo::FirmigaRaporto`** — nomoj kaj statoj de la firmigaj trajtoj
+  (`SMEP`/`SMAP` aŭ `PXN`/`UXN`/`PAN`). `kerno::ĉefa` nur presas ĝin.
+- **`arkitekturo::instali_sistemvokon()`** — `x86_64` instalas la DPL3-pordegon
+  `0x80`; `arm64` markas la `svc`-vektoron.
+- **`arkitekturo::ELF_MAŜINO`** — `62` aŭ `183`, uzata de la ELF-ŝargilo.
+- **`PaĝaTablo::privataj_subtabeloj()`** — anstataŭ `privataj_pdptoj()`; la
+  signifo estas platforma (PDPT aŭ L1/L2-subtabeloj).
+
+## 6. ABI 2 sur `arm64`
+
+| Elemento | `x86_64` | `arm64` |
+| --- | --- | --- |
+| Voknumero | `rax` | `x8` |
+| Argumentoj 0–3 | `rdi`, `rsi`, `rdx`, `r10` | `x0`–`x3` |
+| Rezulto | `rax` | `x0` |
+| Enirmekanismo | `int 0x80` | `svc #0` |
+| Unua uzanta voko | `rdi` = reĝimo, `rsi` = identigilo | `x0` = reĝimo, `x1` = identigilo |
+
+`Tenilo` (32 bitoj), `Mesago` (96 bajtoj, `#[repr(C)]`) kaj la erar-kodoj
+restas bajte identaj; nur `libmikerno::syscall::invoki` kaj la kerna kadro
+estas platformaj. FLUOU A07 mencias la `x86_64`-registrojn; A3 ĝisdatigos la
+tekston al «la registroj estas platformaj, la semantiko komuna».
+
+## 7. Memormodelo
+
+- 4 KiB-granulo, 48-bitaj virtualaj adresoj.
+- Unu `TTBR0_EL1` por procezo, same kiel unu `CR3`: la kernaj identecaj eroj
+  estas kunhavataj, la uzanta fenestro estas privata. `TTBR1_EL1` restas
+  malŝaltita (`TCR_EL1.EPD1 = 1`).
+- Identeca mapo de `0..4 GiB` per `L1`-blokoj de 1 GiB (RAM ĉe `0x4000_0000`,
+  MMIO de `virt` sube); la uzanta fenestro `[0x1_0000_0000, 0x80_0000_0000)`
+  per `L2`/`L3`.
+- `MAIR_EL1`: normala WB por RAM, `Device-nGnRnE` por MMIO; `PaĝaPermesoj`
+  mapiĝas al `AP[2:1]`, `UXN`, `PXN` kaj al la kaŝebla atributo.
+- `KadraAlokilo` restas valida: ĝi alogas kadrojn sub 4 GiB, kiuj estas
+  identece mapitaj.
+- TLB: `TLBI VMALLE1` + `DSB ISH` + `ISB` post mapŝanĝoj; sen ASID unue.
+- Firmigo: `PXN`/`UXN` anstataŭas `SMEP`; `PAN` anstataŭas `SMAP` nur se la
+  procesoro ĝin havas (`cortex-a53` ne havas, `-cpu max` havas).
+
+## 8. Praŝarĝo
+
+- 64-bajta `arm64`-`Image`-kapo: `code0`/`code1`, `text_offset = 0x80000`,
+  `image_size`, `flags`, `magic = 0x644d5241` (`ARM\x64`).
+- QEMU `virt` ŝargas la bildon ĉe `0x4008_0000` kaj transdonas la DTB en `x0`.
+- Eniro akceptas EL2 aŭ EL1: se `CurrentEL` estas EL2, agordas
+  `HCR_EL2.RW = 1` kaj `eret` al EL1. Poste: stako, `.bss`-nuligo, savo de la
+  DTB-montrilo.
+- Minimuma FDT-analizilo: `/memory`, `/chosen/linux,initrd-start|end`,
+  `/soc/serial@9000000`, `/intc`, `/timer`; rezervaj regionoj en
+  `EniraInformo::rezervindaj`.
+- Moduloj: unu `-initrd` (la `horizonto`-bildo) mapiĝas al `Moduloj`; pluraj
+  moduloj venos poste.
+- Haltigo: PSCI `SYSTEM_OFF` per `hvc #0`; `wfi` en la buklo de `halti`.
+
+## 9. Esceptoj, interrompoj kaj temporizilo
+
+- `VBAR_EL1`: 16 eniroj po 128 bajtoj — kvar grupoj (Current EL SP0, Current EL
+  SPx, Lower EL AArch64, Lower EL AArch32) × kvar specoj (Sync, IRQ, FIQ,
+  SError).
+- EL0-sync: `SVC` → sistemvoko; data abort → `PaĝaEraro` (procezo mortigata);
+  instruction abort/undef → `ProtektaEraro` aŭ fatala, laŭ la komuna politiko.
+- EL1-sync: paniko kun `ESR_EL1`, `FAR_EL1`, `ELR_EL1`.
+- `InterrompaGardo` uzas `DAIF` anstataŭ `RFLAGS.IF`; la fasado jam havas la
+  ĝustajn nomojn.
+- GICv2 (`-M virt,gic-version=2`): distribuilo ĉe `0x0800_0000`, CPU-interfaco
+  ĉe `0x0801_0000`; `IAR`/`EOIR`; la tempila PPI estas 30.
+- Ĝenerala temporizilo: `CNTFRQ_EL0`, `CNTP_TVAL_EL0 = frekvenco / 100`,
+  `CNTP_CTL_EL0 = 1`; 100 Hz kiel sur `x86_64`, kun la sama antaŭokupa hoko
+  `planisto::planumi()`.
+
+## 10. Planado
+
+- Kuntekstŝanĝo ĉe EL1 konservas `x19`–`x28`, `x29`, `x30`, `sp` kaj `DAIF`.
+- Uzanta fadeno unue eniras per `eret`: `ELR_EL1 = enirpunkto`,
+  `SPSR_EL1 = EL0t`, `SP_EL0 = stakpinto`, `x0`/`x1` = reĝimo/identigilo.
+- Escepto el EL0 konservas la plenan kadron sur la kerna stako; reveno uzas
+  `eret`, same kiel `iretq` sur `x86_64`.
+- La ripoza fadeno kaj la kunhavigitaj kernaj mapoj restas samaj.
+
+## 11. Fazoj
+
+| Fazo | Versio | Enhavo | Akcepto |
+| --- | --- | --- | --- |
+| A0 | `0.4.3` (sen eldono) | Arkitektura refaktoro: `Kunteksto`, kadro, escepta klasifiko, `ELF_MAŜINO`, `instali_sistemvokon`; `x86_64` sen kondutŝanĝo | `fmt`, `clippy`, `just verify`, PVH kaj ISO verdaj |
+| A1 | `0.4.3-arm.1` | `arm64`-skeleto: `Image`-kapo, EL2→EL1, PL011, FDT, identeca MMU, PSCI-haltigo; `rustup target add aarch64-unknown-none` | `just run-arm` presas la version, la memora linio kaj la serian konzolon; paniko haltigas per PSCI |
+| A2 | `0.4.3-arm.2` | `VBAR_EL1`, GICv2, ĝenerala temporizilo, `DAIF`-gardo, kuntekstŝanĝo | 100 Hz-tikoj, 1000 tikoj, tri fadenoj interplektiĝas kaj finiĝas |
+| A3 | `0.4.3-arm.3` | EL0 per `eret`, `svc #0`, `horizonto` por `aarch64`, ELF-maŝino 183, uzantaj esceptoj | la samaj IPC-linioj kiel `x86_64`, inkluzive `-32`, sekreta paĝo kaj spiona data abort |
+| A4 | `0.4.3-arm.4` | `ramfb` per `fw_cfg`, piksela fiksaĵo, `PXN`/`UXN`/`PAN`, dokumentaro | identa frambufa haketo sur ambaŭ arkoj; `VORTARO.md`, `MEJLOSTONOJ.md` kaj `AGENTS.md` ĝisdatigitaj |
+
+A0 estas antaŭkondiĉo: ĝi ne ŝanĝas la `x86_64`-konduton kaj restas en la
+ĉefa branĉo. A1–A4 disvolviĝas en `arm64` kaj estas kunfandataj nur post kiam
+ĉiu akcepto estas verda.
+
+## 12. Riskoj kaj malŝarĝoj
+
+| Risko | Malŝarĝo |
+| --- | --- |
+| FDT-analizado tro kreskas | Minimuma analizilo por `memory`, `initrd`, `serial`, `intc`, `timer`; fiksa `virt`-fallback nur por diagnozo |
+| EL2 kontraŭ EL1 ĉe starto | `CurrentEL`-kontrolo kaj malgranda EL2→EL1-ŝelo |
+| GICv2 kontraŭ GICv3 | GICv2 unue, eksplicita `gic-version=2`; GICv3 poste |
+| `PAN` mankas sur `cortex-a53` | A4 uzas `-cpu max`; la raporto montras, kiu firmigo estas aktiva |
+| Du malantaŭoj drivas | A0 tenas la komunan nukleon en unu loko; M17 aldonos CI-matricon |
+| Kani nur `x86_64` | La pruvoj restas sur la komuna kodo; `arm64`-specifaĵoj ricevas QEMU-testojn |
+| `Limine` ne subtenas `arm64` | La unua artefakto estas plata `Image`; ISO/UEFI estas aparta decido |
+| `ramfb`/`fw_cfg`-komplekseco | A4 komenciĝas per `-device ramfb`; alternativa vojo estas UEFI `GOP` |
+
+## 13. Unuaj paŝoj
+
+1. `rustup target add aarch64-unknown-none`; kontroli `qemu-system-aarch64`
+   (jam havebla: QEMU 10.2.1).
+2. A0: refaktori la komunajn tipojn kaj restarigi `just verify` kaj la du
+   `x86_64`-vojojn. (Farita.)
+3. A1: `linker-arm64.ld`, `eniro.rs`, `seria.rs`, `fdt.rs`, `pagxado.rs`.
+4. A1-akcepto: `[MiKerno] Saluton, mi estas MiKerno v0.4.3-arm.1!`,
+   `[kerno] memoro: …`, `[kerno] seria konzolo: PL011 @ 0x9000000`.
+5. Nur post verda A1: `VBAR_EL1` kaj GIC (A2).
+
+A0 estas efektivigita; A1 komenciĝos nur post klara «ek» de la uzanto.

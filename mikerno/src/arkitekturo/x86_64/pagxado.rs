@@ -147,7 +147,7 @@ impl AdresaSpaco for X86AdresaSpaco {
         self.radiko()
     }
 
-    fn privataj_pdptoj(&self) -> usize {
+    fn privataj_subtabeloj(&self) -> usize {
         self.privataj_pdptoj
             .iter()
             .map(|vorto| vorto.count_ones() as usize)

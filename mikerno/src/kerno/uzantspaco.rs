@@ -23,7 +23,6 @@ use crate::memoro::{KADRA_GRANDO, Modulo};
 const ELF_MAGIO: [u8; 4] = [0x7F, b'E', b'L', b'F'];
 const ELF_KLASO_64: u8 = 2;
 const ELF_DATUMOJ_LE: u8 = 1;
-const ELF_MAŜINO_X86_64: u16 = 62;
 const ELF_KAPA_GRANDO: usize = 64;
 const ELF_PROGRAMA_GRANDO: usize = 56;
 const PT_LOAD: u32 = 1;
@@ -186,7 +185,7 @@ fn ŝargi_bildon(
     if kapo[0..4] != ELF_MAGIO
         || kapo[4] != ELF_KLASO_64
         || kapo[5] != ELF_DATUMOJ_LE
-        || legi_u16(kapo, 18) != ELF_MAŜINO_X86_64
+        || legi_u16(kapo, 18) != crate::arkitekturo::ELF_MAŜINO
         || legi_u16(kapo, 54) as usize != ELF_PROGRAMA_GRANDO
         || legi_u16(kapo, 56) == 0
     {

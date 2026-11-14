@@ -307,10 +307,11 @@ pub trait AdresaSpaco: PaĝaTablo {
     /// La fizika adreso de la radika paĝtabelo, uzata por `CR3`.
     fn radika_adreso(&self) -> FizikaAdreso;
 
-    /// Kiom da privataj PDPT-kadroj la spaco posedas. Ili estis alokitaj de
+    /// Kiom da privataj subtabeloj la spaco posedas. Ili estis alokitaj de
     /// `krei_kunhavantan` nur por ĉi tiu spaco kaj estas liberigitaj de
-    /// `detruu`; la nombro utilas por diagnozo.
-    fn privataj_pdptoj(&self) -> usize;
+    /// `detruu`; la nombro utilas por diagnozo. Sur `x86_64` temas pri
+    /// PDPT-kadroj.
+    fn privataj_subtabeloj(&self) -> usize;
 
     /// Ŝaltu la procesoran `CR3` al ĉi tiu spaco.
     fn ŝalti(&self);
