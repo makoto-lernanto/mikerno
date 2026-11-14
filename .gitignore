@@ -2,3 +2,6 @@
 /*.log
 /iso_root
 /mikerno.iso
+/iso_root_arm
+/mikerno-arm.iso
+/efi-arm.img
