@@ -38,7 +38,7 @@ fluas tra la sama kadro.
 | G01 | Unueco | Ĉiu grafika aplikaĵo `DEVI` esti konstruita per FluoU kaj deklari `gui = "fluoU"` en sia manifesto. |
 | G02 | Kapablo | Renderado estas kapablo: sen `FENESTRO`-tenilo, ne ekzistas pikseloj. |
 | G03 | Paritateco | La sama kompona arbo `DEVI` doni la saman rezulton sur `x86_64` kaj `arm64`. |
-| G04 | Lingva unueco | Ĉiuj identigiloj, interfacaj tekstoj, dokumentaro kaj komandnomoj estas en Esperanto. |
+| G04 | Lingva unueco | Ĉiuj identigiloj, fontaj interfacaj tekstoj, dokumentaro kaj komandnomoj estas en Esperanto. |
 
 - **G05.** Neniu aplikaĵo — ankaŭ sistema — rajtas desegni rekte en la
   frambufon. La sola escepto estas la kompozitoro mem.
@@ -53,13 +53,16 @@ fluas tra la sama kadro.
 
 ## 2. Lingva regulo
 
-- **L01.** La interfaco, la dokumentaro, la erarmesaĝoj, la komentoj kaj la
-  identigiloj `DEVI` esti en Esperanto.
+- **L01.** La fonta interfaco, la dokumentaro, la erarmesaĝoj, la komentoj kaj
+  la identigiloj `DEVI` esti en Esperanto (vidu §2.2).
 - **L02.** Restas en la angla nur neŝanĝeblaj propraj aŭ fiksaĵaj nomoj:
   `Rust`, `x86_64`, `arm64`, registraj nomoj, instrukcioj kaj normaj API- kaj
   aparataraj nomoj.
-- **L03.** La ĉina lingvo estas malpermesita ie ajn: en la kodo, la interfaco,
-  la dokumentaro, la mesaĝoj kaj la dosiernomoj.
+- **L03.** Dum evoluigo oni verkas en Esperanto: kodo, fontaj interfacaj
+  tekstoj, dokumentaro, mesaĝoj kaj dosiernomoj. Aldona plurlingva mapada
+  tavolo rajtas provizi tradukojn de la montrataj tekstoj al aliaj lingvoj,
+  inkluzive la ĉinan; vidu §2.2. La mapada tavolo estas aparta tavolo — ĝi ne
+  anstataŭas la Esperantajn fontajn tekstojn.
 - **L04.** Ĉiuj komandnomoj de Ligo `DEVI` esti Esperantaj. Anglaj aliasoj
   (`ls`, `cat`, `ps`, `kill`, `echo`, `help`, `clear` kaj similaj) estas
   malpermesitaj, ankaŭ kaŝe. Komandnomoj `DEVUS` esti sen diakritaj signoj,
@@ -93,6 +96,20 @@ fluas tra la sama kadro.
   kompletigo kaj la historio uzas nur la Esperantajn nomojn.
 - **L08.** La sistema tiparo `DEVI` kovri la Esperantajn literojn
   `ĉ ĝ ĥ ĵ ŝ ŭ` kaj la citilojn `« »` en ĉiu streko, kiun FluoU uzas.
+
+### 2.2. Lingvaj tavoloj
+
+- **Fonta tavolo (deviga).** Ĉio, kio estas verkata dum evoluigo — identigiloj,
+  fontaj interfacaj tekstoj, komentoj, dokumentaro, mesaĝoj kaj dosiernomoj —
+  estas en Esperanto.
+- **Mapada tavolo (nedeviga).** Aparta traduka dosierujo, ekzemple `tradukoj/`,
+  rajtas enhavi tradukojn de la montrataj tekstoj al aliaj lingvoj, inkluzive
+  la ĉinan. Ĝi estas aldonita tavolo, ne anstataŭo de la fonta tavolo.
+- La mapada tavolo ne rajtas ŝanĝi identigilojn, protokolajn nomojn,
+  komandnomojn aŭ la strukturon de la interfaco; ĝi tradukas nur la montratajn
+  tekstojn.
+- Se la mapada tavolo mankas aŭ ne kovras iun tekston, la interfaco montras la
+  Esperantan fontan tekston.
 
 ---
 
@@ -417,8 +434,9 @@ Eniro estas la tutsistema komanda paletro. Ĝi estas FluoU-aplikaĵo kun
 - **E07.** Aplikaĵoj lanĉitaj el Eniro `DEVI` ricevi nur la minimumajn
   kapablojn per `DONI`; kolapso de unu aplikaĵo `DEVI NE` haltigi Eniron aŭ la
   kompozitoron.
-- **E08.** Ĉiu rezulto `DEVI` havi Esperantan nomon kaj alireblan priskribon.
-  Anglaj aŭ ĉinaj komandnomoj ne aperas.
+- **E08.** Ĉiu rezulto `DEVI` havi Esperantan fontan nomon kaj alireblan
+  priskribon. Komandnomoj kaj identigiloj restas Esperantaj; la mapada tavolo
+  (§2.2) tradukas nur la montratajn tekstojn.
 - **E09.** La piedlinio `DEVI` montri la klavarajn helpojn en Esperanto kaj la
   version de FluoU.
 
@@ -623,7 +641,7 @@ Aplikaĵo estas `KONFORMA` nur se ĉiuj jenaj kontroloj estas verdaj. Malsukceso
 | P16 | `Dialogo` kaptas fokuson, fermeblas per `Esc` kaj redonas fokuson. |
 | P17 | La piksela fiksaĵo kongruas inter `x86_64` kaj `arm64`. |
 | P18 | Neniu aplikaĵo aliras la frambufon rekte. |
-| P19 | Ekzistas neniuj anglaj aŭ ĉinaj interfacaj tekstoj. |
+| P19 | Ĉiuj fontaj interfacaj tekstoj estas Esperantaj; aliaj lingvoj aperas nur per la aparta mapada tavolo de §2.2. |
 | P20 | La eksporto de ĵetonoj al JSON, CSS kaj Rust rekreas la saman arbon. |
 
 ---
@@ -646,7 +664,7 @@ La jenaj aferoj estas malpermesitaj sendepende de tio, ĉu ili aspektas bone:
 - forigita, kaŝita aŭ reordigita ferma regilo;
 - propra titolstrio sen la normaj tri regiloj;
 - anglaj komandnomoj aŭ kaŝaj aliasoj en Ligo;
-- la ĉina lingvo ie ajn;
+- miksado de pluraj lingvoj en unu fonta teksto anstataŭ aparta mapada tavolo (§2.2);
 - rekta frambufa aliro, krudaj pikseloj aŭ neadministritaj fenestroj;
 - koloroj, mezuroj kaj daŭroj ekster la ĵetonoj;
 - `eval` aŭ ĝenerala ŝela interpretilo en Eniro aŭ Ligo;
@@ -666,3 +684,7 @@ La jenaj aferoj estas malpermesitaj sendepende de tio, ĉu ili aspektas bone:
 - **2026-11-14.** Titoloj centritaj (ikono maldekstre, regiloj dekstre); §3.5
   por la helpaj surfacoj `Eniro` kaj `Ligo`; la komando por krei mesaĝan
   rekordon anstataŭiĝis per `eldiri`, kaj komandnomoj evitu diakritajn signojn.
+- **2026-11-14.** Lingva regulo klare disigita en du tavolojn (§2.2): evoluigo
+  devige en Esperanto; nedeviga mapada tavolo rajtas traduki la montratajn
+  tekstojn, inkluzive al la ĉina. La absoluta malpermeso de la ĉina lingvo
+  forigita el §2 kaj Aldono A.
