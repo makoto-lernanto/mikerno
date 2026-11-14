@@ -45,7 +45,10 @@ run-iso: iso
 kontroli-version:
     bash tools/versio.sh --kontroli
 
-# Pruvu la kernajn algoritmojn per Kani (formala verifikado).
+# Kompleta kvalita pordego: formato + lint + konstruo + versio + formala pruvo.
 # Kani ne subtenas tutmondan asemblaĵon; la pruvoj ne atingas ĝin.
 verify: kontroli-version
+    cargo fmt --all -- --check
+    cargo clippy --workspace --release -- -D warnings
+    cargo build --workspace --release
     cargo kani -p mikerno -Z unstable-options --ignore-global-asm
