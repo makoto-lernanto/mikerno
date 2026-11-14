@@ -103,7 +103,7 @@ fn miksi(mut valoro: u64) -> u64 {
 
 pub fn halti() -> ! {
     loop {
-        unsafe { asm!("hlt", options(nomem, nostack, preserves_flags)) };
+        atendi_interrompon();
     }
 }
 
@@ -120,8 +120,10 @@ pub fn malebligi_interrompojn() {
     unsafe { asm!("cli", options(nomem, nostack)) };
 }
 
-pub fn interrompoj_ebligitaj() -> bool {
+/// La konservitaj `RFLAGS`-bitoj de la nuna kunteksto.
+pub fn flagoj() -> u64 {
     let flagoj: u64;
+    // SAFETY: `pushfq`/`pop` nur legas `RFLAGS`.
     unsafe {
         asm!(
             "pushfq",
@@ -130,7 +132,11 @@ pub fn interrompoj_ebligitaj() -> bool {
             options(preserves_flags),
         );
     }
-    flagoj & (1 << 9) != 0
+    flagoj
+}
+
+pub fn interrompoj_ebligitaj() -> bool {
+    flagoj() & (1 << 9) != 0
 }
 
 /// La adreso, kiu kaŭzis la lastan paĝan eraron (`CR2`).

@@ -31,15 +31,9 @@ pub fn pravalorizi() {
     // SAFETY: nur la subtenataj firmigaj bitoj estas ŝaltataj; ĉiuj ceteraj
     // `CR4`-bitoj restas kiel la praŝarĝa ŝelko lasis ilin.
     unsafe {
-        let mut cr4: u64;
-        asm!(
-            "mov {}, cr4",
-            out(reg) cr4,
-            options(nomem, nostack, preserves_flags),
-        );
         asm!(
             "mov cr4, {}",
-            in(reg) cr4 | bitoj,
+            in(reg) cr4() | bitoj,
             options(nomem, nostack, preserves_flags),
         );
     }
@@ -74,7 +68,7 @@ pub fn raporto() -> FirmigaRaporto {
     raporto
 }
 
-fn cr4_aktiva(bito: u64) -> bool {
+fn cr4() -> u64 {
     let cr4: u64;
     // SAFETY: legado de `CR4` ne havas kromefikojn.
     unsafe {
@@ -84,7 +78,11 @@ fn cr4_aktiva(bito: u64) -> bool {
             options(nomem, nostack, preserves_flags),
         );
     }
-    cr4 & bito != 0
+    cr4
+}
+
+fn cr4_aktiva(bito: u64) -> bool {
+    cr4() & bito != 0
 }
 
 /// Malfermu la SMAP-fenestron: Ring 0 rajtas legi kaj skribi uzantajn paĝojn
@@ -104,17 +102,7 @@ pub fn clac() {
 }
 
 fn ac_aktiva() -> bool {
-    let flagoj: u64;
-    // SAFETY: `pushfq`/`pop` nur legas `RFLAGS`.
-    unsafe {
-        asm!(
-            "pushfq",
-            "pop {}",
-            out(reg) flagoj,
-            options(preserves_flags),
-        );
-    }
-    flagoj & FLAGO_AC != 0
+    procesoro::flagoj() & FLAGO_AC != 0
 }
 
 /// RAII-gardo por mallonga aliro al uzantaj paĝoj sub SMAP.
@@ -144,6 +132,39 @@ impl Drop for StacGardo {
     }
 }
 
+/// Mapu unu `U=1`-provfolion ĉe `UZANTA_BAZO`, skribu `valoro` en ĝin kaj
+/// ŝaltu la spacon. `false` se la mapado aŭ la traduko malsukcesas.
+fn prepari_provan_folion(
+    nomo: &str,
+    spaco: &mut X86AdresaSpaco,
+    alokilo: &mut KadraAlokilo,
+    permesoj: PaĝaPermesoj,
+    valoro: u8,
+) -> bool {
+    if let Err(eraro) = spaco.mapi_uzantan_regionon(
+        VirtuaAdreso::nova(UZANTA_BAZO),
+        KADRA_GRANDO as usize,
+        permesoj,
+        alokilo,
+    ) {
+        crate::skribu!("[memoro] {nomo}-provo: mapado malsukcesis: {eraro}\n");
+        return false;
+    }
+    let Some(fizika) = spaco.traduki(VirtuaAdreso::nova(UZANTA_BAZO)) else {
+        crate::skribu!("[memoro] {nomo}-provo: traduko mankas\n");
+        return false;
+    };
+    // SAFETY: la mapado liveris freŝan kadron, atingeblan per la identeca mapo;
+    // ni posedas ĝin kaj skribas unu kontrolitan bajton.
+    unsafe {
+        core::ptr::write_volatile(fizika.adreso() as *mut u8, valoro);
+    }
+    // La mapo devas esti videbla en la aktiva `CR3`; interrompoj estas
+    // malŝaltitaj en ĉi tiu punkto de la starto.
+    spaco.ŝalti();
+    true
+}
+
 /// Pruvu, ke Ring 0 ne povas plenumi uzantan folion.
 ///
 /// La funkcio mapas unu `U=1`-kodon en la aktivan kernan spacon, skribas solan
@@ -151,28 +172,9 @@ impl Drop for StacGardo {
 /// traktilo rekonas la plenuman provon kaj haltigas la kernon; `call` neniam
 /// revenas. Reveno signifus, ke la barilo mankas.
 pub fn testi_smep(spaco: &mut X86AdresaSpaco, alokilo: &mut KadraAlokilo) {
-    if let Err(eraro) = spaco.mapi_uzantan_regionon(
-        VirtuaAdreso::nova(UZANTA_BAZO),
-        KADRA_GRANDO as usize,
-        PaĝaPermesoj::UZANTA_KODO,
-        alokilo,
-    ) {
-        crate::skribu!("[memoro] SMEP-provo: mapado malsukcesis: {}\n", eraro);
+    if !prepari_provan_folion("SMEP", spaco, alokilo, PaĝaPermesoj::UZANTA_KODO, 0xC3) {
         return;
     }
-    let Some(fizika) = spaco.traduki(VirtuaAdreso::nova(UZANTA_BAZO)) else {
-        crate::skribu!("[memoro] SMEP-provo: traduko mankas\n");
-        return;
-    };
-    // SAFETY: la mapado liveris freŝan kadron, atingeblan per la identeca mapo;
-    // ni posedas ĝin kaj skribas solan `ret` (0xC3).
-    unsafe {
-        core::ptr::write_volatile(fizika.adreso() as *mut u8, 0xC3);
-    }
-
-    // La mapo devas esti videbla en la aktiva `CR3`; interrompoj estas
-    // malŝaltitaj en ĉi tiu punkto de la starto.
-    spaco.ŝalti();
 
     let permesoj = spaco.permesoj(VirtuaAdreso::nova(UZANTA_BAZO));
     if !matches!(permesoj, Some(p) if p.uzanta && p.plenumebla) {
@@ -206,28 +208,9 @@ pub fn testi_smep(spaco: &mut X86AdresaSpaco, alokilo: &mut KadraAlokilo) {
 /// haltigas la kernon; la legado neniam revenas. Reveno signifus, ke la barilo
 /// mankas.
 pub fn testi_smap(spaco: &mut X86AdresaSpaco, alokilo: &mut KadraAlokilo) {
-    if let Err(eraro) = spaco.mapi_uzantan_regionon(
-        VirtuaAdreso::nova(UZANTA_BAZO),
-        KADRA_GRANDO as usize,
-        PaĝaPermesoj::UZANTA_DATUMOJ,
-        alokilo,
-    ) {
-        crate::skribu!("[memoro] SMAP-provo: mapado malsukcesis: {}\n", eraro);
+    if !prepari_provan_folion("SMAP", spaco, alokilo, PaĝaPermesoj::UZANTA_DATUMOJ, 0xA5) {
         return;
     }
-    let Some(fizika) = spaco.traduki(VirtuaAdreso::nova(UZANTA_BAZO)) else {
-        crate::skribu!("[memoro] SMAP-provo: traduko mankas\n");
-        return;
-    };
-    // SAFETY: la mapado liveris freŝan kadron, atingeblan per la identeca mapo;
-    // ni posedas ĝin kaj skribas unu konatan bajton por la revena kazo.
-    unsafe {
-        core::ptr::write_volatile(fizika.adreso() as *mut u8, 0xA5);
-    }
-
-    // La mapo devas esti videbla en la aktiva `CR3`; interrompoj estas
-    // malŝaltitaj en ĉi tiu punkto de la starto.
-    spaco.ŝalti();
 
     let permesoj = spaco.permesoj(VirtuaAdreso::nova(UZANTA_BAZO));
     if !matches!(permesoj, Some(p) if p.uzanta && p.skribebla && !p.plenumebla) {

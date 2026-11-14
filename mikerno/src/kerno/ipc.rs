@@ -422,10 +422,7 @@ impl Kapablotabelo {
     }
 
     fn unua_libera(&self) -> Option<usize> {
-        self.eroj
-            .iter()
-            .enumerate()
-            .position(|(indekso, eniro)| !eniro.uzata && self.generacioj[indekso] != 0)
+        (0..MAKSAJ_KAPABLOJ).find(|&fendo| !self.eroj[fendo].uzata && self.generacioj[fendo] != 0)
     }
 
     /// Instalu kapablon en la donitan fendon; `None` se ĝi estas okupata aŭ

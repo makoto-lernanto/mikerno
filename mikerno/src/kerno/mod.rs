@@ -50,7 +50,7 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         crate::skribu!(
             "[kerno] {} subtenata: {}\n",
             trajto.nomo,
-            jes_ne(trajto.subtenata)
+            if trajto.subtenata { "jes" } else { "ne" }
         );
     }
     for trajto in firmigo.trajtoj() {
@@ -255,10 +255,6 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         );
     }
     crate::arkitekturo::halti()
-}
-
-fn jes_ne(valoro: bool) -> &'static str {
-    if valoro { "jes" } else { "ne" }
 }
 
 const STAKA_GRANDE: usize = 16 * 1024;
@@ -487,13 +483,11 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
         };
         procezo.agordi_bildon(bildo.komenco, bildo.fino, bildo.enirpunkto);
         let dua = proceza_id == UZANTA_FADENO_ID;
-        match uzantspaco::mapi_sekreton(procezo.spaco(), alokilo, id, dua) {
-            Ok(adreso) => {
-                procezo.agordi_sekretan(adreso);
-                Ok(adreso)
-            }
-            Err(eraro) => Err(eraro),
+        let sekreta = uzantspaco::mapi_sekreton(procezo.spaco(), alokilo, id, dua);
+        if let Ok(adreso) = sekreta {
+            procezo.agordi_sekretan(adreso);
         }
+        sekreta
     };
     if let Err(eraro) = sekreta {
         crate::skribu!("[procezo] {} sekreta paĝo malsukcesis: {}\n", id, eraro);

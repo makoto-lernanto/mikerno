@@ -56,7 +56,7 @@ static SKRIBA_BUFRO: Kunhavigita<[u8; MAKS_SKRIBO]> = Kunhavigita::nova([0; MAKS
 /// `el_ring3` estas vera nur por vokoj el Ring 3: la kerno mem estas fidinda
 /// kaj rajtas uzi kernajn montrilojn, dum uzantaj montriloj estas limigitaj al
 /// la anoncitaj bildaj kaj stakaj regionoj.
-pub fn voki(numero: usize, a0: u64, a1: u64, a2: u64, _a3: u64, el_ring3: bool) -> u64 {
+pub fn voki(numero: usize, a0: u64, a1: u64, a2: u64, el_ring3: bool) -> u64 {
     match numero {
         SYS_SKRIBI => skribi(a0, a1, el_ring3),
         SYS_FINI => fini(),
@@ -151,16 +151,19 @@ fn sendi(tenilo: u64, montrilo: u64, el_ring3: bool) -> u64 {
 ///
 /// La novaj permesoj devas esti subaro de la fontaj; `0` aŭ nekonata bito estas
 /// malĝusta argumento.
-fn doni(fonto: u64, celo: u64, permesoj: u64) -> u64 {
-    if permesoj >> 8 != 0 {
-        return MALĜUSTA_ARG;
+/// Malpakigu permesojn el la 8 malaltaj bitoj; `None` se iu pli alta bito
+/// estas ŝaltita aŭ se neniu konata permeso restas.
+fn el_permesoj(valoro: u64) -> Option<Permesoj> {
+    if valoro >> 8 != 0 {
+        return None;
     }
-    let Some(permesoj) = Permesoj::el_bitoj(permesoj as u8) else {
+    Permesoj::el_bitoj(valoro as u8).filter(|permesoj| permesoj.bitoj() != 0)
+}
+
+fn doni(fonto: u64, celo: u64, permesoj: u64) -> u64 {
+    let Some(permesoj) = el_permesoj(permesoj) else {
         return MALĜUSTA_ARG;
     };
-    if permesoj.bitoj() == 0 {
-        return MALĜUSTA_ARG;
-    }
     let Some(fonto) = el_tenilo(fonto) else {
         return NEVALIDA_TENILO;
     };
@@ -208,15 +211,9 @@ fn el_tenilo(valoro: u64) -> Option<Tenilo> {
 
 /// `rdi` = permesoj; `0` aŭ nekonata bito estas malĝusta argumento.
 fn krei_finpunkton(permesoj: u64) -> u64 {
-    if permesoj >> 8 != 0 {
-        return MALĜUSTA_ARG;
-    }
-    let Some(permesoj) = Permesoj::el_bitoj(permesoj as u8) else {
+    let Some(permesoj) = el_permesoj(permesoj) else {
         return MALĜUSTA_ARG;
     };
-    if permesoj.bitoj() == 0 {
-        return MALĜUSTA_ARG;
-    }
     match ipc::krei_finpunkton(planisto::nuna_procezo(), permesoj) {
         Ok(tenilo) => tenilo.nombro() as u64,
         Err(eraro) => kodo(eraro),
@@ -273,10 +270,10 @@ fn kontroli_regionon(montrilo: u64, longo: usize, skriba: bool, el_ring3: bool) 
     if !el_ring3 {
         return true;
     }
-    let Some(procezo) = super::procezo::akiri(super::planisto::nuna_procezo()) else {
+    let id = super::planisto::nuna_procezo();
+    let Some(procezo) = super::procezo::akiri(id) else {
         return false;
     };
-    let id = super::planisto::nuna_procezo();
     let (bilda_komenco, bilda_fino) = procezo.bildaj_limoj();
     let en_bildo = bilda_fino > bilda_komenco && montrilo >= bilda_komenco && fino <= bilda_fino;
     let staka_komenco = UZANTA_STAKO_SUPRO - UZANTA_STAKO_GRANDE as u64;

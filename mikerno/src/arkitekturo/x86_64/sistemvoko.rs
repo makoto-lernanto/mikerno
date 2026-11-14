@@ -6,7 +6,7 @@ use crate::interrompo::{InterrompaTraktilo, SISTEMVOKA_VEKTORO};
 use crate::kerno::sistemvoko as kerna;
 
 /// Vokata de la `0x80`-traktilo post kiam `isr_komuna` konstruis la kadron.
-pub fn sistemvoka_dispetĉo(kadro: &mut dyn SistemvokaKadro) {
+pub fn sistemvoka_dispetĉo(kadro: &mut InterrompaKadro) {
     // Ring 3-vokantoj bezonas montrilan kontrolon; Ring 0 estas fidinda.
     let el_ring3 = kadro.el_uzanto();
     let rezulto = kerna::voki(
@@ -14,7 +14,6 @@ pub fn sistemvoka_dispetĉo(kadro: &mut dyn SistemvokaKadro) {
         kadro.argumento(0),
         kadro.argumento(1),
         kadro.argumento(2),
-        kadro.argumento(3),
         el_ring3,
     );
     // NE FORGESU: `iretq` restarigas la rezultregistron el ĉi tiu kadro; sen la

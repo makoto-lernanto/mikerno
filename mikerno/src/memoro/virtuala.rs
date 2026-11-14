@@ -232,45 +232,6 @@ pub trait PaĝaTablo {
         };
         self.mapigi(virtuala, fizika, permesoj, alokilo)
     }
-
-    /// Mapu freŝajn, nuligitajn kadrojn por la uzanta intervalo `[komenco,
-    /// komenco + longo)`. La limoj estas kontrolitaj antaŭ la unua aloko.
-    fn mapi_uzantan_regionon(
-        &mut self,
-        komenco: VirtuaAdreso,
-        longo: usize,
-        permesoj: PaĝaPermesoj,
-        alokilo: &mut KadraAlokilo,
-    ) -> Result<(), PaĝaEraro> {
-        kontroli_fenestron(komenco.adreso(), longo)?;
-        if !komenco.adreso().is_multiple_of(KADRA_GRANDO) {
-            return Err(PaĝaEraro::NevalidaAdreso);
-        }
-        let paĝoj = longo.div_ceil(KADRA_GRANDO as usize);
-        for indekso in 0..paĝoj {
-            let virtuala = VirtuaAdreso::nova(komenco.adreso() + indekso as u64 * KADRA_GRANDO);
-            if self.traduki(virtuala).is_some() {
-                return Err(PaĝaEraro::Konflikto);
-            }
-        }
-
-        for indekso in 0..paĝoj {
-            let kadro = alokilo.aloki().ok_or(PaĝaEraro::Elĉerpita)?;
-            // SAFETY: la alokilo liveras kadron en la unuaj 4 GiB, kiuj estas
-            // identece mapitaj; la kadro estas freŝe alokita, do ĝia enhavo
-            // apartenas al ĉi tiu mapado.
-            unsafe {
-                core::ptr::write_bytes(kadro.adreso() as *mut u8, 0, KADRA_GRANDO as usize);
-            }
-            self.mapi_uzantan(
-                VirtuaAdreso::nova(komenco.adreso() + indekso as u64 * KADRA_GRANDO),
-                FizikaAdreso::nova(kadro.adreso()),
-                permesoj,
-                alokilo,
-            )?;
-        }
-        Ok(())
-    }
 }
 
 /// Kontrolu, ke `[adreso, adreso + longo)` kuŝas tute en la uzanta fenestro
@@ -289,6 +250,23 @@ fn kontroli_fenestron(adreso: u64, longo: usize) -> Result<(), PaĝaEraro> {
 }
 
 pub trait AdresaSpaco: PaĝaTablo {
+    /// Mapu freŝajn, nuligitajn kadrojn por la uzanta intervalo `[komenco,
+    /// komenco + longo)`. La limoj estas kontrolitaj antaŭ la unua aloko.
+    fn mapi_uzantan_regionon(
+        &mut self,
+        komenco: VirtuaAdreso,
+        longo: usize,
+        permesoj: PaĝaPermesoj,
+        alokilo: &mut KadraAlokilo,
+    ) -> Result<(), PaĝaEraro> {
+        kontroli_fenestron(komenco.adreso(), longo)?;
+        let permesoj = PaĝaPermesoj {
+            uzanta: true,
+            ..permesoj
+        };
+        self.mapigi_freŝan_regionon(komenco, longo, permesoj, alokilo)
+    }
+
     /// Kreu freŝan, malplenan adresan spacon: nur la radika tabelo ekzistas.
     fn krei(alokilo: &mut KadraAlokilo) -> Result<Self, PaĝaEraro>
     where

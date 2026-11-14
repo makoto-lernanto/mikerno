@@ -102,15 +102,19 @@ impl Planisto {
         self.stato_procezan(id, ProcezaEstado::Kuranta);
     }
 
+    /// La procezo de la donita fadeno; `0` por nekonata identigilo aŭ kernaj
+    /// fadenoj (`procezo == 0`).
+    fn procezo_de(&self, id: FadenoId) -> ProcezaId {
+        self.fadenoj
+            .get(id as usize)
+            .and_then(|fadeno| fadeno.as_ref())
+            .map_or(0, |fadeno| fadeno.procezo)
+    }
+
     /// Spegulu la fadenan staton en la proceza tabelo; fadenoj de la nukleo
     /// (`procezo == 0`) ne havas procezan eron.
     fn stato_procezan(&self, id: FadenoId, stato: ProcezaEstado) {
-        let Some(procezo) = self.fadenoj[id as usize]
-            .as_ref()
-            .map(|fadeno| fadeno.procezo)
-        else {
-            return;
-        };
+        let procezo = self.procezo_de(id);
         if procezo != 0 {
             marki(procezo, stato);
         }
@@ -173,9 +177,7 @@ impl Planisto {
 
     pub fn morti(&mut self, id: FadenoId) -> ! {
         crate::arkitekturo::malebligi_interrompojn();
-        let proceza = self.fadenoj[id as usize]
-            .as_ref()
-            .map_or(0, |fadeno| fadeno.procezo);
+        let proceza = self.procezo_de(id);
         if let Some(fadeno) = self.fadenoj[id as usize].as_mut() {
             fadeno.stato = FadenoStato::Mortinta;
         }
@@ -186,13 +188,10 @@ impl Planisto {
         // mortiga escepto ni liberigas la tutan adresan spacon antaŭ ol elekti
         // la sekvan fadenon. La kernaj mapoj kaj la statika kerna stako restas
         // validaj dum la ŝalto.
-        if proceza != 0 {
-            match super::procezo::detrui(proceza, super::kadra_alokilo()) {
-                Ok(()) => {}
-                Err(eraro) => {
-                    crate::skribu!("[procezo] {} ne povis esti detruita: {}\n", proceza, eraro)
-                }
-            }
+        if proceza != 0
+            && let Err(eraro) = super::procezo::detrui(proceza, super::kadra_alokilo())
+        {
+            crate::skribu!("[procezo] {} ne povis esti detruita: {}\n", proceza, eraro);
         }
 
         let sekva = self.elekti_proksiman().unwrap_or(RIPAZA_ID);
@@ -222,12 +221,7 @@ impl Planisto {
 
     /// La procezo de la nuna fadeno; `0` por la ripoza kaj la kernaj fadenoj.
     pub fn nuna_procezo(&self) -> ProcezaId {
-        let Some(id) = self.nuna_fadeno else {
-            return 0;
-        };
-        self.fadenoj[id as usize]
-            .as_ref()
-            .map_or(0, |fadeno| fadeno.procezo)
+        self.nuna_fadeno.map_or(0, |id| self.procezo_de(id))
     }
 
     pub fn raporto(&self) -> (usize, usize, usize) {
@@ -245,9 +239,7 @@ impl Planisto {
     }
 
     unsafe fn switch(&mut self, malnova: FadenoId, nova: FadenoId) {
-        let proceza = self.fadenoj[nova as usize]
-            .as_ref()
-            .map_or(0, |fadeno| fadeno.procezo);
+        let proceza = self.procezo_de(nova);
         // La fadenaj kontekstoj vivas en la kerna bildo, kiun ĉiu proceza
         // spaco kunhavas, do la ŝalto povas okazi antaŭ la registra konservo.
         // SAFETY: `switch` estas vokata nur kun interrompoj malŝaltitaj, kaj
@@ -332,9 +324,7 @@ pub fn morti() -> ! {
     // antaŭ ol `morti` prunteprenas la planiston.
     let proceza = {
         let planisto = planisto();
-        planisto.fadenoj[id as usize]
-            .as_ref()
-            .map_or(0, |fadeno| fadeno.procezo)
+        planisto.procezo_de(id)
     };
     if proceza != 0 {
         super::ipc::purigi_procezon(proceza);
