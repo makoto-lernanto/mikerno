@@ -14,3 +14,13 @@ rustflags = [
 
 [target.'cfg(all(target_arch = "x86_64", target_os = "none"))']
 runner = 'bash tools/run-qemu.sh'
+
+[target.aarch64-unknown-none]
+# La arm64-bildo estas ligita kiel plata `Image` per `boot/linker-arm64.ld`
+# (la kerno mem liveras ĝin per `build.rs`).
+rustflags = [
+    "-C", "linker=rust-lld",
+]
+
+[target.'cfg(all(target_arch = "aarch64", target_os = "none"))']
+runner = 'bash tools/run-qemu-arm.sh'

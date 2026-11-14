@@ -16,8 +16,8 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.4.3 (workspace)
-- **Arkitekturo:** x86_64, unuprocesora
+- **Versio:** 0.4.3-arm.1 (workspace)
+- **Arkitekturo:** x86_64, unuprocesora; `arm64`-skeleto (antaŭeldono) en la branĉo `arm64`
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
 - **Statuso:** funkcianta prototipo — vidu [Mejloŝtonoj](docs/MEJLOSTONOJ.md)
@@ -137,17 +137,20 @@ cargo install just          # opcia
 | Ilo | Versio / noto |
 | --- | --- |
 | Rust | 1.100 aŭ pli nova (eldono 2024); projekto kontrolita per 1.100.0 |
-| Cela triopo | `x86_64-unknown-none` |
-| QEMU | `qemu-system-x86_64` (`sudo apt install qemu-system-x86`) |
-| xorriso | Nur por `just iso` (`sudo apt install xorriso`) |
+| Cela triopo | `x86_64-unknown-none`; `aarch64-unknown-none` por la ARM-ŝpuro |
+| QEMU | `qemu-system-x86_64`; `qemu-system-aarch64` por la ARM-ŝpuro |
+| xorriso | Nur por `just iso` kaj `just iso-arm` (`sudo apt install xorriso`) |
+| dosfstools / mtools | Nur por `just iso-arm` (`sudo apt install dosfstools mtools`) |
+| UEFI-firmware | Nur por `just run-iso-arm` (`sudo apt install qemu-efi-aarch64`) |
 | `just` | Opcia, sed rekomendata por la difinitaj taskoj |
-| bash | Lanĉilo de `tools/run-qemu.sh` |
+| bash | Lanĉilo de `tools/run-qemu.sh` kaj `tools/run-qemu-arm.sh` |
 | Kani | Nur por `just verify` (`cargo kani`) |
 
-Instalu la celan triopon:
+Instalu la celajn triopojn:
 
 ```sh
 rustup target add x86_64-unknown-none
+rustup target add aarch64-unknown-none   # por la ARM-ŝpuro
 ```
 
 ### Konstrui kaj ruli
@@ -158,8 +161,17 @@ just build         # konstruas nur la kernon (= build-kerno)
 just run           # QEMU -kernel, rekte per la PVH-noto (sen ISO)
 just iso           # kreas mikerno.iso per Limine + Multiboot2
 just run-iso       # rulas la ISO-on (QEMU-fenestro montras la Limine-menuon)
+just run-arm       # arm64-skeleto: plata `Image` sub QEMU `virt` (branĉo arm64)
+just iso-arm       # UEFI-bootebla `mikerno-arm.iso` (Limine + plata `Image`)
+just run-iso-arm   # rulas `mikerno-arm.iso` per AAVMF
 just verify        # formalaj pruvoj per Kani (postulas `cargo kani`)
 ```
+
+`just run-arm` bezonas la celan triopon `aarch64-unknown-none`
+(`rustup target add aarch64-unknown-none`) kaj `qemu-system-aarch64`.
+`just iso-arm` krome postulas `xorriso`, `mkfs.fat` (dosfstools) kaj
+`mmd`/`mcopy` (mtools); `just run-iso-arm` bezonas UEFI-firmwaren
+(`qemu-efi-aarch64`, alirebla kiel `QEMU_EFI.fd` aŭ per `QEMU_ARM_EFI`).
 
 Ekvivalentaj rektaj komandoj:
 
@@ -740,7 +752,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.4.3!
+[MiKerno] Saluton, mi estas MiKerno v0.4.3-arm.1!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
@@ -1019,7 +1031,7 @@ Enigitaj triaj komponantoj:
 
 | Komponanto | Loko | Noto |
 | --- | --- | --- |
-| Limine | `tools/limine/` | Praŝarĝilo por la ISO (Multiboot2) |
+| Limine | `tools/limine/` | Praŝarĝilo: Multiboot2 (`x86_64`) kaj Linux-protokolo (`arm64`) |
 | DejaVu Sans Mono (bitmapaj strekoj) | `mikerno/src/ekrano/fonto/` | Rasterigita el DejaVu Sans Mono; permesilo Bitstream Vera + Arev en `third_party/dejavu/LICENSE.txt` |
 | `tools/font/generi.py` | `tools/font/` | Generilo por la kvar strekoj; postulas Python 3 kaj Pillow |
 

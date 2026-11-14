@@ -182,7 +182,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `pinto` | top | |
 | `kreski malsupren` | grow downward | |
 | `frambufo` / `ekrano` | framebuffer / screen | Ekzistanta kodo uzas `framebuffer` kaj `ekrano`. |
-| `seria konzolo` | serial console | COM1. |
+| `seria konzolo` | serial console | COM1 sur `x86_64`; PL011 sur `arm64`. |
 | `tiparo` | font | |
 | `glifo` | glyph | |
 | `streko` | strike / font size | |
@@ -206,6 +206,23 @@ kaj protokolaj nomoj sekvu ĝin.
 | `firmiga raporto` | hardening report | `FirmigaRaporto`; SMEP/SMAP aŭ PXN/UXN/PAN. |
 | `privata subtabelo` | private subtable | Anstataŭas `privataj_pdptoj`: PDPT aŭ L1/L2-subtabeloj. |
 | `antaŭeldono` | pre-release | `0.4.3-arm.N` dum la ARM-ŝpuro. |
+| `plata bildo` | flat image | `Image`: senŝela binara bildo kun 64-bajta kapo. |
+| `Image-kapo` | Image header | `code0`/`code1`, `text_offset`, `image_size`, `flags`, magio `0x644d5241`. |
+| `FDT` | flattened device tree | Analizilo `arm64/fdt.rs`; la praŝarĝilo transdonas la `DTB` en `x0`. |
+| `DTB` | device tree blob | |
+| `PSCI` | Power State Coordination Interface | `SYSTEM_OFF` per `hvc #0`. |
+| `PL011` | ARM UART | Seria konzolo ĉe `0x0900_0000` sur QEMU `virt`. |
+| `elstara nivelo` | exception level | `CurrentEL`; EL2→EL1 per `HCR_EL2.RW` kaj `eret`. |
+| `identeca mapo` | identity map | Virtuala adreso egalas la fizikan. |
+| `L0-tabelo` / `L1-tabelo` | level-0 / level-1 table | 4-nivela paĝado kun 1 GiB-blokoj. |
+| `bloka ero` | block entry | Priskribo kun `AF`, `SH`, `PXN`/`UXN`. |
+| `kerna fino` | kernel end | `__kerna_fino`; eniras `image_size`. |
+| `funkciovoko` | hypervisor call | `hvc #0` por PSCI. |
+| `UEFI-ISO` | UEFI ISO | `mikerno-arm.iso`; El Torito + `BOOTAA64.EFI`. |
+| `El Torito` | El Torito | Elŝuta speco de ISO9660; la firmvaro legas la EFI-bildon. |
+| `UEFI-memormapo` | UEFI memory map | `/chosen/linux,uefi-mmap-*`; uzata kiam `/memory` mankas. |
+| `konvena memoro` | conventional memory | UEFI-tipo 7; la «uzebla» kvanto en la raporto. |
+| `AAVMF` | AArch64 UEFI firmware | `QEMU_EFI.fd`; uzata de `just run-iso-arm`. |
 
 ## FluoU — grafika uzinterfaco
 

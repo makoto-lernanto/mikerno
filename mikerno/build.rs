@@ -9,9 +9,18 @@ fn main() {
     let radiko = env::var("CARGO_MANIFEST_DIR")
         .expect("CARGO_MANIFEST_DIR mankas")
         .replace('\\', "/");
-    println!("cargo::rerun-if-changed=boot/linker.ld");
-    println!("cargo::rustc-link-arg=-T{radiko}/boot/linker.ld");
-    // La bildo estas PIE (ET_DYN): ĉiuj difinoj estas lokaj, do la ŝelko kaj
-    // la kerno alvokas ilin sen PLT, kiun neniu dinamika ligilo plenumus.
-    println!("cargo::rustc-link-arg=-Bsymbolic");
+    let arkitekturo = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
+    let arm64 = arkitekturo == "aarch64";
+    let skripto = if arm64 {
+        "boot/linker-arm64.ld"
+    } else {
+        "boot/linker.ld"
+    };
+    println!("cargo::rerun-if-changed={skripto}");
+    println!("cargo::rustc-link-arg=-T{radiko}/{skripto}");
+    // La x86_64-bildo estas PIE (ET_DYN): ĉiuj difinoj estas lokaj, do la ŝelko
+    // kaj la kerno alvokas ilin sen PLT, kiun neniu dinamika ligilo plenumus.
+    if !arm64 {
+        println!("cargo::rustc-link-arg=-Bsymbolic");
+    }
 }

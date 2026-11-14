@@ -1,4 +1,7 @@
 /target
 /*.log
 /iso_root
+/iso_root_arm
+/efi-arm.img
 /mikerno.iso
+/mikerno-arm.iso

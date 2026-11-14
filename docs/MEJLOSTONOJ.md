@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-14 · Versio de la workspace: 0.4.3
+> Stato: 2026-11-14 · Versio de la workspace: 0.4.3-arm.1
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -45,6 +45,17 @@ A0 (arkitektura refaktoro, sen kondutŝanĝo) estas plenumita la 2026-11-14 en
 al la malantaŭo; `SistemvokaKadro`, `FirmigaRaporto` kaj `ELF_MAŜINO` eniris la
 fasadon; `privataj_pdptoj` fariĝis `privataj_subtabeloj`. `just verify`, la
 PVH-vojo kaj la ISO-vojo restas verdaj.
+
+A1 (arm64-skeleto) estas plenumita la 2026-11-14 en `0.4.3-arm.1`: plata
+`Image` kun la 64-bajta kapo, EL2→EL1 per `HCR_EL2.RW`, PL011-konzolo,
+minimuma FDT-analizilo (memoro, initrd, seria adreso), identeca MMU per
+L0/L1-tabeloj kaj PSCI `SYSTEM_OFF`. `just run-arm` presas la version, la
+memoran linion kaj la serian konzolon, kaj paniko haltigas la maŝinon per
+PSCI. `just iso-arm` aldone kunmetas UEFI-booteblan `mikerno-arm.iso` per
+Limine 12.9.6 (`BOOTAA64.EFI`); sub UEFI la memora linio venas el la
+UEFI-memormapo en `/chosen`, do ĝi raportas konvenan memoron (229 MiB el
+256 MiB). La versio estas presata de la kerno, same kiel ĉe `x86_64`. La
+`x86_64`-konstruo kaj ties scenaro restas senŝanĝaj.
 
 ---
 

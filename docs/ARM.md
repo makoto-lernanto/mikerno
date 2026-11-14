@@ -1,6 +1,6 @@
 # MiKerno-ARM — plano por la `arm64`-ŝpuro
 
-> Stato: 2026-11-14 · A0 plenumita (refaktoro sen kondutŝanĝo); A1–A4 planitaj
+> Stato: 2026-11-14 · A0 kaj A1 plenumitaj; A2–A4 planitaj
 >
 > Rilataj: [FLUOU.md](FLUOU.md) §9 (A06, A07), [MEJLOSTONOJ.md](MEJLOSTONOJ.md),
 > [VORTARO.md](VORTARO.md).
@@ -20,7 +20,7 @@ Ne-celoj por la unuaj fazoj:
 
 - SMP, IOMMU, virtio kaj reto;
 - KASLR sur `arm64` (la bildo restas ĉe fiksa bazo);
-- `arm64`-ISO aŭ UEFI-pakaĵo (la unua artefakto estas plata `Image`);
+- `arm64`-BIOS-ISO aŭ `multiboot2`-pakaĵo (la ISO estas UEFI-bootebla);
 - Kani-pruvoj por la `arm64`-malantaŭo (Kani subtenas nur `x86_64`).
 
 ## 2. Kial aparta ŝpuro
@@ -36,9 +36,8 @@ praŝarĝa vojo. Tial la ŝpuro ne anstataŭas M15–M17, sed iras paralele:
 - kunfando nur post kiam A4 estas verda; la numero en la mejloŝtona listo
   estos elektita laŭ la tiama stato (sugesto: M19 → `0.9.0`, post M18).
 
-`tools/versio.sh` nuntempe akceptas nur `0.x.y`; A1 etendos la esprimojn al
-`0.x.y-arm.N`. La ŝpuro aldonos mallongan paragrafon al `AGENTS.md` pri tiu
-versiado, sed nur kiam la unua fazo komenciĝos.
+`tools/versio.sh` akceptas ankaŭ la antaŭeldonon `0.x.y-arm.N` (farita en A1),
+kaj `AGENTS.md` priskribas tiun versiadon.
 
 ## 3. Nunaj kouplingoj al `x86_64`
 
@@ -147,12 +146,17 @@ tekston al «la registroj estas platformaj, la semantiko komuna».
 - 64-bajta `arm64`-`Image`-kapo: `code0`/`code1`, `text_offset = 0x80000`,
   `image_size`, `flags`, `magic = 0x644d5241` (`ARM\x64`).
 - QEMU `virt` ŝargas la bildon ĉe `0x4008_0000` kaj transdonas la DTB en `x0`.
+- UEFI-ISO: `mikerno-arm.iso` enhavas la plataĵon `mikerno.img` kaj Limine
+  (`BOOTAA64.EFI`) kiel El Torito-bildon; la firmvaro venas el
+  `qemu-efi-aarch64`, kaj `just run-iso-arm` startigas ĝin.
 - Eniro akceptas EL2 aŭ EL1: se `CurrentEL` estas EL2, agordas
   `HCR_EL2.RW = 1` kaj `eret` al EL1. Poste: stako, `.bss`-nuligo, savo de la
   DTB-montrilo.
 - Minimuma FDT-analizilo: `/memory`, `/chosen/linux,initrd-start|end`,
   `/soc/serial@9000000`, `/intc`, `/timer`; rezervaj regionoj en
-  `EniraInformo::rezervindaj`.
+  `EniraInformo::rezervindaj`. Se `/memory` mankas (Limine sub UEFI transdonas
+  nur minimuman DTB-on), la analizilo legas la UEFI-memormapon el
+  `/chosen/linux,uefi-mmap-*`.
 - Moduloj: unu `-initrd` (la `horizonto`-bildo) mapiĝas al `Moduloj`; pluraj
   moduloj venos poste.
 - Haltigo: PSCI `SYSTEM_OFF` per `hvc #0`; `wfi` en la buklo de `halti`.
@@ -187,7 +191,7 @@ tekston al «la registroj estas platformaj, la semantiko komuna».
 | Fazo | Versio | Enhavo | Akcepto |
 | --- | --- | --- | --- |
 | A0 | `0.4.3` (sen eldono) | Arkitektura refaktoro: `Kunteksto`, kadro, escepta klasifiko, `ELF_MAŜINO`, `instali_sistemvokon`; `x86_64` sen kondutŝanĝo | `fmt`, `clippy`, `just verify`, PVH kaj ISO verdaj |
-| A1 | `0.4.3-arm.1` | `arm64`-skeleto: `Image`-kapo, EL2→EL1, PL011, FDT, identeca MMU, PSCI-haltigo; `rustup target add aarch64-unknown-none` | `just run-arm` presas la version, la memora linio kaj la serian konzolon; paniko haltigas per PSCI |
+| A1 | `0.4.3-arm.1` | `arm64`-skeleto: `Image`-kapo, EL2→EL1, PL011, FDT, identeca MMU, PSCI-haltigo, UEFI-ISO; `rustup target add aarch64-unknown-none` | `just run-arm` presas la version, la memora linio kaj la serian konzolon; paniko haltigas per PSCI; `just run-iso-arm` presas la saman version |
 | A2 | `0.4.3-arm.2` | `VBAR_EL1`, GICv2, ĝenerala temporizilo, `DAIF`-gardo, kuntekstŝanĝo | 100 Hz-tikoj, 1000 tikoj, tri fadenoj interplektiĝas kaj finiĝas |
 | A3 | `0.4.3-arm.3` | EL0 per `eret`, `svc #0`, `horizonto` por `aarch64`, ELF-maŝino 183, uzantaj esceptoj | la samaj IPC-linioj kiel `x86_64`, inkluzive `-32`, sekreta paĝo kaj spiona data abort |
 | A4 | `0.4.3-arm.4` | `ramfb` per `fw_cfg`, piksela fiksaĵo, `PXN`/`UXN`/`PAN`, dokumentaro | identa frambufa haketo sur ambaŭ arkoj; `VORTARO.md`, `MEJLOSTONOJ.md` kaj `AGENTS.md` ĝisdatigitaj |
@@ -195,6 +199,27 @@ tekston al «la registroj estas platformaj, la semantiko komuna».
 A0 estas antaŭkondiĉo: ĝi ne ŝanĝas la `x86_64`-konduton kaj restas en la
 ĉefa branĉo. A1–A4 disvolviĝas en `arm64` kaj estas kunfandataj nur post kiam
 ĉiu akcepto estas verda.
+
+A1 (2026-11-14, `0.4.3-arm.1`) liveras la skeleto-bildon: `eniro.rs` kun la
+`Image`-kapo kaj EL2→EL1, `seria.rs` (PL011), `fdt.rs` (memoro, initrd, seria
+adreso), `pagxado.rs` (identeca mapo per L0/L1 kaj 1 GiB-blokoj) kaj
+`procesoro.rs` (PSCI `SYSTEM_OFF`). La akcepto estas verda:
+
+```text
+[MiKerno] Saluton, mi estas MiKerno v0.4.3-arm.1!
+[kerno] memoro: 1 regionoj, 256 MiB uzeblaj
+[kerno] seria konzolo: PL011 @ 0x9000000
+```
+
+QEMU finiĝas per la PSCI-haltigo; la sama haltigo kaptas panikon. La `x86_64`
+konstruo, `clippy` kaj la PVH-scenaro restas senŝanĝaj.
+
+Krome `just iso-arm` kunmetas UEFI-booteblan `mikerno-arm.iso`: la ISO enhavas
+`mikerno.img` kaj Limine 12.9.6 (`BOOTAA64.EFI`) kiel El Torito-bildon. La
+versio estas presata de la kerno mem, same kiel ĉe `x86_64`; `limine.conf` ne
+portas version. Sub UEFI la memora linio venas el la UEFI-memormapo, do ĝi
+raportas la konvenan memoron (ekzemple `8 regionoj, 229 MiB uzeblaj`) anstataŭ
+la tuta `-m`-kvanto.
 
 ## 12. Riskoj kaj malŝarĝoj
 
@@ -206,7 +231,7 @@ A0 estas antaŭkondiĉo: ĝi ne ŝanĝas la `x86_64`-konduton kaj restas en la
 | `PAN` mankas sur `cortex-a53` | A4 uzas `-cpu max`; la raporto montras, kiu firmigo estas aktiva |
 | Du malantaŭoj drivas | A0 tenas la komunan nukleon en unu loko; M17 aldonos CI-matricon |
 | Kani nur `x86_64` | La pruvoj restas sur la komuna kodo; `arm64`-specifaĵoj ricevas QEMU-testojn |
-| `Limine` ne subtenas `arm64` | La unua artefakto estas plata `Image`; ISO/UEFI estas aparta decido |
+| `Limine` ne subtenas `arm64` | Malaktuala: Limine 12.9.6 havas `BOOTAA64.EFI`; la ISO estas UEFI-bootebla per El Torito, kaj BIOS-ISO ne estas celata |
 | `ramfb`/`fw_cfg`-komplekseco | A4 komenciĝas per `-device ramfb`; alternativa vojo estas UEFI `GOP` |
 
 ## 13. Unuaj paŝoj
@@ -216,8 +241,11 @@ A0 estas antaŭkondiĉo: ĝi ne ŝanĝas la `x86_64`-konduton kaj restas en la
 2. A0: refaktori la komunajn tipojn kaj restarigi `just verify` kaj la du
    `x86_64`-vojojn. (Farita.)
 3. A1: `linker-arm64.ld`, `eniro.rs`, `seria.rs`, `fdt.rs`, `pagxado.rs`.
+   (Farita.)
 4. A1-akcepto: `[MiKerno] Saluton, mi estas MiKerno v0.4.3-arm.1!`,
-   `[kerno] memoro: …`, `[kerno] seria konzolo: PL011 @ 0x9000000`.
-5. Nur post verda A1: `VBAR_EL1` kaj GIC (A2).
+   `[kerno] memoro: …`, `[kerno] seria konzolo: PL011 @ 0x9000000`. (Verda.)
+5. A1-ISO: `just iso-arm` kaj `just run-iso-arm` per Limine kaj AAVMF.
+   (Farita.)
+6. Nur post verda A1: `VBAR_EL1` kaj GIC (A2).
 
-A0 estas efektivigita; A1 komenciĝos nur post klara «ek» de la uzanto.
+A0 kaj A1 estas efektivigitaj; A2 komenciĝos nur post klara «ek» de la uzanto.

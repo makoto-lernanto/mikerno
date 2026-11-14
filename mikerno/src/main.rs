@@ -2,10 +2,15 @@
 #![no_main]
 
 mod arkitekturo;
+#[cfg(target_arch = "x86_64")]
 mod ekrano;
+#[cfg(target_arch = "x86_64")]
 mod interrompo;
+#[cfg(target_arch = "x86_64")]
 mod kerno;
+#[cfg(target_arch = "x86_64")]
 mod kunhavigita;
+#[cfg(target_arch = "x86_64")]
 mod memoro;
 
 // Kani kunligas la gastigan `std`, kiu jam provizas la panikan traktilon.
@@ -25,6 +30,7 @@ macro_rules! skribu {
 ///
 /// Ĝi provas la KASLR-kopion kaj salton; se tio ne eblas, ĝi mem vokas la duan
 /// enirpunkton ĉe la liga bazo. Ĝi neniam revenas al la ŝelko.
+#[cfg(target_arch = "x86_64")]
 #[unsafe(no_mangle)]
 pub extern "C" fn kerna_eniro(starta_informo: *const u8, magio: u32) -> ! {
     arkitekturo::hazardigi(starta_informo, magio)
@@ -32,6 +38,7 @@ pub extern "C" fn kerna_eniro(starta_informo: *const u8, magio: u32) -> ! {
 
 /// Dua kerna enirpunkto: la bildo jam loĝas ĉe `bazo` (la liga bazo, se KASLR
 /// malsukcesis). `origino` estas la adreso, de kiu la bildo estis kopiita.
+#[cfg(target_arch = "x86_64")]
 #[unsafe(no_mangle)]
 pub extern "C" fn kerna_eniro_kopio(
     starta_informo: *const u8,

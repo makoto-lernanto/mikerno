@@ -5,6 +5,9 @@
 # legas ĝin per `env!("CARGO_PKG_VERSION")` kaj `limine.conf` ne portas
 # version, do nur la dokumentaj lokoj bezonas ĉi tiun skripton.
 #
+# La `arm64`-ŝpuro uzas antaŭeldonojn `0.x.y-arm.N`; ankaŭ tiuj formoj estas
+# akceptataj kaj ĝisdatigataj.
+#
 # Uzado:
 #   tools/versio.sh --kontroli    # malsukcesas se iu loko malkongruas
 #   tools/versio.sh --ĝisdatigi  # anstataŭigas la version en la dokumentoj
@@ -46,22 +49,22 @@ kontroli() {
 kontroli_ĉiujn() {
     local eraro=0
     kontroli "$README" \
-        's/^- \*\*Versio:\*\* ([0-9]+\.[0-9]+\.[0-9]+) \(workspace\)$/\1/p' \
+        's/^- \*\*Versio:\*\* ([0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?) \(workspace\)$/\1/p' \
         "README.md (Versio)" || eraro=1
     kontroli "$README" \
-        's/^\[MiKerno\] Saluton, mi estas MiKerno v([0-9]+\.[0-9]+\.[0-9]+)!$/\1/p' \
+        's/^\[MiKerno\] Saluton, mi estas MiKerno v([0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?)!$/\1/p' \
         "README.md (ekzempla saluto)" || eraro=1
     kontroli "$MEJLOSTONOJ" \
-        's/^> Stato: .* · Versio de la workspace: ([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' \
+        's/^> Stato: .* · Versio de la workspace: ([0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?)$/\1/p' \
         "docs/MEJLOSTONOJ.md" || eraro=1
     kontroli "$AGENTS" \
-        's/^Nuna versio: `([0-9]+\.[0-9]+\.[0-9]+)`.*$/\1/p' \
+        's/^Nuna versio: `([0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?)`.*$/\1/p' \
         "AGENTS.md" || eraro=1
     if ! grep -q 'env!("CARGO_PKG_VERSION")' "$KERNO"; then
         echo "versio: la saluta linio ne legas env!(\"CARGO_PKG_VERSION\") en $KERNO" >&2
         eraro=1
     fi
-    if grep -Eq '^/.* v[0-9]+\.[0-9]+\.[0-9]+' "$LIMINE"; then
+    if grep -Eq '^/.* v[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?' "$LIMINE"; then
         echo "versio: limine.conf ankoraŭ enhavas version en la menuo" >&2
         eraro=1
     fi
@@ -69,10 +72,10 @@ kontroli_ĉiujn() {
 }
 
 ĝisdatigi() {
-    sed -E -i "s/^(- \*\*Versio:\*\* )[0-9]+\.[0-9]+\.[0-9]+/\1$VERSIO/" "$README"
-    sed -E -i "s/^(\[MiKerno\] Saluton, mi estas MiKerno v)[0-9]+\.[0-9]+\.[0-9]+!/\1$VERSIO!/" "$README"
-    sed -E -i "s/^(> Stato: .* · Versio de la workspace: )[0-9]+\.[0-9]+\.[0-9]+$/\1$VERSIO/" "$MEJLOSTONOJ"
-    sed -E -i "s/^(Nuna versio: \`)[0-9]+\.[0-9]+\.[0-9]+(\`)/\1$VERSIO\2/" "$AGENTS"
+    sed -E -i "s/^(- \*\*Versio:\*\* )[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?/\1$VERSIO/" "$README"
+    sed -E -i "s/^(\[MiKerno\] Saluton, mi estas MiKerno v)[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?!/\1$VERSIO!/" "$README"
+    sed -E -i "s/^(> Stato: .* · Versio de la workspace: )[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?$/\1$VERSIO/" "$MEJLOSTONOJ"
+    sed -E -i "s/^(Nuna versio: \`)[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?(\`)/\1$VERSIO\3/" "$AGENTS"
 }
 
 case "${1:-}" in
