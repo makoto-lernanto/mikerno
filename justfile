@@ -19,7 +19,7 @@ build: build-kerno
 
 # Rulu la kernon rekte per QEMU (PVH, sen ISO).
 run: build-kerno
-    cargo run -p mikerno --release
+    bash tools/run-qemu.sh {{kerno}}
 
 # Kunmetu praŝarĝeblan ISO-on (Limine + Multiboot2).
 iso: build-kerno
