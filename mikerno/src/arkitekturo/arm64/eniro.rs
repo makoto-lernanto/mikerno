@@ -33,7 +33,7 @@ _starto:
     mov x9, #1
     lsl x9, x9, #31                 /* HCR_EL2.RW = 1 */
     msr hcr_el2, x9
-    mov x9, #0x5                    /* SPSR_EL2: EL1h, DAIF maskitaj */
+    mov x9, #0x3C5                  /* SPSR_EL2: EL1h, D/A/I/F maskitaj */
     msr spsr_el2, x9
     adr x9, .Lel1
     msr elr_el2, x9
@@ -67,7 +67,7 @@ _starto:
     wfi
     b .Lhalti
 
-    .section .bss, "aw", @nobits
+    .section .stako, "aw", @nobits
     .align 4
 _stako:
     .space 65536

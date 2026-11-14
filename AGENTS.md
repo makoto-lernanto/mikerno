@@ -32,7 +32,7 @@ En la branĉo `arm64` la versio estas antaŭeldono `0.x.y-arm.N`, kie `N` estas
 la ARM-fazo (`A1` → `arm.1`). La baza `0.x.y` restas tiu de la ĉefa branĉo;
 `tools/versio.sh` akceptas ambaŭ formojn.
 
-Nuna versio: `0.4.3-arm.1` (M14, Fazo 4 + ARM A1, branĉo `arm64`).
+Nuna versio: `0.4.3-arm.2` (M14, Fazo 4 + ARM A2, branĉo `arm64`).
 
 La sola fonto de la versio estas `[workspace.package] version` en `Cargo.toml`.
 La kerno legas ĝin per `env!("CARGO_PKG_VERSION")`, do `just run` kaj la ISO
@@ -60,6 +60,9 @@ rulas `--kontroli`.
 
 ## Commit-reguloj
 
+- Antaŭ ĉiu commit mezuru la Ring 0-kodon per `bash tools/kodlinioj.sh
+  --linio` kaj aldonu la ricevitan vicon al la tabelo «Grando de la Ring
+  0-kodo» en `docs/MEJLOSTONOJ.md`.
 - Sen klara permeso de la uzanto («vi povas commit»), **neniam** rulu
   `git commit` aŭ `git push`.
 - Post la permeso, commitu ĉiujn ŝanĝojn de la nuna Fazo kaj puŝu ilin; la

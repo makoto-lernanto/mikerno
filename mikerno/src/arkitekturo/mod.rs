@@ -22,6 +22,10 @@ use crate::memoro::virtuala::{AdresaSpaco, FizikaAdreso, PaĝaEraro};
 #[cfg(target_arch = "x86_64")]
 use crate::memoro::{EniraEraro, EniraInformo};
 
+#[cfg(target_arch = "aarch64")]
+pub use arm64::interrompo::InterrompaKadro;
+#[cfg(target_arch = "aarch64")]
+pub use arm64::planado::Kunteksto;
 #[cfg(target_arch = "x86_64")]
 pub use malantaŭo::interrompo::{InterrompaKadro, escepto_speco};
 #[cfg(target_arch = "x86_64")]
@@ -115,6 +119,8 @@ pub fn krei_adresan_spacon(alokilo: &mut KadraAlokilo) -> Result<Spaco, PaĝaEra
     <Spaco as AdresaSpaco>::krei(alokilo)
 }
 
+#[cfg(target_arch = "aarch64")]
+pub use arm64::procesoro::{ebligi_interrompojn, interrompoj_ebligitaj, malebligi_interrompojn};
 #[cfg(target_arch = "x86_64")]
 pub use malantaŭo::procesoro::{
     ebligi_interrompojn, interrompoj_ebligitaj, malebligi_interrompojn,
@@ -123,6 +129,10 @@ pub use malantaŭo::procesoro::{
 #[cfg(target_arch = "x86_64")]
 pub fn atendi_interrompon() {
     malantaŭo::procesoro::atendi_interrompon();
+}
+#[cfg(target_arch = "aarch64")]
+pub fn atendi_interrompon() {
+    arm64::procesoro::atendi_interrompon();
 }
 
 /// La adreso, kiu kaŭzis la lastan paĝan eraron (`CR2`).
@@ -202,6 +212,10 @@ pub unsafe fn eniri_uzanton(enirpunkto: u64, stakpinto: u64, reĝimo: u64, ident
 pub fn temporizilaj_tikoj() -> u64 {
     malantaŭo::temporizilo::tikoj()
 }
+#[cfg(target_arch = "aarch64")]
+pub fn temporizilaj_tikoj() -> u64 {
+    arm64::temporizilo::tikoj()
+}
 
 /// Instalu la platforman enirmekanismon de sistemvokoj kaj ĝian traktilon.
 #[cfg(target_arch = "x86_64")]
@@ -213,10 +227,20 @@ pub fn instali_sistemvokon() {
 pub fn prepari_kuntekston(konteksto: &mut Kunteksto, stako_pinto: u64) {
     malantaŭo::planado::prepari_kuntekston(konteksto, stako_pinto);
 }
+#[cfg(target_arch = "aarch64")]
+pub fn prepari_kuntekston(konteksto: &mut Kunteksto, stako_pinto: u64) {
+    arm64::planado::prepari_kuntekston(konteksto, stako_pinto);
+}
 
 /// # Sekureco
 /// Vidu `planado::ŝalti_kuntekston`.
 #[cfg(target_arch = "x86_64")]
 pub unsafe fn ŝalti_kuntekston(malnova: *mut Kunteksto, nova: *const Kunteksto) {
     unsafe { malantaŭo::planado::ŝalti_kuntekston(malnova, nova) }
+}
+/// # Sekureco
+/// Vidu `planado::ŝalti_kuntekston`.
+#[cfg(target_arch = "aarch64")]
+pub unsafe fn ŝalti_kuntekston(malnova: *mut Kunteksto, nova: *const Kunteksto) {
+    unsafe { arm64::planado::ŝalti_kuntekston(malnova, nova) }
 }

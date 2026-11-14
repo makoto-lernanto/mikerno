@@ -1,6 +1,6 @@
 # MiKerno-ARM — plano por la `arm64`-ŝpuro
 
-> Stato: 2026-11-14 · A0 kaj A1 plenumitaj; A2–A4 planitaj
+> Stato: 2026-11-14 · A0–A2 plenumitaj; A3–A4 planitaj
 >
 > Rilataj: [FLUOU.md](FLUOU.md) §9 (A06, A07), [MEJLOSTONOJ.md](MEJLOSTONOJ.md),
 > [VORTARO.md](VORTARO.md).
@@ -221,6 +221,27 @@ portas version. Sub UEFI la memora linio venas el la UEFI-memormapo, do ĝi
 raportas la konvenan memoron (ekzemple `8 regionoj, 229 MiB uzeblaj`) anstataŭ
 la tuta `-m`-kvanto.
 
+A2 (2026-11-14, `0.4.3-arm.2`) aldonas la interrompan vojon: `interrompo.rs`
+instalas `VBAR_EL1` kun 16 eniroj po 128 bajtoj kaj konservas la plenan kadron
+(`x0`–`x30`, `ELR_EL1`, `SPSR_EL1`, `ESR_EL1`, `FAR_EL1`); `gic.rs` pravalorizas
+la GICv2-on (`0x0800_0000`/`0x0801_0000`, PPI 30) kaj konfirmas la interrompon
+antaŭ la traktilo; `temporizilo.rs` programmas `CNTP_TVAL_EL0` per
+`CNTFRQ_EL0`/100; `procesoro.rs` donas la `DAIF`-helpilojn; `planado.rs` faras
+la kuntekstŝanĝon (`x19`–`x30`, `sp`, `DAIF`) kaj la unuan eniron per
+trampolino. La komuna `kerno::planisto` kaj `interrompo` kompiliĝas sur ambaŭ
+arkoj. La akcepto estas verda:
+
+```text
+[horloĝo] tiko 100
+[fadeno 1] 100 tikoj
+…
+[fadeno 3] vekis fadenon 2 ĉe 501 tikoj
+[fadeno 2] vekita ĉe 502 tikoj
+…
+[fadeno 1] finiĝis post 1000 tikoj
+[kerno] fina stato: 3 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+```
+
 ## 12. Riskoj kaj malŝarĝoj
 
 | Risko | Malŝarĝo |
@@ -246,6 +267,8 @@ la tuta `-m`-kvanto.
    `[kerno] memoro: …`, `[kerno] seria konzolo: PL011 @ 0x9000000`. (Verda.)
 5. A1-ISO: `just iso-arm` kaj `just run-iso-arm` per Limine kaj AAVMF.
    (Farita.)
-6. Nur post verda A1: `VBAR_EL1` kaj GIC (A2).
+6. A2: `VBAR_EL1`, GICv2, ĝenerala temporizilo, `DAIF`-gardo, kuntekstŝanĝo.
+   (Farita; la akcepto estas verda.)
+7. A3: EL0 per `eret`, `svc #0`, uzantaj esceptoj.
 
-A0 kaj A1 estas efektivigitaj; A2 komenciĝos nur post klara «ek» de la uzanto.
+A0–A2 estas efektivigitaj; A3 komenciĝos nur post klara «ek» de la uzanto.

@@ -1,17 +1,22 @@
 //! Arkitekture sendependa interrompa tavolo: la traktila registrejo, la
 //! komuna escepta politiko kaj la RAII-gardo por la interrompa flago.
 
-use crate::arkitekturo::{EsceptoTipo, InterrompaKadro, SistemvokaKadro};
+use crate::arkitekturo::InterrompaKadro;
+#[cfg(target_arch = "x86_64")]
+use crate::arkitekturo::{EsceptoTipo, SistemvokaKadro};
 use crate::kunhavigita::Kunhavigita;
+#[cfg(target_arch = "x86_64")]
 use crate::memoro::virtuala::{UZANTA_BAZO, UZANTA_FINO};
 
 pub use crate::arkitekturo::{ebligi_interrompojn, interrompoj_ebligitaj, malebligi_interrompojn};
 
 pub const VEKTOROJ: usize = 256;
 /// La vektoro de `int 0x80`; ĝia pordego estas la sola DPL3-pordego.
+#[cfg(target_arch = "x86_64")]
 pub const SISTEMVOKA_VEKTORO: u8 = 0x80;
 /// `RFLAGS.AC` (bito 18): kun `CR4.SMAP` ŝaltita, Ring 0 povas aliri uzantajn
 /// paĝojn nur kiam ĉi tiu bito estas 1.
+#[cfg(target_arch = "x86_64")]
 const FLAGO_AC: u64 = 1 << 18;
 
 pub trait InterrompaTraktilo {
@@ -48,7 +53,20 @@ impl Drop for InterrompaGardo {
     }
 }
 
+/// Voku la registritan traktilon por `vektoro`; `false` se neniu ekzistas.
+/// La platforma dispetĉo alvokas ĝin post la aparata konfirmo.
+#[cfg(target_arch = "aarch64")]
+pub fn trakti_vektoron(vektoro: usize, kadro: &mut InterrompaKadro) -> bool {
+    if let Some(traktilo) = TRAKTILOJ.akiri()[vektoro] {
+        traktilo.trakta(kadro);
+        true
+    } else {
+        false
+    }
+}
+
 /// Vokata de la arkitektura enira ŝelko.
+#[cfg(target_arch = "x86_64")]
 #[unsafe(no_mangle)]
 pub extern "C" fn interrompa_dispetcho(kadro: *mut InterrompaKadro) {
     // Ring 3 rajtas ŝalti `RFLAGS.AC` per `popfq`, kaj la interrompa pordego
@@ -88,10 +106,12 @@ pub extern "C" fn interrompa_dispetcho(kadro: *mut InterrompaKadro) {
 ///
 /// `int 0x80` estas programa interrompo: la APIC-ISR ne havas ĝian biton, do
 /// EOI estus mislokita. Ankaŭ `int3` kaj la spuria `0xFF` restas ekstere.
+#[cfg(target_arch = "x86_64")]
 fn estas_apic_vektoro(vektoro: usize) -> bool {
     (0x20..0x80).contains(&vektoro)
 }
 
+#[cfg(target_arch = "x86_64")]
 fn trakti_escepton(kadro: &mut InterrompaKadro) -> ! {
     let speco = crate::arkitekturo::escepto_speco(kadro.vektoro());
     // `#GP` kaj `#PF` el Ring 3 apartenas al la uzanta procezo, ne al la

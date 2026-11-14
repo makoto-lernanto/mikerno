@@ -197,7 +197,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `aliniiĝinta` | aligned | |
 | `ŝpuro` | track | Aparta disvolva linio; la ARM-ŝpuro ne anstataŭas M15–M17. |
 | `platforma malantaŭo` | platform backend | `malantaŭo` en `arkitekturo`; `x86_64` aŭ `arm64`. |
-| `interrompa kadro` | interrupt frame | `InterrompaKadro`: platforma tipo en `x86_64/interrompo.rs`. |
+| `interrompa kadro` | interrupt frame | `InterrompaKadro`: platforma tipo en `x86_64/interrompo.rs` aŭ `arm64/interrompo.rs`. |
 | `sistemvoka kadro` | system-call frame | `SistemvokaKadro`; la komuna kodo legas la registrojn per ĝi. |
 | `escepta speco` | exception kind | `EsceptoTipo`: `PaĝaEraro`, `ProtektaEraro`, `Nekonata`. |
 | `instali sistemvokon` | install system calls | `instali_sistemvokon()`; la malantaŭo registras sian enirmekanismon. |
@@ -223,6 +223,17 @@ kaj protokolaj nomoj sekvu ĝin.
 | `UEFI-memormapo` | UEFI memory map | `/chosen/linux,uefi-mmap-*`; uzata kiam `/memory` mankas. |
 | `konvena memoro` | conventional memory | UEFI-tipo 7; la «uzebla» kvanto en la raporto. |
 | `AAVMF` | AArch64 UEFI firmware | `QEMU_EFI.fd`; uzata de `just run-iso-arm`. |
+| `vektora tabelo` | vector table | `VBAR_EL1`; 16 eniroj po 128 bajtoj; `__vektoroj` en `arm64/interrompo.rs`. |
+| `vektoro` | vector | La enira indekso 0–15 aŭ GIC-identigilo; `InterrompaKadro::vektoro`. |
+| `distribuilo` | distributor | GIC-distribuilo (`GICD_*`) ĉe `0x0800_0000`. |
+| `CPU-interfaco` | CPU interface | GICC (`GICC_*`) ĉe `0x0801_0000`. |
+| `aparta aparata interrompo` | private peripheral interrupt (PPI) | PPI 30 estas la ĝenerala temporizilo. |
+| `ĝenerala temporizilo` | generic timer | `CNTFRQ_EL0`, `CNTP_TVAL_EL0`, `CNTP_CTL_EL0`. |
+| `tika frekvenco` | tick rate | `FREKVENCO = 100` (100 Hz, 10 ms). |
+| `trampolino` | trampoline | `fadeno_trampolino`: la unua eniro de nova fadeno malmaskas `IRQ`. |
+| `fadeno-stako` | thread stack | `FadenaStako`; 16 KiB po fadeno. |
+| `stako-pinto` | stack top | `stako_pinto`; la enira stako finiĝas ĉe `__stako_supro`. |
+| `enira stako` | entry stack | La sekcio `.stako` ekster `.bss`, do la nula buklo ne tuŝas ĝin. |
 
 ## FluoU — grafika uzinterfaco
 
@@ -321,7 +332,9 @@ eksteraj protokolaj nomoj:
 `AArch64`, `EL0`, `EL1`, `EL2`, `SVC`, `GIC`, `GICv2`, `GICv3`, `PL011`, `FDT`,
 `DTB`, `Image`, `TTBR0_EL1`, `TCR_EL1`, `MAIR_EL1`, `SCTLR_EL1`, `VBAR_EL1`,
 `ESR_EL1`, `FAR_EL1`, `ELR_EL1`, `SPSR_EL1`, `DAIF`, `CNTFRQ_EL0`,
-`CNTP_TVAL_EL0`, `CNTP_CTL_EL0`, `PXN`, `UXN`, `PAN`, `PSCI`, `WFI`, `HCR_EL2`.
+`CNTP_TVAL_EL0`, `CNTP_CTL_EL0`, `GICD_CTLR`, `GICD_ISENABLER`,
+`GICD_IPRIORITYR`, `GICD_ITARGETSR`, `GICC_CTLR`, `GICC_PMR`, `GICC_IAR`,
+`GICC_EOIR`, `PXN`, `UXN`, `PAN`, `PSCI`, `WFI`, `HCR_EL2`, `eret`, `svc`.
 
 ## Reguloj
 

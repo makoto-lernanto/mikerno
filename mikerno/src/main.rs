@@ -1,16 +1,15 @@
 #![no_std]
 #![no_main]
+// A2 uzas nur parton de la komunaj memoro- kaj proceza tipoj; A3/A4 ligos la
+// ceterajn.
+#![cfg_attr(target_arch = "aarch64", allow(dead_code))]
 
 mod arkitekturo;
 #[cfg(target_arch = "x86_64")]
 mod ekrano;
-#[cfg(target_arch = "x86_64")]
 mod interrompo;
-#[cfg(target_arch = "x86_64")]
 mod kerno;
-#[cfg(target_arch = "x86_64")]
 mod kunhavigita;
-#[cfg(target_arch = "x86_64")]
 mod memoro;
 
 // Kani kunligas la gastigan `std`, kiu jam provizas la panikan traktilon.

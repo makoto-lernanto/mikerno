@@ -11,19 +11,24 @@ SECTIONS
        unua instrukcio (`b _starto`). */
     .text : ALIGN(16)
     {
+        __kerna_kodo_komenco = .;
         KEEP(*(.text.entry))
         *(.text .text.*)
+        __kerna_kodo_fino = .;
     }
     . = ALIGN(4K);
 
     .rodata : ALIGN(4K)
     {
+        __kerna_rodata_komenco = .;
         *(.rodata .rodata.*)
+        __kerna_rodata_fino = .;
     }
     . = ALIGN(4K);
 
     .data : ALIGN(4K)
     {
+        __kerna_datumoj_komenco = .;
         *(.data .data.*)
         *(.got .got.plt)
     }
@@ -35,6 +40,13 @@ SECTIONS
         *(COMMON)
         . = ALIGN(4K);
         __bss_fino = .;
+    }
+
+    /* La enira stako kuŝas ekster `.bss`: la nula buklo de la eniro ne tuŝas
+       ĝin, kaj `sp` montras al ĝia pinto. */
+    .stako (NOLOAD) : ALIGN(4K)
+    {
+        KEEP(*(.stako))
     }
 
     __kerna_fino = .;

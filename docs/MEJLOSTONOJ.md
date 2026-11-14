@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-14 · Versio de la workspace: 0.4.3-arm.1
+> Stato: 2026-11-14 · Versio de la workspace: 0.4.3-arm.2
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -56,6 +56,38 @@ Limine 12.9.6 (`BOOTAA64.EFI`); sub UEFI la memora linio venas el la
 UEFI-memormapo en `/chosen`, do ĝi raportas konvenan memoron (229 MiB el
 256 MiB). La versio estas presata de la kerno, same kiel ĉe `x86_64`. La
 `x86_64`-konstruo kaj ties scenaro restas senŝanĝaj.
+
+A2 (arm64) estas plenumita la 2026-11-14 en `0.4.3-arm.2`: la vektora tabelo
+`VBAR_EL1` (16 eniroj po 128 bajtoj) kun plena kadro `x0`–`x30`, `ELR_EL1`,
+`SPSR_EL1`, `ESR_EL1` kaj `FAR_EL1`; GICv2 (distribuilo `0x0800_0000`,
+CPU-interfaco `0x0801_0000`, PPI 30, EOI antaŭ la traktilo); la ĝenerala
+temporizilo per `CNTFRQ_EL0`/`CNTP_TVAL_EL0` je 100 Hz; `DAIF`-gardo; kaj la
+kuntekstŝanĝo de la planisto (`x19`–`x30`, `sp`, `DAIF`, unua eniro per
+trampolino). La komuna `kerno::planisto` kaj `interrompo` nun kompiliĝas sur
+ambaŭ arkoj per `cfg`-gardoj, sen ŝanĝi la `x86_64`-konduton. La enira stako
+translokiĝis ekster `.bss`, do la nula buklo de la eniro ne tuŝas ĝin.
+Akcepto (`just run-arm`):
+
+```text
+[horloĝo] tiko 100
+[fadeno 1] 100 tikoj
+…
+[fadeno 3] vekis fadenon 2 ĉe 501 tikoj
+[fadeno 2] vekita ĉe 502 tikoj
+…
+[fadeno 1] finiĝis post 1000 tikoj
+[kerno] fina stato: 3 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+```
+
+### 1.2. Grando de la Ring 0-kodo
+
+`bash tools/kodlinioj.sh --linio` mezuras la Ring 0-fonton (`mikerno/src`,
+`*.rs`) antaŭ ĉiu commit. «Kodo» malatentas malplenajn kaj komentajn liniojn.
+
+| Dato | Versio | Dosieroj | Linioj | Kodo | Komento | Malplena |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-14 | 0.4.3-arm.1 | 41 | 8792 | 6780 | 1143 | 869 |
+| 2026-11-14 | 0.4.3-arm.2 | 45 | 9511 | 7343 | 1224 | 944 |
 
 ---
 

@@ -16,7 +16,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.4.3-arm.1 (workspace)
+- **Versio:** 0.4.3-arm.2 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora; `arm64`-skeleto (antaŭeldono) en la branĉo `arm64`
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -752,7 +752,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.4.3-arm.1!
+[MiKerno] Saluton, mi estas MiKerno v0.4.3-arm.2!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes

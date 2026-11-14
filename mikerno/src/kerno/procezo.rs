@@ -18,7 +18,7 @@ use crate::kunhavigita::Kunhavigita;
 use crate::memoro::kadro::KadraAlokilo;
 use crate::memoro::virtuala::{AdresaSpaco, FizikaAdreso, PaĝaEraro};
 
-pub type ProcezaId = u64;
+pub use super::objekto::ProcezaId;
 
 /// La proceza tabelo havas 8 liniojn: `0` estas la kerno kaj `1..=7` estas
 /// uzantaj procezoj (C8).
