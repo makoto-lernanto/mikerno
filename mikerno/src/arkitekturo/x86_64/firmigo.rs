@@ -101,7 +101,9 @@ pub fn clac() {
     unsafe { asm!("clac", options(nostack)) };
 }
 
-fn ac_aktiva() -> bool {
+/// Ĉu `RFLAGS.AC` estas ŝaltita? Uzata de la `STAC`-gardo kaj de la aserto en
+/// la interrompa dispetĉo.
+pub fn ac_aktiva() -> bool {
     procesoro::flagoj() & FLAGO_AC != 0
 }
 
@@ -130,6 +132,54 @@ impl Drop for StacGardo {
             clac();
         }
     }
+}
+
+/// Pruvu la disciplinon de la `STAC`-fenestro.
+///
+/// La provo kontrolas kvar aferojn: la fenestro estas fermita antaŭ ol la unua
+/// gardo, la gardo malfermas ĝin, nestita gardo ne fermas la eksteran fenestron
+/// ĉe sia `Drop`, kaj la lasta gardo restarigas la antaŭan staton. Fine ĝi
+/// ŝaltas `AC` sen gardo — kvazaŭ Ring 3 havus ĝin — kaj pruvas, ke
+/// `malŝalti_ac` forigas ankaŭ tian fenestron.
+pub fn testi_ac() {
+    if !smap_aktiva() {
+        crate::skribu!("[memoro] AC-provo preterlasita: SMAP ne estas ŝaltita\n");
+        return;
+    }
+
+    let fermita = !ac_aktiva();
+    let ekstera = StacGardo::nova();
+    let malfermita = ac_aktiva();
+    let interna = StacGardo::nova();
+    let ankoraŭ_malfermita = ac_aktiva();
+    drop(interna);
+    let post_interna = ac_aktiva();
+    drop(ekstera);
+    let fermita_post = !ac_aktiva();
+
+    stac();
+    let ŝtelita = ac_aktiva();
+    crate::arkitekturo::malŝalti_ac();
+    let purigita = !ac_aktiva();
+
+    let bone = fermita
+        && malfermita
+        && ankoraŭ_malfermita
+        && post_interna
+        && fermita_post
+        && ŝtelita
+        && purigita;
+    crate::skribu!(
+        "[memoro] AC ({}): fermita={}, malfermita={}, interna={}, post_interna={}, fermita_post={}, ŝtelita={}, purigita={}\n",
+        if bone { "bone" } else { "MALBONE" },
+        fermita,
+        malfermita,
+        ankoraŭ_malfermita,
+        post_interna,
+        fermita_post,
+        ŝtelita,
+        purigita
+    );
 }
 
 /// Mapu unu `U=1`-provfolion ĉe `UZANTA_BAZO`, skribu `valoro` en ĝin kaj

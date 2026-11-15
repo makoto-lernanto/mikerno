@@ -151,3 +151,22 @@ pub fn fuŝa_adreso() -> u64 {
     }
     adreso
 }
+
+/// Ĉu `CR4.PCIDE` (bito 17) estas malŝaltita?
+///
+/// MiKerno skribas nudan fizikan radikon en `CR3`; se PCID estus aktiva, la
+/// malaltaj 12 bitoj havus la sencon de PCID kaj `mov cr3` purigus la TLB-on
+/// nur por tiu unu etikedo. La modelo «unu radiko = unu TLB-spaco» tiam ne
+/// plu validus.
+pub fn ne_pcide() -> bool {
+    let cr4: u64;
+    // SAFETY: legado de `CR4` ne havas kromefikojn.
+    unsafe {
+        asm!(
+            "mov {}, cr4",
+            out(reg) cr4,
+            options(nomem, nostack, preserves_flags),
+        );
+    }
+    cr4 & (1 << 17) == 0
+}

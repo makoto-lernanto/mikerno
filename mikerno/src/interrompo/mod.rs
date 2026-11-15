@@ -56,6 +56,12 @@ pub extern "C" fn interrompa_dispetcho(kadro: *mut InterrompaKadro) {
     // montrilon; `iretq` restarigas la konservitan kredaron, do la uzanto
     // revidas sian propran `AC`.
     crate::arkitekturo::malŝalti_ac();
+    // La disciplino havas unu sencon nur se `CLAC` vere fermas la fenestron.
+    // Se ĝi restus malfermita, la tuta sistemvoka kopiado perdus la SMAP-barilon.
+    if crate::arkitekturo::smap_aktiva() && crate::arkitekturo::ac_aktiva() {
+        crate::skribu!("\n[kerno] AC-restaĵo: la SMAP-fenestro restis malfermita; haltas\n");
+        crate::arkitekturo::halti();
+    }
 
     let kadro = unsafe { &mut *kadro };
     let vektoro = kadro.vektoro as usize;
@@ -88,8 +94,8 @@ pub extern "C" fn interrompa_dispetcho(kadro: *mut InterrompaKadro) {
 ///
 /// `int 0x80` estas programa interrompo: la APIC-ISR ne havas ĝian biton, do
 /// EOI estus mislokita. Ankaŭ `int3` kaj la spuria `0xFF` restas ekstere.
-fn estas_apic_vektoro(vektoro: usize) -> bool {
-    (0x20..0x80).contains(&vektoro)
+pub(crate) const fn estas_apic_vektoro(vektoro: usize) -> bool {
+    vektoro >= 0x20 && vektoro < 0x80
 }
 
 fn trakti_escepton(kadro: &mut InterrompaKadro) -> ! {
@@ -163,4 +169,26 @@ fn trakti_escepton(kadro: &mut InterrompaKadro) -> ! {
         );
     }
     crate::arkitekturo::halti()
+}
+
+#[cfg(kani)]
+mod kani_proofs {
+    //! Pruvo por la EOI-politiko: EOI apartenas nur al la aparataj vektoroj.
+
+    use super::estas_apic_vektoro;
+
+    #[kani::proof]
+    fn eoi_nur_por_apic_vektoroj() {
+        let vektoro: usize = kani::any();
+        if estas_apic_vektoro(vektoro) {
+            assert!(vektoro >= 0x20 && vektoro < 0x80);
+        } else {
+            assert!(vektoro < 0x20 || vektoro >= 0x80);
+        }
+        assert!(!estas_apic_vektoro(0x0E));
+        assert!(!estas_apic_vektoro(super::SISTEMVOKA_VEKTORO as usize));
+        assert!(!estas_apic_vektoro(0xFF));
+        assert!(estas_apic_vektoro(0x20));
+        assert!(estas_apic_vektoro(0x7F));
+    }
 }

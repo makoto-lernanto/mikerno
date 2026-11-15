@@ -1,8 +1,12 @@
 # MiKerno: konstruado, PVH-rulado kaj ISO-rulado.
 # Postulas bash, QEMU (`qemu-system-x86`) kaj, por `iso`, la sisteman `xorriso`.
+# Por `run-arm` kaj `run-iso-arm` ankaŭ necesas `qemu-system-aarch64`; por la
+# ISO krome UEFI-firmware.
 
 kerno := "target/x86_64-unknown-none/release/mikerno"
 bildo := "mikerno.iso"
+bildo_arm := "target/aarch64-unknown-none/release/mikerno.img"
+bildo_arm_iso := "mikerno-arm.iso"
 
 default: build
 
@@ -40,6 +44,16 @@ iso: build-kerno
 # Rulu la ISO-on en QEMU; la fenestro montras la Limine-menuon.
 run-iso: iso
     bash tools/run-qemu.sh iso
+
+# Rulu la antaŭe konstruitan arm64-kernon sub QEMU (`virt`).
+# La bildo venas el la `arm64`-branĉo (`just build-arm`) kaj nur estas startigata.
+run-arm:
+    bash tools/run-qemu-arm.sh {{bildo_arm}}
+
+# La ISO devenas el la `arm64`-branĉo (`just iso-arm`) kaj nur estas startigata.
+# Rulu la arm64-ISO-on en QEMU kun fenestro kaj seria konzolo.
+run-iso-arm:
+    bash tools/run-qemu-arm.sh --iso {{bildo_arm_iso}}
 
 # Kontrolu, ke la dokumenta versio kongruas kun `Cargo.toml`.
 kontroli-version:

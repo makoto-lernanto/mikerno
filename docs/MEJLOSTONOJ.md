@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-14 · Versio de la workspace: 0.4.5
+> Stato: 2026-11-15 · Versio de la workspace: 0.4.6
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -26,7 +26,7 @@
 | M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj |
 | M12 | Per-procesaj adresspacoj | Plenumita | W^X laŭ sekcioj, `CR0.WP`, proceza izolado (spiono `#PF`, viktimo pluvivas), egalaj kadroj |
 | M13 | Kerna memoro-firmigo: SMEP, SMAP, KASLR | Plenumita | SMEP, SMAP kaj KASLR pruvitaj per Ring 0-provoj kaj tri startoj |
-| M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Parta | Ring 0/Ring 3-scenaroj kaj Kani-pruvoj verdaj (ABI 2) |
+| M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Plenumita | Ring 0/Ring 3-scenaroj kaj AC/CR3/EOI-provoj verdaj (ABI 2) |
 | M15 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
 | M16 | Konservado, dosiersistemo, ŝelo | Venonta | — |
 | M17 | CI, testoj, plena pruvaro | Venonta | — |
@@ -875,6 +875,26 @@ pli ol 3 GB al malpli ol 1 GB, kaj la tuta pordo fariĝas verda.
 | 2026-11-14 | 4. `REVOKI`(8) tutfinpunkta, revokaj vekoj `-32`, purigo ĉe proceza detruo, `Result<Mesago, IpcEraro>` | 0.4.3 | `[ipc] revoko (bone): sen_revoki=-1, revoko=0, donita=-9, fermo=-9, duobla=-9`; `[fadeno 1] revokis la defaŭltan finpunkton de fadeno 3`; `[fadeno 3] revoka veko (bone): kodo -32`; `[ipc] purigo de procezo 4/5: 1 kapabloj liberigitaj, 1 finpunktoj revokitaj`; `[ring3] procezo 4: revoko (bone): argumento=-1, sen_revoki=-1, fermo_sen=0, revoko=0, sendo=-9, fermo=-9, duobla=-9`; `[sistemvoko] Ring 0-memtesto: …, revoki=-9, revok_argumento=-1`; 21 Kani-pruvoj; `size -A`: `.text` 92799, `.rodata` 51808, `.data` 36104, `.bss` 364544 B — RAM-kresko (`.data`+`.bss`) 48 B (C3) |
 | 2026-11-14 | 5. Sendblokado ĉe plena vico, sender-bita masko, `-90`, `IpcStatistiko` | 0.4.4 | `[fadeno 1] premrego (bone): 17 mesaĝoj senditaj; la lasta atendis liberan lokon`; `[fadeno 2] premrego (bone): 17 mesaĝoj, idento sendinto=1, ricevonto=2`; `[fadeno 2] sendblokada revoko (bone): enmetitaj=16, kodo=-32`; `[fadeno 3] revokis finpunkton 1; vekas la blokitan sendanton`; `[sistemvoko] Ring 0-memtesto: …, tro_longa=-90`; `[ipc] statistiko (bone): senditaj=37, ricevitaj=21, premregoj=2, revokoj=7`; `[kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj`; 23 Kani-pruvoj; `size -A`: `.text` 99551, `.rodata` 52336, `.data` 36424, `.bss` 364544 B — RAM-kresko (`.data`+`.bss`) 320 B (C3) |
 | 2026-11-14 | 6. `RICEVI_TEMPO`(9)/`SENDI_TEMPO`(10), `-110`, `-11`, absoluta limdato | 0.4.5 | `[fadeno 4] tempolimoj (bone): nebloka=-11 (0 tikoj), tempolimo=-110 (5 tikoj), mesaĝo=0/tipo 90, senfina=0/tipo 91`; `[ring3] procezo 5: tempolimoj (bone): nebloka=-11, tempolimo=-110, sendo=0, senfina=0, troa=-1`; `[ring3] procezo 6: tempolimoj (bone): nebloka=-11, tempolimo=-110, sendo=0, senfina=0, troa=-1`; `[memoro] izolado (bone): 64809 kadroj antaŭ, 64809 post`; `[ipc] statistiko (bone): senditaj=41, ricevitaj=25, premregoj=2, revokoj=7, tempolimoj=3`; `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj`; 26 Kani-pruvoj; `size -A`: `.text` 102719, `.rodata` 52908, `.data` 36488, `.bss` 380928 B — RAM-kresko (`.data`+`.bss`) 16448 B ≤ 20 KiB (C3) |
+| 2026-11-15 | 7. AC/CR3/EOI/ellasa revizio, pruva kompletigo, eldono | 0.4.6 | `[memoro] AC (bone): fermita=true, malfermita=true, interna=true, post_interna=true, fermita_post=true, ŝtelita=true, purigita=true`; `[kerno] gardoj (bone): malŝalto=true, interna=true, restarigo=true (IF antaŭe false)`; `[memoro] CR3 (bone): PCID=malŝaltita, aktiva=0x196000, kongrua=true, aliniita=true`; `[sistemvoko] Ring 0-memtesto: …, tro_longa=-90, sen_eoi=true`; `[apic] EOI (bone): 1000 konfirmoj, 1000 tikoj`; `[memoro] izolado (bone): 64799 kadroj antaŭ, 64799 post`; `[ipc] statistiko (bone): senditaj=41, ricevitaj=25, premregoj=2, revokoj=7, tempolimoj=3`; `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj`; PVH kaj ISO startoj verdaj; 29 Kani-pruvoj (3 novaj: `eoi_nur_por_apic_vektoroj`, `cr3_radiko_estas_pagx_aliniita`, `cr3_radiko_forprenas_nur_la_malaltajn_bitojn`); `size -A`: `.text` 103471, `.rodata` 53476, `.data` 36488, `.bss` 380928 B — RAM-kresko (`.data`+`.bss`) 0 B (C3) |
+
+**Rezultoj de la revizio (Fazo 7).**
+
+- **AC.** `firmigo::testi_ac` pruvas la tutan vivciklon de `StacGardo`: fermita
+  antaŭ la unua gardo, malfermita dum ĝi, nedaŭra nestita fenestro, restarigo
+  ĉe `Drop`, kaj forigo de `AC`, kiun Ring 3 estus lasinta ŝaltita. La
+  interrompa dispetĉo haltas, se `CLAC` ne fermus la fenestron.
+- **CR3.** La ISO-starto montris, ke Limine lasas `CR4.PCIDE` (bito 17)
+  ŝaltita. `pagxado::pravalorizi` nun reŝargas `CR3` kun nula PCID kaj poste
+  malŝaltas `PCIDE`; `ŝalti_radikon` haltas, se la bito restus ŝaltita, ĉar la
+  modelo «unu radiko = unu TLB-spaco» dependas de ĝi. `testi_cr3` komparas la
+  aktivan radikon kun la ĵus konstruita `PML4`.
+- **EOI.** `apic::konfirmi` kalkulas la senditajn `EOI`-ojn; la fina raporto
+  komparas ilin kun la temporizilaj tikoj. `estas_apic_vektoro` estas pruvita
+  por la tuta `usize`-amplekso, do `int 0x80` neniam ricevas `EOI`-on.
+- **Ellaso.** `testi_gardojn` pruvas la nestitan `InterrompaGardo`-vojon, kaj
+  `Kunhavigita::akiri` dokumentas sian sekurecan invariancon.
+- **Grando.** `skribi_formaton` estas `#[inline(never)]`: la novaj diagnozaj
+  vokoj alie duobligis la formatigan vojon (`.text` 117007 → 103471 B).
 
 **Akceptkriterioj.** Mesaĝo portas `sendinto`/`ricevonto`; revoko malvalidigas
 kapablon kaj vekas la blokitan ricevanton per `-32`; proceza detruo liberigas
@@ -970,7 +990,7 @@ mejloŝtono venas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo el M16.
 | Meza | Sekreta paĝo estas unu fiksa mapado por procezo | Neniu ĝenerala `mmap`/`brk` por uzantaj datumoj | M16 |
 | Meza | Neniu IOMMU | Aparata DMA ne estas izolita | M18 |
 | Meza | Framebuffer sen rulumo | Malbona uzsperto | M6-poste |
-| Malalta | `Kunhavigita::akiri` prenas `&self` | Facila misuzo | revizio |
+| Malalta | `Kunhavigita::akiri` prenas `&self` | Facila misuzo | reviziita kaj dokumentita (Fazo 7) |
 | Malalta | Kani-modelo ≠ produkta kodo | Pruvoj ne rekte aplikeblas | M9 |
 
 ---

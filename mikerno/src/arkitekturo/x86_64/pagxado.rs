@@ -13,6 +13,8 @@ use crate::memoro::virtuala::{
     VirtuaAdreso,
 };
 
+use super::procesoro;
+
 const PREZENTA: u64 = 1 << 0;
 const SKRIBEBA: u64 = 1 << 1;
 const UZANTA: u64 = 1 << 2;
@@ -24,12 +26,16 @@ const NE_PLENUMEBLA: u64 = 1 << 63;
 const ADRESO_MASKO: u64 = 0x000F_FFFF_FFFF_F000;
 /// Bitoj 51:21 — la bazo de 2 MiB grandega paĝo.
 const DU_MIB_BAZA_MASKO: u64 = 0x000F_FFFF_FFE0_0000;
+/// `CR4.PCIDE` (bito 17): proces-kuntekstaj identigiloj.
+const PCIDE_BITO: u64 = 1 << 17;
 
 const EFER_MSR: u32 = 0xC000_0080;
 const NXE_BITO: u32 = 1 << 11;
 
 /// Ŝaltu `EFER.NXE` (por la bito 63) kaj `CR0.WP` (por ke Ring 0 ankaŭ respektu
 /// nurlegajn paĝojn). Sen `WP` nurlegaj mapoj estus nur konsilo, ne barilo.
+/// Ankaŭ malŝaltu `CR4.PCIDE`: la praŝarĝila ŝelko (ekz. Limine) povas lasi
+/// ĝin ŝaltita, sed la `CR3`-modelo de MiKerno skribas nudan radikon.
 pub fn pravalorizi() {
     // SAFETY: `rdmsr`/`wrmsr` kun `EFER_MSR` estas la dokumentita vojo por
     // ŝalti `NXE`; la aliaj bitoj de la MSR estas konservitaj.
@@ -51,6 +57,28 @@ pub fn pravalorizi() {
             options(nostack, preserves_flags),
         );
     }
+    // Se `CR3` portas ne-nulan PCID-on, tiuj bitoj fariĝus rezervitaj tuj post
+    // la malŝalto de `PCIDE`; do unue reŝargu `CR3` kun nula PCID, poste
+    // forigu la biton. La dua paŝo ankaŭ purigas la tutan TLB-on.
+    // SAFETY: nur `CR4.PCIDE` estas forigata; CPL estas 0 kaj `CR0.PG=1`.
+    unsafe {
+        let cr4: u64;
+        asm!("mov {}, cr4", out(reg) cr4, options(nomem, nostack, preserves_flags));
+        if cr4 & PCIDE_BITO != 0 {
+            let cr3: u64;
+            asm!("mov {}, cr3", out(reg) cr3, options(nomem, nostack, preserves_flags));
+            asm!(
+                "mov cr3, {}",
+                in(reg) cr3 & ADRESO_MASKO,
+                options(nostack, preserves_flags),
+            );
+            asm!(
+                "mov cr4, {}",
+                in(reg) cr4 & !PCIDE_BITO,
+                options(nostack, preserves_flags),
+            );
+        }
+    }
     // SAFETY: `CR0.WP` (bito 16) estas la sola bito ŝanĝata; la ceteraj,
     // inkluzive `PG` kaj `PE`, restas kiel la praŝarĝa ŝelko lasis ilin.
     unsafe {
@@ -71,6 +99,16 @@ pub struct X86AdresaSpaco {
     privataj_pdptoj: [u64; PRIVATAJ_VORTOJ],
 }
 
+/// La radika paĝtabelo enhavita en `CR3`-valoro.
+///
+/// MiKerno tenas `CR4.PCIDE` malŝaltita, do la malaltaj 12 bitoj estas
+/// rezervitaj kaj nulo (`ŝalti_radikon` haltigas la kernon alie). La masko
+/// ankaŭ igas la komparon en `procezo::aktivigi` sendependa de eventualaj
+/// flagaj bitoj.
+pub const fn radiko_ero(cr3: u64) -> u64 {
+    cr3 & ADRESO_MASKO
+}
+
 /// La fizika radiko, kiun `CR3` nun montras.
 pub fn aktiva_radiko() -> FizikaAdreso {
     let cr3: u64;
@@ -82,7 +120,7 @@ pub fn aktiva_radiko() -> FizikaAdreso {
             options(nomem, nostack, preserves_flags),
         );
     }
-    FizikaAdreso::nova(cr3 & ADRESO_MASKO)
+    FizikaAdreso::nova(radiko_ero(cr3))
 }
 
 /// Ŝaltu `CR3` al la donita radika paĝtabelo.
@@ -94,8 +132,17 @@ pub fn aktiva_radiko() -> FizikaAdreso {
 /// de kerna funkcio; tamen vokenda kun interrompoj malŝaltitaj, por ke neniu
 /// traktilo uzu duonvalidan staton.
 pub unsafe fn ŝalti_radikon(radiko: FizikaAdreso) {
+    // La tuta modelo de `aktivigi` (kompari la aktivan radikon, ŝalti nur ĉe
+    // diferenco) supozas, ke `mov cr3` ŝanĝas unu TLB-spacon. Kun PCID la
+    // malaltaj 12 bitoj estus etikedo, do ni rifuzas daŭrigi anstataŭ silente
+    // ŝanĝi la signifon.
+    if !procesoro::ne_pcide() {
+        crate::skribu!("\n[kerno] CR3: CR4.PCID estas ŝaltita; MiKerno postulas PCID=0; haltas\n");
+        crate::arkitekturo::halti();
+    }
     // SAFETY: la alvokanto garantias vivan `PML4` kun atingeblaj kernaj mapoj;
-    // `mov cr3` estas la sola necesa operacio (MiKerno ne uzas PCID).
+    // `mov cr3` estas la sola necesa operacio (PCID estas malŝaltita, vidu
+    // supre).
     unsafe {
         asm!(
             "mov cr3, {}",
@@ -540,5 +587,36 @@ fn permesoj_el_ero(ero: u64) -> PaĝaPermesoj {
         plenumebla: ero & NE_PLENUMEBLA == 0,
         kaŝebla: ero & NEKAŜEBLA == 0,
         uzanta: ero & UZANTA != 0,
+    }
+}
+
+#[cfg(kani)]
+mod kani_proofs {
+    //! Pruvoj por la `CR3`-disciplino: la radiko estas paĝ-aliniiĝinta, kaj por
+    //! fizika `CR3`-valoro la masko forprenas ĝuste la malaltajn 12 bitojn.
+
+    use super::{ADRESO_MASKO, radiko_ero};
+
+    #[kani::proof]
+    fn cr3_radiko_estas_pagx_aliniita() {
+        let cr3: u64 = kani::any();
+        let radiko = radiko_ero(cr3);
+        assert_eq!(radiko & 0xFFF, 0);
+        assert_eq!(radiko, cr3 & ADRESO_MASKO);
+        assert!(radiko <= ADRESO_MASKO);
+    }
+
+    #[kani::proof]
+    fn cr3_radiko_forprenas_nur_la_malaltajn_bitojn() {
+        let cr3: u64 = kani::any();
+        // Nur fizika adreso: bitoj 63:52 estas nulaj, do la supra maskoparto
+        // ne perdas informon.
+        kani::assume(cr3 >> 52 == 0);
+        let radiko = radiko_ero(cr3);
+        assert_eq!(radiko, cr3 & !0xFFF_u64);
+        assert_eq!(radiko >> 12, cr3 >> 12);
+        if cr3 & 0xFFF == 0 {
+            assert_eq!(radiko, cr3);
+        }
     }
 }

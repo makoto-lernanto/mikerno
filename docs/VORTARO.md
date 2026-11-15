@@ -22,6 +22,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `fizika adreso` | physical address | |
 | `adresa spaco` | address space | `AdresaSpaco`. |
 | `radika adreso` | root address | Fizika adreso de `PML4`, ŝargata en `CR3`. |
+| `radiko-ero` | root entry | `radiko_ero(cr3)` eltiras bitojn 51:12; la malaltaj 12 bitoj estas nulaj, ĉar `PCIDE` estas malŝaltita. |
 | `aktivigi` | activate | Ŝalti la procezan `CR3` kaj `TSS.RSP0` antaŭ kuntekstŝanĝo. |
 | `paĝa tabelo` | page table | `PaĝaTablo`. |
 | `paĝa eraro` | page fault (#PF) | |
@@ -144,6 +145,8 @@ kaj protokolaj nomoj sekvu ĝin.
 | `procesoraj trajtoj` | processor features | `procesoro::trajtoj()`; CPUID folio 7. |
 | `SMEP` | supervisor mode execution prevention | `CR4.SMEP`; Ring 0 ne plenumas `U=1`-foliojn (0.3.0). |
 | `SMAP` | supervisor mode access prevention | `CR4.SMAP`; `STAC` malfermas kaj `CLAC` fermas la fenestron (0.3.1). |
+| `PCID` | process-context identifier | `CR4.PCIDE` (bito 17); la praŝarĝilo povas lasi ĝin ŝaltita, sed `pagxado::pravalorizi` ĝin malŝaltas (unue `CR3` kun nula PCID). |
+| `ne PCID` | PCID disabled | `procesoro::ne_pcide()`; `ŝalti_radikon` haltas, se `PCIDE` restus ŝaltita. |
 | `relokebla` | relocatable | KASLR postulas relokeblan aŭ alta-duonan kernon. |
 | `alta duonmapo` | higher-half mapping | La kerno loĝas super la uzanta fenestro. |
 | `hazarda bazadreso` | randomized base address | KASLR elektas ĝin ĉe starto. |
@@ -152,6 +155,9 @@ kaj protokolaj nomoj sekvu ĝin.
 | `interrompa readresado` | interrupt remapping | IOMMU-akompananto por interrompoj. |
 | `STAC-fenestro` | STAC window | `StacGardo`: mallonga Ring 0-alirejo al uzantaj paĝoj; `Drop` fermas ĝin per `CLAC`. |
 | `AC-bito` | AC flag | `STAC` starigas, `CLAC` nuligas por SMAP. |
+| `AC-provo` | AC probe | `firmigo::testi_ac()`: fermita, malfermita, nestita, restarigita, ŝtelita kaj purigita fenestro. |
+| `AC-restaĵo` | residual AC | Se `SMAP` estas aktiva kaj `AC` restas post `malŝalti_ac`, la interrompa dispetĉo haltas. |
+| `gardoprovo` | guard probe | `testi_gardojn()`: `InterrompaGardo` malŝaltas `IF`, kaj `Drop` restarigas la antaŭan staton ankaŭ ĉe nestitaj gardoj. |
 | `sendi` / `ricevi` | send / receive | |
 | `bloki` / `veki` | block / wake | |
 | `cedi` | yield | `SYS_CEDI`. |
@@ -220,6 +226,11 @@ kaj protokolaj nomoj sekvu ĝin.
 | `firmiga raporto` | hardening report | `FirmigaRaporto`; SMEP/SMAP aŭ PXN/UXN/PAN. |
 | `privata subtabelo` | private subtable | Anstataŭas `privataj_pdptoj`: PDPT aŭ L1/L2-subtabeloj. |
 | `antaŭeldono` | pre-release | `0.4.3-arm.N` dum la ARM-ŝpuro. |
+| `CR3-provo` | CR3 probe | `testi_cr3(radiko)`: `PCID=malŝaltita`, la aktiva radiko egalas la konstruitan `PML4`, kaj ĝi estas paĝ-aliniiĝinta. |
+| `EOI-nombrilo` | EOI counter | `KONFIRMOJ`/`konfirmoj_interrompoj()`: nombro de senditaj `EOI`-oj; la fina raporto komparas ĝin kun la temporizilaj tikoj. |
+| `EOI-politiko` | EOI policy | `estas_apic_vektoro`: nur `0x20..0x80`; `int 0x80`, `int3` kaj la spuria `0xFF` restas ekstere. |
+| `sen EOI` | no EOI | `sen_eoi` en la Ring 0-memtesto: `int 0x80` ne rajtas pliigi la `EOI`-nombrilon. |
+| `ellasa revizio` | release review | Fazo 7: revizio de la ellasaj vojoj — `STAC`-gardo, `CR3`-ŝalto, `EOI` kaj liberigo/revoko. |
 
 ## FluoU — grafika uzinterfaco
 
@@ -308,7 +319,7 @@ kiel kaŝitaj aliasoj.
 La jenaj nomoj restas en sia originala formo, ĉar ili estas aparataj aŭ
 eksteraj protokolaj nomoj:
 
-`x86_64`, `CR0`, `CR2`, `CR3`, `CR4`, `RSP0`, `RIP`, `RFLAGS`, `RAX`, `RDI`,
+`x86_64`, `CR0`, `CR2`, `CR3`, `CR4`, `PCID`, `PCIDE`, `RSP0`, `RIP`, `RFLAGS`, `RAX`, `RDI`,
 `RSI`, `RDX`, `R10`, `MSR`, `EFER`, `NXE`, `PAE`, `PML4`, `PDPT`, `PD`, `PT`,
 `IDT`, `GDT`, `TSS`, `APIC`, `PIT`, `COM1`, `Multiboot2`, `Xen-PVH`, `ELF`,
 `Limine`, `QEMU`, `int 0x80`, `iretq`, `syscall`, `sysret`, `W^X`, `CR0.WP`,

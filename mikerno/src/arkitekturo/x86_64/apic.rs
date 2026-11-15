@@ -3,6 +3,7 @@
 
 use core::arch::asm;
 use core::ptr;
+use core::sync::atomic::{AtomicU64, Ordering};
 
 use crate::memoro::kadro::KadraAlokilo;
 use crate::memoro::virtuala::{AdresaSpaco, FizikaAdreso, PaĝaEraro, PaĝaPermesoj, VirtuaAdreso};
@@ -24,6 +25,9 @@ const SPURIA_VEKTORO: u32 = 0xFF;
 const SVR_AKTIVA_BITO: u32 = 1 << 8;
 
 static mut APIC_BAZO: u64 = 0;
+/// Nombrilo de la senditaj `EOI`-oj; la fina raporto komparas ĝin kun la
+/// temporizilaj tikoj.
+static KONFIRMOJ: AtomicU64 = AtomicU64::new(0);
 
 fn legi_msr(msr: u32) -> u64 {
     let malalta: u32;
@@ -110,5 +114,11 @@ pub fn pravalorizi(
 pub fn konfirmi() {
     if bazo() != 0 {
         skribi(REGISTRO_EOI, 0);
+        KONFIRMOJ.fetch_add(1, Ordering::Relaxed);
     }
+}
+
+/// Kiom da `EOI`-oj estis senditaj ekde la starto?
+pub fn konfirmoj() -> u64 {
+    KONFIRMOJ.load(Ordering::Relaxed)
 }

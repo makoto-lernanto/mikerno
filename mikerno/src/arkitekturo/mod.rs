@@ -37,7 +37,8 @@ pub fn hazardo() -> u64 {
 }
 
 pub use malantaŭo::firmigo::{
-    StacGardo, aktiva as smep_aktiva, clac, smap_aktiva, testi_smap, testi_smep,
+    StacGardo, ac_aktiva, aktiva as smep_aktiva, clac, smap_aktiva, testi_ac, testi_smap,
+    testi_smep,
 };
 
 /// La firmigaj trajtoj faritaj de la platformo, por la starta raporto.
@@ -59,6 +60,9 @@ pub fn halti() -> ! {
     malantaŭo::procesoro::halti()
 }
 
+/// Ne enlinie: la diagnozaj vokoj estas multaj, kaj unu kunhavata kopio de la
+/// formatiga vojo tenas `.text` malgranda.
+#[inline(never)]
 pub fn skribi_formaton(argumentoj: fmt::Arguments) {
     let _gardo = crate::interrompo::InterrompaGardo::nova();
     malantaŭo::seria::skribi_formaton(argumentoj);
@@ -95,8 +99,18 @@ pub fn fuŝa_adreso() -> u64 {
     malantaŭo::procesoro::fuŝa_adreso()
 }
 
+/// Ĉu `CR4.PCIDE` estas malŝaltita? La `CR3`-vojo de MiKerno postulas tion.
+pub fn ne_pcide() -> bool {
+    malantaŭo::procesoro::ne_pcide()
+}
+
 pub fn konfirmi_interrompon() {
     malantaŭo::apic::konfirmi()
+}
+
+/// Kiom da aparataj `EOI`-oj estis senditaj ekde la starto?
+pub fn konfirmoj_interrompoj() -> u64 {
+    malantaŭo::apic::konfirmoj()
 }
 
 pub fn pravalorizi_apicon(

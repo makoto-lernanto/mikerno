@@ -392,6 +392,14 @@ pub fn testi_ring0() {
     let mut tro_longa_mesago = ipc::Mesago::malplena();
     tro_longa_mesago.longo = ipc::MAKSA_MESAGA_LONGO + 1;
     let tro_longa = invoki(SYS_SENDI, [0, &tro_longa_mesago as *const _ as u64, 0, 0]);
+    // `int 0x80` estas programa interrompo: la dispetĉo ne rajtas sendi EOI-on.
+    // La mezuro okazas kun interrompoj malŝaltitaj, do tiko ne ŝajnigas EOI-on.
+    let sen_eoi = {
+        let _gardo = crate::interrompo::InterrompaGardo::nova();
+        let antaŭ = crate::arkitekturo::konfirmoj_interrompoj();
+        let _ = invoki(SYS_SKRIBI, [teksto.as_ptr() as u64, 0, 0, 0]);
+        crate::arkitekturo::konfirmoj_interrompoj() == antaŭ
+    };
     // La kerno ne havas kapablolinion (C8), do `KREI_FINPUNKTON` rifuzas per
     // `-28`, kaj `DONI`/`FERMI`/`REVOKI` kun valida-aspekta tenilo redonas
     // `-9`; ne-nula `rsi` ĉe `REVOKI` estas malĝusta argumento (`-1`).
@@ -404,7 +412,7 @@ pub fn testi_ring0() {
     let revoki = invoki(SYS_REVOKI, [0x100, 0, 0, 0]);
     let revok_argumento = invoki(SYS_REVOKI, [0x100, 1, 0, 0]);
     crate::skribu!(
-        "[sistemvoko] Ring 0-memtesto: skribo={}, nekonata={}, nula={}, troa={}, cedo={}, krei={}, doni={}, fermi={}, revoki={}, revok_argumento={}, tro_longa={}\n",
+        "[sistemvoko] Ring 0-memtesto: skribo={}, nekonata={}, nula={}, troa={}, cedo={}, krei={}, doni={}, fermi={}, revoki={}, revok_argumento={}, tro_longa={}, sen_eoi={}\n",
         skribo as i64,
         nekonata as i64,
         nula as i64,
@@ -415,7 +423,8 @@ pub fn testi_ring0() {
         fermi as i64,
         revoki as i64,
         revok_argumento as i64,
-        tro_longa as i64
+        tro_longa as i64,
+        sen_eoi
     );
 }
 

@@ -2,6 +2,7 @@
 //! `crate::arkitekturo`.
 
 use crate::arkitekturo::Spaco;
+use crate::interrompo::InterrompaGardo;
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::EniraInformo;
 use crate::memoro::KADRA_GRANDO;
@@ -58,6 +59,8 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
             crate::skribu!("[kerno] {} ŝaltita; {}\n", trajto.nomo, trajto.priskribo);
         }
     }
+    crate::arkitekturo::testi_ac();
+    testi_gardojn();
     crate::arkitekturo::instali_sistemvokon();
     crate::skribu!(
         "[kerno] memoro: {} regionoj, {} MiB uzeblaj\n",
@@ -122,6 +125,7 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         procezo::agordi_kernan_spacon(spaco.radika_adreso());
         (spaco, framebuffer)
     };
+    testi_cr3(spaco.radika_adreso().adreso());
 
     match framebuffer {
         Some(fb) if crate::ekrano::pravalorizi(fb) => crate::skribu!(
@@ -217,6 +221,20 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
     };
     crate::interrompo::malebligi_interrompojn();
 
+    // Ĉiu temporizila interrompo devas ricevi EOI; mankanta EOI lasus la
+    // APIC-ISR-biton ŝaltita kaj sufokus la sekvajn vekojn.
+    let konfirmoj = crate::arkitekturo::konfirmoj_interrompoj();
+    crate::skribu!(
+        "[apic] EOI ({}): {} konfirmoj, {} tikoj\n",
+        if konfirmoj >= tikoj {
+            "bone"
+        } else {
+            "MALBONE"
+        },
+        konfirmoj,
+        tikoj
+    );
+
     if let Some(antaŭ) = izolado_antaŭ {
         let post = {
             let alokilo = kadra_alokilo();
@@ -288,6 +306,52 @@ fn komenca_reĝimo(fadeno: u64) -> u64 {
     } else {
         REĜIMO_SEKRETO
     }
+}
+
+/// Pruvu la `CR3`-disciplinon post la unua ŝalto: `CR4.PCIDE` devas esti
+/// malŝaltita, la aktiva radiko devas esti la ĵus konstruita kerna `PML4`, kaj
+/// reŝalto al la sama radiko ne rajtas ŝanĝi ĝin.
+fn testi_cr3(radiko: u64) {
+    let aktiva = crate::arkitekturo::aktiva_adreso_spaco();
+    let sen_pcid = crate::arkitekturo::ne_pcide();
+    // La sama `mov cr3`-vojo kiel ĉe la planisto; reŝalto al la nuna radiko
+    // ne rajtas interrompi la plenumadon.
+    unsafe { crate::arkitekturo::ŝalti_adresan_spacon(radiko) };
+    let post = crate::arkitekturo::aktiva_adreso_spaco();
+    let kongrua = aktiva == radiko && post == radiko;
+    let aliniita = radiko & (KADRA_GRANDO - 1) == 0;
+    let bone = sen_pcid && kongrua && aliniita;
+    crate::skribu!(
+        "[memoro] CR3 ({}): PCID={}, aktiva=0x{:x}, kongrua={}, aliniita={}\n",
+        if bone { "bone" } else { "MALBONE" },
+        if sen_pcid { "malŝaltita" } else { "AKTIVA" },
+        radiko,
+        kongrua,
+        aliniita
+    );
+}
+
+/// Pruvu la liberigan vojon de `InterrompaGardo`: ĝi malŝaltas interrompojn, kaj
+/// `Drop` restarigas la antaŭan staton ankaŭ ĉe nestitaj gardoj.
+fn testi_gardojn() {
+    let antaŭa = crate::interrompo::interrompoj_ebligitaj();
+    let ekstera = InterrompaGardo::nova();
+    let malŝaltita = !crate::interrompo::interrompoj_ebligitaj();
+    let interna = InterrompaGardo::nova();
+    drop(interna);
+    let interna_nenio = !crate::interrompo::interrompoj_ebligitaj();
+    drop(ekstera);
+    let restarigita = crate::interrompo::interrompoj_ebligitaj() == antaŭa;
+
+    let bone = malŝaltita && interna_nenio && restarigita;
+    crate::skribu!(
+        "[kerno] gardoj ({}): malŝalto={}, interna={}, restarigo={} (IF antaŭe {})\n",
+        if bone { "bone" } else { "MALBONE" },
+        malŝaltita,
+        interna_nenio,
+        restarigita,
+        antaŭa
+    );
 }
 
 /// Pruvu la liberigan vojon per proviza adresa spaco: kreu ĝin, mapu unu

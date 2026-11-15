@@ -16,7 +16,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.4.5 (workspace)
+- **Versio:** 0.4.6 (workspace)
 - **Arkitekturo:** x86_64, unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -139,6 +139,7 @@ cargo install just          # opcia
 | Rust | 1.100 aŭ pli nova (eldono 2024); projekto kontrolita per 1.100.0 |
 | Cela triopo | `x86_64-unknown-none` |
 | QEMU | `qemu-system-x86_64` (`sudo apt install qemu-system-x86`) |
+| QEMU (arm64) | Nur por `just run-arm` kaj `just run-iso-arm`: `qemu-system-aarch64`; por la ISO ankaŭ UEFI-firmware (`sudo apt install qemu-system-arm qemu-efi-aarch64`) |
 | xorriso | Nur por `just iso` (`sudo apt install xorriso`) |
 | `just` | Opcia, sed rekomendata por la difinitaj taskoj |
 | bash | Lanĉilo de `tools/run-qemu.sh` |
@@ -158,6 +159,8 @@ just build         # konstruas nur la kernon (= build-kerno)
 just run           # QEMU -kernel, rekte per la PVH-noto (sen ISO)
 just iso           # kreas mikerno.iso per Limine + Multiboot2
 just run-iso       # rulas la ISO-on (QEMU-fenestro montras la Limine-menuon)
+just run-arm       # startigas la antaŭe konstruitan arm64-kernon (QEMU virt)
+just run-iso-arm   # startigas mikerno-arm.iso (arm64, QEMU virt + UEFI)
 just verify        # formalaj pruvoj per Kani (postulas `cargo kani`)
 ```
 
@@ -182,6 +185,14 @@ En la QEMU-konzolo: `Ctrl+A x` tuj finas QEMU, `Ctrl+A c` malfermas la
 monitoron (tie `quit`). La `-serial mon:stdio` muntado estas necesa ĉar `Ctrl+C`
 alie sendiĝas al la guest kiel bajto `0x03`. En WSL2 sen WSLg uzu
 `QEMU_DISPLAY=none` por la ISO-vojo.
+
+`just run-arm` kaj `just run-iso-arm` startigas bildojn el la `arm64`-branĉo:
+la unua lanĉas la antaŭe konstruitan kernon (`mikerno.img`), la dua la ISO-on en
+QEMU kun UEFI. Ĉe la ISO la fenestro montras la UEFI/Limine-ekranon; la kerna
+eligo venas per la seria konzolo en la terminalo, ĉar la arm64-kerno ankoraŭ ne
+havas framebuffer. Sen WSLg uzu `QEMU_DISPLAY=none just run-iso-arm`. La bildoj
+estas kreataj per `just build-arm` kaj `just iso-arm` en la `arm64`-branĉo;
+`main` nur startigas ilin.
 
 > **Atentu:** `mikerno.iso` kaj `iso_root/` estas ignorataj de git. Post ĉiu
 > kerna ŝanĝo rerulu `just iso`; alie la ISO enhavos malnovan bildon. Tio
@@ -754,16 +765,19 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.4.5!
+[MiKerno] Saluton, mi estas MiKerno v0.4.6!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
 [kerno] SMEP ŝaltita; Ring 0 ne povas plenumi uzantajn paĝojn.
 [kerno] SMAP ŝaltita; Ring 0 legas uzantajn bufrojn nur en STAC-fenestroj.
+[memoro] AC (bone): fermita=true, malfermita=true, interna=true, post_interna=true, fermita_post=true, ŝtelita=true, purigita=true
+[kerno] gardoj (bone): malŝalto=true, interna=true, restarigo=true (IF antaŭe false)
 [sistemvoko] pordego 0x80 (DPL3) instalita
 [kerno] memoro: 7 regionoj, 255 MiB uzeblaj
 [memoro] liberigo (bone): 64956 kadroj antaŭ, 64956 post
 [memoro] W^X (bone): .text RX, .rodata R NX, .data/.bss RW NX, modulo R NX
+[memoro] CR3 (bone): PCID=malŝaltita, aktiva=0x196000, kongrua=true, aliniita=true
 [kerno] framebuffer ne havebla; nur COM1    (PVH; ISO montras 1280x800)
 [tss] TR ŝargita; kernostako pinto 0x123ce10
 [temporizilo] kalibrado: ... kalkuloj/s, komenca ...
@@ -779,7 +793,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 [kerno] IPC: mesaĝo sendita al fadeno 2
 [kerno] planisto ekas: 4 fadenoj, antaŭokupo ĉiu 10 ms
 saluton el Ring 0 tra int 0x80
-[sistemvoko] Ring 0-memtesto: skribo=0, nekonata=-2, nula=-1, troa=-1, cedo=0, krei=-28, doni=-9, fermi=-9, revoki=-9, revok_argumento=-1, tro_longa=-90
+[sistemvoko] Ring 0-memtesto: skribo=0, nekonata=-2, nula=-1, troa=-1, cedo=0, krei=-28, doni=-9, fermi=-9, revoki=-9, revok_argumento=-1, tro_longa=-90, sen_eoi=true
 ...
 [fadeno 1] premrego (bone): 17 mesaĝoj senditaj; la lasta atendis liberan lokon
 [fadeno 1] kuranta (fojo 1)
@@ -836,6 +850,7 @@ horizonto: procezo vekis en Ring 3.
 [ipc] purigo de procezo 4: 1 kapabloj liberigitaj, 1 finpunktoj revokitaj
 [planisto] fadeno 4 finiĝis
 [procezo] 4 detruita: 1 privataj PDPT-oj, PML4 0x213000, 35 kadroj liberigitaj
+[apic] EOI (bone): 1000 konfirmoj, 1000 tikoj
 [memoro] izolado (bone): 64809 kadroj antaŭ, 64809 post
 [kerno] planisto revenis al la ripoza fadeno
 [ipc] statistiko (bone): senditaj=41, ricevitaj=25, premregoj=2, revokoj=7, tempolimoj=3
