@@ -275,7 +275,7 @@ La ses akcentaj koloroj estas la permesitaj antaŭagordoj: `oro`, `koralo`,
 | `--elevacio` | 0,6 | 0–1 |
 | `--tipara-skalo` | 1,0 | 0,85–1,25 |
 | `--akra-nebulo` | 24 DIP | 0–40 DIP |
-| `--akra-opakeco` | 62% | 20–92% |
+| `--akra-opakeco` | 50% | 20–92% |
 | `--revelo` | 55% | 0–100% |
 | `--grajno` | 1,0 | 0–1 |
 
@@ -581,7 +581,7 @@ Ekrano
 [aplikaĵo]
 nomo    = "Notilo"
 versio  = "1.0.0"
-gui     = "fluoU"                    # deviga
+gu      = "fluoU"                    # deviga
 fluo    = "0.1"                      # kadra versio
 arkoj   = ["x86_64", "arm64"]        # tago unu
 

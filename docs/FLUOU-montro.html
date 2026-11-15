@@ -1,2190 +1,3155 @@
 <!DOCTYPE html>
 <html lang="eo" data-temo="malluma">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark light">
-<title>FluoU — vida montro</title>
-<style>
-/* ── Ĵetonoj ─────────────────────────────────────────────────────── */
-:root{
-  --mov-kurbo: cubic-bezier(.16,1,.3,1);
-  --radiuso: 8px;
-  --radiuso-granda: 12px;
-  --radiuso-pilolo: 999px;
-  --akcento: #FFB454;
-  --akcenta-soft: color-mix(in srgb, var(--akcento) 14%, transparent);
-  --sukcesa-soft: color-mix(in srgb, var(--sukceso) 12%, transparent);
-  --dangxera-soft: color-mix(in srgb, var(--dangxero) 12%, transparent);
-  --averta-soft: color-mix(in srgb, var(--averto) 12%, transparent);
-  --informa-soft: color-mix(in srgb, var(--informo) 12%, transparent);
-  --tiparo: "Segoe UI", "Noto Sans", "DejaVu Sans", system-ui, sans-serif;
-  --mono: "Cascadia Code", "JetBrains Mono", "Fira Code", ui-monospace, "DejaVu Sans Mono", Consolas, monospace;
-}
-:root, [data-temo="malluma"]{
-  color-scheme: dark;
-  --fondo: #0A0D1C;
-  --fondo2: #10142A;
-  --surfaco: #171C36;
-  --surfaco2: #1F2547;
-  --teksto: #EEF0FF;
-  --teksto2: #A7ADCC;
-  --teksto3: #6D7396;
-  --limo: rgba(148,163,255,.16);
-  --limo2: rgba(148,163,255,.09);
-  --oro: #FFB454;
-  --koralo: #FF5C8A;
-  --ĉielo: #4CC9FF;
-  --verdo: #57E389;
-  --viola: #A78BFA;
-  --bluo: #5B7CFA;
-  --sukceso: #57E389;
-  --averto: #FFB454;
-  --danĝero: #FF6B6B;
-  --informo: #4CC9FF;
-  --ombro: 0 30px 80px rgba(3,5,14,.55);
-  --ombro-malgranda: 0 10px 30px rgba(3,5,14,.35);
-}
-[data-temo="hela"]{
-  color-scheme: light;
-  --fondo: #F6F3EC;
-  --fondo2: #EFE9DF;
-  --surfaco: #FFFFFF;
-  --surfaco2: #F4EFE6;
-  --teksto: #20223A;
-  --teksto2: #565B7C;
-  --teksto3: #8B8FA8;
-  --limo: rgba(60,60,110,.18);
-  --limo2: rgba(60,60,110,.10);
-  --sukceso: #1E9E55;
-  --averto: #B26A00;
-  --danĝero: #C42B1C;
-  --informo: #0B79B8;
-  --ombro: 0 30px 80px rgba(60,60,100,.20);
-  --ombro-malgranda: 0 10px 30px rgba(60,60,100,.14);
-}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>FluoU — vida montro</title>
+  <style>
+    /* ── Ĵetonoj ─────────────────────────────────────────────────────── */
+    :root {
+      --mov-kurbo: cubic-bezier(.16, 1, .3, 1);
+      --radiuso: 8px;
+      --radiuso-granda: 12px;
+      --radiuso-pilolo: 999px;
+      --akcento: #FFB454;
+      --akcenta-soft: color-mix(in srgb, var(--akcento) 14%, transparent);
+      --sukcesa-soft: color-mix(in srgb, var(--sukceso) 12%, transparent);
+      --dangxera-soft: color-mix(in srgb, var(--dangxero) 12%, transparent);
+      --averta-soft: color-mix(in srgb, var(--averto) 12%, transparent);
+      --informa-soft: color-mix(in srgb, var(--informo) 12%, transparent);
+      --tiparo: "Segoe UI", "Noto Sans", "DejaVu Sans", system-ui, sans-serif;
+      --mono: "Cascadia Code", "JetBrains Mono", "Fira Code", ui-monospace, "DejaVu Sans Mono", Consolas, monospace;
+    }
 
-*{ box-sizing: border-box; }
-[hidden]{ display: none !important; }
-html{ scroll-behavior: smooth; }
-body{
-  margin: 0;
-  min-height: 100vh;
-  padding: 28px 24px 72px;
-  font-family: var(--tiparo);
-  color: var(--teksto);
-  background:
-    radial-gradient(1100px 560px at 12% -12%, color-mix(in srgb, var(--akcento) 11%, transparent), transparent 62%),
-    radial-gradient(900px 520px at 92% 0%, color-mix(in srgb, var(--bluo) 13%, transparent), transparent 64%),
-    var(--fondo);
-  transition: background-color .3s var(--mov-kurbo), color .3s var(--mov-kurbo);
-  -webkit-font-smoothing: antialiased;
-}
-body::after{
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: .035;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-a{ color: var(--akcento); text-underline-offset: 2px; }
-button{ font-family: inherit; }
-:focus-visible{ outline: 2px solid var(--akcento); outline-offset: 2px; }
-.salto{
-  position: absolute; left: -9999px; top: 0; z-index: 200;
-  padding: 10px 16px; border-radius: var(--radiuso);
-  background: var(--surfaco); color: var(--teksto);
-}
-.salto:focus{ left: 16px; top: 16px; }
+    :root,
+    [data-temo="malluma"] {
+      color-scheme: dark;
+      --fondo: #0A0D1C;
+      --fondo2: #10142A;
+      --surfaco: #171C36;
+      --surfaco2: #1F2547;
+      --teksto: #EEF0FF;
+      --teksto2: #A7ADCC;
+      --teksto3: #6D7396;
+      --limo: rgba(148, 163, 255, .16);
+      --limo2: rgba(148, 163, 255, .09);
+      --oro: #FFB454;
+      --koralo: #FF5C8A;
+      --ĉielo: #4CC9FF;
+      --verdo: #57E389;
+      --viola: #A78BFA;
+      --bluo: #5B7CFA;
+      --sukceso: #57E389;
+      --averto: #FFB454;
+      --danĝero: #FF6B6B;
+      --informo: #4CC9FF;
+      --ombro: 0 30px 80px rgba(3, 5, 14, .55);
+      --ombro-malgranda: 0 10px 30px rgba(3, 5, 14, .35);
+    }
 
-/* ── Kapo ────────────────────────────────────────────────────────── */
-.kapo{
-  position: relative; z-index: 2;
-  max-width: 1160px; margin: 0 auto 56px;
-  display: flex; align-items: center; justify-content: space-between; gap: 20px;
-  flex-wrap: wrap;
-}
-.marko{ display: flex; align-items: center; gap: 12px; }
-.marka-ikono{
-  width: 34px; height: 34px; border-radius: 10px;
-  display: grid; place-items: center;
-  background: linear-gradient(150deg, var(--akcento), color-mix(in srgb, var(--akcento) 45%, var(--bluo)));
-  color: #0A0D1C; font-weight: 850; font-size: 17px;
-  box-shadow: 0 6px 20px color-mix(in srgb, var(--akcento) 30%, transparent);
-}
-.marka-teksto{ display: flex; flex-direction: column; line-height: 1.2; }
-.marka-teksto strong{ font-size: 16px; letter-spacing: .02em; }
-.marka-teksto span{ font-size: 12px; color: var(--teksto3); }
-.versio{
-  margin-left: 2px; padding: 2px 8px; border-radius: var(--radiuso-pilolo);
-  border: 1px solid var(--limo); font: 600 10.5px/1.6 var(--mono);
-  color: var(--akcento); background: var(--akcenta-soft);
-}
-.agordoj{ display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.akcentoj{ display: flex; gap: 8px; align-items: center; }
-.akcento-elektilo{
-  width: 32px; height: 32px; padding: 0;
-  display: grid; place-items: center;
-  border: 0; border-radius: 50%;
-  background: transparent; cursor: pointer;
-}
-.akcento-elektilo::before{
-  content: ""; width: 22px; height: 22px; border-radius: 50%;
-  background: var(--koloro);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.18);
-  transition: transform .18s var(--mov-kurbo), box-shadow .18s var(--mov-kurbo);
-}
-.akcento-elektilo:hover::before{ transform: scale(1.12); }
-.akcento-elektilo[aria-pressed="true"]::before{
-  box-shadow: 0 0 0 2px var(--fondo), 0 0 0 4px var(--koloro);
-}
+    [data-temo="hela"] {
+      color-scheme: light;
+      --fondo: #F6F3EC;
+      --fondo2: #EFE9DF;
+      --surfaco: #FFFFFF;
+      --surfaco2: #F4EFE6;
+      --teksto: #20223A;
+      --teksto2: #565B7C;
+      --teksto3: #8B8FA8;
+      --limo: rgba(60, 60, 110, .18);
+      --limo2: rgba(60, 60, 110, .10);
+      --sukceso: #1E9E55;
+      --averto: #B26A00;
+      --danĝero: #C42B1C;
+      --informo: #0B79B8;
+      --ombro: 0 30px 80px rgba(60, 60, 100, .20);
+      --ombro-malgranda: 0 10px 30px rgba(60, 60, 100, .14);
+    }
 
-/* ── Ŝaltilo ─────────────────────────────────────────────────────── */
-.sxaltilo{
-  display: inline-flex; align-items: center; gap: 9px;
-  padding: 5px 0;
-  font-size: 12.5px; color: var(--teksto2); cursor: pointer; user-select: none;
-}
-.sxaltilo input{
-  appearance: none; -webkit-appearance: none;
-  position: relative; flex: none; margin: 0;
-  width: 42px; height: 23px; border-radius: var(--radiuso-pilolo);
-  background: var(--surfaco2); border: 1px solid var(--limo);
-  cursor: pointer;
-  transition: background .2s var(--mov-kurbo), border-color .2s var(--mov-kurbo);
-}
-.sxaltilo input::after{
-  content: ""; position: absolute; top: 4px; left: 4px;
-  width: 13px; height: 13px; border-radius: 50%;
-  background: var(--teksto2);
-  transition: transform .22s var(--mov-kurbo), width .18s var(--mov-kurbo), background .2s linear;
-}
-.sxaltilo input:hover::after{ width: 17px; }
-.sxaltilo input:checked{
-  background: color-mix(in srgb, var(--akcento) 62%, transparent);
-  border-color: color-mix(in srgb, var(--akcento) 70%, transparent);
-}
-.sxaltilo input:checked::after{
-  transform: translateX(18px);
-  width: 13px;
-  background: #0A0D1C;
-}
-.sxaltilo input:checked:hover::after{
-  width: 17px;
-  transform: translateX(14px);
-}
-.sxaltilo.malgranda{ font-size: 12px; }
+    * {
+      box-sizing: border-box;
+    }
 
-/* ── Heroo ───────────────────────────────────────────────────────── */
-main{ position: relative; z-index: 1; max-width: 1160px; margin: 0 auto; }
-.heroo{ padding: 8px 0 64px; max-width: 820px; }
-.supera-etikedo{
-  margin: 0 0 14px;
-  font: 600 11px/1.6 var(--mono); letter-spacing: .14em; text-transform: uppercase;
-  color: var(--akcento);
-}
-.heroo h1{
-  margin: 0 0 18px;
-  font-size: clamp(48px, 8vw, 76px); line-height: .98; font-weight: 850;
-  letter-spacing: -.035em;
-}
-.heroo h1 span{
-  background: linear-gradient(100deg, var(--akcento), var(--koralo) 55%, var(--ĉielo));
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.heroo-teksto{
-  margin: 0 0 26px; max-width: 640px;
-  font-size: 16.5px; line-height: 1.65; color: var(--teksto2);
-}
-.principoj{ display: flex; flex-wrap: wrap; gap: 8px; }
-.principo{
-  padding: 5px 11px; border-radius: var(--radiuso-pilolo);
-  border: 1px solid var(--limo); background: color-mix(in srgb, var(--surfaco) 55%, transparent);
-  font-size: 12px; color: var(--teksto2);
-}
-.principo.vigla{ border-color: color-mix(in srgb, var(--akcento) 40%, transparent); color: var(--akcento); background: var(--akcenta-soft); }
+    [hidden] {
+      display: none !important;
+    }
 
-/* ── Scenoj ──────────────────────────────────────────────────────── */
-.sceno{ margin: 0 0 72px; }
-.scena-kapo{
-  display: flex; gap: 18px; align-items: flex-start;
-  margin-bottom: 22px; max-width: 800px;
-}
-.scena-numero{
-  flex: none; margin-top: 4px;
-  font: 700 12px/1 var(--mono); letter-spacing: .08em;
-  color: var(--akcento);
-  padding: 7px 9px; border-radius: 6px;
-  background: var(--akcenta-soft); border: 1px solid color-mix(in srgb, var(--akcento) 30%, transparent);
-}
-.scena-kapo h2{ margin: 0 0 6px; font-size: 25px; letter-spacing: -.02em; font-weight: 800; }
-.scena-kapo p{ margin: 0; font-size: 14px; line-height: 1.65; color: var(--teksto2); }
-.scena-kapo kbd{ vertical-align: 1px; }
+    html {
+      scroll-behavior: smooth;
+    }
 
-/* ── Labortablo ──────────────────────────────────────────────────── */
-.labortablo{
-  position: relative;
-  border: 1px solid var(--limo);
-  border-radius: var(--radiuso-granda);
-  overflow: hidden;
-  background:
-    radial-gradient(620px 320px at 18% 0%, color-mix(in srgb, var(--akcento) 12%, transparent), transparent 70%),
-    radial-gradient(560px 340px at 88% 106%, color-mix(in srgb, var(--bluo) 16%, transparent), transparent 72%),
-    linear-gradient(160deg, var(--fondo2), var(--fondo));
-  box-shadow: var(--ombro-malgranda);
-}
-#fenestraStage{
-  display: grid; place-items: center;
-  padding: 30px; min-height: 636px;
-}
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 28px 24px 72px;
+      font-family: var(--tiparo);
+      color: var(--teksto);
+      background:
+        radial-gradient(1100px 560px at 12% -12%, color-mix(in srgb, var(--akcento) 11%, transparent), transparent 62%),
+        radial-gradient(900px 520px at 92% 0%, color-mix(in srgb, var(--bluo) 13%, transparent), transparent 64%),
+        var(--fondo);
+      transition: background-color .3s var(--mov-kurbo), color .3s var(--mov-kurbo);
+      -webkit-font-smoothing: antialiased;
+    }
 
-/* ── Fenestro ────────────────────────────────────────────────────── */
-.fenestro{
-  position: relative; z-index: 2;
-  width: min(920px, 100%);
-  height: 540px;
-  display: flex; flex-direction: column;
-  border: 1px solid var(--limo);
-  border-radius: var(--radiuso);
-  overflow: hidden;
-  background:
-    linear-gradient(165deg,
-      color-mix(in srgb, var(--surfaco) 88%, var(--akcento) 12%) 0%,
-      var(--surfaco) 42%,
-      color-mix(in srgb, var(--surfaco) 94%, var(--fondo) 6%) 100%);
-  box-shadow: var(--ombro);
-  transition: transform .26s var(--mov-kurbo), opacity .26s var(--mov-kurbo), inset .26s var(--mov-kurbo), border-radius .26s var(--mov-kurbo);
-}
-.fenestro.pligrandigita{
-  position: absolute; inset: 12px;
-  width: auto; height: auto; border-radius: 0;
-}
-.fenestro.malgrandigita{ opacity: 0; transform: translateY(70px) scale(.86); pointer-events: none; }
-.fenestro.fermita{ opacity: 0; transform: scale(.96); pointer-events: none; }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: .035;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
 
-.revelo{ position: relative; }
-.revelo::before{
-  content: "";
-  position: absolute; inset: 0; z-index: 0;
-  pointer-events: none;
-  opacity: 0;
-  background: radial-gradient(430px circle at var(--mx, 50%) var(--my, 0%),
-    color-mix(in srgb, var(--akcento) 14%, transparent), transparent 64%);
-  transition: opacity .3s var(--mov-kurbo);
-}
-.revelo:hover::before{ opacity: .8; }
-.revelo > *{ position: relative; z-index: 1; }
+    a {
+      color: var(--akcento);
+      text-underline-offset: 2px;
+    }
 
-/* Titolstrio — 32 DIP */
-.titolstrio{
-  flex: none;
-  display: grid; align-items: center;
-  grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
-  height: 32px; padding-left: 10px;
-  border-bottom: 1px solid var(--limo2);
-  background: color-mix(in srgb, var(--surfaco) 82%, transparent);
-  user-select: none;
-}
-.titola-flanko{ display: flex; align-items: center; gap: 9px; min-width: 0; }
-.titola-centro{ display: flex; justify-content: center; min-width: 0; padding: 0 12px; }
-.aplika-ikono{ width: 16px; height: 16px; display: block; flex: none; }
-.titolo{
-  font-size: 12px; font-weight: 600; color: var(--teksto);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  min-width: 0;
-}
-.regiloj{ justify-self: end; display: flex; align-self: stretch; }
-.regiloj button{
-  width: 46px; height: 100%; padding: 0;
-  display: grid; place-items: center;
-  border: 0; border-radius: 0;
-  background: transparent; color: var(--teksto2);
-  cursor: default; outline-offset: -2px;
-  transition: background .12s linear, color .12s linear;
-}
-.regiloj button svg{ width: 10px; height: 10px; display: block; }
-.regiloj button:hover{
-  background: color-mix(in srgb, var(--teksto) 6%, transparent);
-  color: var(--teksto);
-}
-.regiloj button:active{
-  background: color-mix(in srgb, var(--teksto) 3%, transparent);
-  color: var(--teksto2);
-}
-.regiloj button.fermi:hover{ background: #C42B1C; color: #FFFFFF; }
-.regiloj button.fermi:active{ background: #B02A22; color: #FFFFFF; }
-.regiloj button svg.ikono-restarigi{ display: none; }
-.pligrandigita .regiloj button svg.ikono-pligrandigi{ display: none; }
-.pligrandigita .regiloj button svg.ikono-restarigi{ display: block; }
+    button {
+      font-family: inherit;
+    }
 
-/* Fenestra korpo */
-.fenestra-korpo{
-  flex: 1; min-height: 0;
-  display: grid; grid-template-columns: 214px minmax(0, 1fr);
-}
-.flanko{
-  min-height: 0; overflow: auto;
-  padding: 12px 10px 14px;
-  border-right: 1px solid var(--limo2);
-  background: color-mix(in srgb, var(--surfaco2) 46%, transparent);
-  display: flex; flex-direction: column; gap: 3px;
-}
-.flanka-etikedo{
-  margin: 10px 8px 5px;
-  font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--teksto3);
-}
-.flanka-etikedo:first-child{ margin-top: 2px; }
-.dosiero{
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  width: 100%; padding: 7px 9px;
-  border: 0; border-radius: 6px;
-  background: transparent; color: var(--teksto2);
-  font-size: 12.5px; text-align: left; cursor: pointer;
-  transition: background .14s linear, color .14s linear;
-}
-.dosiero span:first-child{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dosiero:hover{ background: color-mix(in srgb, var(--teksto) 5%, transparent); color: var(--teksto); }
-.dosiero.elektita{
-  background: var(--akcenta-soft);
-  color: var(--teksto);
-  box-shadow: inset 2px 0 0 var(--akcento);
-}
-.dosiero .sildeto{ font-size: 9.5px; padding: 1px 5px; flex: none; }
-.flanko .sxaltilo{ margin: 8px 8px 0; font-size: 12px; }
+    :focus-visible {
+      outline: 2px solid var(--akcento);
+      outline-offset: 2px;
+    }
 
-.redaktilo{
-  min-width: 0; min-height: 0;
-  display: flex; flex-direction: column; gap: 11px;
-  padding: 15px 18px 14px;
-}
-.ilobreto{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.spaco{ flex: 1; }
-.redaktata{
-  flex: 1; min-height: 0; width: 100%;
-  border: 0; border-radius: 6px; padding: 6px 4px;
-  background: transparent; color: var(--teksto);
-  font: 13.5px/1.7 var(--tiparo);
-  resize: none;
-}
-.redaktata:focus-visible{ outline: 2px solid var(--akcento); outline-offset: -2px; }
+    .salto {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 200;
+      padding: 10px 16px;
+      border-radius: var(--radiuso);
+      background: var(--surfaco);
+      color: var(--teksto);
+    }
 
-/* Butoj */
-.buto{
-  height: 32px; padding: 0 14px;
-  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  border-radius: var(--radiuso); border: 1px solid transparent;
-  font-size: 12.5px; font-weight: 600; cursor: pointer;
-  transition: background .16s var(--mov-kurbo), border-color .16s var(--mov-kurbo), transform .12s var(--mov-kurbo);
-}
-.buto:active{ transform: translateY(1px); }
-.buto.akcenta{
-  background: var(--akcento); color: #0A0D1C;
-  border-color: color-mix(in srgb, var(--akcento) 80%, #000);
-}
-.buto.akcenta:hover{ background: color-mix(in srgb, var(--akcento) 88%, #FFFFFF); }
-.buto.norma{
-  background: color-mix(in srgb, var(--teksto) 7%, transparent);
-  border-color: var(--limo); color: var(--teksto);
-}
-.buto.norma:hover{ background: color-mix(in srgb, var(--teksto) 11%, transparent); }
-.buto.subtila{ background: transparent; color: var(--teksto2); }
-.buto.subtila:hover{ background: color-mix(in srgb, var(--teksto) 6%, transparent); color: var(--teksto); }
-.buto.dangxera{
-  background: var(--dangxera-soft); color: var(--danĝero);
-  border-color: color-mix(in srgb, var(--danĝero) 34%, transparent);
-}
-.buto.dangxera:hover{ background: color-mix(in srgb, var(--danĝero) 20%, transparent); }
+    .salto:focus {
+      left: 16px;
+      top: 16px;
+    }
 
-/* Informa strio */
-.informa-strio{
-  display: flex; align-items: center; gap: 9px;
-  padding: 8px 11px; border-radius: var(--radiuso);
-  border: 1px solid color-mix(in srgb, var(--sukceso) 32%, transparent);
-  background: var(--sukcesa-soft);
-  font-size: 12px; color: var(--teksto);
-}
-.informa-strio .semantiko{ font-weight: 700; color: var(--sukceso); }
-.informa-strio .fermi-strieto{
-  margin: -6px -6px -6px auto;
-  width: 32px; height: 32px; padding: 0;
-  display: grid; place-items: center;
-  border: 0; border-radius: 4px; background: transparent;
-  color: var(--teksto2); font-size: 15px; line-height: 1; cursor: pointer;
-}
-.informa-strio .fermi-strieto:hover{ background: color-mix(in srgb, var(--teksto) 8%, transparent); color: var(--teksto); }
+    /* ── Kapo ────────────────────────────────────────────────────────── */
+    .kapo {
+      position: relative;
+      z-index: 2;
+      max-width: 1160px;
+      margin: 0 auto 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
 
-.progreso{ display: flex; flex-direction: column; gap: 5px; }
-.progresa-etikedo{
-  display: flex; justify-content: space-between;
-  font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--teksto3);
-}
-.progresa-etikedo span{ color: var(--akcento); font-weight: 700; }
-.progresa-trako{
-  height: 5px; border-radius: var(--radiuso-pilolo);
-  background: color-mix(in srgb, var(--teksto) 9%, transparent); overflow: hidden;
-}
-.progresa-plenigo{
-  height: 100%; border-radius: inherit;
-  background: linear-gradient(90deg, var(--akcento), color-mix(in srgb, var(--akcento) 55%, var(--bluo)));
-  transition: width .6s var(--mov-kurbo);
-}
+    .marko {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
-/* Sildeto */
-.sildeto{
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 2px 6px; border-radius: var(--radiuso-pilolo);
-  border: 1px solid var(--limo);
-  background: color-mix(in srgb, var(--teksto) 6%, transparent);
-  font: 600 10px/1.5 var(--mono); letter-spacing: .02em; color: var(--teksto2);
-  white-space: nowrap;
-}
-.sildeto.tenila{
-  color: var(--akcento);
-  border-color: color-mix(in srgb, var(--akcento) 32%, transparent);
-  background: var(--akcenta-soft);
-}
+    .marka-ikono {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(150deg, var(--akcento), color-mix(in srgb, var(--akcento) 45%, var(--bluo)));
+      color: #0A0D1C;
+      font-weight: 850;
+      font-size: 17px;
+      box-shadow: 0 6px 20px color-mix(in srgb, var(--akcento) 30%, transparent);
+    }
 
-/* Tasko kaj restarigo */
-.tasko{
-  position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
-  z-index: 3;
-  display: flex; align-items: center; gap: 9px;
-  padding: 8px 14px;
-  border: 1px solid var(--limo); border-radius: var(--radiuso);
-  background: color-mix(in srgb, var(--surfaco) 88%, transparent);
-  backdrop-filter: blur(16px) saturate(1.4);
-  box-shadow: var(--ombro-malgranda);
-  color: var(--teksto); font-size: 12.5px; cursor: pointer;
-  transition: background .16s linear;
-}
-.tasko:hover{ background: color-mix(in srgb, var(--surfaco) 96%, var(--akcento) 4%); }
-.tasko .sildeto{ font-size: 9.5px; }
-.restarigo{
-  position: relative; z-index: 3;
-  width: min(420px, 100%);
-  padding: 26px 24px;
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  text-align: center;
-  border: 1px solid var(--limo); border-radius: var(--radiuso-granda);
-  background: color-mix(in srgb, var(--surfaco) 82%, transparent);
-  backdrop-filter: blur(20px) saturate(1.4);
-  box-shadow: var(--ombro);
-}
-.restarigo h3{ margin: 0; font-size: 16px; }
-.restarigo p{ margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--teksto2); }
+    .marka-teksto {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+    }
 
-/* ── Eniro ───────────────────────────────────────────────────────── */
-#eniraStage{
-  display: grid; place-items: center;
-  padding: 30px 30px 68px; min-height: 592px;
-}
-.enira-ombro{ position: absolute; inset: 0; pointer-events: none; }
-.enira-ombro::before,
-.enira-ombro::after{
-  content: ""; position: absolute;
-  border: 1px solid var(--limo); border-radius: 10px;
-  background: color-mix(in srgb, var(--surfaco) 46%, transparent);
-}
-.enira-ombro::before{ width: 56%; height: 62%; left: 6%; top: 11%; transform: rotate(-1.2deg); opacity: .55; }
-.enira-ombro::after{ width: 42%; height: 50%; right: 7%; bottom: 9%; transform: rotate(1.4deg); opacity: .4; }
+    .marka-teksto strong {
+      font-size: 16px;
+      letter-spacing: .02em;
+    }
 
-.eniro{
-  width: min(680px, 100%);
-  display: flex; flex-direction: column;
-  border: 1px solid var(--limo);
-  border-radius: var(--radiuso-granda);
-  overflow: hidden;
-  background: color-mix(in srgb, var(--surfaco) 76%, transparent);
-  backdrop-filter: blur(24px) saturate(1.5);
-  box-shadow: var(--ombro);
-  transition: width .24s var(--mov-kurbo), box-shadow .24s var(--mov-kurbo);
-}
-.eniro.tavola{
-  position: fixed !important;
-  top: 11vh; left: 50%; transform: translateX(-50%);
-  width: min(720px, 92vw);
-  z-index: 90;
-  animation: levi .22s var(--mov-kurbo);
-}
-@keyframes levi{
-  from{ opacity: 0; transform: translate(-50%, 10px) scale(.985); }
-  to{ opacity: 1; transform: translate(-50%, 0) scale(1); }
-}
-.enira-titolstrio{
-  display: grid; align-items: center;
-  grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
-  height: 32px; padding: 0 12px 0 14px;
-  border-bottom: 1px solid var(--limo2);
-  background: color-mix(in srgb, var(--fondo2) 55%, transparent);
-  user-select: none;
-}
-.enira-titola-flanko{ display: flex; align-items: center; gap: 8px; min-width: 0; }
-.enira-titola-ikono{ width: 16px; height: 16px; flex: none; color: var(--akcento); }
-.enira-titola-centro{ display: flex; justify-content: center; min-width: 0; padding: 0 10px; }
-.enira-titolo{
-  font: 600 12px/1 var(--tiparo); color: var(--teksto);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.enira-titola-dekstro{ justify-self: end; display: flex; align-items: center; min-width: 0; }
-.enira-kapo{
-  display: flex; align-items: center;
-  padding: 12px 16px 13px;
-  border-bottom: 1px solid var(--limo2);
-}
-.enira-sercho{
-  flex: 1; min-width: 0;
-  border: 0; background: transparent; color: var(--teksto);
-  caret-color: var(--akcento);
-  font: 15.5px/1.5 var(--tiparo);
-}
-.enira-sercho::placeholder{ color: var(--teksto3); }
-.enira-sercho:focus{ outline: none; }
-.enira-modo{
-  flex: none; padding: 2px 8px; border-radius: var(--radiuso-pilolo);
-  border: 1px solid color-mix(in srgb, var(--akcento) 32%, transparent);
-  background: var(--akcenta-soft);
-  font: 600 10.5px/1.6 var(--mono); color: var(--akcento);
-}
-.eniraj-rezultoj{
-  max-height: 336px; overflow: auto;
-  padding: 6px 6px 8px;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--limo) transparent;
-}
-.eniraj-rezultoj::-webkit-scrollbar{ width: 10px; }
-.eniraj-rezultoj::-webkit-scrollbar-thumb{
-  border: 2px solid transparent; border-radius: 99px;
-  background: var(--limo); background-clip: padding-box;
-}
-.enira-grupo{
-  padding: 9px 12px 4px;
-  font: 700 10px/1.4 var(--mono); letter-spacing: .12em; text-transform: uppercase;
-  color: var(--teksto3);
-}
-.enira-ero{
-  display: flex; align-items: center; gap: 11px;
-  width: 100%; padding: 9px 11px;
-  border: 0; border-radius: var(--radiuso);
-  background: transparent; color: inherit;
-  text-align: left; cursor: pointer;
-  transition: background .12s linear;
-}
-.enira-ero:hover{ background: color-mix(in srgb, var(--teksto) 5%, transparent); }
-.enira-ero.elektita{
-  background: var(--akcenta-soft);
-  box-shadow: inset 2px 0 0 var(--akcento);
-}
-.era-ikono{
-  width: 27px; height: 27px; flex: none;
-  display: grid; place-items: center;
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--akcento) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--akcento) 22%, transparent);
-  color: var(--akcento); font: 12px/1 var(--mono);
-}
-.era-teksto{ display: flex; flex-direction: column; min-width: 0; gap: 1px; }
-.era-nomo{
-  font: 600 13px/1.5 var(--mono); color: var(--teksto);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.era-priskribo{
-  font-size: 11.5px; color: var(--teksto2);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.enira-senrezulte{ padding: 22px 16px; font-size: 12.5px; color: var(--teksto2); }
-.enira-senrezulte code{ font-family: var(--mono); color: var(--akcento); }
-.enira-piedo{
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 8px 14px;
-  border-top: 1px solid var(--limo2);
-  font-size: 11px; color: var(--teksto3);
-  flex-wrap: wrap;
-}
-.enira-piedo span{ display: inline-flex; align-items: center; gap: 4px; }
-.enira-versio{ margin-left: auto; font-family: var(--mono); }
-kbd{
-  display: inline-block;
-  padding: 1px 5px;
-  border: 1px solid var(--limo); border-bottom-width: 2px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--teksto) 5%, transparent);
-  font: 600 10px/1.5 var(--mono); color: var(--teksto2);
-}
+    .marka-teksto span {
+      font-size: 12px;
+      color: var(--teksto3);
+    }
 
-/* Kalkulo kaj delegado */
-.kalkula-rezulto{ padding: 18px 16px 20px; }
-.kalkula-etikedo{
-  font: 700 10px/1.4 var(--mono); letter-spacing: .12em; text-transform: uppercase;
-  color: var(--teksto3); margin-bottom: 4px;
-}
-.kalkula-valoro{
-  font: 600 30px/1.2 var(--mono); color: var(--akcento);
-  word-break: break-all;
-}
-.kalkula-esprimo{
-  margin-top: 6px; font: 11.5px/1.5 var(--mono); color: var(--teksto3);
-  word-break: break-all;
-}
-.kalkula-noto{
-  margin-top: 12px; padding-top: 10px;
-  border-top: 1px solid var(--limo2);
-  font-size: 11px; color: var(--teksto3);
-}
-.enira-eraro{ padding: 16px; font-size: 12.5px; color: var(--dangxero); }
-.enira-butono{
-  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
-  z-index: 4;
-}
+    .versio {
+      margin-left: 2px;
+      padding: 2px 8px;
+      border-radius: var(--radiuso-pilolo);
+      border: 1px solid var(--limo);
+      font: 600 10.5px/1.6 var(--mono);
+      color: var(--akcento);
+      background: var(--akcenta-soft);
+    }
 
-/* ── Ligo ────────────────────────────────────────────────────────── */
-.terminalo{
-  border: 1px solid var(--limo);
-  border-radius: var(--radiuso-granda);
-  overflow: hidden;
-  background: color-mix(in srgb, var(--fondo2) 94%, #000000);
-  box-shadow: var(--ombro-malgranda);
-  transition: opacity .26s var(--mov-kurbo), transform .26s var(--mov-kurbo), border-radius .26s var(--mov-kurbo);
-}
-.terminalo.malgrandigita{ opacity: 0; transform: translateY(60px) scale(.9); pointer-events: none; }
-.terminalo.fermita{ opacity: 0; transform: scale(.96); pointer-events: none; }
-.terminalo.pligrandigita{
-  position: fixed; inset: 16px; z-index: 85;
-  display: flex; flex-direction: column;
-  border-radius: 0; background: var(--fondo2);
-}
-.terminalo.pligrandigita .terminala-korpo{ flex: 1; height: auto; }
-.terminala-restarigo{ display: flex; margin: 16px auto 0; }
-[data-temo="hela"] .terminalo{ background: #12152A; }
-.terminala-kapo{
-  display: grid; align-items: center;
-  grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
-  height: 32px; padding: 0 0 0 14px;
-  border-bottom: 1px solid rgba(148,163,255,.12);
-  background: color-mix(in srgb, var(--fondo2) 80%, transparent);
-  color: #C9CEF0;
-}
-.terminala-flanko{ display: flex; align-items: center; gap: 10px; min-width: 0; }
-.terminala-sigilo{
-  font: 700 12px/1 var(--mono); color: var(--akcento);
-  padding: 5px 7px; border-radius: 5px; background: rgba(255,180,84,.12);
-}
-.terminala-centro{ display: flex; justify-content: center; min-width: 0; padding: 0 10px; }
-.terminala-titolo{
-  font-size: 12px; font-weight: 600; color: #EEF0FF;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.terminala-kapo .sildeto{ border-color: rgba(148,163,255,.22); background: rgba(148,163,255,.08); color: #A7ADCC; }
-.terminala-dekstro{ justify-self: end; display: flex; align-items: center; gap: 10px; min-width: 0; }
-.terminala-dekstro .regiloj{ height: 32px; }
-.terminala-stato{ font: 600 10.5px/1.6 var(--mono); color: #57E389; display: inline-flex; align-items: center; gap: 5px; }
-.terminala-stato::before{ content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
-.terminala-korpo{
-  height: 424px; overflow: auto;
-  padding: 15px 16px 18px;
-  color: #EEF0FF;
-  font: 12.5px/1.72 var(--mono);
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(148,163,255,.22) transparent;
-}
-.terminala-korpo::-webkit-scrollbar{ width: 10px; }
-.terminala-korpo::-webkit-scrollbar-thumb{
-  border: 2px solid transparent; border-radius: 99px;
-  background: rgba(148,163,255,.22); background-clip: padding-box;
-}
-.terminala-korpo .linio{ margin: 0 0 2px; white-space: pre-wrap; word-break: break-word; }
-.terminala-korpo .linio.komanda{ margin-top: 9px; }
-.terminala-korpo .prompto{ color: #FFB454; font-weight: 700; }
-.terminala-korpo .terminala-marko{ color: #4CC9FF; font-weight: 700; }
-.terminala-korpo .muted{ color: #6D7396; }
-.terminala-korpo .sukceso{ color: #57E389; }
-.terminala-korpo .eraro{ color: #FF6B6B; }
-.terminala-korpo code{
-  padding: 1px 5px; border-radius: 4px;
-  background: rgba(148,163,255,.10); color: #A7ADCC;
-  font-family: var(--mono); font-size: .95em;
-}
-.terminala-tabelo{
-  width: 100%; margin: 7px 0 12px;
-  border-collapse: collapse;
-}
-.terminala-tabelo th{
-  padding: 5px 9px;
-  text-align: left;
-  font: 700 9.5px/1.5 var(--mono); letter-spacing: .1em; text-transform: uppercase;
-  color: #6D7396;
-  border-bottom: 1px solid rgba(148,163,255,.16);
-}
-.terminala-tabelo td{
-  padding: 5px 9px;
-  border-bottom: 1px solid rgba(148,163,255,.07);
-  color: #C9CEF0;
-  vertical-align: middle;
-}
-.terminala-tabelo td.nombra{ text-align: right; font-variant-numeric: tabular-nums; color: #EEF0FF; }
-.terminala-korpo .sildeto.tenila{
-  color: #FFB454; border-color: rgba(255,180,84,.30); background: rgba(255,180,84,.12);
-}
-.terminala-korpo .sildeto{ font-size: 9.5px; padding: 1px 6px; }
-.dosiera-kapo{
-  display: inline-block; margin: 6px 0 0;
-  padding: 2px 8px; border-radius: 5px 5px 0 0;
-  background: rgba(148,163,255,.08); color: #A7ADCC;
-  font-size: 10.5px;
-}
-.dosiera-enhavo{
-  margin: 0 0 12px; padding: 11px 13px;
-  border-left: 2px solid #FFB454;
-  background: rgba(148,163,255,.05);
-  color: #C9CEF0;
-  font: 11.5px/1.7 var(--mono);
-  white-space: pre-wrap; word-break: break-word;
-}
-.scalaro{
-  display: flex; align-items: baseline; gap: 12px;
-  margin: 8px 0 12px; padding: 9px 13px;
-  border-left: 2px solid #FFB454;
-  background: rgba(255,180,84,.07);
-  border-radius: 0 7px 7px 0;
-}
-.scalara-etikedo{
-  font: 700 9.5px/1.5 var(--mono); letter-spacing: .1em; text-transform: uppercase;
-  color: #6D7396;
-}
-.scalara-valoro{ font: 600 19px/1.3 var(--mono); color: #FFB454; }
-.teksta-limo{
-  display: flex; align-items: center; gap: 10px;
-  margin: 10px 0 6px;
-  color: #6D7396;
-  font: 700 9.5px/1.5 var(--mono); letter-spacing: .12em; text-transform: uppercase;
-}
-.teksta-limo::before, .teksta-limo::after{
-  content: ""; flex: 1; height: 1px; background: rgba(148,163,255,.16);
-}
-.terminala-injeto{
-  display: flex; align-items: center; gap: 9px;
-  padding: 10px 16px;
-  border-top: 1px solid rgba(148,163,255,.12);
-  background: rgba(16,20,42,.65);
-}
-.terminala-injeto .prompto{ color: #FFB454; font: 700 13px/1 var(--mono); flex: none; }
-.terminala-injeto input{
-  flex: 1; min-width: 0;
-  border: 0; background: transparent; color: #EEF0FF;
-  caret-color: #FFB454;
-  font: 13px/1.6 var(--mono);
-}
-.terminala-injeto input::placeholder{ color: #4A5075; }
-.terminala-injeto input:focus{ outline: none; }
-.sugestoj{
-  display: flex; flex-wrap: wrap; gap: 6px;
-  padding: 0 16px 13px;
-  background: rgba(16,20,42,.65);
-}
-.sugesto{
-  padding: 7px 10px;
-  border: 1px solid rgba(148,163,255,.18); border-radius: var(--radiuso-pilolo);
-  background: rgba(148,163,255,.06); color: #A7ADCC;
-  font: 11px/1.5 var(--mono); cursor: pointer;
-  transition: background .14s linear, color .14s linear, border-color .14s linear;
-}
-.sugesto:hover{ background: rgba(255,180,84,.12); border-color: rgba(255,180,84,.32); color: #FFB454; }
+    .agordoj {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
 
-/* ── Fulmomesaĝoj ────────────────────────────────────────────────── */
-.fulmomesagxoj{
-  position: fixed; right: 20px; bottom: 20px; z-index: 150;
-  display: flex; flex-direction: column; gap: 8px;
-  width: min(340px, calc(100vw - 32px));
-  pointer-events: none;
-}
-.fulmomesagxo{
-  padding: 11px 14px;
-  border: 1px solid var(--limo); border-radius: 10px;
-  background: color-mix(in srgb, var(--surfaco) 92%, transparent);
-  backdrop-filter: blur(18px) saturate(1.4);
-  box-shadow: var(--ombro-malgranda);
-  pointer-events: auto;
-  animation: enflugi .22s var(--mov-kurbo);
-  border-left: 3px solid var(--informo);
-}
-.fulmomesagxo.sukceso{ border-left-color: var(--sukceso); }
-.fulmomesagxo.averto{ border-left-color: var(--averto); }
-.fulmomesagxo.dangxero{ border-left-color: var(--danĝero); }
-.fulmomesagxo.foriri{ animation: elflugi .22s var(--mov-kurbo) forwards; }
-.fulma-titolo{ font-size: 12.5px; font-weight: 700; margin-bottom: 2px; }
-.fulma-teksto{ font-size: 11.5px; line-height: 1.5; color: var(--teksto2); }
-@keyframes enflugi{ from{ opacity: 0; transform: translateY(10px); } to{ opacity: 1; transform: none; } }
-@keyframes elflugi{ to{ opacity: 0; transform: translateX(14px); } }
+    .akcentoj {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
 
-/* ── Tavolo por Eniro ───────────────────────────────────────────── */
-.enira-tavolo{
-  position: fixed; inset: 0; z-index: 80;
-  background: rgba(5,7,14,.58);
-  backdrop-filter: blur(7px);
-  animation: aperi .18s linear;
-}
-[data-temo="hela"] .enira-tavolo{ background: rgba(40,42,70,.30); }
-@keyframes aperi{ from{ opacity: 0; } to{ opacity: 1; } }
+    .akcento-elektilo {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      cursor: pointer;
+    }
 
-/* ── Piedo ───────────────────────────────────────────────────────── */
-.piedo{
-  max-width: 1160px; margin: 0 auto;
-  padding-top: 24px; border-top: 1px solid var(--limo2);
-  font-size: 12px; line-height: 1.7; color: var(--teksto3);
-}
-.piedo p{ margin: 0; }
+    .akcento-elektilo::before {
+      content: "";
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--koloro);
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18);
+      transition: transform .18s var(--mov-kurbo), box-shadow .18s var(--mov-kurbo);
+    }
 
-/* ── Movado ──────────────────────────────────────────────────────── */
-@media (prefers-reduced-motion: reduce){
-  *, *::before, *::after{
-    animation-duration: .001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: .001ms !important;
-  }
-  html{ scroll-behavior: auto; }
-}
+    .akcento-elektilo:hover::before {
+      transform: scale(1.12);
+    }
 
-/* ── Etaj ekranoj ───────────────────────────────────────────────── */
-@media (max-width: 800px){
-  body{ padding: 20px 12px 56px; }
-  .kapo{ margin-bottom: 40px; }
-  .marka-teksto span{ display: none; }
-  .agordoj{ gap: 12px; }
-  .heroo{ padding-bottom: 44px; }
-  .sceno{ margin-bottom: 52px; }
-  .scena-kapo{ gap: 12px; }
-  .scena-kapo h2{ font-size: 21px; }
-  #fenestraStage{ padding: 14px; min-height: 0; }
-  .fenestro{ height: 470px; }
-  .fenestra-korpo{ grid-template-columns: 1fr; }
-  .flanko{ display: none; }
-  .regiloj button{ width: 42px; }
-  #eniraStage{ min-height: 540px; padding: 16px 14px 62px; }
-  .enira-ombro{ display: none; }
-  .eniraj-rezultoj{ max-height: 300px; }
-  .terminala-korpo{ height: 360px; font-size: 11.5px; }
-  .terminala-tabelo td, .terminala-tabelo th{ padding: 4px 6px; }
-  .sugestoj{ display: none; }
-}
-</style>
+    .akcento-elektilo[aria-pressed="true"]::before {
+      box-shadow: 0 0 0 2px var(--fondo), 0 0 0 4px var(--koloro);
+    }
+
+    /* ── Ŝaltilo ─────────────────────────────────────────────────────── */
+    .sxaltilo {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 5px 0;
+      font-size: 12.5px;
+      color: var(--teksto2);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .sxaltilo input {
+      appearance: none;
+      -webkit-appearance: none;
+      position: relative;
+      flex: none;
+      margin: 0;
+      width: 42px;
+      height: 23px;
+      border-radius: var(--radiuso-pilolo);
+      background: var(--surfaco2);
+      border: 1px solid var(--limo);
+      cursor: pointer;
+      transition: background .2s var(--mov-kurbo), border-color .2s var(--mov-kurbo);
+    }
+
+    .sxaltilo input::after {
+      content: "";
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--teksto2);
+      transition: transform .22s var(--mov-kurbo), width .18s var(--mov-kurbo), background .2s linear;
+    }
+
+    .sxaltilo input:hover::after {
+      width: 17px;
+    }
+
+    .sxaltilo input:checked {
+      background: color-mix(in srgb, var(--akcento) 62%, transparent);
+      border-color: color-mix(in srgb, var(--akcento) 70%, transparent);
+    }
+
+    .sxaltilo input:checked::after {
+      transform: translateX(18px);
+      width: 13px;
+      background: #0A0D1C;
+    }
+
+    .sxaltilo input:checked:hover::after {
+      width: 17px;
+      transform: translateX(14px);
+    }
+
+    .sxaltilo.malgranda {
+      font-size: 12px;
+    }
+
+    /* ── Heroo ───────────────────────────────────────────────────────── */
+    main {
+      position: relative;
+      z-index: 1;
+      max-width: 1160px;
+      margin: 0 auto;
+    }
+
+    .heroo {
+      padding: 8px 0 64px;
+      max-width: 820px;
+    }
+
+    .supera-etikedo {
+      margin: 0 0 14px;
+      font: 600 11px/1.6 var(--mono);
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--akcento);
+    }
+
+    .heroo h1 {
+      margin: 0 0 18px;
+      font-size: clamp(48px, 8vw, 76px);
+      line-height: .98;
+      font-weight: 850;
+      letter-spacing: -.035em;
+    }
+
+    .heroo h1 span {
+      background: linear-gradient(100deg, var(--akcento), var(--koralo) 55%, var(--ĉielo));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .heroo-teksto {
+      margin: 0 0 26px;
+      max-width: 640px;
+      font-size: 16.5px;
+      line-height: 1.65;
+      color: var(--teksto2);
+    }
+
+    .principoj {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .principo {
+      padding: 5px 11px;
+      border-radius: var(--radiuso-pilolo);
+      border: 1px solid var(--limo);
+      background: color-mix(in srgb, var(--surfaco) 55%, transparent);
+      font-size: 12px;
+      color: var(--teksto2);
+    }
+
+    .principo.vigla {
+      border-color: color-mix(in srgb, var(--akcento) 40%, transparent);
+      color: var(--akcento);
+      background: var(--akcenta-soft);
+    }
+
+    /* ── Scenoj ──────────────────────────────────────────────────────── */
+    .sceno {
+      margin: 0 0 72px;
+    }
+
+    .scena-kapo {
+      display: flex;
+      gap: 18px;
+      align-items: flex-start;
+      margin-bottom: 22px;
+      max-width: 800px;
+    }
+
+    .scena-numero {
+      flex: none;
+      margin-top: 4px;
+      font: 700 12px/1 var(--mono);
+      letter-spacing: .08em;
+      color: var(--akcento);
+      padding: 7px 9px;
+      border-radius: 6px;
+      background: var(--akcenta-soft);
+      border: 1px solid color-mix(in srgb, var(--akcento) 30%, transparent);
+    }
+
+    .scena-kapo h2 {
+      margin: 0 0 6px;
+      font-size: 25px;
+      letter-spacing: -.02em;
+      font-weight: 800;
+    }
+
+    .scena-kapo p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--teksto2);
+    }
+
+    .scena-kapo kbd {
+      vertical-align: 1px;
+    }
+
+    /* ── Labortablo ──────────────────────────────────────────────────── */
+    .labortablo {
+      position: relative;
+      border: 1px solid var(--limo);
+      border-radius: var(--radiuso-granda);
+      overflow: hidden;
+      background:
+        radial-gradient(620px 320px at 18% 0%, color-mix(in srgb, var(--akcento) 12%, transparent), transparent 70%),
+        radial-gradient(560px 340px at 88% 106%, color-mix(in srgb, var(--bluo) 16%, transparent), transparent 72%),
+        linear-gradient(160deg, var(--fondo2), var(--fondo));
+      box-shadow: var(--ombro-malgranda);
+    }
+
+    #fenestraStage {
+      display: grid;
+      place-items: center;
+      padding: 30px;
+      min-height: 636px;
+    }
+
+    /* ── Fenestro ────────────────────────────────────────────────────── */
+    .fenestro {
+      position: relative;
+      z-index: 2;
+      width: min(920px, 100%);
+      height: 540px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--limo);
+      border-radius: var(--radiuso);
+      overflow: hidden;
+      background:
+        linear-gradient(165deg,
+          color-mix(in srgb, var(--surfaco) 88%, var(--akcento) 12%) 0%,
+          var(--surfaco) 42%,
+          color-mix(in srgb, var(--surfaco) 94%, var(--fondo) 6%) 100%);
+      box-shadow: var(--ombro);
+      transition: transform .26s var(--mov-kurbo), opacity .26s var(--mov-kurbo), inset .26s var(--mov-kurbo), border-radius .26s var(--mov-kurbo);
+    }
+
+    .fenestro.pligrandigita {
+      position: absolute;
+      inset: 12px;
+      width: auto;
+      height: auto;
+      border-radius: 0;
+    }
+
+    .fenestro.malgrandigita {
+      opacity: 0;
+      transform: translateY(70px) scale(.86);
+      pointer-events: none;
+    }
+
+    .fenestro.fermita {
+      opacity: 0;
+      transform: scale(.96);
+      pointer-events: none;
+    }
+
+    .revelo {
+      position: relative;
+    }
+
+    .revelo::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(430px circle at var(--mx, 50%) var(--my, 0%),
+          color-mix(in srgb, var(--akcento) 14%, transparent), transparent 64%);
+      transition: opacity .3s var(--mov-kurbo);
+    }
+
+    .revelo:hover::before {
+      opacity: .8;
+    }
+
+    .revelo>* {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Titolstrio — 32 DIP */
+    .titolstrio {
+      flex: none;
+      display: grid;
+      align-items: center;
+      grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
+      height: 32px;
+      padding-left: 10px;
+      border-bottom: 1px solid var(--limo2);
+      background: color-mix(in srgb, var(--surfaco) 82%, transparent);
+      user-select: none;
+    }
+
+    .titola-flanko {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .titola-centro {
+      display: flex;
+      justify-content: center;
+      min-width: 0;
+      padding: 0 12px;
+    }
+
+    .aplika-ikono {
+      width: 16px;
+      height: 16px;
+      display: block;
+      flex: none;
+    }
+
+    .titolo {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--teksto);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    .regiloj {
+      justify-self: end;
+      display: flex;
+      align-self: stretch;
+    }
+
+    .regiloj button {
+      width: 46px;
+      height: 100%;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: var(--teksto2);
+      cursor: default;
+      outline-offset: -2px;
+      transition: background .12s linear, color .12s linear;
+    }
+
+    .regiloj button svg {
+      width: 10px;
+      height: 10px;
+      display: block;
+    }
+
+    .regiloj button:hover {
+      background: color-mix(in srgb, var(--teksto) 6%, transparent);
+      color: var(--teksto);
+    }
+
+    .regiloj button:active {
+      background: color-mix(in srgb, var(--teksto) 3%, transparent);
+      color: var(--teksto2);
+    }
+
+    .regiloj button.fermi:hover {
+      background: #C42B1C;
+      color: #FFFFFF;
+    }
+
+    .regiloj button.fermi:active {
+      background: #B02A22;
+      color: #FFFFFF;
+    }
+
+    .regiloj button svg.ikono-restarigi {
+      display: none;
+    }
+
+    .pligrandigita .regiloj button svg.ikono-pligrandigi {
+      display: none;
+    }
+
+    .pligrandigita .regiloj button svg.ikono-restarigi {
+      display: block;
+    }
+
+    /* Fenestra korpo */
+    .fenestra-korpo {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 214px minmax(0, 1fr);
+    }
+
+    .flanko {
+      min-height: 0;
+      overflow: auto;
+      padding: 12px 10px 14px;
+      border-right: 1px solid var(--limo2);
+      background: color-mix(in srgb, var(--surfaco2) 46%, transparent);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .flanka-etikedo {
+      margin: 10px 8px 5px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--teksto3);
+    }
+
+    .flanka-etikedo:first-child {
+      margin-top: 2px;
+    }
+
+    .dosiero {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      padding: 7px 9px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--teksto2);
+      font-size: 12.5px;
+      text-align: left;
+      cursor: pointer;
+      transition: background .14s linear, color .14s linear;
+    }
+
+    .dosiero span:first-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .dosiero:hover {
+      background: color-mix(in srgb, var(--teksto) 5%, transparent);
+      color: var(--teksto);
+    }
+
+    .dosiero.elektita {
+      background: var(--akcenta-soft);
+      color: var(--teksto);
+      box-shadow: inset 2px 0 0 var(--akcento);
+    }
+
+    .dosiero .sildeto {
+      font-size: 9.5px;
+      padding: 1px 5px;
+      flex: none;
+    }
+
+    .flanko .sxaltilo {
+      margin: 8px 8px 0;
+      font-size: 12px;
+    }
+
+    .redaktilo {
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      padding: 15px 18px 14px;
+    }
+
+    .ilobreto {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .spaco {
+      flex: 1;
+    }
+
+    .redaktata {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      border: 0;
+      border-radius: 6px;
+      padding: 6px 4px;
+      background: transparent;
+      color: var(--teksto);
+      font: 13.5px/1.7 var(--tiparo);
+      resize: none;
+    }
+
+    .redaktata:focus-visible {
+      outline: 2px solid var(--akcento);
+      outline-offset: -2px;
+    }
+
+    /* Butoj */
+    .buto {
+      height: 32px;
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border-radius: var(--radiuso);
+      border: 1px solid transparent;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .16s var(--mov-kurbo), border-color .16s var(--mov-kurbo), transform .12s var(--mov-kurbo);
+    }
+
+    .buto:active {
+      transform: translateY(1px);
+    }
+
+    .buto.akcenta {
+      background: var(--akcento);
+      color: #0A0D1C;
+      border-color: color-mix(in srgb, var(--akcento) 80%, #000);
+    }
+
+    .buto.akcenta:hover {
+      background: color-mix(in srgb, var(--akcento) 88%, #FFFFFF);
+    }
+
+    .buto.norma {
+      background: color-mix(in srgb, var(--teksto) 7%, transparent);
+      border-color: var(--limo);
+      color: var(--teksto);
+    }
+
+    .buto.norma:hover {
+      background: color-mix(in srgb, var(--teksto) 11%, transparent);
+    }
+
+    .buto.subtila {
+      background: transparent;
+      color: var(--teksto2);
+    }
+
+    .buto.subtila:hover {
+      background: color-mix(in srgb, var(--teksto) 6%, transparent);
+      color: var(--teksto);
+    }
+
+    .buto.dangxera {
+      background: var(--dangxera-soft);
+      color: var(--danĝero);
+      border-color: color-mix(in srgb, var(--danĝero) 34%, transparent);
+    }
+
+    .buto.dangxera:hover {
+      background: color-mix(in srgb, var(--danĝero) 20%, transparent);
+    }
+
+    /* Informa strio */
+    .informa-strio {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 11px;
+      border-radius: var(--radiuso);
+      border: 1px solid color-mix(in srgb, var(--sukceso) 32%, transparent);
+      background: var(--sukcesa-soft);
+      font-size: 12px;
+      color: var(--teksto);
+    }
+
+    .informa-strio .semantiko {
+      font-weight: 700;
+      color: var(--sukceso);
+    }
+
+    .informa-strio .fermi-strieto {
+      margin: -6px -6px -6px auto;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--teksto2);
+      font-size: 15px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .informa-strio .fermi-strieto:hover {
+      background: color-mix(in srgb, var(--teksto) 8%, transparent);
+      color: var(--teksto);
+    }
+
+    .progreso {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .progresa-etikedo {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--teksto3);
+    }
+
+    .progresa-etikedo span {
+      color: var(--akcento);
+      font-weight: 700;
+    }
+
+    .progresa-trako {
+      height: 5px;
+      border-radius: var(--radiuso-pilolo);
+      background: color-mix(in srgb, var(--teksto) 9%, transparent);
+      overflow: hidden;
+    }
+
+    .progresa-plenigo {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--akcento), color-mix(in srgb, var(--akcento) 55%, var(--bluo)));
+      transition: width .6s var(--mov-kurbo);
+    }
+
+    /* Sildeto */
+    .sildeto {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: var(--radiuso-pilolo);
+      border: 1px solid var(--limo);
+      background: color-mix(in srgb, var(--teksto) 6%, transparent);
+      font: 600 10px/1.5 var(--mono);
+      letter-spacing: .02em;
+      color: var(--teksto2);
+      white-space: nowrap;
+    }
+
+    .sildeto.tenila {
+      color: var(--akcento);
+      border-color: color-mix(in srgb, var(--akcento) 32%, transparent);
+      background: var(--akcenta-soft);
+    }
+
+    /* Tasko kaj restarigo */
+    .tasko {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 14px;
+      border: 1px solid var(--limo);
+      border-radius: var(--radiuso);
+      background: color-mix(in srgb, var(--surfaco) 88%, transparent);
+      backdrop-filter: blur(16px) saturate(1.4);
+      box-shadow: var(--ombro-malgranda);
+      color: var(--teksto);
+      font-size: 12.5px;
+      cursor: pointer;
+      transition: background .16s linear;
+    }
+
+    .tasko:hover {
+      background: color-mix(in srgb, var(--surfaco) 96%, var(--akcento) 4%);
+    }
+
+    .tasko .sildeto {
+      font-size: 9.5px;
+    }
+
+    .restarigo {
+      position: relative;
+      z-index: 3;
+      width: min(420px, 100%);
+      padding: 26px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      text-align: center;
+      border: 1px solid var(--limo);
+      border-radius: var(--radiuso-granda);
+      background: color-mix(in srgb, var(--surfaco) 82%, transparent);
+      backdrop-filter: blur(20px) saturate(1.4);
+      box-shadow: var(--ombro);
+    }
+
+    .restarigo h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .restarigo p {
+      margin: 0;
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--teksto2);
+    }
+
+    /* ── Eniro ───────────────────────────────────────────────────────── */
+    #eniraStage {
+      display: grid;
+      place-items: center;
+      padding: 30px 30px 68px;
+      min-height: 592px;
+    }
+
+    .enira-ombro {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .enira-ombro::before,
+    .enira-ombro::after {
+      content: "";
+      position: absolute;
+      border: 1px solid var(--limo);
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--surfaco) 46%, transparent);
+    }
+
+    .enira-ombro::before {
+      width: 56%;
+      height: 62%;
+      left: 6%;
+      top: 11%;
+      transform: rotate(-1.2deg);
+      opacity: .55;
+    }
+
+    .enira-ombro::after {
+      width: 42%;
+      height: 50%;
+      right: 7%;
+      bottom: 9%;
+      transform: rotate(1.4deg);
+      opacity: .4;
+    }
+
+    .eniro {
+      width: min(680px, 100%);
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--limo);
+      border-radius: var(--radiuso-granda);
+      overflow: hidden;
+      background: color-mix(in srgb, var(--surfaco) 76%, transparent);
+      backdrop-filter: blur(24px) saturate(1.5);
+      box-shadow: var(--ombro);
+      transition: width .24s var(--mov-kurbo), box-shadow .24s var(--mov-kurbo);
+    }
+
+    .eniro.tavola {
+      position: fixed !important;
+      top: 11vh;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(720px, 92vw);
+      z-index: 90;
+      animation: levi .22s var(--mov-kurbo);
+    }
+
+    @keyframes levi {
+      from {
+        opacity: 0;
+        transform: translate(-50%, 10px) scale(.985);
+      }
+
+      to {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+      }
+    }
+
+    .enira-titolstrio {
+      display: grid;
+      align-items: center;
+      grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
+      height: 32px;
+      padding: 0 12px 0 14px;
+      border-bottom: 1px solid var(--limo2);
+      background: color-mix(in srgb, var(--fondo2) 55%, transparent);
+      user-select: none;
+    }
+
+    .enira-titola-flanko {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .enira-titola-ikono {
+      width: 16px;
+      height: 16px;
+      flex: none;
+      color: var(--akcento);
+    }
+
+    .enira-titola-centro {
+      display: flex;
+      justify-content: center;
+      min-width: 0;
+      padding: 0 10px;
+    }
+
+    .enira-titolo {
+      font: 600 12px/1 var(--tiparo);
+      color: var(--teksto);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .enira-titola-dekstro {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .enira-kapo {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px 13px;
+      border-bottom: 1px solid var(--limo2);
+    }
+
+    .enira-sercho {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      background: transparent;
+      color: var(--teksto);
+      caret-color: var(--akcento);
+      font: 15.5px/1.5 var(--tiparo);
+    }
+
+    .enira-sercho::placeholder {
+      color: var(--teksto3);
+    }
+
+    .enira-sercho:focus {
+      outline: none;
+    }
+
+    .enira-modo {
+      flex: none;
+      padding: 2px 8px;
+      border-radius: var(--radiuso-pilolo);
+      border: 1px solid color-mix(in srgb, var(--akcento) 32%, transparent);
+      background: var(--akcenta-soft);
+      font: 600 10.5px/1.6 var(--mono);
+      color: var(--akcento);
+    }
+
+    .eniraj-rezultoj {
+      max-height: 336px;
+      overflow: auto;
+      padding: 6px 6px 8px;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+      scrollbar-color: var(--limo) transparent;
+    }
+
+    .eniraj-rezultoj::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .eniraj-rezultoj::-webkit-scrollbar-thumb {
+      border: 2px solid transparent;
+      border-radius: 99px;
+      background: var(--limo);
+      background-clip: padding-box;
+    }
+
+    .enira-grupo {
+      padding: 9px 12px 4px;
+      font: 700 10px/1.4 var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--teksto3);
+    }
+
+    .enira-ero {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      width: 100%;
+      padding: 9px 11px;
+      border: 0;
+      border-radius: var(--radiuso);
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: background .12s linear;
+    }
+
+    .enira-ero:hover {
+      background: color-mix(in srgb, var(--teksto) 5%, transparent);
+    }
+
+    .enira-ero.elektita {
+      background: var(--akcenta-soft);
+      box-shadow: inset 2px 0 0 var(--akcento);
+    }
+
+    .era-ikono {
+      width: 27px;
+      height: 27px;
+      flex: none;
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      background: color-mix(in srgb, var(--akcento) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--akcento) 22%, transparent);
+      color: var(--akcento);
+      font: 12px/1 var(--mono);
+    }
+
+    .era-teksto {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      gap: 1px;
+    }
+
+    .era-nomo {
+      font: 600 13px/1.5 var(--mono);
+      color: var(--teksto);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .era-priskribo {
+      font-size: 11.5px;
+      color: var(--teksto2);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .enira-senrezulte {
+      padding: 22px 16px;
+      font-size: 12.5px;
+      color: var(--teksto2);
+    }
+
+    .enira-senrezulte code {
+      font-family: var(--mono);
+      color: var(--akcento);
+    }
+
+    .enira-piedo {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 14px;
+      border-top: 1px solid var(--limo2);
+      font-size: 11px;
+      color: var(--teksto3);
+      flex-wrap: wrap;
+    }
+
+    .enira-piedo span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .enira-versio {
+      margin-left: auto;
+      font-family: var(--mono);
+    }
+
+    kbd {
+      display: inline-block;
+      padding: 1px 5px;
+      border: 1px solid var(--limo);
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      background: color-mix(in srgb, var(--teksto) 5%, transparent);
+      font: 600 10px/1.5 var(--mono);
+      color: var(--teksto2);
+    }
+
+    /* Kalkulo kaj delegado */
+    .kalkula-rezulto {
+      padding: 18px 16px 20px;
+    }
+
+    .kalkula-etikedo {
+      font: 700 10px/1.4 var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--teksto3);
+      margin-bottom: 4px;
+    }
+
+    .kalkula-valoro {
+      font: 600 30px/1.2 var(--mono);
+      color: var(--akcento);
+      word-break: break-all;
+    }
+
+    .kalkula-esprimo {
+      margin-top: 6px;
+      font: 11.5px/1.5 var(--mono);
+      color: var(--teksto3);
+      word-break: break-all;
+    }
+
+    .kalkula-noto {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--limo2);
+      font-size: 11px;
+      color: var(--teksto3);
+    }
+
+    .enira-eraro {
+      padding: 16px;
+      font-size: 12.5px;
+      color: var(--dangxero);
+    }
+
+    .enira-butono {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 4;
+    }
+
+    /* ── Ligo ────────────────────────────────────────────────────────── */
+    .terminalo {
+      border: 1px solid var(--limo);
+      border-radius: var(--radiuso-granda);
+      overflow: hidden;
+      background: color-mix(in srgb, var(--fondo2) 94%, #000000);
+      box-shadow: var(--ombro-malgranda);
+      transition: opacity .26s var(--mov-kurbo), transform .26s var(--mov-kurbo), border-radius .26s var(--mov-kurbo);
+    }
+
+    .terminalo.malgrandigita {
+      opacity: 0;
+      transform: translateY(60px) scale(.9);
+      pointer-events: none;
+    }
+
+    .terminalo.fermita {
+      opacity: 0;
+      transform: scale(.96);
+      pointer-events: none;
+    }
+
+    .terminalo.pligrandigita {
+      position: fixed;
+      inset: 16px;
+      z-index: 85;
+      display: flex;
+      flex-direction: column;
+      border-radius: 0;
+      background: var(--fondo2);
+    }
+
+    .terminalo.pligrandigita .terminala-korpo {
+      flex: 1;
+      height: auto;
+    }
+
+    .terminala-restarigo {
+      display: flex;
+      margin: 16px auto 0;
+    }
+
+    [data-temo="hela"] .terminalo {
+      background: #12152A;
+    }
+
+    .terminala-kapo {
+      display: grid;
+      align-items: center;
+      grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
+      height: 32px;
+      padding: 0 0 0 14px;
+      border-bottom: 1px solid rgba(148, 163, 255, .12);
+      background: color-mix(in srgb, var(--fondo2) 80%, transparent);
+      color: #C9CEF0;
+    }
+
+    .terminala-flanko {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .terminala-sigilo {
+      font: 700 12px/1 var(--mono);
+      color: var(--akcento);
+      padding: 5px 7px;
+      border-radius: 5px;
+      background: rgba(255, 180, 84, .12);
+    }
+
+    .terminala-centro {
+      display: flex;
+      justify-content: center;
+      min-width: 0;
+      padding: 0 10px;
+    }
+
+    .terminala-titolo {
+      font-size: 12px;
+      font-weight: 600;
+      color: #EEF0FF;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .terminala-kapo .sildeto {
+      border-color: rgba(148, 163, 255, .22);
+      background: rgba(148, 163, 255, .08);
+      color: #A7ADCC;
+    }
+
+    .terminala-dekstro {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .terminala-dekstro .regiloj {
+      height: 32px;
+    }
+
+    .terminala-stato {
+      font: 600 10.5px/1.6 var(--mono);
+      color: #57E389;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .terminala-stato::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 8px currentColor;
+    }
+
+    .terminala-korpo {
+      height: 424px;
+      overflow: auto;
+      padding: 15px 16px 18px;
+      color: #EEF0FF;
+      font: 12.5px/1.72 var(--mono);
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(148, 163, 255, .22) transparent;
+    }
+
+    .terminala-korpo::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .terminala-korpo::-webkit-scrollbar-thumb {
+      border: 2px solid transparent;
+      border-radius: 99px;
+      background: rgba(148, 163, 255, .22);
+      background-clip: padding-box;
+    }
+
+    .terminala-korpo .linio {
+      margin: 0 0 2px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .terminala-korpo .linio.komanda {
+      margin-top: 9px;
+    }
+
+    .terminala-korpo .prompto {
+      color: #FFB454;
+      font-weight: 700;
+    }
+
+    .terminala-korpo .terminala-marko {
+      color: #4CC9FF;
+      font-weight: 700;
+    }
+
+    .terminala-korpo .muted {
+      color: #6D7396;
+    }
+
+    .terminala-korpo .sukceso {
+      color: #57E389;
+    }
+
+    .terminala-korpo .eraro {
+      color: #FF6B6B;
+    }
+
+    .terminala-korpo code {
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(148, 163, 255, .10);
+      color: #A7ADCC;
+      font-family: var(--mono);
+      font-size: .95em;
+    }
+
+    .terminala-tabelo {
+      width: 100%;
+      margin: 7px 0 12px;
+      border-collapse: collapse;
+    }
+
+    .terminala-tabelo th {
+      padding: 5px 9px;
+      text-align: left;
+      font: 700 9.5px/1.5 var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: #6D7396;
+      border-bottom: 1px solid rgba(148, 163, 255, .16);
+    }
+
+    .terminala-tabelo td {
+      padding: 5px 9px;
+      border-bottom: 1px solid rgba(148, 163, 255, .07);
+      color: #C9CEF0;
+      vertical-align: middle;
+    }
+
+    .terminala-tabelo td.nombra {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: #EEF0FF;
+    }
+
+    .terminala-korpo .sildeto.tenila {
+      color: #FFB454;
+      border-color: rgba(255, 180, 84, .30);
+      background: rgba(255, 180, 84, .12);
+    }
+
+    .terminala-korpo .sildeto {
+      font-size: 9.5px;
+      padding: 1px 6px;
+    }
+
+    .dosiera-kapo {
+      display: inline-block;
+      margin: 6px 0 0;
+      padding: 2px 8px;
+      border-radius: 5px 5px 0 0;
+      background: rgba(148, 163, 255, .08);
+      color: #A7ADCC;
+      font-size: 10.5px;
+    }
+
+    .dosiera-enhavo {
+      margin: 0 0 12px;
+      padding: 11px 13px;
+      border-left: 2px solid #FFB454;
+      background: rgba(148, 163, 255, .05);
+      color: #C9CEF0;
+      font: 11.5px/1.7 var(--mono);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .scalaro {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin: 8px 0 12px;
+      padding: 9px 13px;
+      border-left: 2px solid #FFB454;
+      background: rgba(255, 180, 84, .07);
+      border-radius: 0 7px 7px 0;
+    }
+
+    .scalara-etikedo {
+      font: 700 9.5px/1.5 var(--mono);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: #6D7396;
+    }
+
+    .scalara-valoro {
+      font: 600 19px/1.3 var(--mono);
+      color: #FFB454;
+    }
+
+    .teksta-limo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 0 6px;
+      color: #6D7396;
+      font: 700 9.5px/1.5 var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .teksta-limo::before,
+    .teksta-limo::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: rgba(148, 163, 255, .16);
+    }
+
+    .terminala-injeto {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px 16px;
+      border-top: 1px solid rgba(148, 163, 255, .12);
+      background: rgba(16, 20, 42, .65);
+    }
+
+    .terminala-injeto .prompto {
+      color: #FFB454;
+      font: 700 13px/1 var(--mono);
+      flex: none;
+    }
+
+    .terminala-injeto input {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      background: transparent;
+      color: #EEF0FF;
+      caret-color: #FFB454;
+      font: 13px/1.6 var(--mono);
+    }
+
+    .terminala-injeto input::placeholder {
+      color: #4A5075;
+    }
+
+    .terminala-injeto input:focus {
+      outline: none;
+    }
+
+    .sugestoj {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 0 16px 13px;
+      background: rgba(16, 20, 42, .65);
+    }
+
+    .sugesto {
+      padding: 7px 10px;
+      border: 1px solid rgba(148, 163, 255, .18);
+      border-radius: var(--radiuso-pilolo);
+      background: rgba(148, 163, 255, .06);
+      color: #A7ADCC;
+      font: 11px/1.5 var(--mono);
+      cursor: pointer;
+      transition: background .14s linear, color .14s linear, border-color .14s linear;
+    }
+
+    .sugesto:hover {
+      background: rgba(255, 180, 84, .12);
+      border-color: rgba(255, 180, 84, .32);
+      color: #FFB454;
+    }
+
+    /* ── Fulmomesaĝoj ────────────────────────────────────────────────── */
+    .fulmomesagxoj {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 150;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: min(340px, calc(100vw - 32px));
+      pointer-events: none;
+    }
+
+    .fulmomesagxo {
+      padding: 11px 14px;
+      border: 1px solid var(--limo);
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--surfaco) 92%, transparent);
+      backdrop-filter: blur(18px) saturate(1.4);
+      box-shadow: var(--ombro-malgranda);
+      pointer-events: auto;
+      animation: enflugi .22s var(--mov-kurbo);
+      border-left: 3px solid var(--informo);
+    }
+
+    .fulmomesagxo.sukceso {
+      border-left-color: var(--sukceso);
+    }
+
+    .fulmomesagxo.averto {
+      border-left-color: var(--averto);
+    }
+
+    .fulmomesagxo.dangxero {
+      border-left-color: var(--danĝero);
+    }
+
+    .fulmomesagxo.foriri {
+      animation: elflugi .22s var(--mov-kurbo) forwards;
+    }
+
+    .fulma-titolo {
+      font-size: 12.5px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .fulma-teksto {
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: var(--teksto2);
+    }
+
+    @keyframes enflugi {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    @keyframes elflugi {
+      to {
+        opacity: 0;
+        transform: translateX(14px);
+      }
+    }
+
+    /* ── Tavolo por Eniro ───────────────────────────────────────────── */
+    .enira-tavolo {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      background: rgba(5, 7, 14, .58);
+      backdrop-filter: blur(7px);
+      animation: aperi .18s linear;
+    }
+
+    [data-temo="hela"] .enira-tavolo {
+      background: rgba(40, 42, 70, .30);
+    }
+
+    @keyframes aperi {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    /* ── Piedo ───────────────────────────────────────────────────────── */
+    .piedo {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding-top: 24px;
+      border-top: 1px solid var(--limo2);
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--teksto3);
+    }
+
+    .piedo p {
+      margin: 0;
+    }
+
+    /* ── Movado ──────────────────────────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+      }
+
+      html {
+        scroll-behavior: auto;
+      }
+    }
+
+    /* ── Etaj ekranoj ───────────────────────────────────────────────── */
+    @media (max-width: 800px) {
+      body {
+        padding: 20px 12px 56px;
+      }
+
+      .kapo {
+        margin-bottom: 40px;
+      }
+
+      .marka-teksto span {
+        display: none;
+      }
+
+      .agordoj {
+        gap: 12px;
+      }
+
+      .heroo {
+        padding-bottom: 44px;
+      }
+
+      .sceno {
+        margin-bottom: 52px;
+      }
+
+      .scena-kapo {
+        gap: 12px;
+      }
+
+      .scena-kapo h2 {
+        font-size: 21px;
+      }
+
+      #fenestraStage {
+        padding: 14px;
+        min-height: 0;
+      }
+
+      .fenestro {
+        height: 470px;
+      }
+
+      .fenestra-korpo {
+        grid-template-columns: 1fr;
+      }
+
+      .flanko {
+        display: none;
+      }
+
+      .regiloj button {
+        width: 42px;
+      }
+
+      #eniraStage {
+        min-height: 540px;
+        padding: 16px 14px 62px;
+      }
+
+      .enira-ombro {
+        display: none;
+      }
+
+      .eniraj-rezultoj {
+        max-height: 300px;
+      }
+
+      .terminala-korpo {
+        height: 360px;
+        font-size: 11.5px;
+      }
+
+      .terminala-tabelo td,
+      .terminala-tabelo th {
+        padding: 4px 6px;
+      }
+
+      .sugestoj {
+        display: none;
+      }
+    }
+  </style>
 </head>
+
 <body>
-<a class="salto" href="#cxefa">Salti al la enhavo</a>
+  <a class="salto" href="#cxefa">Salti al la enhavo</a>
 
-<header class="kapo">
-  <div class="marko">
-    <span class="marka-ikono" aria-hidden="true">F</span>
-    <span class="marka-teksto">
-      <strong>FluoU</strong>
-      <span>la grafika kadro de Horizonto</span>
-    </span>
-    <span class="versio">0.1</span>
-  </div>
-  <div class="agordoj">
-    <label class="sxaltilo">
-      <span id="temoEtikedo">Malluma</span>
-      <input type="checkbox" id="temoSxaltilo" checked aria-label="Malluma temo">
-    </label>
-    <div class="akcentoj" role="group" aria-label="Akcento">
-      <button class="akcento-elektilo" type="button" data-akcento="oro" style="--koloro:#FFB454" aria-label="Akcento oro" aria-pressed="true"></button>
-      <button class="akcento-elektilo" type="button" data-akcento="koralo" style="--koloro:#FF5C8A" aria-label="Akcento koralo" aria-pressed="false"></button>
-      <button class="akcento-elektilo" type="button" data-akcento="cxielo" style="--koloro:#4CC9FF" aria-label="Akcento ĉielo" aria-pressed="false"></button>
-      <button class="akcento-elektilo" type="button" data-akcento="verdo" style="--koloro:#57E389" aria-label="Akcento verdo" aria-pressed="false"></button>
-      <button class="akcento-elektilo" type="button" data-akcento="viola" style="--koloro:#A78BFA" aria-label="Akcento viola" aria-pressed="false"></button>
-      <button class="akcento-elektilo" type="button" data-akcento="bluo" style="--koloro:#5B7CFA" aria-label="Akcento bluo" aria-pressed="false"></button>
+  <header class="kapo">
+    <div class="marko">
+      <span class="marka-ikono" aria-hidden="true">F</span>
+      <span class="marka-teksto">
+        <strong>FluoU</strong>
+        <span>la grafika kadro de Horizonto</span>
+      </span>
+      <span class="versio">0.1</span>
     </div>
-  </div>
-</header>
-
-<main id="cxefa">
-  <div class="heroo">
-    <p class="supera-etikedo">Norma gvidilo · ABI 2 · 2026-11-14</p>
-    <h1>Ĉio <span>fluas.</span></h1>
-    <p class="heroo-teksto">
-      Vida montro de <a href="FLUOU.md">FLUOU.md</a>: la fenestra modelo,
-      la komanda paletro <strong>Eniro</strong> kaj la objekta ŝelo
-      <strong>Ligo</strong>. Ĉi tiu paĝo estas demonstracio; la deviga teksto
-      restas la gvidilo.
-    </p>
-    <div class="principoj">
-      <span class="principo vigla">Windows-modelaj regiloj</span>
-      <span class="principo">Nur Esperanto</span>
-      <span class="principo">Kapabla renderado</span>
-      <span class="principo">Piksela paritateco</span>
-      <span class="principo">DEVI antaŭ ĉio</span>
+    <div class="agordoj">
+      <label class="sxaltilo">
+        <span id="temoEtikedo">Malluma</span>
+        <input type="checkbox" id="temoSxaltilo" checked aria-label="Malluma temo">
+      </label>
+      <div class="akcentoj" role="group" aria-label="Akcento">
+        <button class="akcento-elektilo" type="button" data-akcento="oro" style="--koloro:#FFB454"
+          aria-label="Akcento oro" aria-pressed="true"></button>
+        <button class="akcento-elektilo" type="button" data-akcento="koralo" style="--koloro:#FF5C8A"
+          aria-label="Akcento koralo" aria-pressed="false"></button>
+        <button class="akcento-elektilo" type="button" data-akcento="cxielo" style="--koloro:#4CC9FF"
+          aria-label="Akcento ĉielo" aria-pressed="false"></button>
+        <button class="akcento-elektilo" type="button" data-akcento="verdo" style="--koloro:#57E389"
+          aria-label="Akcento verdo" aria-pressed="false"></button>
+        <button class="akcento-elektilo" type="button" data-akcento="viola" style="--koloro:#A78BFA"
+          aria-label="Akcento viola" aria-pressed="false"></button>
+        <button class="akcento-elektilo" type="button" data-akcento="bluo" style="--koloro:#5B7CFA"
+          aria-label="Akcento bluo" aria-pressed="false"></button>
+      </div>
     </div>
-  </div>
+  </header>
 
-  <!-- ── 01 · Fenestra modelo ───────────────────────────────────── -->
-  <section class="sceno" id="fenestro" aria-labelledby="titoloFenestro">
-    <div class="scena-kapo">
-      <span class="scena-numero">01</span>
-      <div>
-        <h2 id="titoloFenestro">Fenestra modelo</h2>
-        <p>
-          Titolstrio 32 DIP: la ikono maldekstre, la titolo centre, tri
-          ortangulaj regiloj dekstre kaj neniu trafiklumo. Provu
-          <strong>malgrandigi</strong>, <strong>pligrandigi</strong> kaj
-          <strong>fermi</strong>; la ruĝa ŝveba stato apartenas nur al la ferma
-          regilo.
-        </p>
+  <main id="cxefa">
+    <div class="heroo">
+      <p class="supera-etikedo">Norma gvidilo · ABI 2 · 2026-11-14</p>
+      <h1>Ĉio <span>fluas.</span></h1>
+      <p class="heroo-teksto">
+        Vida montro de <a href="FLUOU.md">FLUOU.md</a>: la fenestra modelo,
+        la komanda paletro <strong>Eniro</strong> kaj la objekta ŝelo
+        <strong>Ligo</strong>. Ĉi tiu paĝo estas demonstracio; la deviga teksto
+        restas la gvidilo.
+      </p>
+      <div class="principoj">
+        <span class="principo vigla">Windows-modelaj regiloj</span>
+        <span class="principo">Nur Esperanto</span>
+        <span class="principo">Kapabla renderado</span>
+        <span class="principo">Piksela paritateco</span>
+        <span class="principo">DEVI antaŭ ĉio</span>
       </div>
     </div>
 
-    <div class="labortablo" id="fenestraStage">
-      <div class="fenestro mika revelo" id="notilo">
-        <div class="titolstrio" id="titolstrio">
-          <div class="titola-flanko">
-            <svg class="aplika-ikono" viewBox="0 0 16 16" aria-hidden="true">
-              <rect x="1" y="1" width="14" height="14" rx="4" style="fill:var(--akcento)"></rect>
-              <path d="M3.6 10.4c1.5-3.2 3-3.2 4.4 0s2.9 3.2 4.4 0"
-                    fill="none" stroke="#0A0D1C" stroke-width="1.6"
-                    stroke-linecap="round" opacity=".85"></path>
-            </svg>
-          </div>
-          <div class="titola-centro">
-            <span class="titolo" id="fenestraTitolo">Notilo — notoj.txt</span>
-          </div>
-          <div class="regiloj">
-            <button type="button" data-ago="malgrandigi" title="Malgrandigi" aria-label="Malgrandigi">
-              <svg viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
-                <path d="M0 5h10"></path>
-              </svg>
-            </button>
-            <button type="button" data-ago="pligrandigi" id="regiloMaksimumi" title="Pligrandigi" aria-label="Pligrandigi">
-              <svg class="ikono-pligrandigi" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
-                <rect x=".8" y=".8" width="8.4" height="8.4"></rect>
-              </svg>
-              <svg class="ikono-restarigi" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
-                <rect x=".8" y="2.8" width="6.4" height="6.4"></rect>
-                <path d="M2.8 2.8V.8h6.4v6.4H6.8"></path>
-              </svg>
-            </button>
-            <button type="button" class="fermi" data-ago="fermi" title="Fermi" aria-label="Fermi">
-              <svg viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
-                <path d="M.8.8l8.4 8.4M9.2.8L.8 9.2"></path>
-              </svg>
-            </button>
-          </div>
+    <!-- ── 01 · Fenestra modelo ───────────────────────────────────── -->
+    <section class="sceno" id="fenestro" aria-labelledby="titoloFenestro">
+      <div class="scena-kapo">
+        <span class="scena-numero">01</span>
+        <div>
+          <h2 id="titoloFenestro">Fenestra modelo</h2>
+          <p>
+            Titolstrio 32 DIP: la ikono maldekstre, la titolo centre, tri
+            ortangulaj regiloj dekstre kaj neniu trafiklumo. Provu
+            <strong>malgrandigi</strong>, <strong>pligrandigi</strong> kaj
+            <strong>fermi</strong>; la ruĝa ŝveba stato apartenas nur al la ferma
+            regilo.
+          </p>
         </div>
+      </div>
 
-        <div class="fenestra-korpo">
-          <aside class="flanko" aria-label="Dokumentoj kaj agordoj">
-            <div class="flanka-etikedo">Dokumentoj</div>
-            <button type="button" class="dosiero elektita" data-dosiero="notoj.txt">
-              <span>notoj.txt</span><span class="sildeto tenila">0x0101</span>
-            </button>
-            <button type="button" class="dosiero" data-dosiero="manifesto.toml">
-              <span>manifesto.toml</span><span class="sildeto tenila">0x0102</span>
-            </button>
-            <button type="button" class="dosiero" data-dosiero="taglibro.md">
-              <span>taglibro.md</span><span class="sildeto tenila">0x0103</span>
-            </button>
-            <button type="button" class="dosiero" data-dosiero="bildo.png">
-              <span>bildo.png</span><span class="sildeto tenila">0x0104</span>
-            </button>
+      <div class="labortablo" id="fenestraStage">
+        <div class="fenestro mika revelo" id="notilo">
+          <div class="titolstrio" id="titolstrio">
+            <div class="titola-flanko">
+              <svg class="aplika-ikono" viewBox="0 0 16 16" aria-hidden="true">
+                <rect x="1" y="1" width="14" height="14" rx="4" style="fill:var(--akcento)"></rect>
+                <path d="M3.6 10.4c1.5-3.2 3-3.2 4.4 0s2.9 3.2 4.4 0" fill="none" stroke="#0A0D1C" stroke-width="1.6"
+                  stroke-linecap="round" opacity=".85"></path>
+              </svg>
+            </div>
+            <div class="titola-centro">
+              <span class="titolo" id="fenestraTitolo">Notilo — notoj.txt</span>
+            </div>
+            <div class="regiloj">
+              <button type="button" data-ago="malgrandigi" title="Malgrandigi" aria-label="Malgrandigi">
+                <svg viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
+                  <path d="M0 5h10"></path>
+                </svg>
+              </button>
+              <button type="button" data-ago="pligrandigi" id="regiloMaksimumi" title="Pligrandigi"
+                aria-label="Pligrandigi">
+                <svg class="ikono-pligrandigi" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor"
+                  stroke-width="1.2">
+                  <rect x=".8" y=".8" width="8.4" height="8.4"></rect>
+                </svg>
+                <svg class="ikono-restarigi" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor"
+                  stroke-width="1.2">
+                  <rect x=".8" y="2.8" width="6.4" height="6.4"></rect>
+                  <path d="M2.8 2.8V.8h6.4v6.4H6.8"></path>
+                </svg>
+              </button>
+              <button type="button" class="fermi" data-ago="fermi" title="Fermi" aria-label="Fermi">
+                <svg viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
+                  <path d="M.8.8l8.4 8.4M9.2.8L.8 9.2"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
 
-            <div class="flanka-etikedo">Agordoj</div>
-            <label class="sxaltilo">
-              <input type="checkbox" checked>
-              Aŭtomata ĝisdatigo
-            </label>
-          </aside>
+          <div class="fenestra-korpo">
+            <aside class="flanko" aria-label="Dokumentoj kaj agordoj">
+              <div class="flanka-etikedo">Dokumentoj</div>
+              <button type="button" class="dosiero elektita" data-dosiero="notoj.txt">
+                <span>notoj.txt</span><span class="sildeto tenila">0x0101</span>
+              </button>
+              <button type="button" class="dosiero" data-dosiero="manifesto.toml">
+                <span>manifesto.toml</span><span class="sildeto tenila">0x0102</span>
+              </button>
+              <button type="button" class="dosiero" data-dosiero="taglibro.md">
+                <span>taglibro.md</span><span class="sildeto tenila">0x0103</span>
+              </button>
+              <button type="button" class="dosiero" data-dosiero="bildo.png">
+                <span>bildo.png</span><span class="sildeto tenila">0x0104</span>
+              </button>
 
-          <div class="redaktilo">
-            <div class="ilobreto">
-              <button type="button" class="buto akcenta" id="konservi">Konservi</button>
-              <button type="button" class="buto norma" id="antauxrigardo">Antaŭrigardo</button>
-              <button type="button" class="buto dangxera" id="forigi">Forigi</button>
-              <span class="spaco"></span>
-              <label class="sxaltilo malgranda">
+              <div class="flanka-etikedo">Agordoj</div>
+              <label class="sxaltilo">
                 <input type="checkbox" checked>
-                Ĝisdatigi
+                Aŭtomata ĝisdatigo
               </label>
+            </aside>
+
+            <div class="redaktilo">
+              <div class="ilobreto">
+                <button type="button" class="buto akcenta" id="konservi">Konservi</button>
+                <button type="button" class="buto norma" id="antauxrigardo">Antaŭrigardo</button>
+                <button type="button" class="buto dangxera" id="forigi">Forigi</button>
+                <span class="spaco"></span>
+                <label class="sxaltilo malgranda">
+                  <input type="checkbox" checked>
+                  Ĝisdatigi
+                </label>
+              </div>
+
+              <textarea class="redaktata" id="redaktataTeksto" spellcheck="false"
+                aria-label="Enhavo de la elektita dosiero"></textarea>
+
+              <div class="informa-strio" id="informaStrio" role="status">
+                <span class="semantiko">Sukceso</span>
+                <span id="informaTeksto">Konservita antaŭ 2 minutoj</span>
+                <button type="button" class="fermi-strieto" id="fermiStrieton"
+                  aria-label="Fermi la informan strion">×</button>
+              </div>
+
+              <div class="progreso" aria-label="Sinkronigo">
+                <div class="progresa-etikedo"><span>Sinkronigo</span><span>50%</span></div>
+                <div class="progresa-trako">
+                  <div class="progresa-plenigo" style="width:50%"></div>
+                </div>
+              </div>
             </div>
+          </div>
+        </div>
 
-            <textarea class="redaktata" id="redaktataTeksto" spellcheck="false"
-              aria-label="Enhavo de la elektita dosiero"></textarea>
+        <button type="button" class="tasko" id="tasko" hidden>
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+            <rect x="1" y="1" width="14" height="14" rx="4" style="fill:var(--akcento)"></rect>
+          </svg>
+          <span>Notilo</span>
+          <span class="sildeto">malgrandigita</span>
+        </button>
 
-            <div class="informa-strio" id="informaStrio" role="status">
-              <span class="semantiko">Sukceso</span>
-              <span id="informaTeksto">Konservita antaŭ 2 minutoj</span>
-              <button type="button" class="fermi-strieto" id="fermiStrieton" aria-label="Fermi la informan strion">×</button>
+        <div class="restarigo" id="restarigo" hidden>
+          <h3>La fenestro fermiĝis</h3>
+          <p>
+            La kompozitoro revokis ĝian <code>FENESTRO</code>-tenilon.
+            Neniu pikselo restas sen kapablo.
+          </p>
+          <button type="button" class="buto akcenta" id="remalfermi">Remalfermi Notilon</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 02 · Eniro ──────────────────────────────────────────────── -->
+    <section class="sceno" id="eniro" aria-labelledby="titoloEniro">
+      <div class="scena-kapo">
+        <span class="scena-numero">02</span>
+        <div>
+          <h2 id="titoloEniro">Eniro · Ctrl+E</h2>
+          <p>
+            La tutsistema komanda paletro kun materialo <strong>Akrila</strong>.
+            Tajpu nomon, <code>=</code> por kalkuli aŭ <code>&gt;</code> por
+            delegi al Ligo. Premu <kbd>Ctrl</kbd>+<kbd>E</kbd> ie ajn sur la
+            paĝo por levi ĝin al tavolo.
+          </p>
+        </div>
+      </div>
+
+      <div class="labortablo" id="eniraStage">
+        <div class="enira-ombro" aria-hidden="true"></div>
+
+        <div class="eniro revelo" id="eniroPaletro" role="dialog" aria-label="Eniro">
+          <div class="enira-titolstrio">
+            <div class="enira-titola-flanko">
+              <svg class="enira-titola-ikono" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor"
+                stroke-width="1.4">
+                <circle cx="7" cy="7" r="4.6"></circle>
+                <path d="M10.4 10.4L14 14" stroke-linecap="round"></path>
+              </svg>
             </div>
+            <div class="enira-titola-centro">
+              <span class="enira-titolo">Eniro</span>
+            </div>
+            <div class="enira-titola-dekstro">
+              <span class="enira-modo" id="eniraModo">Serĉo</span>
+            </div>
+          </div>
+          <div class="enira-kapo">
+            <input class="enira-sercho" id="eniraSercho" type="text" autocomplete="off" autocapitalize="off"
+              spellcheck="false" placeholder="Serĉi komandojn, agordojn aŭ dosierojn…  (= kalkuli, > Ligo)"
+              aria-label="Serĉo en Eniro" aria-controls="enirajRezultoj" aria-autocomplete="list">
+          </div>
+          <div class="eniraj-rezultoj" id="enirajRezultoj" role="listbox" aria-label="Rezultoj de Eniro"></div>
+          <div class="enira-piedo">
+            <span><kbd>↑</kbd><kbd>↓</kbd> navigi</span>
+            <span><kbd>Enter</kbd> ruli</span>
+            <span><kbd>Tab</kbd> kompletigi</span>
+            <span><kbd>Esc</kbd> fermi</span>
+            <span><kbd>Ctrl</kbd>+<kbd>E</kbd> levi</span>
+          </div>
+        </div>
 
-            <div class="progreso" aria-label="Sinkronigo">
-              <div class="progresa-etikedo"><span>Sinkronigo</span><span>62%</span></div>
-              <div class="progresa-trako"><div class="progresa-plenigo" style="width:62%"></div></div>
+        <button type="button" class="buto akcenta enira-butono" id="malfermiEniron">
+          Malfermi Eniron (Ctrl+E)
+        </button>
+      </div>
+    </section>
+
+    <!-- ── 03 · Ligo ───────────────────────────────────────────────── -->
+    <section class="sceno" id="ligo" aria-labelledby="titoloLigo">
+      <div class="scena-kapo">
+        <span class="scena-numero">03</span>
+        <div>
+          <h2 id="titoloLigo">Ligo · objekta ŝelo</h2>
+          <p>
+            La dukto transdonas tipizitajn rekordojn, ne tekston. Provu
+            <code>listi</code>, <code>procezoj</code>, dukton kun
+            <code>filtri</code> aŭ la komandon <code>helpu</code>. La anglaj
+            nomoj ne ekzistas.
+          </p>
+        </div>
+      </div>
+
+      <div class="terminalo revelo" id="terminalo">
+        <div class="terminala-kapo">
+          <div class="terminala-flanko">
+            <span class="terminala-sigilo" aria-hidden="true">❯_</span>
+            <span class="sildeto">ABI 2</span>
+          </div>
+          <div class="terminala-centro">
+            <span class="terminala-titolo">Ligo</span>
+          </div>
+          <div class="terminala-dekstro">
+            <span class="terminala-stato">Konektita</span>
+            <div class="regiloj terminala-regiloj" role="group" aria-label="Fenestraj regiloj de Ligo">
+              <button type="button" data-ago="malgrandigi" title="Malgrandigi" aria-label="Malgrandigi">
+                <svg viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
+                  <path d="M0 5h10"></path>
+                </svg>
+              </button>
+              <button type="button" data-ago="pligrandigi" id="ligoMaksimumi" title="Pligrandigi"
+                aria-label="Pligrandigi">
+                <svg class="ikono-pligrandigi" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor"
+                  stroke-width="1.2">
+                  <rect x=".8" y=".8" width="8.4" height="8.4"></rect>
+                </svg>
+                <svg class="ikono-restarigi" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor"
+                  stroke-width="1.2">
+                  <rect x=".8" y="2.8" width="6.4" height="6.4"></rect>
+                  <path d="M2.8 2.8V.8h6.4v6.4H6.8"></path>
+                </svg>
+              </button>
+              <button type="button" class="fermi" data-ago="fermi" title="Fermi" aria-label="Fermi">
+                <svg viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
+                  <path d="M.8.8l8.4 8.4M9.2.8L.8 9.2"></path>
+                </svg>
+              </button>
             </div>
           </div>
         </div>
-      </div>
 
-      <button type="button" class="tasko" id="tasko" hidden>
-        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-          <rect x="1" y="1" width="14" height="14" rx="4" style="fill:var(--akcento)"></rect>
-        </svg>
-        <span>Notilo</span>
-        <span class="sildeto">malgrandigita</span>
-      </button>
+        <div class="terminala-korpo" id="terminalaKorpo" role="log" aria-live="polite" aria-label="Eligo de Ligo"></div>
 
-      <div class="restarigo" id="restarigo" hidden>
-        <h3>La fenestro fermiĝis</h3>
-        <p>
-          La kompozitoro revokis ĝian <code>FENESTRO</code>-tenilon.
-          Neniu pikselo restas sen kapablo.
-        </p>
-        <button type="button" class="buto akcenta" id="remalfermi">Remalfermi Notilon</button>
-      </div>
-    </div>
-  </section>
+        <form class="terminala-injeto" id="terminalaFormo" autocomplete="off">
+          <label class="prompto" for="ligoEniro">horizonto❯</label>
+          <input id="ligoEniro" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+            placeholder="tajpu helpu" aria-label="Komando de Ligo">
+        </form>
 
-  <!-- ── 02 · Eniro ──────────────────────────────────────────────── -->
-  <section class="sceno" id="eniro" aria-labelledby="titoloEniro">
-    <div class="scena-kapo">
-      <span class="scena-numero">02</span>
-      <div>
-        <h2 id="titoloEniro">Eniro · Ctrl+K</h2>
-        <p>
-          La tutsistema komanda paletro kun materialo <strong>Akrila</strong>.
-          Tajpu nomon, <code>=</code> por kalkuli aŭ <code>&gt;</code> por
-          delegi al Ligo. Premu <kbd>Ctrl</kbd>+<kbd>K</kbd> ie ajn sur la
-          paĝo por levi ĝin al tavolo.
-        </p>
-      </div>
-    </div>
-
-    <div class="labortablo" id="eniraStage">
-      <div class="enira-ombro" aria-hidden="true"></div>
-
-      <div class="eniro revelo" id="eniroPaletro" role="dialog" aria-label="Eniro — komanda paletro">
-        <div class="enira-titolstrio">
-          <div class="enira-titola-flanko">
-            <svg class="enira-titola-ikono" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4">
-              <circle cx="7" cy="7" r="4.6"></circle>
-              <path d="M10.4 10.4L14 14" stroke-linecap="round"></path>
-            </svg>
-          </div>
-          <div class="enira-titola-centro">
-            <span class="enira-titolo">Eniro — komanda paletro</span>
-          </div>
-          <div class="enira-titola-dekstro">
-            <span class="enira-modo" id="eniraModo">Serĉo</span>
-          </div>
-        </div>
-        <div class="enira-kapo">
-          <input class="enira-sercho" id="eniraSercho" type="text"
-                 autocomplete="off" autocapitalize="off" spellcheck="false"
-                 placeholder="Serĉi komandojn, agordojn aŭ dosierojn…  (= kalkuli, > Ligo)"
-                 aria-label="Serĉo en Eniro" aria-controls="enirajRezultoj" aria-autocomplete="list">
-        </div>
-        <div class="eniraj-rezultoj" id="enirajRezultoj" role="listbox" aria-label="Rezultoj de Eniro"></div>
-        <div class="enira-piedo">
-          <span><kbd>↑</kbd><kbd>↓</kbd> navigi</span>
-          <span><kbd>Enter</kbd> ruli</span>
-          <span><kbd>Tab</kbd> kompletigi</span>
-          <span><kbd>Esc</kbd> fermi</span>
-          <span><kbd>Ctrl</kbd>+<kbd>K</kbd> levi</span>
-          <span class="enira-versio">FluoU 0.1</span>
+        <div class="sugestoj" aria-label="Ekzemploj">
+          <button type="button" class="sugesto" data-komando="helpu">helpu</button>
+          <button type="button" class="sugesto" data-komando="listi">listi</button>
+          <button type="button" class="sugesto" data-komando="procezoj">procezoj</button>
+          <button type="button" class="sugesto" data-komando="listi | filtri grandeco > 100">listi | filtri grandeco
+            &gt; 100</button>
+          <button type="button" class="sugesto"
+            data-komando="procezoj | filtri stato == Kuranta | montri pid nomo memoro">procezoj | filtri stato ==
+            Kuranta</button>
+          <button type="button" class="sugesto" data-komando="temo hela">temo hela</button>
+          <button type="button" class="sugesto" data-komando="pri">pri</button>
         </div>
       </div>
+      <button type="button" class="buto akcenta terminala-restarigo" id="ligoRestarigo" hidden>Remalfermi Ligon</button>
+    </section>
 
-      <button type="button" class="buto akcenta enira-butono" id="malfermiEniron">
-        Malfermi Eniron (Ctrl+K)
-      </button>
-    </div>
-  </section>
+    <footer class="piedo">
+      <p>
+        FluoU 0.1 · la deviga teksto estas
+        <a href="FLUOU.md">FLUOU.md</a> · ĉi tiu paĝo nur vidigas ĝin.
+        La regiloj sekvas Windows, la komandaro sekvas Esperanton, kaj neniu
+        fenestro ekzistas sen tenilo.
+      </p>
+    </footer>
+  </main>
 
-  <!-- ── 03 · Ligo ───────────────────────────────────────────────── -->
-  <section class="sceno" id="ligo" aria-labelledby="titoloLigo">
-    <div class="scena-kapo">
-      <span class="scena-numero">03</span>
-      <div>
-        <h2 id="titoloLigo">Ligo · objekta ŝelo</h2>
-        <p>
-          La dukto transdonas tipizitajn rekordojn, ne tekston. Provu
-          <code>listi</code>, <code>procezoj</code>, dukton kun
-          <code>filtri</code> aŭ la komandon <code>helpu</code>. La anglaj
-          nomoj ne ekzistas.
-        </p>
-      </div>
-    </div>
+  <div class="enira-tavolo" id="eniraTavolo" hidden></div>
+  <div class="fulmomesagxoj" id="fulmomesagxoj" aria-live="polite" aria-label="Fulmomesaĝoj"></div>
 
-    <div class="terminalo revelo" id="terminalo">
-      <div class="terminala-kapo">
-        <div class="terminala-flanko">
-          <span class="terminala-sigilo" aria-hidden="true">❯_</span>
-          <span class="sildeto">ABI 2</span>
-        </div>
-        <div class="terminala-centro">
-          <span class="terminala-titolo">Ligo — objekta ŝelo</span>
-        </div>
-        <div class="terminala-dekstro">
-          <span class="terminala-stato">Konektita</span>
-          <div class="regiloj terminala-regiloj" role="group" aria-label="Fenestraj regiloj de Ligo">
-            <button type="button" data-ago="malgrandigi" title="Malgrandigi" aria-label="Malgrandigi">
-              <svg viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
-                <path d="M0 5h10"></path>
-              </svg>
-            </button>
-            <button type="button" data-ago="pligrandigi" id="ligoMaksimumi" title="Pligrandigi" aria-label="Pligrandigi">
-              <svg class="ikono-pligrandigi" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
-                <rect x=".8" y=".8" width="8.4" height="8.4"></rect>
-              </svg>
-              <svg class="ikono-restarigi" viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
-                <rect x=".8" y="2.8" width="6.4" height="6.4"></rect>
-                <path d="M2.8 2.8V.8h6.4v6.4H6.8"></path>
-              </svg>
-            </button>
-            <button type="button" class="fermi" data-ago="fermi" title="Fermi" aria-label="Fermi">
-              <svg viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
-                <path d="M.8.8l8.4 8.4M9.2.8L.8 9.2"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
+  <script>
+    "use strict";
 
-      <div class="terminala-korpo" id="terminalaKorpo" role="log" aria-live="polite" aria-label="Eligo de Ligo"></div>
+    /* ── Helpiloj ─────────────────────────────────────────────────── */
+    const radiko = document.documentElement;
+    const eskapi = (v) => String(v).replace(/[&<>"']/g, (s) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[s]));
 
-      <form class="terminala-injeto" id="terminalaFormo" autocomplete="off">
-        <label class="prompto" for="ligoEniro">horizonto❯</label>
-        <input id="ligoEniro" type="text" autocomplete="off" autocapitalize="off"
-               spellcheck="false" placeholder="tajpu helpu" aria-label="Komando de Ligo">
-      </form>
+    const formatu = (v) => {
+      if (!isFinite(v)) return "—";
+      const r = Math.round(v * 1e6) / 1e6;
+      return String(r).replace(".", ",");
+    };
 
-      <div class="sugestoj" aria-label="Ekzemploj">
-        <button type="button" class="sugesto" data-komando="helpu">helpu</button>
-        <button type="button" class="sugesto" data-komando="listi">listi</button>
-        <button type="button" class="sugesto" data-komando="procezoj">procezoj</button>
-        <button type="button" class="sugesto" data-komando="listi | filtri grandeco > 100">listi | filtri grandeco &gt; 100</button>
-        <button type="button" class="sugesto" data-komando="procezoj | filtri stato == Kuranta | montri pid nomo memoro">procezoj | filtri stato == Kuranta</button>
-        <button type="button" class="sugesto" data-komando="temo hela">temo hela</button>
-        <button type="button" class="sugesto" data-komando="pri">pri</button>
-      </div>
-    </div>
-    <button type="button" class="buto akcenta terminala-restarigo" id="ligoRestarigo" hidden>Remalfermi Ligon</button>
-  </section>
+    /* ── Temo kaj akcento ─────────────────────────────────────────── */
+    const AKCENTOJ = {
+      oro: "#FFB454",
+      koralo: "#FF5C8A",
+      cxielo: "#4CC9FF",
+      verdo: "#57E389",
+      viola: "#A78BFA",
+      bluo: "#5B7CFA"
+    };
+    const AKCENTAJ_NOMOJ = {
+      oro: "oro", koralo: "koralo", cxielo: "ĉielo",
+      verdo: "verdo", viola: "viola", bluo: "bluo"
+    };
 
-  <footer class="piedo">
-    <p>
-      FluoU 0.1 · la deviga teksto estas
-      <a href="FLUOU.md">FLUOU.md</a> · ĉi tiu paĝo nur vidigas ĝin.
-      La regiloj sekvas Windows, la komandaro sekvas Esperanton, kaj neniu
-      fenestro ekzistas sen tenilo.
-    </p>
-  </footer>
-</main>
+    const temoSxaltilo = document.getElementById("temoSxaltilo");
+    const temoEtikedo = document.getElementById("temoEtikedo");
 
-<div class="enira-tavolo" id="eniraTavolo" hidden></div>
-<div class="fulmomesagxoj" id="fulmomesagxoj" aria-live="polite" aria-label="Fulmomesaĝoj"></div>
+    function fulmomesagxo(titolo, teksto, semantiko) {
+      const ujo = document.getElementById("fulmomesagxoj");
+      const el = document.createElement("div");
+      el.className = "fulmomesagxo" + (semantiko ? " " + semantiko : "");
+      el.innerHTML =
+        '<div class="fulma-titolo">' + eskapi(titolo) + '</div>' +
+        '<div class="fulma-teksto">' + eskapi(teksto) + '</div>';
+      ujo.appendChild(el);
+      while (ujo.children.length > 4) ujo.firstElementChild.remove();
+      setTimeout(() => {
+        el.classList.add("foriri");
+        setTimeout(() => el.remove(), 240);
+      }, 3400);
+    }
 
-<script>
-"use strict";
+    function agordiTemon(temo, sciigi) {
+      const valoro = temo === "hela" ? "hela" : "malluma";
+      radiko.dataset.temo = valoro;
+      temoSxaltilo.checked = valoro === "malluma";
+      temoEtikedo.textContent = valoro === "malluma" ? "Malluma" : "Hela";
+      try { localStorage.setItem("fluou-temo", valoro); } catch (e) { /* sen poŝo */ }
+      if (sciigi) {
+        fulmomesagxo("Temo", "La tuta interfaco nun estas " + valoro + ".", "sukceso");
+      }
+    }
 
-/* ── Helpiloj ─────────────────────────────────────────────────── */
-const radiko = document.documentElement;
-const eskapi = (v) => String(v).replace(/[&<>"']/g, (s) => ({
-  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-}[s]));
+    function agordiAkcenton(nomo, sciigi) {
+      const valoro = AKCENTOJ[nomo] ? nomo : "verdo";
+      radiko.style.setProperty("--akcento", AKCENTOJ[valoro]);
+      document.querySelectorAll(".akcento-elektilo").forEach((b) => {
+        b.setAttribute("aria-pressed", String(b.dataset.akcento === valoro));
+      });
+      try { localStorage.setItem("fluou-akcento", valoro); } catch (e) { /* sen poŝo */ }
+      if (sciigi) {
+        fulmomesagxo("Akcento", "Nova akcento: " + AKCENTAJ_NOMOJ[valoro] + ".", "sukceso");
+      }
+    }
 
-const formatu = (v) => {
-  if (!isFinite(v)) return "—";
-  const r = Math.round(v * 1e6) / 1e6;
-  return String(r).replace(".", ",");
-};
+    document.querySelectorAll(".akcento-elektilo").forEach((butono) => {
+      butono.addEventListener("click", () => agordiAkcenton(butono.dataset.akcento, true));
+    });
+    temoSxaltilo.addEventListener("change", () => {
+      agordiTemon(temoSxaltilo.checked ? "malluma" : "hela", true);
+    });
 
-/* ── Temo kaj akcento ─────────────────────────────────────────── */
-const AKCENTOJ = {
-  oro: "#FFB454",
-  koralo: "#FF5C8A",
-  cxielo: "#4CC9FF",
-  verdo: "#57E389",
-  viola: "#A78BFA",
-  bluo: "#5B7CFA"
-};
-const AKCENTAJ_NOMOJ = {
-  oro: "oro", koralo: "koralo", cxielo: "ĉielo",
-  verdo: "verdo", viola: "viola", bluo: "bluo"
-};
+    /* ── Revelo ───────────────────────────────────────────────────── */
+    document.querySelectorAll(".revelo").forEach((el) => {
+      el.addEventListener("pointermove", (e) => {
+        const r = el.getBoundingClientRect();
+        el.style.setProperty("--mx", (e.clientX - r.left) + "px");
+        el.style.setProperty("--my", (e.clientY - r.top) + "px");
+      });
+    });
 
-const temoSxaltilo = document.getElementById("temoSxaltilo");
-const temoEtikedo = document.getElementById("temoEtikedo");
+    /* ── Fenestra modelo ──────────────────────────────────────────── */
+    const fenestro = document.getElementById("notilo");
+    const tasko = document.getElementById("tasko");
+    const restarigo = document.getElementById("restarigo");
+    const regiloMaksimumi = document.getElementById("regiloMaksimumi");
+    const redaktataTeksto = document.getElementById("redaktataTeksto");
+    const fenestraTitolo = document.getElementById("fenestraTitolo");
 
-function fulmomesagxo(titolo, teksto, semantiko) {
-  const ujo = document.getElementById("fulmomesagxoj");
-  const el = document.createElement("div");
-  el.className = "fulmomesagxo" + (semantiko ? " " + semantiko : "");
-  el.innerHTML =
-    '<div class="fulma-titolo">' + eskapi(titolo) + '</div>' +
-    '<div class="fulma-teksto">' + eskapi(teksto) + '</div>';
-  ujo.appendChild(el);
-  while (ujo.children.length > 4) ujo.firstElementChild.remove();
-  setTimeout(() => {
-    el.classList.add("foriri");
-    setTimeout(() => el.remove(), 240);
-  }, 3400);
-}
+    const DOSIERA_ENHAVO = {
+      "notoj.txt": "Bonvenon al FluoU.\n\n" +
+        "Ĉio fluas: la fenestro, la komponantoj kaj la pikseloj\n" +
+        "trairas la saman kadron.\n\n" +
+        "— Titolstrio: ikono maldekstre, titolo centre, regiloj dekstre\n" +
+        "— Tri regiloj dekstre: malgrandigi, pligrandigi, fermi\n" +
+        "— Neniu trafiklumo\n\n" +
+        "La teksto estas redaktebla. Provu la konservan butonon.",
+      "manifesto.toml": "[aplikaĵo]\n" +
+        'nomo   = "Notilo"\n' +
+        'gu    = "fluoU"   # deviga\n' +
+        'fluo   = "0.1"\n' +
+        'arkoj  = ["x86_64", "arm64"]\n\n' +
+        "[permesoj]\n" +
+        "fenestro = true\n" +
+        'dosieroj = ["~/dokumentoj:legi"]',
+      "taglibro.md": "# Taglibro\n\n" +
+        "2026-11-14 — Unua norma versio de FluoU.\n" +
+        "La regiloj transiris al la Windows-modelo.\n" +
+        "La komandaro de Ligo estas Esperanta.",
+      "bildo.png": "Bildoj ne estas teksto. La kompozitoro ricevus\n" +
+        "la bildon per kunhava memora ringo, ne per la teksta limo."
+    };
 
-function agordiTemon(temo, sciigi) {
-  const valoro = temo === "hela" ? "hela" : "malluma";
-  radiko.dataset.temo = valoro;
-  temoSxaltilo.checked = valoro === "malluma";
-  temoEtikedo.textContent = valoro === "malluma" ? "Malluma" : "Hela";
-  try { localStorage.setItem("fluou-temo", valoro); } catch (e) { /* sen poŝo */ }
-  if (sciigi) {
-    fulmomesagxo("Temo", "La tuta interfaco nun estas " + valoro + ".", "sukceso");
-  }
-}
+    redaktataTeksto.value = DOSIERA_ENHAVO["notoj.txt"];
 
-function agordiAkcenton(nomo, sciigi) {
-  const valoro = AKCENTOJ[nomo] ? nomo : "oro";
-  radiko.style.setProperty("--akcento", AKCENTOJ[valoro]);
-  document.querySelectorAll(".akcento-elektilo").forEach((b) => {
-    b.setAttribute("aria-pressed", String(b.dataset.akcento === valoro));
-  });
-  try { localStorage.setItem("fluou-akcento", valoro); } catch (e) { /* sen poŝo */ }
-  if (sciigi) {
-    fulmomesagxo("Akcento", "Nova akcento: " + AKCENTAJ_NOMOJ[valoro] + ".", "sukceso");
-  }
-}
+    document.querySelectorAll(".dosiero").forEach((butono) => {
+      butono.addEventListener("click", () => {
+        const nomo = butono.dataset.dosiero;
+        document.querySelectorAll(".dosiero").forEach((b) => b.classList.remove("elektita"));
+        butono.classList.add("elektita");
+        redaktataTeksto.value = DOSIERA_ENHAVO[nomo] || "";
+        fenestraTitolo.textContent = "Notilo — " + nomo;
+      });
+    });
 
-document.querySelectorAll(".akcento-elektilo").forEach((butono) => {
-  butono.addEventListener("click", () => agordiAkcenton(butono.dataset.akcento, true));
-});
-temoSxaltilo.addEventListener("change", () => {
-  agordiTemon(temoSxaltilo.checked ? "malluma" : "hela", true);
-});
+    function sxangxiMaksimumon() {
+      const pligranda = fenestro.classList.toggle("pligrandigita");
+      regiloMaksimumi.setAttribute("aria-label", pligranda ? "Restarigi" : "Pligrandigi");
+      regiloMaksimumi.title = pligranda ? "Restarigi" : "Pligrandigi";
+    }
 
-/* ── Revelo ───────────────────────────────────────────────────── */
-document.querySelectorAll(".revelo").forEach((el) => {
-  el.addEventListener("pointermove", (e) => {
-    const r = el.getBoundingClientRect();
-    el.style.setProperty("--mx", (e.clientX - r.left) + "px");
-    el.style.setProperty("--my", (e.clientY - r.top) + "px");
-  });
-});
+    document.querySelectorAll("#notilo .regiloj button").forEach((butono) => {
+      butono.addEventListener("click", () => {
+        const ago = butono.dataset.ago;
+        if (ago === "pligrandigi") {
+          sxangxiMaksimumon();
+          return;
+        }
+        if (ago === "malgrandigi") {
+          if (fenestro.classList.contains("pligrandigita")) sxangxiMaksimumon();
+          fenestro.classList.add("malgrandigita");
+          tasko.hidden = false;
+          fulmomesagxo("Malgrandigita", "Notilo atendas en la tasko.", "informo");
+          return;
+        }
+        if (ago === "fermi") {
+          fenestro.classList.add("fermita");
+          setTimeout(() => {
+            fenestro.hidden = true;
+            restarigo.hidden = false;
+          }, 260);
+          fulmomesagxo("Fermi", "La kompozitoro revokis la FENESTRO-tenilon.", "averto");
+        }
+      });
+    });
 
-/* ── Fenestra modelo ──────────────────────────────────────────── */
-const fenestro = document.getElementById("notilo");
-const tasko = document.getElementById("tasko");
-const restarigo = document.getElementById("restarigo");
-const regiloMaksimumi = document.getElementById("regiloMaksimumi");
-const redaktataTeksto = document.getElementById("redaktataTeksto");
-const fenestraTitolo = document.getElementById("fenestraTitolo");
-
-const DOSIERA_ENHAVO = {
-  "notoj.txt": "Bonvenon al FluoU.\n\n" +
-    "Ĉio fluas: la fenestro, la komponantoj kaj la pikseloj\n" +
-    "trairas la saman kadron.\n\n" +
-    "— Titolstrio: ikono maldekstre, titolo centre, regiloj dekstre\n" +
-    "— Tri regiloj dekstre: malgrandigi, pligrandigi, fermi\n" +
-    "— Neniu trafiklumo\n\n" +
-    "La teksto estas redaktebla. Provu la konservan butonon.",
-  "manifesto.toml": "[aplikaĵo]\n" +
-    'nomo   = "Notilo"\n' +
-    'gui    = "fluoU"   # deviga\n' +
-    'fluo   = "0.1"\n' +
-    'arkoj  = ["x86_64", "arm64"]\n\n' +
-    "[permesoj]\n" +
-    "fenestro = true\n" +
-    'dosieroj = ["~/dokumentoj:legi"]',
-  "taglibro.md": "# Taglibro\n\n" +
-    "2026-11-14 — Unua norma versio de FluoU.\n" +
-    "La regiloj transiris al la Windows-modelo.\n" +
-    "La komandaro de Ligo estas Esperanta.",
-  "bildo.png": "Bildoj ne estas teksto. La kompozitoro ricevus\n" +
-    "la bildon per kunhava memora ringo, ne per la teksta limo."
-};
-
-redaktataTeksto.value = DOSIERA_ENHAVO["notoj.txt"];
-
-document.querySelectorAll(".dosiero").forEach((butono) => {
-  butono.addEventListener("click", () => {
-    const nomo = butono.dataset.dosiero;
-    document.querySelectorAll(".dosiero").forEach((b) => b.classList.remove("elektita"));
-    butono.classList.add("elektita");
-    redaktataTeksto.value = DOSIERA_ENHAVO[nomo] || "";
-    fenestraTitolo.textContent = "Notilo — " + nomo;
-  });
-});
-
-function sxangxiMaksimumon() {
-  const pligranda = fenestro.classList.toggle("pligrandigita");
-  regiloMaksimumi.setAttribute("aria-label", pligranda ? "Restarigi" : "Pligrandigi");
-  regiloMaksimumi.title = pligranda ? "Restarigi" : "Pligrandigi";
-}
-
-document.querySelectorAll("#notilo .regiloj button").forEach((butono) => {
-  butono.addEventListener("click", () => {
-    const ago = butono.dataset.ago;
-    if (ago === "pligrandigi") {
+    document.getElementById("titolstrio").addEventListener("dblclick", (e) => {
+      if (e.target.closest(".regiloj")) return;
       sxangxiMaksimumon();
-      return;
+    });
+
+    tasko.addEventListener("click", () => {
+      fenestro.classList.remove("malgrandigita");
+      tasko.hidden = true;
+    });
+
+    document.getElementById("remalfermi").addEventListener("click", () => {
+      restarigo.hidden = true;
+      fenestro.hidden = false;
+      fenestro.classList.remove("fermita", "malgrandigita", "pligrandigita");
+      tasko.hidden = true;
+      document.querySelectorAll(".dosiero").forEach((b) => {
+        b.classList.toggle("elektita", b.dataset.dosiero === "notoj.txt");
+      });
+      regiloMaksimumi.setAttribute("aria-label", "Pligrandigi");
+      regiloMaksimumi.title = "Pligrandigi";
+      fenestraTitolo.textContent = "Notilo — notoj.txt";
+      redaktataTeksto.value = DOSIERA_ENHAVO["notoj.txt"];
+      fulmomesagxo("Remalfermita", "Nova FENESTRO-tenilo atribuiĝis al Notilo.", "sukceso");
+    });
+
+    document.getElementById("konservi").addEventListener("click", () => {
+      document.getElementById("informaTeksto").textContent = "Konservita ĵus";
+      document.getElementById("informaStrio").hidden = false;
+      fulmomesagxo("Konservite", "La dosiero konserviĝis tra la FENESTRO-tenilo.", "sukceso");
+    });
+    document.getElementById("antauxrigardo").addEventListener("click", () => {
+      fulmomesagxo("Antaŭrigardo", "Nova FENESTRO malfermiĝis en la kompozitoro.", "informo");
+    });
+    document.getElementById("forigi").addEventListener("click", () => {
+      fulmomesagxo("Danĝera ago", "Forigo postulas konfirmon (K06).", "dangxero");
+    });
+    document.getElementById("fermiStrieton").addEventListener("click", () => {
+      document.getElementById("informaStrio").hidden = true;
+    });
+
+    /* ── Datumoj de Ligo ──────────────────────────────────────────── */
+    const DOSIEROJ = [
+      { nomo: "notoj.txt", tipo: "teksto", grandeco: 1.2, tenilo: "0x0101" },
+      { nomo: "manifesto.toml", tipo: "agordo", grandeco: 0.4, tenilo: "0x0102" },
+      { nomo: "taglibro.md", tipo: "teksto", grandeco: 2.7, tenilo: "0x0103" },
+      { nomo: "bildo.png", tipo: "bildo", grandeco: 148, tenilo: "0x0104" }
+    ];
+
+    const PROCEZOJ = [
+      { pid: 1, nomo: "kerno", stato: "Kuranta", memoro: 12, permesoj: "ĈIUJ" },
+      { pid: 2, nomo: "kompozitoro", stato: "Kuranta", memoro: 48, permesoj: "FENESTRO · SENDI · RICEVI" },
+      { pid: 3, nomo: "eniro", stato: "Preta", memoro: 22, permesoj: "FENESTRO · SENDI" },
+      { pid: 4, nomo: "notilo", stato: "Kuranta", memoro: 36, permesoj: "DOSIEROJ:LEGI" },
+      { pid: 5, nomo: "ligo", stato: "Kuranta", memoro: 18, permesoj: "FENESTRO · SENDI · RICEVI" }
+    ];
+
+    const KOMANDOJ = [
+      { nomo: "helpu", priskribo: "Montri la komandtabelon kaj la helpon" },
+      { nomo: "listi", priskribo: "Listigi dosierojn kun nomo, tipo, grandeco kaj tenilo" },
+      { nomo: "legi", priskribo: "Legi dosieron kiel rekordon kun tenilo" },
+      { nomo: "procezoj", priskribo: "Montri la procezan tabelon" },
+      { nomo: "mortigi", priskribo: "Mortigi procezon (ne protektan)" },
+      { nomo: "eldiri", priskribo: "Krei mesaĝan rekordon" },
+      { nomo: "pri", priskribo: "Montri sistemajn informojn" },
+      { nomo: "temo", priskribo: "Ŝanĝi la temon: malluma aŭ hela" },
+      { nomo: "akcento", priskribo: "Ŝanĝi la akcenton de la interfaco" },
+      { nomo: "eniro", priskribo: "Malfermi la komandan paletron" },
+      { nomo: "filtri", priskribo: "Filtri rekordojn laŭ kampo" },
+      { nomo: "ordigi", priskribo: "Ordigi rekordojn laŭ kampo" },
+      { nomo: "unua", priskribo: "Preni la unuajn rekordojn" },
+      { nomo: "sumi", priskribo: "Sumi nombran kampon" },
+      { nomo: "nombri", priskribo: "Nombri rekordojn" },
+      { nomo: "montri", priskribo: "Projekcii kolumnojn" },
+      { nomo: "teksto", priskribo: "Transiri al la eksplicita teksta limo" },
+      { nomo: "purigi", priskribo: "Malplenigi la terminalon" }
+    ];
+
+    const UNUOJ = { grandeco: " KiB", memoro: " MiB" };
+
+    /* ── Ligo ─────────────────────────────────────────────────────── */
+    const terminalaKorpo = document.getElementById("terminalaKorpo");
+    const terminalaFormo = document.getElementById("terminalaFormo");
+    const ligoEniro = document.getElementById("ligoEniro");
+    const terminalo = document.getElementById("terminalo");
+    const ligoMaksimumi = document.getElementById("ligoMaksimumi");
+    const ligoRestarigo = document.getElementById("ligoRestarigo");
+
+    function sxangxiLigonMaksimumon() {
+      const pligranda = terminalo.classList.toggle("pligrandigita");
+      ligoMaksimumi.setAttribute("aria-label", pligranda ? "Restarigi" : "Pligrandigi");
+      ligoMaksimumi.title = pligranda ? "Restarigi" : "Pligrandigi";
     }
-    if (ago === "malgrandigi") {
-      if (fenestro.classList.contains("pligrandigita")) sxangxiMaksimumon();
-      fenestro.classList.add("malgrandigita");
-      tasko.hidden = false;
-      fulmomesagxo("Malgrandigita", "Notilo atendas en la tasko.", "informo");
-      return;
+
+    document.querySelectorAll(".terminala-regiloj button").forEach((butono) => {
+      butono.addEventListener("click", () => {
+        const ago = butono.dataset.ago;
+        if (ago === "pligrandigi") {
+          sxangxiLigonMaksimumon();
+          return;
+        }
+        if (ago === "malgrandigi") {
+          if (terminalo.classList.contains("pligrandigita")) sxangxiLigonMaksimumon();
+          terminalo.classList.add("malgrandigita");
+          ligoRestarigo.hidden = false;
+          fulmomesagxo("Malgrandigita", "Ligo atendas sub la sceno.", "informo");
+          return;
+        }
+        if (ago === "fermi") {
+          terminalo.classList.add("fermita");
+          setTimeout(() => {
+            terminalo.hidden = true;
+            ligoRestarigo.hidden = false;
+          }, 260);
+          fulmomesagxo("Fermi", "La kompozitoro revokis la FENESTRO-tenilon de Ligo.", "averto");
+        }
+      });
+    });
+
+    ligoRestarigo.addEventListener("click", () => {
+      terminalo.hidden = false;
+      terminalo.classList.remove("fermita", "malgrandigita", "pligrandigita");
+      ligoRestarigo.hidden = true;
+      ligoMaksimumi.setAttribute("aria-label", "Pligrandigi");
+      ligoMaksimumi.title = "Pligrandigi";
+      ligoEniro.focus();
+    });
+    const ligoHistorio = [];
+    let ligoHistoriaIndekso = 0;
+    let lastRecords = null;
+    let lastColumns = null;
+
+    function linio(html, klaso) {
+      const d = document.createElement("div");
+      d.className = "linio" + (klaso ? " " + klaso : "");
+      d.innerHTML = html;
+      terminalaKorpo.appendChild(d);
+      return d;
     }
-    if (ago === "fermi") {
-      fenestro.classList.add("fermita");
-      setTimeout(() => {
-        fenestro.hidden = true;
-        restarigo.hidden = false;
-      }, 260);
-      fulmomesagxo("Fermi", "La kompozitoro revokis la FENESTRO-tenilon.", "averto");
+    function skrolli() { terminalaKorpo.scrollTop = terminalaKorpo.scrollHeight; }
+    function eraro(mesagxo) { linio("✕ " + eskapi(mesagxo), "eraro"); }
+    function montraValoro(kampo, valoro) {
+      if (typeof valoro === "number" && UNUOJ[kampo]) return formatu(valoro) + UNUOJ[kampo];
+      return String(valoro);
     }
-  });
-});
 
-document.getElementById("titolstrio").addEventListener("dblclick", (e) => {
-  if (e.target.closest(".regiloj")) return;
-  sxangxiMaksimumon();
-});
-
-tasko.addEventListener("click", () => {
-  fenestro.classList.remove("malgrandigita");
-  tasko.hidden = true;
-});
-
-document.getElementById("remalfermi").addEventListener("click", () => {
-  restarigo.hidden = true;
-  fenestro.hidden = false;
-  fenestro.classList.remove("fermita", "malgrandigita", "pligrandigita");
-  tasko.hidden = true;
-  document.querySelectorAll(".dosiero").forEach((b) => {
-    b.classList.toggle("elektita", b.dataset.dosiero === "notoj.txt");
-  });
-  regiloMaksimumi.setAttribute("aria-label", "Pligrandigi");
-  regiloMaksimumi.title = "Pligrandigi";
-  fenestraTitolo.textContent = "Notilo — notoj.txt";
-  redaktataTeksto.value = DOSIERA_ENHAVO["notoj.txt"];
-  fulmomesagxo("Remalfermita", "Nova FENESTRO-tenilo atribuiĝis al Notilo.", "sukceso");
-});
-
-document.getElementById("konservi").addEventListener("click", () => {
-  document.getElementById("informaTeksto").textContent = "Konservita ĵus";
-  document.getElementById("informaStrio").hidden = false;
-  fulmomesagxo("Konservite", "La dosiero konserviĝis tra la FENESTRO-tenilo.", "sukceso");
-});
-document.getElementById("antauxrigardo").addEventListener("click", () => {
-  fulmomesagxo("Antaŭrigardo", "Nova FENESTRO malfermiĝis en la kompozitoro.", "informo");
-});
-document.getElementById("forigi").addEventListener("click", () => {
-  fulmomesagxo("Danĝera ago", "Forigo postulas konfirmon (K06).", "dangxero");
-});
-document.getElementById("fermiStrieton").addEventListener("click", () => {
-  document.getElementById("informaStrio").hidden = true;
-});
-
-/* ── Datumoj de Ligo ──────────────────────────────────────────── */
-const DOSIEROJ = [
-  { nomo: "notoj.txt", tipo: "teksto", grandeco: 1.2, tenilo: "0x0101" },
-  { nomo: "manifesto.toml", tipo: "agordo", grandeco: 0.4, tenilo: "0x0102" },
-  { nomo: "taglibro.md", tipo: "teksto", grandeco: 2.7, tenilo: "0x0103" },
-  { nomo: "bildo.png", tipo: "bildo", grandeco: 148, tenilo: "0x0104" }
-];
-
-const PROCEZOJ = [
-  { pid: 1, nomo: "kerno", stato: "Kuranta", memoro: 12, permesoj: "ĈIUJ" },
-  { pid: 2, nomo: "kompozitoro", stato: "Kuranta", memoro: 48, permesoj: "FENESTRO · SENDI · RICEVI" },
-  { pid: 3, nomo: "eniro", stato: "Preta", memoro: 22, permesoj: "FENESTRO · SENDI" },
-  { pid: 4, nomo: "notilo", stato: "Kuranta", memoro: 36, permesoj: "DOSIEROJ:LEGI" },
-  { pid: 5, nomo: "ligo", stato: "Kuranta", memoro: 18, permesoj: "FENESTRO · SENDI · RICEVI" }
-];
-
-const KOMANDOJ = [
-  { nomo: "helpu", priskribo: "Montri la komandtabelon kaj la helpon" },
-  { nomo: "listi", priskribo: "Listigi dosierojn kun nomo, tipo, grandeco kaj tenilo" },
-  { nomo: "legi", priskribo: "Legi dosieron kiel rekordon kun tenilo" },
-  { nomo: "procezoj", priskribo: "Montri la procezan tabelon" },
-  { nomo: "mortigi", priskribo: "Mortigi procezon (ne protektan)" },
-  { nomo: "eldiri", priskribo: "Krei mesaĝan rekordon" },
-  { nomo: "pri", priskribo: "Montri sistemajn informojn" },
-  { nomo: "temo", priskribo: "Ŝanĝi la temon: malluma aŭ hela" },
-  { nomo: "akcento", priskribo: "Ŝanĝi la akcenton de la interfaco" },
-  { nomo: "eniro", priskribo: "Malfermi la komandan paletron" },
-  { nomo: "filtri", priskribo: "Filtri rekordojn laŭ kampo" },
-  { nomo: "ordigi", priskribo: "Ordigi rekordojn laŭ kampo" },
-  { nomo: "unua", priskribo: "Preni la unuajn rekordojn" },
-  { nomo: "sumi", priskribo: "Sumi nombran kampon" },
-  { nomo: "nombri", priskribo: "Nombri rekordojn" },
-  { nomo: "montri", priskribo: "Projekcii kolumnojn" },
-  { nomo: "teksto", priskribo: "Transiri al la eksplicita teksta limo" },
-  { nomo: "purigi", priskribo: "Malplenigi la terminalon" }
-];
-
-const UNUOJ = { grandeco: " KiB", memoro: " MiB" };
-
-/* ── Ligo ─────────────────────────────────────────────────────── */
-const terminalaKorpo = document.getElementById("terminalaKorpo");
-const terminalaFormo = document.getElementById("terminalaFormo");
-const ligoEniro = document.getElementById("ligoEniro");
-const terminalo = document.getElementById("terminalo");
-const ligoMaksimumi = document.getElementById("ligoMaksimumi");
-const ligoRestarigo = document.getElementById("ligoRestarigo");
-
-function sxangxiLigonMaksimumon() {
-  const pligranda = terminalo.classList.toggle("pligrandigita");
-  ligoMaksimumi.setAttribute("aria-label", pligranda ? "Restarigi" : "Pligrandigi");
-  ligoMaksimumi.title = pligranda ? "Restarigi" : "Pligrandigi";
-}
-
-document.querySelectorAll(".terminala-regiloj button").forEach((butono) => {
-  butono.addEventListener("click", () => {
-    const ago = butono.dataset.ago;
-    if (ago === "pligrandigi") {
-      sxangxiLigonMaksimumon();
-      return;
-    }
-    if (ago === "malgrandigi") {
-      if (terminalo.classList.contains("pligrandigita")) sxangxiLigonMaksimumon();
-      terminalo.classList.add("malgrandigita");
-      ligoRestarigo.hidden = false;
-      fulmomesagxo("Malgrandigita", "Ligo atendas sub la sceno.", "informo");
-      return;
-    }
-    if (ago === "fermi") {
-      terminalo.classList.add("fermita");
-      setTimeout(() => {
-        terminalo.hidden = true;
-        ligoRestarigo.hidden = false;
-      }, 260);
-      fulmomesagxo("Fermi", "La kompozitoro revokis la FENESTRO-tenilon de Ligo.", "averto");
-    }
-  });
-});
-
-ligoRestarigo.addEventListener("click", () => {
-  terminalo.hidden = false;
-  terminalo.classList.remove("fermita", "malgrandigita", "pligrandigita");
-  ligoRestarigo.hidden = true;
-  ligoMaksimumi.setAttribute("aria-label", "Pligrandigi");
-  ligoMaksimumi.title = "Pligrandigi";
-  ligoEniro.focus();
-});
-const ligoHistorio = [];
-let ligoHistoriaIndekso = 0;
-let lastRecords = null;
-let lastColumns = null;
-
-function linio(html, klaso) {
-  const d = document.createElement("div");
-  d.className = "linio" + (klaso ? " " + klaso : "");
-  d.innerHTML = html;
-  terminalaKorpo.appendChild(d);
-  return d;
-}
-function skrolli() { terminalaKorpo.scrollTop = terminalaKorpo.scrollHeight; }
-function eraro(mesagxo) { linio("✕ " + eskapi(mesagxo), "eraro"); }
-function montraValoro(kampo, valoro) {
-  if (typeof valoro === "number" && UNUOJ[kampo]) return formatu(valoro) + UNUOJ[kampo];
-  return String(valoro);
-}
-
-function tabelo(records, kolumnoj) {
-  if (!records || !records.length) {
-    linio("Neniu rekordo.", "muted");
-    return;
-  }
-  let kol = (kolumnoj && kolumnoj.length) ? kolumnoj : [];
-  if (!kol.length) {
-    kol = [];
-    for (const r of records) {
-      for (const k of Object.keys(r)) if (!kol.includes(k)) kol.push(k);
-    }
-  }
-  let html = '<table class="terminala-tabelo"><thead><tr>';
-  for (const k of kol) html += "<th>" + eskapi(k) + "</th>";
-  html += "</tr></thead><tbody>";
-  for (const r of records) {
-    html += "<tr>";
-    for (const k of kol) {
-      const v = r[k];
-      if (k === "tenilo" && v != null) {
-        html += '<td><span class="sildeto tenila">TENILO ' + eskapi(v) + "</span></td>";
-      } else if (typeof v === "number") {
-        html += '<td class="nombra">' + eskapi(montraValoro(k, v)) + "</td>";
-      } else {
-        html += "<td>" + eskapi(v == null ? "—" : montraValoro(k, v)) + "</td>";
+    function tabelo(records, kolumnoj) {
+      if (!records || !records.length) {
+        linio("Neniu rekordo.", "muted");
+        return;
       }
+      let kol = (kolumnoj && kolumnoj.length) ? kolumnoj : [];
+      if (!kol.length) {
+        kol = [];
+        for (const r of records) {
+          for (const k of Object.keys(r)) if (!kol.includes(k)) kol.push(k);
+        }
+      }
+      let html = '<table class="terminala-tabelo"><thead><tr>';
+      for (const k of kol) html += "<th>" + eskapi(k) + "</th>";
+      html += "</tr></thead><tbody>";
+      for (const r of records) {
+        html += "<tr>";
+        for (const k of kol) {
+          const v = r[k];
+          if (k === "tenilo" && v != null) {
+            html += '<td><span class="sildeto tenila">TENILO ' + eskapi(v) + "</span></td>";
+          } else if (typeof v === "number") {
+            html += '<td class="nombra">' + eskapi(montraValoro(k, v)) + "</td>";
+          } else {
+            html += "<td>" + eskapi(v == null ? "—" : montraValoro(k, v)) + "</td>";
+          }
+        }
+        html += "</tr>";
+      }
+      html += "</tbody></table>";
+      linio(html);
     }
-    html += "</tr>";
-  }
-  html += "</tbody></table>";
-  linio(html);
-}
 
-function skalaro(etikedo, valoro) {
-  linio('<div class="scalaro"><span class="scalara-etikedo">' + eskapi(etikedo) +
+    function skalaro(etikedo, valoro) {
+      linio('<div class="scalaro"><span class="scalara-etikedo">' + eskapi(etikedo) +
         '</span><span class="scalara-valoro">' + eskapi(valoro) + "</span></div>");
-}
+    }
 
-function bonvenon() {
-  linio('<span class="terminala-marko">Ligo 0.1</span> — objekta ŝelo de Horizonto · ABI 2');
-  linio("Tajpu <code>helpu</code> por la komandaro. Anglaj nomoj kiel <code>ls</code> ne ekzistas.", "muted");
-}
+    function bonvenon() {
+      linio('<span class="terminala-marko">Ligo 0.1</span> — objekta ŝelo de Horizonto · ABI 2');
+      linio("Tajpu <code>helpu</code> por la komandaro. Anglaj nomoj kiel <code>ls</code> ne ekzistas.", "muted");
+    }
 
-function helpo() {
-  linio('<span class="terminala-marko">Komandaro de Ligo</span>');
-  tabelo(KOMANDOJ.map((k) => ({ komando: k.nomo, priskribo: k.priskribo })), ["komando", "priskribo"]);
-  linio("Duktoj: <code>listi | filtri grandeco &gt; 100 | ordigi grandeco malkreske | montri</code>", "muted");
-}
+    function helpo() {
+      linio('<span class="terminala-marko">Komandaro de Ligo</span>');
+      tabelo(KOMANDOJ.map((k) => ({ komando: k.nomo, priskribo: k.priskribo })), ["komando", "priskribo"]);
+      linio("Duktoj: <code>listi | filtri grandeco &gt; 100 | ordigi grandeco malkreske | montri</code>", "muted");
+    }
 
-function pri() {
-  tabelo([
-    { kampo: "FluoU", valoro: "0.1" },
-    { kampo: "ABI", valoro: "2" },
-    { kampo: "Kerno", valoro: "MiKerno 0.4.3" },
-    { kampo: "Arkitekturoj", valoro: "x86_64, arm64" },
-    { kampo: "Kompozitoro", valoro: "izolita servo · nur FENESTRO-teniloj" }
-  ], ["kampo", "valoro"]);
-}
+    function pri() {
+      tabelo([
+        { kampo: "FluoU", valoro: "0.1" },
+        { kampo: "ABI", valoro: "2" },
+        { kampo: "Kerno", valoro: "MiKerno 0.4.3" },
+        { kampo: "Arkitekturoj", valoro: "x86_64, arm64" },
+        { kampo: "Kompozitoro", valoro: "izolita servo · nur FENESTRO-teniloj" }
+      ], ["kampo", "valoro"]);
+    }
 
-function legiDosieron(nomo) {
-  const pura = nomo.replace(/^["']|["']$/g, "").trim();
-  if (!pura) { eraro("legi: mankas dosiernomo (-2)"); return; }
-  if (Object.prototype.hasOwnProperty.call(DOSIERA_ENHAVO, pura)) {
-    linio('<div class="dosiera-kapo">' + eskapi(pura) + '</div><pre class="dosiera-enhavo">' +
+    function legiDosieron(nomo) {
+      const pura = nomo.replace(/^["']|["']$/g, "").trim();
+      if (!pura) { eraro("legi: mankas dosiernomo (-2)"); return; }
+      if (Object.prototype.hasOwnProperty.call(DOSIERA_ENHAVO, pura)) {
+        linio('<div class="dosiera-kapo">' + eskapi(pura) + '</div><pre class="dosiera-enhavo">' +
           eskapi(DOSIERA_ENHAVO[pura]) + "</pre>");
-    return;
-  }
-  if (DOSIEROJ.some((d) => d.nomo === pura)) {
-    eraro("legi: " + pura + " ne estas teksto (-90)");
-    return;
-  }
-  eraro("legi: dosiero ne ekzistas (-3)");
-}
-
-function mortigi(argumentoj) {
-  const kruda = argumentoj.join(" ").trim();
-  const pid = Number(kruda);
-  if (!Number.isInteger(pid)) { eraro("mortigi: nevalida proceza identigilo (-3)"); return; }
-  if (pid <= 3) { eraro("procezo " + pid + " estas protekta sistema procezo (-1)"); return; }
-  const procezo = PROCEZOJ.find((p) => p.pid === pid);
-  if (!procezo) { eraro("mortigi: procezo " + pid + " ne ekzistas (-3)"); return; }
-  if (procezo.stato === "Mortinta") { eraro("mortigi: procezo " + pid + " jam finiĝis (-3)"); return; }
-  procezo.stato = "Mortinta";
-  linio("Procezo " + pid + " (" + procezo.nomo + ") finiĝis.", "sukceso");
-}
-
-function filtri(records, argumentoj) {
-  if (argumentoj.length < 2) throw new Error("filtri: mankas kampo aŭ operacio (-2)");
-  const kampo = argumentoj[0];
-  const op = argumentoj[1];
-  const celoKruda = argumentoj.slice(2).join(" ").replace(/^["']|["']$/g, "");
-  if (!records.length) return records;
-  if (!(kampo in records[0])) throw new Error("filtri: kampo ne ekzistas: " + kampo + " (-2)");
-  const celoNombro = Number(celoKruda.replace(",", "."));
-  const nombra = celoKruda !== "" && !isNaN(celoNombro);
-  return records.filter((r) => {
-    const v = r[kampo];
-    if (typeof v === "number" && nombra) {
-      switch (op) {
-        case ">": return v > celoNombro;
-        case "<": return v < celoNombro;
-        case ">=": return v >= celoNombro;
-        case "<=": return v <= celoNombro;
-        case "==": case "=": return v === celoNombro;
-        case "!=": return v !== celoNombro;
-        default: throw new Error("filtri: nekonata operacio: " + op + " (-2)");
+        return;
       }
-    }
-    const s = String(v).toLowerCase();
-    const c = celoKruda.toLowerCase();
-    switch (op) {
-      case "==": case "=": return s === c;
-      case "!=": return s !== c;
-      case "entenas": return s.includes(c);
-      default: throw new Error("filtri: nekonata operacio: " + op + " (-2)");
-    }
-  });
-}
-
-function ordigi(records, argumentoj) {
-  if (!argumentoj.length) throw new Error("ordigi: mankas kampo (-2)");
-  const kampo = argumentoj[0];
-  const malkreske = (argumentoj[1] || "").toLowerCase() === "malkreske";
-  if (records.length && !(kampo in records[0])) {
-    throw new Error("ordigi: kampo ne ekzistas: " + kampo + " (-2)");
-  }
-  const kopio = records.slice();
-  kopio.sort((a, b) => {
-    const x = a[kampo], y = b[kampo];
-    let r;
-    if (typeof x === "number" && typeof y === "number") r = x - y;
-    else r = String(x).localeCompare(String(y), "eo");
-    return malkreske ? -r : r;
-  });
-  return kopio;
-}
-
-function unua(records, argumentoj) {
-  const n = parseInt(argumentoj[0], 10);
-  if (!Number.isInteger(n) || n < 0) throw new Error("unua: mankas valida nombro (-2)");
-  return records.slice(0, n);
-}
-
-function sumi(records, argumentoj) {
-  if (!argumentoj.length) throw new Error("sumi: mankas kampo (-2)");
-  const kampo = argumentoj[0];
-  if (records.length && !(kampo in records[0])) {
-    throw new Error("sumi: kampo ne ekzistas: " + kampo + " (-2)");
-  }
-  let totalo = 0;
-  for (const r of records) {
-    if (typeof r[kampo] !== "number") throw new Error("sumi: " + kampo + " ne estas nombra (-2)");
-    totalo += r[kampo];
-  }
-  skalaro("sumo de " + kampo, formatu(totalo) + (UNUOJ[kampo] || ""));
-  return null;
-}
-
-function nombri(records) {
-  skalaro("nombro de rekordoj", String(records.length));
-  return null;
-}
-
-function montri(records, argumentoj) {
-  lastColumns = argumentoj.length ? argumentoj.slice() : null;
-  return records;
-}
-
-function tekstaLimo(records) {
-  linio('<div class="teksta-limo">eksplicita teksta limo</div>');
-  for (const r of records) {
-    const partoj = Object.keys(r).map((k) => k + ": " + montraValoro(k, r[k]));
-    linio(eskapi(partoj.join(" · ")));
-  }
-  return null;
-}
-
-function temoElLigo(argumentoj) {
-  const valoro = (argumentoj[0] || "").toLowerCase();
-  if (valoro !== "malluma" && valoro !== "hela") {
-    eraro('temo: uzu "malluma" aŭ "hela" (-3)');
-    return;
-  }
-  agordiTemon(valoro, false);
-  linio("Temo ŝanĝita al " + valoro + ".", "sukceso");
-  fulmomesagxo("Temo", "La tuta interfaco nun estas " + valoro + ".", "sukceso");
-}
-
-function akcentoElLigo(argumentoj) {
-  const kruda = (argumentoj[0] || "").toLowerCase();
-  const mapo = {
-    oro: "oro",
-    koralo: "koralo",
-    "ĉielo": "cxielo",
-    cxielo: "cxielo",
-    verdo: "verdo",
-    viola: "viola",
-    bluo: "bluo"
-  };
-  const valoro = mapo[kruda];
-  if (!valoro) {
-    eraro("akcento: uzu oro, koralo, ĉielo, verdo, viola aŭ bluo (-3)");
-    return;
-  }
-  agordiAkcenton(valoro, false);
-  linio("Akcento ŝanĝita al " + AKCENTAJ_NOMOJ[valoro] + ".", "sukceso");
-  fulmomesagxo("Akcento", "Nova akcento: " + AKCENTAJ_NOMOJ[valoro] + ".", "sukceso");
-}
-
-function plenumiLigon(teksto) {
-  const unuajTokoj = teksto.split(/\s+/);
-  const unuaVorto = unuajTokoj[0].toLowerCase();
-
-  if (unuaVorto === "eldiri") {
-    const spaco = teksto.indexOf(" ");
-    const gxin = spaco === -1 ? "" : teksto.slice(spaco + 1).trim();
-    if (!gxin) { eraro("eldiri: mankas teksto (-2)"); return; }
-    tabelo([{ "mesaĝo": gxin }], ["mesaĝo"]);
-    return;
-  }
-
-  const partoj = teksto.split("|").map((p) => p.trim()).filter(Boolean);
-  const unuaParto = partoj[0];
-  const tokoj = unuaParto.split(/\s+/);
-  const komando = tokoj[0].toLowerCase();
-  const argumentoj = tokoj.slice(1);
-  const krudaArgumento = unuaParto.slice(komando.length).trim();
-
-  lastRecords = null;
-  lastColumns = null;
-
-  switch (komando) {
-    case "helpu": helpo(); return;
-    case "listi": lastRecords = DOSIEROJ.map((d) => Object.assign({}, d)); break;
-    case "procezoj": lastRecords = PROCEZOJ.map((p) => Object.assign({}, p)); break;
-    case "legi": legiDosieron(krudaArgumento); return;
-    case "mortigi": mortigi(argumentoj); return;
-    case "pri": pri(); return;
-    case "temo": temoElLigo(argumentoj); return;
-    case "akcento": akcentoElLigo(argumentoj); return;
-    case "eniro": malfermiEniron(); linio("Eniro malfermita. Premu Ctrl+K ie ajn.", "sukceso"); return;
-    case "purigi": terminalaKorpo.innerHTML = ""; bonvenon(); return;
-    case "filtri": case "ordigi": case "unua": case "sumi":
-    case "nombri": case "montri": case "teksto":
-      eraro("Neniuj rekordoj. Komencu per listi aŭ procezoj (-2)"); return;
-    default:
-      eraro('Nekonata komando: "' + komando + '" (-2) — tajpu helpu'); return;
-  }
-
-  for (let i = 1; i < partoj.length; i++) {
-    if (lastRecords === null) return;
-    const stTokoj = partoj[i].split(/\s+/);
-    const stadio = stTokoj[0].toLowerCase();
-    const stArg = stTokoj.slice(1);
-    switch (stadio) {
-      case "filtri": lastRecords = filtri(lastRecords, stArg); break;
-      case "ordigi": lastRecords = ordigi(lastRecords, stArg); break;
-      case "unua": lastRecords = unua(lastRecords, stArg); break;
-      case "sumi": lastRecords = sumi(lastRecords, stArg); break;
-      case "nombri": lastRecords = nombri(lastRecords); break;
-      case "montri": lastRecords = montri(lastRecords, stArg); break;
-      case "teksto": lastRecords = tekstaLimo(lastRecords); break;
-      default:
-        eraro('Nekonata stadio: "' + stadio + '" (-2)'); return;
-    }
-  }
-
-  if (lastRecords !== null) tabelo(lastRecords, lastColumns);
-}
-
-function ruliLigon(teksto) {
-  const pura = String(teksto || "").trim();
-  if (!pura) return;
-  const eho = document.createElement("div");
-  eho.className = "linio komanda";
-  eho.innerHTML = '<span class="prompto">horizonto❯</span> <span>' + eskapi(pura) + "</span>";
-  terminalaKorpo.appendChild(eho);
-  if (ligoHistorio[ligoHistorio.length - 1] !== pura) ligoHistorio.push(pura);
-  ligoHistoriaIndekso = ligoHistorio.length;
-  try {
-    plenumiLigon(pura);
-  } catch (e) {
-    eraro(e && e.message ? e.message : "Neatendita eraro (-1)");
-  }
-  skrolli();
-}
-
-terminalaFormo.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const valoro = ligoEniro.value;
-  ligoEniro.value = "";
-  ruliLigon(valoro);
-});
-
-document.querySelectorAll(".sugesto").forEach((butono) => {
-  butono.addEventListener("click", () => {
-    const komando = butono.dataset.komando;
-    ligoEniro.value = "";
-    ruliLigon(komando);
-    ligoEniro.focus();
-  });
-});
-
-ligoEniro.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowUp") {
-    e.preventDefault();
-    if (!ligoHistorio.length) return;
-    ligoHistoriaIndekso = Math.max(0, ligoHistoriaIndekso - 1);
-    ligoEniro.value = ligoHistorio[ligoHistoriaIndekso] || "";
-    setTimeout(() => ligoEniro.setSelectionRange(ligoEniro.value.length, ligoEniro.value.length), 0);
-    return;
-  }
-  if (e.key === "ArrowDown") {
-    e.preventDefault();
-    if (!ligoHistorio.length) return;
-    ligoHistoriaIndekso = Math.min(ligoHistorio.length, ligoHistoriaIndekso + 1);
-    ligoEniro.value = ligoHistorio[ligoHistoriaIndekso] || "";
-    return;
-  }
-  if (e.key === "Tab") {
-    const unuaVorto = ligoEniro.value.split(/\s+/)[0];
-    if (!unuaVorto) return;
-    const eblaj = KOMANDOJ.map((k) => k.nomo).filter((n) => n.startsWith(unuaVorto));
-    if (!eblaj.length) return;
-    e.preventDefault();
-    let komuna = eblaj[0];
-    for (const n of eblaj) {
-      while (!n.startsWith(komuna)) komuna = komuna.slice(0, -1);
-    }
-    ligoEniro.value = komuna + (eblaj.length === 1 ? " " : "");
-  }
-});
-
-/* ── Eniro ────────────────────────────────────────────────────── */
-const eniroPaletro = document.getElementById("eniroPaletro");
-const eniraSercho = document.getElementById("eniraSercho");
-const enirajRezultoj = document.getElementById("enirajRezultoj");
-const eniraModo = document.getElementById("eniraModo");
-const eniraTavolo = document.getElementById("eniraTavolo");
-
-let enirajEroj = [];
-let eniraElektita = 0;
-let eniraKalkulo = null;
-let eniraDelegado = "";
-let eniraHejmo = eniroPaletro.parentNode;
-let eniraSekvanto = eniroPaletro.nextSibling;
-
-const AGORDAJ_EROJ = [
-  { nomo: "Malfermi Lignon", priskribo: "Salti al la objekta ŝelo kaj fokusi la komandon", tipo: "navigo", grupo: "Agordoj", ikono: "↧" },
-  { nomo: "Temo: malluma", priskribo: "Ŝanĝi la tutan FluoU-interfacon al malluma temo", tipo: "agordo", grupo: "Agordoj", ikono: "◐", plenumu: () => agordiTemon("malluma", true) },
-  { nomo: "Temo: hela", priskribo: "Ŝanĝi la tutan FluoU-interfacon al hela temo", tipo: "agordo", grupo: "Agordoj", ikono: "◑", plenumu: () => agordiTemon("hela", true) },
-  { nomo: "Akcento: oro", priskribo: "Suna akcento #FFB454", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("oro", true) },
-  { nomo: "Akcento: koralo", priskribo: "Krepuska akcento #FF5C8A", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("koralo", true) },
-  { nomo: "Akcento: ĉielo", priskribo: "Ĉiela akcento #4CC9FF", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("cxielo", true) },
-  { nomo: "Akcento: verdo", priskribo: "Natura akcento #57E389", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("verdo", true) },
-  { nomo: "Akcento: viola", priskribo: "Dua akcento #A78BFA", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("viola", true) },
-  { nomo: "Akcento: bluo", priskribo: "Profunda bluo #5B7CFA", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("bluo", true) }
-];
-
-const ENIRAJ_EROJ = KOMANDOJ.map((k) => ({
-  nomo: k.nomo,
-  priskribo: k.priskribo,
-  tipo: "komando",
-  grupo: "Komandoj de Ligo",
-  ikono: "❯"
-})).concat(AGORDAJ_EROJ);
-
-function eroHtml(ero, indekso) {
-  return '<button type="button" class="enira-ero' + (indekso === eniraElektita ? " elektita" : "") +
-    '" role="option" aria-selected="' + (indekso === eniraElektita ? "true" : "false") +
-    '" data-indekso="' + indekso + '">' +
-    '<span class="era-ikono" aria-hidden="true">' + eskapi(ero.ikono || "❯") + "</span>" +
-    '<span class="era-teksto"><span class="era-nomo">' + eskapi(ero.nomo) +
-    '</span><span class="era-priskribo">' + eskapi(ero.priskribo) + "</span></span>" +
-    "</button>";
-}
-
-function sxangxiElekton() {
-  const eroj = enirajRezultoj.querySelectorAll(".enira-ero");
-  eroj.forEach((el, i) => {
-    const elektita = i === eniraElektita;
-    el.classList.toggle("elektita", elektita);
-    el.setAttribute("aria-selected", elektita ? "true" : "false");
-  });
-  const elektita = enirajRezultoj.querySelector(".enira-ero.elektita");
-  if (elektita) elektita.scrollIntoView({ block: "nearest" });
-}
-
-function prezentiSerchon(sercho) {
-  eniraModo.textContent = "Serĉo";
-  eniraKalkulo = null;
-  eniraDelegado = "";
-  const q = sercho.trim().toLowerCase();
-  const trovaj = ENIRAJ_EROJ.filter((e) =>
-    !q || (e.nomo + " " + e.priskribo).toLowerCase().includes(q)
-  );
-  trovaj.sort((a, b) => {
-    const an = a.nomo.toLowerCase(), bn = b.nomo.toLowerCase();
-    const pa = an.startsWith(q) ? 0 : (an.includes(q) ? 1 : 2);
-    const pb = bn.startsWith(q) ? 0 : (bn.includes(q) ? 1 : 2);
-    return pa - pb;
-  });
-
-  if (!trovaj.length) {
-    enirajEroj = [];
-    enirajRezultoj.innerHTML = '<div class="enira-senrezulte">Neniu rezulto por «' +
-      eskapi(sercho) + '». Provu <code>helpu</code> aŭ <code>= 2 + 2</code>.</div>';
-    return;
-  }
-
-  const grupoj = new Map();
-  for (const e of trovaj) {
-    if (!grupoj.has(e.grupo)) grupoj.set(e.grupo, []);
-    grupoj.get(e.grupo).push(e);
-  }
-  let html = "";
-  const ordigitaj = [];
-  for (const [grupo, eroj] of grupoj) {
-    html += '<div class="enira-grupo">' + eskapi(grupo) + "</div>";
-    for (const ero of eroj) {
-      html += eroHtml(ero, ordigitaj.length);
-      ordigitaj.push(ero);
-    }
-  }
-  enirajEroj = ordigitaj;
-  if (eniraElektita >= enirajEroj.length) eniraElektita = Math.max(0, enirajEroj.length - 1);
-  enirajRezultoj.innerHTML = html;
-}
-
-function prezentiKalkulon(esprimo) {
-  eniraModo.textContent = "Kalkulo";
-  enirajEroj = [];
-  eniraElektita = 0;
-  eniraDelegado = "";
-  if (!esprimo.trim()) {
-    eniraKalkulo = null;
-    enirajRezultoj.innerHTML =
-      '<div class="enira-senrezulte">Tajpu esprimon post «=», ekzemple <code>= 12 * (3 + 4)</code>.' +
-      ' La analizilo estas sekura kaj neniam uzas <code>eval</code>.</div>';
-    return;
-  }
-  try {
-    const valoro = kalkuli(esprimo);
-    eniraKalkulo = valoro;
-    enirajEroj = [{ tipo: "kalkulo" }];
-    enirajRezultoj.innerHTML =
-      '<div class="kalkula-rezulto">' +
-        '<div class="kalkula-etikedo">Rezulto</div>' +
-        '<div class="kalkula-valoro">' + eskapi(formatu(valoro)) + "</div>" +
-        '<div class="kalkula-esprimo">= ' + eskapi(esprimo) + "</div>" +
-        '<div class="kalkula-noto">Enter kopias la rezulton · sen eval · sen dosieroj · sen reto</div>' +
-      "</div>";
-  } catch (e) {
-    eniraKalkulo = null;
-    enirajRezultoj.innerHTML = '<div class="enira-eraro">' + eskapi(e.message) + " (-2)</div>";
-  }
-}
-
-function prezentiDelegadon(komando) {
-  eniraModo.textContent = "Ligo";
-  eniraKalkulo = null;
-  eniraDelegado = komando.trim();
-  if (!eniraDelegado) {
-    enirajEroj = [];
-    enirajRezultoj.innerHTML =
-      '<div class="enira-senrezulte">Tajpu komandon post «&gt;», ekzemple <code>&gt; listi | nombri</code>.' +
-      " La komanda registro estas komuna kun Ligo.</div>";
-    return;
-  }
-  enirajEroj = [{
-    nomo: 'Ruli «' + eniraDelegado + '» en Ligo',
-    priskribo: "La sama objekta fluo kiel la terminalo",
-    tipo: "delegado",
-    grupo: "Delegado",
-    ikono: ">",
-    komando: eniraDelegado
-  }];
-  eniraElektita = 0;
-  enirajRezultoj.innerHTML = '<div class="enira-grupo">Delegado</div>' + eroHtml(enirajEroj[0], 0);
-}
-
-function prezentiEniron() {
-  const valoro = eniraSercho.value;
-  if (valoro.startsWith("=")) prezentiKalkulon(valoro.slice(1));
-  else if (valoro.startsWith(">")) prezentiDelegadon(valoro.slice(1));
-  else prezentiSerchon(valoro);
-}
-
-function kalkuli(esprimo) {
-  const s = esprimo.replace(/\s+/g, "").replace(/,/g, ".");
-  if (!s) throw new Error("Mankas esprimo");
-  let i = 0;
-
-  function faktoro() {
-    if (s[i] === "+") { i++; return faktoro(); }
-    if (s[i] === "-") { i++; return -faktoro(); }
-    if (s[i] === "(") {
-      i++;
-      const v = sumo();
-      if (s[i] !== ")") throw new Error("Mankas «)»");
-      i++;
-      return v;
-    }
-    const komenco = i;
-    while (i < s.length && /[0-9.]/.test(s[i])) i++;
-    if (komenco === i) throw new Error("Nevalida esprimo");
-    const n = Number(s.slice(komenco, i));
-    if (isNaN(n)) throw new Error("Nevalida nombro");
-    return n;
-  }
-  function produto() {
-    let v = faktoro();
-    while (s[i] === "*" || s[i] === "/" || s[i] === "%") {
-      const op = s[i++];
-      const d = faktoro();
-      if (op === "*") v *= d;
-      else if (op === "/") {
-        if (d === 0) throw new Error("Divido per nulo");
-        v /= d;
-      } else {
-        if (d === 0) throw new Error("Modulo per nulo");
-        v %= d;
+      if (DOSIEROJ.some((d) => d.nomo === pura)) {
+        eraro("legi: " + pura + " ne estas teksto (-90)");
+        return;
       }
+      eraro("legi: dosiero ne ekzistas (-3)");
     }
-    return v;
-  }
-  function sumo() {
-    let v = produto();
-    while (s[i] === "+" || s[i] === "-") {
-      const op = s[i++];
-      const d = produto();
-      v = op === "+" ? v + d : v - d;
+
+    function mortigi(argumentoj) {
+      const kruda = argumentoj.join(" ").trim();
+      const pid = Number(kruda);
+      if (!Number.isInteger(pid)) { eraro("mortigi: nevalida proceza identigilo (-3)"); return; }
+      if (pid <= 3) { eraro("procezo " + pid + " estas protekta sistema procezo (-1)"); return; }
+      const procezo = PROCEZOJ.find((p) => p.pid === pid);
+      if (!procezo) { eraro("mortigi: procezo " + pid + " ne ekzistas (-3)"); return; }
+      if (procezo.stato === "Mortinta") { eraro("mortigi: procezo " + pid + " jam finiĝis (-3)"); return; }
+      procezo.stato = "Mortinta";
+      linio("Procezo " + pid + " (" + procezo.nomo + ") finiĝis.", "sukceso");
     }
-    return v;
-  }
 
-  const valoro = sumo();
-  if (i !== s.length) throw new Error("Nevalida esprimo");
-  if (!isFinite(valoro)) throw new Error("La rezulto ne estas finia");
-  return valoro;
-}
+    function filtri(records, argumentoj) {
+      if (argumentoj.length < 2) throw new Error("filtri: mankas kampo aŭ operacio (-2)");
+      const kampo = argumentoj[0];
+      const op = argumentoj[1];
+      const celoKruda = argumentoj.slice(2).join(" ").replace(/^["']|["']$/g, "");
+      if (!records.length) return records;
+      if (!(kampo in records[0])) throw new Error("filtri: kampo ne ekzistas: " + kampo + " (-2)");
+      const celoNombro = Number(celoKruda.replace(",", "."));
+      const nombra = celoKruda !== "" && !isNaN(celoNombro);
+      return records.filter((r) => {
+        const v = r[kampo];
+        if (typeof v === "number" && nombra) {
+          switch (op) {
+            case ">": return v > celoNombro;
+            case "<": return v < celoNombro;
+            case ">=": return v >= celoNombro;
+            case "<=": return v <= celoNombro;
+            case "==": case "=": return v === celoNombro;
+            case "!=": return v !== celoNombro;
+            default: throw new Error("filtri: nekonata operacio: " + op + " (-2)");
+          }
+        }
+        const s = String(v).toLowerCase();
+        const c = celoKruda.toLowerCase();
+        switch (op) {
+          case "==": case "=": return s === c;
+          case "!=": return s !== c;
+          case "entenas": return s.includes(c);
+          default: throw new Error("filtri: nekonata operacio: " + op + " (-2)");
+        }
+      });
+    }
 
-function malfermiEniron() {
-  if (!eniroPaletro.classList.contains("tavola")) {
-    eniraHejmo = eniroPaletro.parentNode;
-    eniraSekvanto = eniroPaletro.nextSibling;
-    document.body.appendChild(eniroPaletro);
-    eniroPaletro.classList.add("tavola");
-    eniroPaletro.setAttribute("aria-modal", "true");
-    eniraTavolo.hidden = false;
-  }
-  eniraSercho.focus();
-  eniraSercho.select();
-}
+    function ordigi(records, argumentoj) {
+      if (!argumentoj.length) throw new Error("ordigi: mankas kampo (-2)");
+      const kampo = argumentoj[0];
+      const malkreske = (argumentoj[1] || "").toLowerCase() === "malkreske";
+      if (records.length && !(kampo in records[0])) {
+        throw new Error("ordigi: kampo ne ekzistas: " + kampo + " (-2)");
+      }
+      const kopio = records.slice();
+      kopio.sort((a, b) => {
+        const x = a[kampo], y = b[kampo];
+        let r;
+        if (typeof x === "number" && typeof y === "number") r = x - y;
+        else r = String(x).localeCompare(String(y), "eo");
+        return malkreske ? -r : r;
+      });
+      return kopio;
+    }
 
-function fermiEniron() {
-  if (!eniroPaletro.classList.contains("tavola")) return;
-  eniroPaletro.classList.remove("tavola");
-  eniroPaletro.removeAttribute("aria-modal");
-  eniraTavolo.hidden = true;
-  if (eniraHejmo && eniraHejmo.isConnected) {
-    eniraHejmo.insertBefore(eniroPaletro, eniraSekvanto);
-  }
-}
+    function unua(records, argumentoj) {
+      const n = parseInt(argumentoj[0], 10);
+      if (!Number.isInteger(n) || n < 0) throw new Error("unua: mankas valida nombro (-2)");
+      return records.slice(0, n);
+    }
 
-function montruLigon() {
-  document.getElementById("ligo").scrollIntoView({ behavior: "smooth", block: "start" });
-  setTimeout(() => ligoEniro.focus({ preventScroll: true }), 380);
-}
+    function sumi(records, argumentoj) {
+      if (!argumentoj.length) throw new Error("sumi: mankas kampo (-2)");
+      const kampo = argumentoj[0];
+      if (records.length && !(kampo in records[0])) {
+        throw new Error("sumi: kampo ne ekzistas: " + kampo + " (-2)");
+      }
+      let totalo = 0;
+      for (const r of records) {
+        if (typeof r[kampo] !== "number") throw new Error("sumi: " + kampo + " ne estas nombra (-2)");
+        totalo += r[kampo];
+      }
+      skalaro("sumo de " + kampo, formatu(totalo) + (UNUOJ[kampo] || ""));
+      return null;
+    }
 
-function plenumiEniranEron() {
-  const ero = enirajEroj[eniraElektita];
-  if (!ero) return;
-  if (ero.tipo === "kalkulo") {
-    const valoro = formatu(eniraKalkulo);
-    if (navigator.clipboard && navigator.clipboard.writeText) {
+    function nombri(records) {
+      skalaro("nombro de rekordoj", String(records.length));
+      return null;
+    }
+
+    function montri(records, argumentoj) {
+      lastColumns = argumentoj.length ? argumentoj.slice() : null;
+      return records;
+    }
+
+    function tekstaLimo(records) {
+      linio('<div class="teksta-limo">eksplicita teksta limo</div>');
+      for (const r of records) {
+        const partoj = Object.keys(r).map((k) => k + ": " + montraValoro(k, r[k]));
+        linio(eskapi(partoj.join(" · ")));
+      }
+      return null;
+    }
+
+    function temoElLigo(argumentoj) {
+      const valoro = (argumentoj[0] || "").toLowerCase();
+      if (valoro !== "malluma" && valoro !== "hela") {
+        eraro('temo: uzu "malluma" aŭ "hela" (-3)');
+        return;
+      }
+      agordiTemon(valoro, false);
+      linio("Temo ŝanĝita al " + valoro + ".", "sukceso");
+      fulmomesagxo("Temo", "La tuta interfaco nun estas " + valoro + ".", "sukceso");
+    }
+
+    function akcentoElLigo(argumentoj) {
+      const kruda = (argumentoj[0] || "").toLowerCase();
+      const mapo = {
+        oro: "oro",
+        koralo: "koralo",
+        "ĉielo": "cxielo",
+        cxielo: "cxielo",
+        verdo: "verdo",
+        viola: "viola",
+        bluo: "bluo"
+      };
+      const valoro = mapo[kruda];
+      if (!valoro) {
+        eraro("akcento: uzu oro, koralo, ĉielo, verdo, viola aŭ bluo (-3)");
+        return;
+      }
+      agordiAkcenton(valoro, false);
+      linio("Akcento ŝanĝita al " + AKCENTAJ_NOMOJ[valoro] + ".", "sukceso");
+      fulmomesagxo("Akcento", "Nova akcento: " + AKCENTAJ_NOMOJ[valoro] + ".", "sukceso");
+    }
+
+    function plenumiLigon(teksto) {
+      const unuajTokoj = teksto.split(/\s+/);
+      const unuaVorto = unuajTokoj[0].toLowerCase();
+
+      if (unuaVorto === "eldiri") {
+        const spaco = teksto.indexOf(" ");
+        const gxin = spaco === -1 ? "" : teksto.slice(spaco + 1).trim();
+        if (!gxin) { eraro("eldiri: mankas teksto (-2)"); return; }
+        tabelo([{ "mesaĝo": gxin }], ["mesaĝo"]);
+        return;
+      }
+
+      const partoj = teksto.split("|").map((p) => p.trim()).filter(Boolean);
+      const unuaParto = partoj[0];
+      const tokoj = unuaParto.split(/\s+/);
+      const komando = tokoj[0].toLowerCase();
+      const argumentoj = tokoj.slice(1);
+      const krudaArgumento = unuaParto.slice(komando.length).trim();
+
+      lastRecords = null;
+      lastColumns = null;
+
+      switch (komando) {
+        case "helpu": helpo(); return;
+        case "listi": lastRecords = DOSIEROJ.map((d) => Object.assign({}, d)); break;
+        case "procezoj": lastRecords = PROCEZOJ.map((p) => Object.assign({}, p)); break;
+        case "legi": legiDosieron(krudaArgumento); return;
+        case "mortigi": mortigi(argumentoj); return;
+        case "pri": pri(); return;
+        case "temo": temoElLigo(argumentoj); return;
+        case "akcento": akcentoElLigo(argumentoj); return;
+        case "eniro": malfermiEniron(); linio("Eniro malfermita. Premu Ctrl+E ie ajn.", "sukceso"); return;
+        case "purigi": terminalaKorpo.innerHTML = ""; bonvenon(); return;
+        case "filtri": case "ordigi": case "unua": case "sumi":
+        case "nombri": case "montri": case "teksto":
+          eraro("Neniuj rekordoj. Komencu per listi aŭ procezoj (-2)"); return;
+        default:
+          eraro('Nekonata komando: "' + komando + '" (-2) — tajpu helpu'); return;
+      }
+
+      for (let i = 1; i < partoj.length; i++) {
+        if (lastRecords === null) return;
+        const stTokoj = partoj[i].split(/\s+/);
+        const stadio = stTokoj[0].toLowerCase();
+        const stArg = stTokoj.slice(1);
+        switch (stadio) {
+          case "filtri": lastRecords = filtri(lastRecords, stArg); break;
+          case "ordigi": lastRecords = ordigi(lastRecords, stArg); break;
+          case "unua": lastRecords = unua(lastRecords, stArg); break;
+          case "sumi": lastRecords = sumi(lastRecords, stArg); break;
+          case "nombri": lastRecords = nombri(lastRecords); break;
+          case "montri": lastRecords = montri(lastRecords, stArg); break;
+          case "teksto": lastRecords = tekstaLimo(lastRecords); break;
+          default:
+            eraro('Nekonata stadio: "' + stadio + '" (-2)'); return;
+        }
+      }
+
+      if (lastRecords !== null) tabelo(lastRecords, lastColumns);
+    }
+
+    function ruliLigon(teksto) {
+      const pura = String(teksto || "").trim();
+      if (!pura) return;
+      const eho = document.createElement("div");
+      eho.className = "linio komanda";
+      eho.innerHTML = '<span class="prompto">horizonto❯</span> <span>' + eskapi(pura) + "</span>";
+      terminalaKorpo.appendChild(eho);
+      if (ligoHistorio[ligoHistorio.length - 1] !== pura) ligoHistorio.push(pura);
+      ligoHistoriaIndekso = ligoHistorio.length;
       try {
-        navigator.clipboard.writeText(valoro).then(
-          () => fulmomesagxo("Kopiite", "La rezulto " + valoro + " kopiiĝis.", "sukceso"),
-          () => fulmomesagxo("Kopiado malsukcesis", "La retumilo ne permesis kopiadon.", "averto")
-        );
+        plenumiLigon(pura);
       } catch (e) {
-        fulmomesagxo("Kopiado malsukcesis", "La retumilo ne permesis kopiadon.", "averto");
+        eraro(e && e.message ? e.message : "Neatendita eraro (-1)");
       }
-    } else {
-      fulmomesagxo("Kopiado", "La retumilo ne subtenas kopiadon.", "averto");
+      skrolli();
     }
-    return;
-  }
-  if (ero.tipo === "delegado") {
-    fermiEniron();
-    ruliLigon(ero.komando);
-    fulmomesagxo("Ligo", "Rulita en la objekta ŝelo.", "sukceso");
-    montruLigon();
-    return;
-  }
-  if (ero.tipo === "komando") {
-    fermiEniron();
-    ruliLigon(ero.nomo);
-    fulmomesagxo("Ligo", "Rulita: " + ero.nomo, "sukceso");
-    montruLigon();
-    return;
-  }
-  if (ero.tipo === "agordo") {
-    ero.plenumu();
-    fermiEniron();
-    return;
-  }
-  if (ero.tipo === "navigo") {
-    fermiEniron();
-    montruLigon();
-  }
-}
 
-eniraSercho.addEventListener("input", () => {
-  eniraElektita = 0;
-  prezentiEniron();
-});
+    terminalaFormo.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const valoro = ligoEniro.value;
+      ligoEniro.value = "";
+      ruliLigon(valoro);
+    });
 
-eniraSercho.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowDown") {
-    e.preventDefault();
-    if (!enirajEroj.length) return;
-    eniraElektita = (eniraElektita + 1) % enirajEroj.length;
-    sxangxiElekton();
-    return;
-  }
-  if (e.key === "ArrowUp") {
-    e.preventDefault();
-    if (!enirajEroj.length) return;
-    eniraElektita = (eniraElektita - 1 + enirajEroj.length) % enirajEroj.length;
-    sxangxiElekton();
-    return;
-  }
-  if (e.key === "Enter") {
-    e.preventDefault();
-    if (enirajEroj.length) plenumiEniranEron();
-    else if (eniraKalkulo !== null) plenumiEniranEron();
-    return;
-  }
-  if (e.key === "Escape") {
-    if (eniroPaletro.classList.contains("tavola")) {
-      e.preventDefault();
-      fermiEniron();
-    } else if (eniraSercho.value) {
-      e.preventDefault();
-      eniraSercho.value = "";
+    document.querySelectorAll(".sugesto").forEach((butono) => {
+      butono.addEventListener("click", () => {
+        const komando = butono.dataset.komando;
+        ligoEniro.value = "";
+        ruliLigon(komando);
+        ligoEniro.focus();
+      });
+    });
+
+    ligoEniro.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (!ligoHistorio.length) return;
+        ligoHistoriaIndekso = Math.max(0, ligoHistoriaIndekso - 1);
+        ligoEniro.value = ligoHistorio[ligoHistoriaIndekso] || "";
+        setTimeout(() => ligoEniro.setSelectionRange(ligoEniro.value.length, ligoEniro.value.length), 0);
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (!ligoHistorio.length) return;
+        ligoHistoriaIndekso = Math.min(ligoHistorio.length, ligoHistoriaIndekso + 1);
+        ligoEniro.value = ligoHistorio[ligoHistoriaIndekso] || "";
+        return;
+      }
+      if (e.key === "Tab") {
+        const unuaVorto = ligoEniro.value.split(/\s+/)[0];
+        if (!unuaVorto) return;
+        const eblaj = KOMANDOJ.map((k) => k.nomo).filter((n) => n.startsWith(unuaVorto));
+        if (!eblaj.length) return;
+        e.preventDefault();
+        let komuna = eblaj[0];
+        for (const n of eblaj) {
+          while (!n.startsWith(komuna)) komuna = komuna.slice(0, -1);
+        }
+        ligoEniro.value = komuna + (eblaj.length === 1 ? " " : "");
+      }
+    });
+
+    /* ── Eniro ────────────────────────────────────────────────────── */
+    const eniroPaletro = document.getElementById("eniroPaletro");
+    const eniraSercho = document.getElementById("eniraSercho");
+    const enirajRezultoj = document.getElementById("enirajRezultoj");
+    const eniraModo = document.getElementById("eniraModo");
+    const eniraTavolo = document.getElementById("eniraTavolo");
+
+    let enirajEroj = [];
+    let eniraElektita = 0;
+    let eniraKalkulo = null;
+    let eniraDelegado = "";
+    let eniraHejmo = eniroPaletro.parentNode;
+    let eniraSekvanto = eniroPaletro.nextSibling;
+
+    const AGORDAJ_EROJ = [
+      { nomo: "Malfermi Lignon", priskribo: "Salti al la objekta ŝelo kaj fokusi la komandon", tipo: "navigo", grupo: "Agordoj", ikono: "↧" },
+      { nomo: "Temo: malluma", priskribo: "Ŝanĝi la tutan FluoU-interfacon al malluma temo", tipo: "agordo", grupo: "Agordoj", ikono: "◐", plenumu: () => agordiTemon("malluma", true) },
+      { nomo: "Temo: hela", priskribo: "Ŝanĝi la tutan FluoU-interfacon al hela temo", tipo: "agordo", grupo: "Agordoj", ikono: "◑", plenumu: () => agordiTemon("hela", true) },
+      { nomo: "Akcento: oro", priskribo: "Suna akcento #FFB454", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("oro", true) },
+      { nomo: "Akcento: koralo", priskribo: "Krepuska akcento #FF5C8A", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("koralo", true) },
+      { nomo: "Akcento: ĉielo", priskribo: "Ĉiela akcento #4CC9FF", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("cxielo", true) },
+      { nomo: "Akcento: verdo", priskribo: "Natura akcento #57E389", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("verdo", true) },
+      { nomo: "Akcento: viola", priskribo: "Dua akcento #A78BFA", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("viola", true) },
+      { nomo: "Akcento: bluo", priskribo: "Profunda bluo #5B7CFA", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("bluo", true) }
+    ];
+
+    const ENIRAJ_EROJ = KOMANDOJ.map((k) => ({
+      nomo: k.nomo,
+      priskribo: k.priskribo,
+      tipo: "komando",
+      grupo: "Komandoj de Ligo",
+      ikono: "❯"
+    })).concat(AGORDAJ_EROJ);
+
+    function eroHtml(ero, indekso) {
+      return '<button type="button" class="enira-ero' + (indekso === eniraElektita ? " elektita" : "") +
+        '" role="option" aria-selected="' + (indekso === eniraElektita ? "true" : "false") +
+        '" data-indekso="' + indekso + '">' +
+        '<span class="era-ikono" aria-hidden="true">' + eskapi(ero.ikono || "❯") + "</span>" +
+        '<span class="era-teksto"><span class="era-nomo">' + eskapi(ero.nomo) +
+        '</span><span class="era-priskribo">' + eskapi(ero.priskribo) + "</span></span>" +
+        "</button>";
+    }
+
+    function sxangxiElekton() {
+      const eroj = enirajRezultoj.querySelectorAll(".enira-ero");
+      eroj.forEach((el, i) => {
+        const elektita = i === eniraElektita;
+        el.classList.toggle("elektita", elektita);
+        el.setAttribute("aria-selected", elektita ? "true" : "false");
+      });
+      const elektita = enirajRezultoj.querySelector(".enira-ero.elektita");
+      if (elektita) elektita.scrollIntoView({ block: "nearest" });
+    }
+
+    function prezentiSerchon(sercho) {
+      eniraModo.textContent = "Serĉo";
+      eniraKalkulo = null;
+      eniraDelegado = "";
+      const q = sercho.trim().toLowerCase();
+      const trovaj = ENIRAJ_EROJ.filter((e) =>
+        !q || (e.nomo + " " + e.priskribo).toLowerCase().includes(q)
+      );
+      trovaj.sort((a, b) => {
+        const an = a.nomo.toLowerCase(), bn = b.nomo.toLowerCase();
+        const pa = an.startsWith(q) ? 0 : (an.includes(q) ? 1 : 2);
+        const pb = bn.startsWith(q) ? 0 : (bn.includes(q) ? 1 : 2);
+        return pa - pb;
+      });
+
+      if (!trovaj.length) {
+        enirajEroj = [];
+        enirajRezultoj.innerHTML = '<div class="enira-senrezulte">Neniu rezulto por «' +
+          eskapi(sercho) + '». Provu <code>helpu</code> aŭ <code>= 2 + 2</code>.</div>';
+        return;
+      }
+
+      const grupoj = new Map();
+      for (const e of trovaj) {
+        if (!grupoj.has(e.grupo)) grupoj.set(e.grupo, []);
+        grupoj.get(e.grupo).push(e);
+      }
+      let html = "";
+      const ordigitaj = [];
+      for (const [grupo, eroj] of grupoj) {
+        html += '<div class="enira-grupo">' + eskapi(grupo) + "</div>";
+        for (const ero of eroj) {
+          html += eroHtml(ero, ordigitaj.length);
+          ordigitaj.push(ero);
+        }
+      }
+      enirajEroj = ordigitaj;
+      if (eniraElektita >= enirajEroj.length) eniraElektita = Math.max(0, enirajEroj.length - 1);
+      enirajRezultoj.innerHTML = html;
+    }
+
+    function prezentiKalkulon(esprimo) {
+      eniraModo.textContent = "Kalkulo";
+      enirajEroj = [];
+      eniraElektita = 0;
+      eniraDelegado = "";
+      if (!esprimo.trim()) {
+        eniraKalkulo = null;
+        enirajRezultoj.innerHTML =
+          '<div class="enira-senrezulte">Tajpu esprimon post «=», ekzemple <code>= 12 * (3 + 4)</code>.' +
+          ' La analizilo estas sekura kaj neniam uzas <code>eval</code>.</div>';
+        return;
+      }
+      try {
+        const valoro = kalkuli(esprimo);
+        eniraKalkulo = valoro;
+        enirajEroj = [{ tipo: "kalkulo" }];
+        enirajRezultoj.innerHTML =
+          '<div class="kalkula-rezulto">' +
+          '<div class="kalkula-etikedo">Rezulto</div>' +
+          '<div class="kalkula-valoro">' + eskapi(formatu(valoro)) + "</div>" +
+          '<div class="kalkula-esprimo">= ' + eskapi(esprimo) + "</div>" +
+          '<div class="kalkula-noto">Enter kopias la rezulton · sen eval · sen dosieroj · sen reto</div>' +
+          "</div>";
+      } catch (e) {
+        eniraKalkulo = null;
+        enirajRezultoj.innerHTML = '<div class="enira-eraro">' + eskapi(e.message) + " (-2)</div>";
+      }
+    }
+
+    function prezentiDelegadon(komando) {
+      eniraModo.textContent = "Ligo";
+      eniraKalkulo = null;
+      eniraDelegado = komando.trim();
+      if (!eniraDelegado) {
+        enirajEroj = [];
+        enirajRezultoj.innerHTML =
+          '<div class="enira-senrezulte">Tajpu komandon post «&gt;», ekzemple <code>&gt; listi | nombri</code>.' +
+          " La komanda registro estas komuna kun Ligo.</div>";
+        return;
+      }
+      enirajEroj = [{
+        nomo: 'Ruli «' + eniraDelegado + '» en Ligo',
+        priskribo: "La sama objekta fluo kiel la terminalo",
+        tipo: "delegado",
+        grupo: "Delegado",
+        ikono: ">",
+        komando: eniraDelegado
+      }];
+      eniraElektita = 0;
+      enirajRezultoj.innerHTML = '<div class="enira-grupo">Delegado</div>' + eroHtml(enirajEroj[0], 0);
+    }
+
+    function prezentiEniron() {
+      const valoro = eniraSercho.value;
+      if (valoro.startsWith("=")) prezentiKalkulon(valoro.slice(1));
+      else if (valoro.startsWith(">")) prezentiDelegadon(valoro.slice(1));
+      else prezentiSerchon(valoro);
+    }
+
+    function kalkuli(esprimo) {
+      const s = esprimo.replace(/\s+/g, "").replace(/,/g, ".");
+      if (!s) throw new Error("Mankas esprimo");
+      let i = 0;
+
+      function faktoro() {
+        if (s[i] === "+") { i++; return faktoro(); }
+        if (s[i] === "-") { i++; return -faktoro(); }
+        if (s[i] === "(") {
+          i++;
+          const v = sumo();
+          if (s[i] !== ")") throw new Error("Mankas «)»");
+          i++;
+          return v;
+        }
+        const komenco = i;
+        while (i < s.length && /[0-9.]/.test(s[i])) i++;
+        if (komenco === i) throw new Error("Nevalida esprimo");
+        const n = Number(s.slice(komenco, i));
+        if (isNaN(n)) throw new Error("Nevalida nombro");
+        return n;
+      }
+      function produto() {
+        let v = faktoro();
+        while (s[i] === "*" || s[i] === "/" || s[i] === "%") {
+          const op = s[i++];
+          const d = faktoro();
+          if (op === "*") v *= d;
+          else if (op === "/") {
+            if (d === 0) throw new Error("Divido per nulo");
+            v /= d;
+          } else {
+            if (d === 0) throw new Error("Modulo per nulo");
+            v %= d;
+          }
+        }
+        return v;
+      }
+      function sumo() {
+        let v = produto();
+        while (s[i] === "+" || s[i] === "-") {
+          const op = s[i++];
+          const d = produto();
+          v = op === "+" ? v + d : v - d;
+        }
+        return v;
+      }
+
+      const valoro = sumo();
+      if (i !== s.length) throw new Error("Nevalida esprimo");
+      if (!isFinite(valoro)) throw new Error("La rezulto ne estas finia");
+      return valoro;
+    }
+
+    function malfermiEniron() {
+      if (!eniroPaletro.classList.contains("tavola")) {
+        eniraHejmo = eniroPaletro.parentNode;
+        eniraSekvanto = eniroPaletro.nextSibling;
+        document.body.appendChild(eniroPaletro);
+        eniroPaletro.classList.add("tavola");
+        eniroPaletro.setAttribute("aria-modal", "true");
+        eniraTavolo.hidden = false;
+      }
+      eniraSercho.focus();
+      eniraSercho.select();
+    }
+
+    function fermiEniron() {
+      if (!eniroPaletro.classList.contains("tavola")) return;
+      eniroPaletro.classList.remove("tavola");
+      eniroPaletro.removeAttribute("aria-modal");
+      eniraTavolo.hidden = true;
+      if (eniraHejmo && eniraHejmo.isConnected) {
+        eniraHejmo.insertBefore(eniroPaletro, eniraSekvanto);
+      }
+    }
+
+    function montruLigon() {
+      document.getElementById("ligo").scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => ligoEniro.focus({ preventScroll: true }), 380);
+    }
+
+    function plenumiEniranEron() {
+      const ero = enirajEroj[eniraElektita];
+      if (!ero) return;
+      if (ero.tipo === "kalkulo") {
+        const valoro = formatu(eniraKalkulo);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          try {
+            navigator.clipboard.writeText(valoro).then(
+              () => fulmomesagxo("Kopiite", "La rezulto " + valoro + " kopiiĝis.", "sukceso"),
+              () => fulmomesagxo("Kopiado malsukcesis", "La retumilo ne permesis kopiadon.", "averto")
+            );
+          } catch (e) {
+            fulmomesagxo("Kopiado malsukcesis", "La retumilo ne permesis kopiadon.", "averto");
+          }
+        } else {
+          fulmomesagxo("Kopiado", "La retumilo ne subtenas kopiadon.", "averto");
+        }
+        return;
+      }
+      if (ero.tipo === "delegado") {
+        fermiEniron();
+        ruliLigon(ero.komando);
+        fulmomesagxo("Ligo", "Rulita en la objekta ŝelo.", "sukceso");
+        montruLigon();
+        return;
+      }
+      if (ero.tipo === "komando") {
+        fermiEniron();
+        ruliLigon(ero.nomo);
+        fulmomesagxo("Ligo", "Rulita: " + ero.nomo, "sukceso");
+        montruLigon();
+        return;
+      }
+      if (ero.tipo === "agordo") {
+        ero.plenumu();
+        fermiEniron();
+        return;
+      }
+      if (ero.tipo === "navigo") {
+        fermiEniron();
+        montruLigon();
+      }
+    }
+
+    eniraSercho.addEventListener("input", () => {
       eniraElektita = 0;
       prezentiEniron();
-    }
-  }
-});
+    });
 
-enirajRezultoj.addEventListener("click", (e) => {
-  const butono = e.target.closest(".enira-ero");
-  if (!butono) return;
-  eniraElektita = Number(butono.dataset.indekso);
-  plenumiEniranEron();
-});
+    eniraSercho.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (!enirajEroj.length) return;
+        eniraElektita = (eniraElektita + 1) % enirajEroj.length;
+        sxangxiElekton();
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (!enirajEroj.length) return;
+        eniraElektita = (eniraElektita - 1 + enirajEroj.length) % enirajEroj.length;
+        sxangxiElekton();
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (enirajEroj.length) plenumiEniranEron();
+        else if (eniraKalkulo !== null) plenumiEniranEron();
+        return;
+      }
+      if (e.key === "Escape") {
+        if (eniroPaletro.classList.contains("tavola")) {
+          e.preventDefault();
+          fermiEniron();
+        } else if (eniraSercho.value) {
+          e.preventDefault();
+          eniraSercho.value = "";
+          eniraElektita = 0;
+          prezentiEniron();
+        }
+      }
+    });
 
-enirajRezultoj.addEventListener("pointerover", (e) => {
-  const butono = e.target.closest(".enira-ero");
-  if (!butono) return;
-  eniraElektita = Number(butono.dataset.indekso);
-  sxangxiElekton();
-});
+    enirajRezultoj.addEventListener("click", (e) => {
+      const butono = e.target.closest(".enira-ero");
+      if (!butono) return;
+      eniraElektita = Number(butono.dataset.indekso);
+      plenumiEniranEron();
+    });
 
-document.getElementById("malfermiEniron").addEventListener("click", malfermiEniron);
-eniraTavolo.addEventListener("click", fermiEniron);
+    enirajRezultoj.addEventListener("pointerover", (e) => {
+      const butono = e.target.closest(".enira-ero");
+      if (!butono) return;
+      eniraElektita = Number(butono.dataset.indekso);
+      sxangxiElekton();
+    });
 
-window.addEventListener("keydown", (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-    e.preventDefault();
-    malfermiEniron();
-    return;
-  }
-  if (e.key === "Escape" && eniroPaletro.classList.contains("tavola")) {
-    e.preventDefault();
-    fermiEniron();
-  }
-});
+    document.getElementById("malfermiEniron").addEventListener("click", malfermiEniron);
+    eniraTavolo.addEventListener("click", fermiEniron);
 
-/* ── Starto ───────────────────────────────────────────────────── */
-(function starti() {
-  let temo = "malluma";
-  let akcento = "oro";
-  try {
-    temo = localStorage.getItem("fluou-temo") || "malluma";
-    akcento = localStorage.getItem("fluou-akcento") || "oro";
-  } catch (e) { /* sen poŝo */ }
-  agordiTemon(temo, false);
-  agordiAkcenton(akcento, false);
-  bonvenon();
-  prezentiEniron();
-})();
-</script>
+    window.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "e") {
+        e.preventDefault();
+        malfermiEniron();
+        return;
+      }
+      if (e.key === "Escape" && eniroPaletro.classList.contains("tavola")) {
+        e.preventDefault();
+        fermiEniron();
+      }
+    });
+
+    /* ── Starto ───────────────────────────────────────────────────── */
+    (function starti() {
+      let temo = "malluma";
+      let akcento = "verdo";
+      try {
+        temo = localStorage.getItem("fluou-temo") || "malluma";
+        akcento = localStorage.getItem("fluou-akcento") || "verdo";
+      } catch (e) { /* sen poŝo */ }
+      agordiTemon(temo, false);
+      agordiAkcenton(akcento, false);
+      bonvenon();
+      prezentiEniron();
+    })();
+  </script>
 </body>
+
 </html>
