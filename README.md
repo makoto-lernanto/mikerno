@@ -16,8 +16,8 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.4.3-arm.3 (workspace)
-- **Arkitekturo:** x86_64, unuprocesora; `arm64`-malantaŭo (antaŭeldono, EL0 kaj `svc #0`) en la branĉo `arm64`
+- **Versio:** 0.4.3-arm.4 (workspace)
+- **Arkitekturo:** x86_64, unuprocesora; `arm64`-malantaŭo (antaŭeldono, EL0, `svc #0`, ramfb kaj PAN) en la branĉo `arm64`
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
 - **Statuso:** funkcianta prototipo — vidu [Mejloŝtonoj](docs/MEJLOSTONOJ.md)
@@ -169,13 +169,17 @@ just verify        # formalaj pruvoj per Kani (postulas `cargo kani`)
 
 `just run-arm` bezonas la celan triopon `aarch64-unknown-none`
 (`rustup target add aarch64-unknown-none`) kaj `qemu-system-aarch64`.
-En la antaŭeldono `0.4.3-arm.3` la arm64-kerno eniras `EL0` per `eret`,
+En la antaŭeldono `0.4.3-arm.4` la arm64-kerno eniras `EL0` per `eret`,
 plenumas `svc #0`, posedas per-procezajn `TTBR0`-spacojn kaj rulas la saman
 IPC-scenaron kiel `x86_64`; `horizonto` venas kiel `-initrd` aŭ kiel
-ISO-modulo.
+ISO-modulo. La frambufo venas el `ramfb` per `fw_cfg` (1280×800, `XR24`),
+`PXN`/`UXN`/`PAN` estas aktivaj, kaj la piksela fiksaĵo donas la saman
+haketon kiel la `x86_64`-ISO.
 `just iso-arm` krome postulas `xorriso`, `mkfs.fat` (dosfstools) kaj
 `mmd`/`mcopy` (mtools); `just run-iso-arm` bezonas UEFI-firmwaren
 (`qemu-efi-aarch64`, alirebla kiel `QEMU_EFI.fd` aŭ per `QEMU_ARM_EFI`).
+La ISO-vojo implicite uzas `cortex-a76` (AAVMF 2025.11 blokiĝas sub TCG kun
+`-cpu max`); `QEMU_ARM_CPU` anstataŭigas la elekton.
 
 Ekvivalentaj rektaj komandoj:
 
@@ -488,6 +492,9 @@ sendblokado kaj `fork`/`exec`-distribuo de kapabloj venas en la sekvaj fazoj.
   reĝimo, `\n` → `\r\n`. Ĉi tio estas la arkitektura konzolo kaj ĉiam funkcias.
 - **Framebuffer** (`ekrano/`): 32-bpp Linuksa framebuffer el Multiboot2, desegnita
   per antaŭe rasterigitaj bitmapaj tiparoj derivitaj el **DejaVu Sans Mono**.
+  Sur `arm64` la frambufon kreas la kerno mem: `fw_cfg` liveras la dosieron
+  `etc/ramfb`, kaj `ramfb` montras kontiguajn RAM-kadrojn (1280×800, `XR24`,
+  paŝo 5120).
   Ekzistas kvar strekoj — 8×16, 12×24, 16×32 kaj 32×64 — kaj la konzolo elektas
   la plej grandan, kiu donas almenaŭ 80 kolumnojn kaj 24 vicojn, kun nombro da
   vicoj plej proksima al 33. Ĉiu streko enhavas la 95 ASCII-signojn kaj 16
@@ -756,7 +763,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.4.3-arm.3!
+[MiKerno] Saluton, mi estas MiKerno v0.4.3-arm.4!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
@@ -833,9 +840,17 @@ horizonto: procezo vekis en Ring 3.
 [kerno] planisto revenis al la ripoza fadeno
 ...
 [kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+[ekrano] piksela fiksaĵo 1280x800, 32 bpp, tiparo 12x24; haketo 0xecf1f6dbe1421575    (ISO; PVH diras «preterlasita»)
 [memoro] SMAP-provo: Ring 0 provos legi la uzantan folion ĉe 0x100000000
 [eraro] procezo 0: SMAP-malobservo ĉe 0x0000000100000000 (erarkodo=0x1)
 ```
+
+La piksela fiksaĵo estas la sama sur `arm64`: `just run-arm` kaj
+`just run-iso-arm` presas `[ekrano] piksela fiksaĵo 1280x800, 32 bpp, tiparo
+12x24; haketo 0xecf1f6dbe1421575`, kaj ankaŭ `[memoro] PAN-provo: EL1 provos
+legi la uzantan folion ĉe 0x100000000` sekvata de `[eraro] PAN-malobservo`.
+Ambaŭ arkoj uzas la saman desegnaĵon (gradiento kaj teksto), la saman tiparon
+kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
 
 ---
 

@@ -35,12 +35,15 @@ if [[ "$ARG" == "--iso" ]]; then
         echo "UEFI-firmware ne trovita; instalu qemu-efi-aarch64 aŭ agordu QEMU_ARM_EFI" >&2
         exit 1
     fi
+    # AAVMF (2025.11) blokiĝas sub TCG kun `-cpu max` antaŭ ol atingi la
+    # praŝarĝilon; `cortex-a76` havas `PAN` kaj praŝarĝas la ISO-on.
     exec "$QEMU" \
         -M virt \
-        -cpu "${QEMU_ARM_CPU:-cortex-a53}" \
+        -cpu "${QEMU_ARM_CPU:-cortex-a76}" \
         -m 256M \
         -bios "$FIRMWARE" \
         -cdrom "$ISO" \
+        -device ramfb \
         -serial mon:stdio \
         -display none \
         -no-reboot
@@ -49,9 +52,11 @@ fi
 if [[ -f "$ARG" ]]; then
     KERNEL="$ARG"
 else
+    # Oni pasigu la plataĵon `Image`, ne la ELF-on: QEMU liveras la DTB-on en
+    # `x0` nur kiam ĝi rekonas la Linux-`Image`-kapon.
     case "$ARG" in
-        debug)   KERNEL="$ROOT/target/aarch64-unknown-none/debug/mikerno" ;;
-        release) KERNEL="$ROOT/target/aarch64-unknown-none/release/mikerno" ;;
+        debug)   KERNEL="$ROOT/target/aarch64-unknown-none/debug/mikerno.img" ;;
+        release) KERNEL="$ROOT/target/aarch64-unknown-none/release/mikerno.img" ;;
         *) echo "uzado: $0 [debug|release|<kerno>|--iso [<iso>]]" >&2; exit 2 ;;
     esac
 fi
@@ -73,10 +78,11 @@ if [[ -f "$INITRD" ]]; then
 fi
 exec "$QEMU" \
     -M virt \
-    -cpu "${QEMU_ARM_CPU:-cortex-a53}" \
+    -cpu "${QEMU_ARM_CPU:-max}" \
     -m 256M \
     -kernel "$KERNEL" \
     "${INITRD_ARGS[@]}" \
+    -device ramfb \
     -serial mon:stdio \
     -display none \
     -no-reboot

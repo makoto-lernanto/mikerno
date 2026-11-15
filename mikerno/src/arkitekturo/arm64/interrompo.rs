@@ -267,6 +267,32 @@ pub extern "C" fn interrompa_dispetcho_arm64(kadro: *mut InterrompaKadro) {
                 // fadenon kaj neniam revenas al ĉi tiu kadro.
                 crate::kerno::planisto::morti()
             }
+            // `PAN`-malobservo: `EL1` provis atingi folion en la uzanta
+            // fenestro kun la fenestro fermita. `PAN` kaŭzas permesan
+            // malobservon (DFSC `0x0C..=0x0F`); traduka eraro en la sama
+            // fenestro estus kerna cimo. La samaj `FAR`-valoroj en la
+            // identeca kerna mapo ne estus uzantaj folioj, do la fenestra
+            // kontrolo sufiĉas por distingi ĝin.
+            let permesa = (0x0C..=0x0F).contains(&(kadro.esr & 0x3F));
+            if ec == EC_DATENA_ABORTO_EL1
+                && super::pan_aktiva()
+                && permesa
+                && (crate::memoro::virtuala::UZANTA_BAZO..crate::memoro::virtuala::UZANTA_FINO)
+                    .contains(&kadro.far)
+            {
+                let ago = if kadro.esr & (1 << 6) != 0 {
+                    "skribi"
+                } else {
+                    "legi"
+                };
+                crate::skribu!(
+                    "\n[eraro] PAN-malobservo: EL1 provis {} uzantan paĝon ĉe 0x{:016x} (esr=0x{:x})\n",
+                    ago,
+                    kadro.far,
+                    kadro.esr
+                );
+                crate::arkitekturo::halti()
+            }
             crate::skribu!(
                 "\n[kerno] escepto: ESR=0x{:x}, FAR=0x{:x}, ELR=0x{:x}, SPSR=0x{:x}\n",
                 kadro.esr,

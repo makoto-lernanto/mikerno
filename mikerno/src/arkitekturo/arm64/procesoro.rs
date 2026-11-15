@@ -59,3 +59,26 @@ pub fn temporizila_frekvenco() -> u64 {
     unsafe { asm!("mrs {}, cntfrq_el0", out(reg) valoro, options(nomem, nostack)) };
     valoro
 }
+
+/// Ĉu la procesoro havas `PAN`-on (`ID_AA64MMFR1_EL1.PAN`)?
+pub fn pan_subtenata() -> bool {
+    let valoro: u64;
+    // SAFETY: `ID_AA64MMFR1_EL1` estas nurlega identiga registro.
+    unsafe { asm!("mrs {}, id_aa64mmfr1_el1", out(reg) valoro, options(nomem, nostack)) };
+    (valoro >> 20) & 0xF != 0
+}
+
+/// Malfermu la `PAN`-fenestron: `EL1` rajtas legi kaj skribi uzantajn paĝojn.
+///
+/// Vokenda nur se `pan_subtenata()`; malfermita fenestro fermiĝas per
+/// `fermi_pan` aŭ per la sekva escepta eniro (`SCTLR_EL1.SPAN = 0`).
+pub fn malfermi_pan() {
+    // SAFETY: la alvokanto certigas, ke `PAN` estas efektivigita.
+    unsafe { asm!("msr pan, #0", options(nomem, nostack)) };
+}
+
+/// Fermu la `PAN`-fenestron.
+pub fn fermi_pan() {
+    // SAFETY: la alvokanto certigas, ke `PAN` estas efektivigita.
+    unsafe { asm!("msr pan, #1", options(nomem, nostack)) };
+}

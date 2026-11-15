@@ -32,7 +32,7 @@ En la branĉo `arm64` la versio estas antaŭeldono `0.x.y-arm.N`, kie `N` estas
 la ARM-fazo (`A1` → `arm.1`). La baza `0.x.y` restas tiu de la ĉefa branĉo;
 `tools/versio.sh` akceptas ambaŭ formojn.
 
-Nuna versio: `0.4.3-arm.3` (M14, Fazo 4 + ARM A3, branĉo `arm64`).
+Nuna versio: `0.4.3-arm.4` (M14, Fazo 4 + ARM A4, branĉo `arm64`).
 
 La sola fonto de la versio estas `[workspace.package] version` en `Cargo.toml`.
 La kerno legas ĝin per `env!("CARGO_PKG_VERSION")`, do `just run` kaj la ISO

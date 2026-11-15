@@ -23,13 +23,13 @@ use crate::memoro::virtuala::{AdresaSpaco, FizikaAdreso, PaĝaEraro};
 use crate::memoro::{EniraEraro, EniraInformo};
 
 #[cfg(target_arch = "aarch64")]
-pub use arm64::StacGardo;
-#[cfg(target_arch = "aarch64")]
 pub use arm64::interrompo::InterrompaKadro;
 #[cfg(target_arch = "aarch64")]
 pub use arm64::planado::Kunteksto;
 #[cfg(target_arch = "aarch64")]
 pub use arm64::uzanta::ELF_MAŜINO;
+#[cfg(target_arch = "aarch64")]
+pub use arm64::{StacGardo, pan_aktiva, testi_pan};
 #[cfg(target_arch = "x86_64")]
 pub use malantaŭo::interrompo::{InterrompaKadro, escepto_speco};
 #[cfg(target_arch = "x86_64")]
@@ -37,10 +37,11 @@ pub use malantaŭo::planado::Kunteksto;
 #[cfg(target_arch = "x86_64")]
 pub use malantaŭo::uzanta::ELF_MAŜINO;
 
-/// Skribu formatitan tekston al la platforma konzolo.
+/// Skribu formatitan tekston al la seria konzolo kaj al la frambufferio.
 #[cfg(target_arch = "aarch64")]
 pub fn skribi_formaton(argumentoj: fmt::Arguments) {
     arm64::seria::skribi_formaton(argumentoj);
+    crate::ekrano::skribi_formaton(argumentoj);
 }
 
 /// Skribu formatitan tekston al la seria konzolo kaj al la frambuffer.
@@ -85,6 +86,22 @@ pub fn hazardo() -> u64 {
 pub use malantaŭo::firmigo::{
     StacGardo, aktiva as smep_aktiva, clac, smap_aktiva, testi_smap, testi_smep,
 };
+
+/// Kreu frambufferion sur platformo, kiu ne ricevas unu de la praŝarĝilo.
+///
+/// `x86_64` ricevas la frambufferion per Multiboot2, do ĉi tiu funkcio nur
+/// redonas `None`; `arm64` anoncas RAM-bufron al `ramfb` per `fw_cfg`.
+#[cfg(target_arch = "x86_64")]
+pub fn krei_frambufferon(_alokilo: &mut KadraAlokilo) -> Option<crate::ekrano::FramebufferInformo> {
+    None
+}
+
+#[cfg(target_arch = "aarch64")]
+pub fn krei_frambufferon(
+    alokilo: &mut crate::memoro::kadro::KadraAlokilo,
+) -> Option<crate::ekrano::FramebufferInformo> {
+    arm64::fw_cfg::krei_frambufferon(alokilo)
+}
 
 /// La firmigaj trajtoj faritaj de la platformo, por la starta raporto.
 #[cfg(target_arch = "x86_64")]

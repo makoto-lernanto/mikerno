@@ -11,6 +11,7 @@
 use core::arch::asm;
 use core::ptr::{read_volatile, write_bytes, write_volatile};
 
+use super::procesoro;
 use crate::memoro::kadro::{KadraAlokilo, Kadro};
 use crate::memoro::virtuala::{
     AdresaSpaco, FizikaAdreso, PaĝaEraro, PaĝaPermesoj, PaĝaTablo, UZANTA_BAZO, VirtuaAdreso,
@@ -84,11 +85,16 @@ pub fn pravalorizi() {
         let mut sctlr: u64;
         asm!("mrs {}, sctlr_el1", out(reg) sctlr, options(nomem, nostack));
         sctlr |= (1 << 0) | (1 << 2) | (1 << 12); // M | C | I
-        // SPAN = 0: escepta eniro ne ŝaltu `PAN`, do la kerno povas legi
-        // uzantajn bufrojn sen aparta fenestro (A3 ne uzas PAN-on).
+        // SPAN = 0: ĉiu escepta eniro al `EL1` fermas la `PAN`-fenestron, do
+        // la kerno legas uzantajn bufrojn nur per `StacGardo`.
         sctlr &= !(1 << 23);
         asm!("msr sctlr_el1, {}", in(reg) sctlr, options(nomem, nostack));
         asm!("isb", options(nomem, nostack));
+    }
+    // Antaŭ la unua escepto `PAN` ankoraŭ havas sian pravaloran staton; fermu
+    // la fenestron ankaŭ ĉi tie.
+    if procesoro::pan_subtenata() {
+        procesoro::fermi_pan();
     }
 }
 
@@ -437,11 +443,14 @@ impl AdresaSpaco for ArmAdresaSpaco {
             )?;
         }
 
-        // MMIO de QEMU `virt`: GIC-distribuilo, GIC-CPU-interfaco kaj PL011.
+        // MMIO de QEMU `virt`: GIC-distribuilo, GIC-CPU-interfaco, PL011 kaj
+        // `fw_cfg` (la adreso venas el la FDT, kun fiksa fallback).
+        let fw_cfg = super::fw_cfg::bazo();
         for (komenco, fino) in [
             (0x0800_0000u64, 0x0800_1000u64),
             (0x0801_0000u64, 0x0801_2000u64),
             (0x0900_0000u64, 0x0900_1000u64),
+            (fw_cfg, fw_cfg + 0x1000),
         ] {
             self.mapigi_intervalon(
                 VirtuaAdreso::nova(komenco),

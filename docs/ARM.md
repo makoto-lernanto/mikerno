@@ -1,6 +1,6 @@
 # MiKerno-ARM — plano por la `arm64`-ŝpuro
 
-> Stato: 2026-11-15 · A0–A3 plenumitaj; A4 planita
+> Stato: 2026-11-15 · A0–A4 plenumitaj
 >
 > Rilataj: [FLUOU.md](FLUOU.md) §9 (A06, A07), [MEJLOSTONOJ.md](MEJLOSTONOJ.md),
 > [VORTARO.md](VORTARO.md).
@@ -266,18 +266,64 @@ La IPC-linioj (inkluzive `revoko`, `-9`, `-28`, `-32` kaj la negativajn
 Ring 3-kazojn) kongruas kun `x86_64`; sub UEFI la kadraj nombroj estas
 `58465` pro la firmvara memoro, dum la ceteraj linioj restas samaj.
 
+A4 (2026-11-15, `0.4.3-arm.4`) aldonas la grafikajn kaj firmigajn pecojn de
+la paritateco:
+
+- `arkitekturo/arm64/fw_cfg.rs` parolas kun la `fw_cfg`-MMIO de QEMU
+  (`/fw-cfg@9020000`, `qemu,fw-cfg-mmio`): legas `FW_CFG_FILE_DIR`, trovas
+  `etc/ramfb` kaj skribas per DMA 28-bajtan `RAMFBCfg` (ĉiuj kampoj
+  grandendianaj) por 1280×800, `XR24`, paŝo 5120. La frambufo estas
+  kontiguaj, identece mapitaj kadroj el `KadraAlokilo`.
+- `fdt.rs` rekonas la `fw-cfg`-nodon. La analizilo nun nuligas la `reg`-staton
+  ĉe ĉiu nodkomenco kaj konservas la bazan adreson sendepende de la ordo de
+  `reg` kaj `compatible`; antaŭe frata nodo povis heredigi sian adreson (la
+  PL011 ricevis la `fw_cfg`-adreson).
+- `ekrano/` liveras `testi_pikselojn`: gradiento plus teksto, poste FNV-1a
+  64-haketo de ĉiuj videblaj pikseloj. La tiparo elektiĝas per la sama regulo
+  kiel sur `x86_64`, do la haketo estas komparebla.
+- `PXN`/`UXN`/`PAN`: `ID_AA64MMFR1_EL1` decidas ĉu `PAN` ekzistas;
+  `SCTLR_EL1.SPAN = 0` refermas la fenestron ĉe ĉiu escepta eniro, kaj
+  `StacGardo` malfermas ĝin nur por la kernaj legadoj de uzantaj bufroj. La
+  vektora ŝelko raportas `PAN`-malobservon (`EC = 0x25`, `FAR` en la uzanta
+  fenestro) anstataŭ la ĝenerala escepto. `-C target-feature=+pan` nur
+  permesas al LLVM enkodigi `msr pan`; la subteno mem estas kontrolata.
+- `tools/run-qemu-arm.sh` pasigas la plataĵon `Image` (ne la ELF-on), ĉar
+  QEMU transdonas la DTB-on en `x0` nur por la Linux-`Image`-kapo. La ISO-vojo
+  implicite uzas `cortex-a76`: AAVMF 2025.11 blokiĝas sub TCG kun `-cpu max`.
+
+La akcepto estas la sama haketo sur ambaŭ arkoj; jen `just run-arm`
+(la ISO-vojo liveras identajn liniojn kaj ankaŭ la `PAN`-provon):
+
+```text
+[kerno] PXN subtenata: jes
+[kerno] UXN subtenata: jes
+[kerno] PAN subtenata: jes
+[kerno] PXN ŝaltita; EL1 ne plenumas uzantajn paĝojn
+[kerno] UXN ŝaltita; EL0 ne plenumas datumajn paĝojn
+[kerno] PAN ŝaltita; EL1 legas uzantajn paĝojn nur en malfermita fenestro
+[kerno] framebuffer 1280x800, 32 bpp
+[kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+[ekrano] piksela fiksaĵo 1280x800, 32 bpp, tiparo 12x24; haketo 0xecf1f6dbe1421575
+[memoro] PAN-provo: EL1 provos legi la uzantan folion ĉe 0x100000000
+
+[eraro] PAN-malobservo: EL1 provis legi uzantan paĝon ĉe 0x0000000100000000 (esr=0x9600000f)
+```
+
+La `x86_64`-ISO (Limine, 1280×800, tiparo 12×24) presas la saman
+`haketo 0xecf1f6dbe1421575`; la ceteraj scenaroj restas senŝanĝaj.
+
 ## 12. Riskoj kaj malŝarĝoj
 
 | Risko | Malŝarĝo |
 | --- | --- |
-| FDT-analizado tro kreskas | Minimuma analizilo por `memory`, `initrd`, `serial`, `intc`, `timer`; fiksa `virt`-fallback nur por diagnozo |
+| FDT-analizado tro kreskas | Minimuma analizilo por `memory`, `initrd`, `serial`, `intc`, `timer` kaj `fw-cfg`; fiksa `virt`-fallback nur por diagnozo |
 | EL2 kontraŭ EL1 ĉe starto | `CurrentEL`-kontrolo kaj malgranda EL2→EL1-ŝelo |
 | GICv2 kontraŭ GICv3 | GICv2 unue, eksplicita `gic-version=2`; GICv3 poste |
-| `PAN` mankas sur `cortex-a53` | A4 uzas `-cpu max`; la raporto montras, kiu firmigo estas aktiva |
+| `PAN` mankas sur `cortex-a53` | Solvita en A4: la `-kernel`-vojo uzas `-cpu max`; la UEFI-ISO uzas `cortex-a76`, ĉar AAVMF 2025.11 blokiĝas sub TCG kun `max`; la raporto montras la aktivan firmigon |
 | Du malantaŭoj drivas | A0 tenas la komunan nukleon en unu loko; M17 aldonos CI-matricon |
 | Kani nur `x86_64` | La pruvoj restas sur la komuna kodo; `arm64`-specifaĵoj ricevas QEMU-testojn |
 | `Limine` ne subtenas `arm64` | Malaktuala: Limine 12.9.6 havas `BOOTAA64.EFI`; la ISO estas UEFI-bootebla per El Torito, kaj BIOS-ISO ne estas celata |
-| `ramfb`/`fw_cfg`-komplekseco | A4 komenciĝas per `-device ramfb`; alternativa vojo estas UEFI `GOP` |
+| `ramfb`/`fw_cfg`-komplekseco | Solvita en A4 per `-device ramfb` kaj `qemu,fw-cfg-mmio`; UEFI `GOP` ne necesis |
 
 ## 13. Unuaj paŝoj
 
@@ -296,5 +342,7 @@ Ring 3-kazojn) kongruas kun `x86_64`; sub UEFI la kadraj nombroj estas
 7. A3: EL0 per `eret`, `svc #0`, uzantaj esceptoj. (Farita; la akcepto estas
    verda per `-kernel`/`-initrd` kaj per la UEFI-ISO.)
 8. A4: `ramfb` per `fw_cfg`, piksela fiksaĵo, `PAN` kaj dokumentaro.
+   (Farita; la akcepto estas la identa haketo
+   `0xecf1f6dbe1421575` per `-kernel` kaj per la UEFI-ISO.)
 
-A0–A3 estas efektivigitaj; A4 komenciĝos nur post klara «ek» de la uzanto.
+A0–A4 estas efektivigitaj; la ŝpuro atendas la kunfandan decidon.

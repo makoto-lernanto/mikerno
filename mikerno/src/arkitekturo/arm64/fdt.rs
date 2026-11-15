@@ -29,6 +29,7 @@ enum Speco {
     Memoro,
     Elektita,
     Seria,
+    FwCfg,
 }
 
 pub struct Fdt {
@@ -39,6 +40,7 @@ pub struct Fdt {
     memoro: [MemoraRegiono; MAKSAJ_MEMORAJ],
     nombro: usize,
     seria: Option<u64>,
+    fw_cfg: Option<u64>,
     initrd: Option<(u64, u64)>,
 }
 
@@ -72,6 +74,7 @@ impl Fdt {
             }; MAKSAJ_MEMORAJ],
             nombro: 0,
             seria: None,
+            fw_cfg: None,
             initrd: None,
         };
         fdt.off_struct = fdt.be32(8)? as usize;
@@ -97,6 +100,11 @@ impl Fdt {
 
     pub fn seria_adreso(&self) -> Option<u64> {
         self.seria
+    }
+
+    /// La bazo de la `fw_cfg`-MMIO (`qemu,fw-cfg-mmio`).
+    pub fn fw_cfg_adreso(&self) -> Option<u64> {
+        self.fw_cfg
     }
 
     pub fn initrd(&self) -> Option<(u64, u64)> {
@@ -126,6 +134,9 @@ impl Fdt {
                     profundo += 1;
                     if profundo < MAKSAJ_NODOJ {
                         celoj[profundo] = celoj[profundo - 1];
+                        // La antaŭa frato lasis sian `reg` ĉi tie; `compatible`
+                        // de ĉi tiu nodo ne rajtas legi ĝin.
+                        reg_bazo[profundo] = None;
                         speco[profundo] = if estas(nomo, b"memory") || nomo.starts_with(b"memory@")
                         {
                             Speco::Memoro
@@ -133,6 +144,8 @@ impl Fdt {
                             Speco::Elektita
                         } else if estas(nomo, b"serial") || nomo.starts_with(b"serial@") {
                             Speco::Seria
+                        } else if nomo.starts_with(b"fw-cfg") {
+                            Speco::FwCfg
                         } else {
                             Speco::Alia
                         };
@@ -177,8 +190,20 @@ impl Fdt {
                             if let Some(bazo) = reg_bazo[profundo] {
                                 self.seria = Some(bazo);
                             }
+                        } else if enhavas(valoro, b"qemu,fw-cfg-mmio") {
+                            speco[profundo] = Speco::FwCfg;
+                            if let Some(bazo) = reg_bazo[profundo] {
+                                self.fw_cfg = Some(bazo);
+                            }
                         }
                     } else if estas(nomo, b"reg") {
+                        // `reg` povas antaŭi `compatible`; konservu la bazan
+                        // adreson por ĉiu nodo, por ke la speco-decidiĝo ĝin
+                        // trovu sendepende de la propraĵa ordo.
+                        let adresaj = celoj[profundo].0;
+                        if let Some(bazo) = self.celoj(valoro_off, adresaj) {
+                            reg_bazo[profundo] = Some(bazo);
+                        }
                         if speco[profundo] == Speco::Memoro {
                             let (adresaj, grandaj) = celoj[profundo];
                             if let (Some(komenco), Some(longo)) = (
@@ -191,11 +216,9 @@ impl Fdt {
                                 self.nombro += 1;
                             }
                         } else if speco[profundo] == Speco::Seria {
-                            let adresaj = celoj[profundo].0;
-                            if let Some(bazo) = self.celoj(valoro_off, adresaj) {
-                                reg_bazo[profundo] = Some(bazo);
-                                self.seria = Some(bazo);
-                            }
+                            self.seria = reg_bazo[profundo];
+                        } else if speco[profundo] == Speco::FwCfg {
+                            self.fw_cfg = reg_bazo[profundo];
                         }
                     } else if speco[profundo] == Speco::Elektita {
                         if estas(nomo, b"linux,initrd-start") {

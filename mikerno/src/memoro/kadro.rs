@@ -81,6 +81,35 @@ impl KadraAlokilo {
         None
     }
 
+    /// Aloku `n` sinsekvajn kadrojn kaj redonu la unuan. `None` se ne ekzistas
+    /// sufiĉe longa libera intervalo. La kadroj restas okupataj ĝis eksplicita
+    /// `liberigi`. Nur `arm64` uzas ĝin (`ramfb`).
+    #[cfg(target_arch = "aarch64")]
+    pub fn aloki_kontiguajn(&mut self, n: usize) -> Option<Kadro> {
+        if n == 0 || n > MAKSA_KADROJ {
+            return None;
+        }
+        let mut indekso = 0;
+        while indekso + n <= MAKSA_KADROJ {
+            if self.kadro_uzata(indekso) {
+                indekso += 1;
+                continue;
+            }
+            let mut longa = 1;
+            while longa < n && !self.kadro_uzata(indekso + longa) {
+                longa += 1;
+            }
+            if longa == n {
+                for kadro in indekso..indekso + n {
+                    self.marki(kadro, true);
+                }
+                return Some(Kadro(indekso as u64));
+            }
+            indekso += longa;
+        }
+        None
+    }
+
     /// Redonu la kadron al la bitaro.
     ///
     /// Se la kadro jam estas libera, la voko estas senefika: duobla liberigo

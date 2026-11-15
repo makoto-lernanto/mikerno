@@ -239,6 +239,22 @@ kaj protokolaj nomoj sekvu ĝin.
 | `fadeno-stako` | thread stack | `FadenaStako`; 16 KiB po fadeno. |
 | `stako-pinto` | stack top | `stako_pinto`; la enira stako finiĝas ĉe `__stako_supro`. |
 | `enira stako` | entry stack | La sekcio `.stako` ekster `.bss`, do la nula buklo ne tuŝas ĝin. |
+| `fw_cfg` | firmware configuration | La MMIO-aparato de QEMU (`qemu,fw-cfg-mmio`); dateno, selektilo kaj DMA. |
+| `selektilo` | selector | La 2-bajta grandendiana registro ĉe `fw_cfg + 0x08`. |
+| `dosierujo de fw_cfg` | fw_cfg file directory | Klavo `0x0019`; eroj po 64 bajtoj kun nomo kaj selektilo. |
+| `ramfb` | RAM framebuffer | La `fw_cfg`-dosiero `etc/ramfb`; `RAMFBCfg` 28 bajtoj. |
+| `kvarobla signo` | fourcc | `XR24` (`0x3432_5258`): XRGB8888 kun 32-bitaj pikseloj. |
+| `paŝo` | stride | Bajtoj po vico; `LARĜO * 4 = 5120`. |
+| `DMA-priskribo` | DMA descriptor | `DmaEro`: `kontrolo`, `longo`, `adreso`, ĉiuj grandendianaj. |
+| `kontiguaj kadroj` | contiguous frames | `aloki_kontiguajn(n)`: unua-taŭga serĉo kaj markado de `n` sinsekvaj kadroj. |
+| `piksela fiksaĵo` | pixel fixture | `testi_pikselojn`: gradiento, teksto, haketo; `PikselaRaporto`. |
+| `haketo` | hash | FNV-1a 64 super la videblaj pikseloj; komparebla inter la arkoj. |
+| `PXN` | privileged execute-never | PTE-bito: `EL1` ne plenumas `U=1`-foliojn. |
+| `UXN` | unprivileged execute-never | PTE-bito: `EL0` ne plenumas datumajn foliojn; la kodo havas `UXN = 0`. |
+| `PAN` | privileged access never | `ID_AA64MMFR1_EL1`; `msr pan, #0` malfermas, `#1` fermas la fenestron. |
+| `SPAN` | set PAN | `SCTLR_EL1.SPAN = 0`: ĉiu escepta eniro refermas la `PAN`-fenestron. |
+| `PAN-fenestro` | PAN window | `StacGardo` (arm64): malfermas ĉe profundo 0 kaj refermas per `Drop`. |
+| `PAN-malobservo` | PAN violation | `EC = 0x25` kun `FAR` en la uzanta fenestro; la kerno haltas. |
 
 ## FluoU — grafika uzinterfaco
 
@@ -340,7 +356,10 @@ eksteraj protokolaj nomoj:
 `ESR_EL1`, `FAR_EL1`, `ELR_EL1`, `SPSR_EL1`, `DAIF`, `CNTFRQ_EL0`,
 `CNTP_TVAL_EL0`, `CNTP_CTL_EL0`, `GICD_CTLR`, `GICD_ISENABLER`,
 `GICD_IPRIORITYR`, `GICD_ITARGETSR`, `GICC_CTLR`, `GICC_PMR`, `GICC_IAR`,
-`GICC_EOIR`, `PXN`, `UXN`, `PAN`, `PSCI`, `WFI`, `HCR_EL2`, `eret`, `svc`.
+`GICC_EOIR`, `PXN`, `UXN`, `PAN`, `PSCI`, `WFI`, `HCR_EL2`, `eret`, `svc`,
+`fw_cfg`, `FW_CFG_FILE_DIR`, `qemu,fw-cfg-mmio`, `etc/ramfb`, `ramfb`,
+`RAMFBCfg`, `XR24`, `FNV-1a`, `ID_AA64MMFR1_EL1`, `SCTLR_EL1.SPAN`, `msr pan`,
+`cortex-a76`.
 
 ## Reguloj
 

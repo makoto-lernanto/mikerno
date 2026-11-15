@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-15 · Versio de la workspace: 0.4.3-arm.3
+> Stato: 2026-11-15 · Versio de la workspace: 0.4.3-arm.4
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -105,6 +105,26 @@ la firmvaro rezervas; la ceteraj linioj kongruas. La `x86_64`-konstruo kaj
 ties scenaro restas senŝanĝaj, kaj `fmt`, `clippy` (ambaŭ celoj) kaj
 `cargo build --workspace --release` estas verdaj.
 
+A4 (arm64) estas plenumita la 2026-11-15 en `0.4.3-arm.4`: `fw_cfg.rs` legas
+la dosierujon de `fw_cfg`, trovas `etc/ramfb` kaj skribas per DMA 28-bajtan
+`RAMFBCfg` (1280×800, `XR24`, paŝo 5120) al kontiguaj, identece mapitaj
+kadroj; `ekrano` liveras la pikselan fiksaĵon (`testi_pikseloj`: gradiento,
+teksto kaj FNV-1a 64-haketo); `PXN`/`UXN` kaj `PAN` estas ŝaltataj, kaj la
+vektora ŝelko raportas `PAN`-malobservon. La FDT-analizilo nuligas la
+`reg`-staton ĉe ĉiu nodkomenco, do la PL011 ne plu heredas la `fw_cfg`-adreson.
+La akcepto estas la identa frambufa haketo sur ambaŭ arkoj:
+
+```text
+[kerno] PAN subtenata: jes
+[kerno] framebuffer 1280x800, 32 bpp
+[ekrano] piksela fiksaĵo 1280x800, 32 bpp, tiparo 12x24; haketo 0xecf1f6dbe1421575
+[eraro] PAN-malobservo: EL1 provis legi uzantan paĝon ĉe 0x0000000100000000 (esr=0x9600000f)
+```
+
+`just run-arm` (plata `Image`) kaj `just run-iso-arm` (Limine + AAVMF) liveras
+la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
+`cortex-a76`, ĉar AAVMF 2025.11 blokiĝas sub TCG kun `-cpu max`.
+
 ### 1.2. Grando de la Ring 0-kodo
 
 `bash tools/kodlinioj.sh --linio` mezuras la Ring 0-fonton (`mikerno/src`,
@@ -115,6 +135,7 @@ ties scenaro restas senŝanĝaj, kaj `fmt`, `clippy` (ambaŭ celoj) kaj
 | 2026-11-14 | 0.4.3-arm.1 | 41 | 8792 | 6780 | 1143 | 869 |
 | 2026-11-14 | 0.4.3-arm.2 | 45 | 9511 | 7343 | 1224 | 944 |
 | 2026-11-15 | 0.4.3-arm.3 | 47 | 10238 | 7903 | 1334 | 1001 |
+| 2026-11-15 | 0.4.3-arm.4 | 48 | 10731 | 8239 | 1455 | 1037 |
 
 ---
 

@@ -1,12 +1,13 @@
-//! Framebuffer-teksta konzolo: bitmapaj glifoj desegnitaj rekte en la Linuksa
-//! framebuffer, kiun Limine liveras per Multiboot2.
+//! Framebuffer-teksta konzolo: bitmapaj glifoj desegnitaj rekte en la
+//! framebuffer, kiun la praŝarĝilo liveras (Limine per Multiboot2) aŭ, sur
+//! `arm64`, kiun la kerno anoncas al `ramfb`.
 //!
 //! La konzolo elektas inter la kvar strekoj de `fonto` laŭ la framebuffer-
 //! grando: ju pli alta la ekrano, des pli granda la tiparo — ĉiam kun proksimume
 //! 33 tekstovicoj. Tiel la teksto restas akra kaj legebla sen skalado.
 //!
 //! Se framebuffer mankas (Xen-PVH aŭ malnova firmvaro), la konzolo restas
-//! malŝaltita kaj la eligo okazas nur sur COM1.
+//! malŝaltita kaj la eligo okazas nur sur la seria konzolo.
 
 use core::fmt::{self, Write};
 use core::ptr;
@@ -105,6 +106,26 @@ pub fn skribi_formaton(argumentoj: fmt::Arguments) {
     }
 }
 
+/// Rezulto de la piksela fiksaĵo, por la kompara linio de la starto.
+pub struct PikselaRaporto {
+    pub larĝo: u32,
+    pub alto: u32,
+    pub bpp: u8,
+    pub tiparo: (usize, usize),
+    pub haketo: u64,
+}
+
+/// Desegnu determinan provbildon en la tutan frambufferon, resumu la pikselojn
+/// kaj restarigu puran paĝon. `None` se la konzolo ne estas ŝaltita.
+///
+/// La bildo dependas nur de la framebuffer-grando, de la elektita tiparo kaj de
+/// la koloraj deŝovoj, do ĝia haketo estas komparebla inter la platformoj kiam
+/// la geometrio kongruas.
+pub fn testi_pikselojn() -> Option<PikselaRaporto> {
+    let ekrano = EKRANO.akiri().as_mut()?;
+    Some(ekrano.testi_pikselojn())
+}
+
 impl Ekrano {
     fn pikselo(&self, x: usize, y: usize, koloro: u32) {
         let adreso = self.informo.bazo + y as u64 * self.informo.paŝo as u64 + x as u64 * 4;
@@ -176,6 +197,55 @@ impl Ekrano {
     fn skribi(&mut self, teksto: &str, rgb: u32) {
         for signo in teksto.chars() {
             self.skribi_signon(signo, rgb);
+        }
+    }
+
+    /// Determina provbildo: kolora gradiento kun teksto super ĝi.
+    fn ŝablono(&mut self) {
+        let larĝo = self.informo.larĝo.max(2);
+        let alto = self.informo.alto.max(2);
+        for y in 0..self.informo.alto as usize {
+            let verda = (y as u32 * 255 / (alto - 1)) & 0xFF;
+            for x in 0..self.informo.larĝo as usize {
+                let ruĝa = (x as u32 * 255 / (larĝo - 1)) & 0xFF;
+                let blua = (x as u32 ^ y as u32) & 0xFF;
+                let koloro = self.koloro((ruĝa << 16) | (verda << 8) | blua);
+                self.pikselo(x, y, koloro);
+            }
+        }
+        self.x = 0;
+        self.y = 0;
+        self.skribi("MiKerno\npiksela fiksaĵo\n", TITOLA_RGB);
+    }
+
+    /// FNV-1a 64 super ĉiuj pikseloj de la videbla regiono.
+    fn haketi(&self) -> u64 {
+        let mut haketo = 0xcbf2_9ce4_8422_2325u64;
+        for y in 0..self.informo.alto as usize {
+            let vico = self.informo.bazo + y as u64 * self.informo.paŝo as u64;
+            for x in 0..self.informo.larĝo as usize {
+                // SAFETY: la adreso kuŝas en la mapita frambufferio; la legado
+                // estas flikema, por ke la kompililo ne forigu ĝin.
+                let valoro = unsafe { ptr::read_volatile((vico + x as u64 * 4) as *const u32) };
+                haketo ^= valoro as u64;
+                haketo = haketo.wrapping_mul(0x0000_0100_0000_01b3);
+            }
+        }
+        haketo
+    }
+
+    fn testi_pikselojn(&mut self) -> PikselaRaporto {
+        self.ŝablono();
+        let haketo = self.haketi();
+        // Restarigu puran paĝon, por ke la sekva teksto (la raporta linio)
+        // aperu sur ordinara fono.
+        self.malplenigi();
+        PikselaRaporto {
+            larĝo: self.informo.larĝo,
+            alto: self.informo.alto,
+            bpp: self.informo.bpp,
+            tiparo: (self.tiparo.larĝo, self.tiparo.alto),
+            haketo,
         }
     }
 }

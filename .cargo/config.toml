@@ -17,9 +17,12 @@ runner = 'bash tools/run-qemu.sh'
 
 [target.aarch64-unknown-none]
 # La arm64-bildo estas ligita kiel plata `Image` per `boot/linker-arm64.ld`
-# (la kerno mem liveras ĝin per `build.rs`).
+# (la kerno mem liveras ĝin per `build.rs`). `+pan` nur permesas la
+# `MSR PAN`-instrukciojn; la kerno kontrolas la subtenon per
+# `ID_AA64MMFR1_EL1` antaŭ ol uzi ilin.
 rustflags = [
     "-C", "linker=rust-lld",
+    "-C", "target-feature=+pan",
 ]
 
 [target.'cfg(all(target_arch = "aarch64", target_os = "none"))']

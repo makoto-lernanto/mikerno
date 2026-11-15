@@ -67,7 +67,6 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
 
     // La alokilo restas prunteprenita nur en ĉi tiu bloko: la planisto
     // aliras ĝin mem dum la proceza detruo, do longa `&mut` malhelpus.
-    #[cfg_attr(target_arch = "aarch64", allow(unused_mut, unused_variables))]
     let (mut spaco, framebuffer) = {
         let alokilo = kadra_alokilo();
         alokilo.pravalorizi(informo.memora_mapo, informo.rezervindaj, origino);
@@ -100,34 +99,47 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
             crate::skribu!("[kerno] identeca mapo malsukcesis: {}\n", eraro);
             return;
         }
-        #[cfg(target_arch = "x86_64")]
-        let framebuffer = match informo.framebuffer {
+        // Se la praŝarĝilo ne liveras frambufferion, la platformo povas krei
+        // sian propran (arm64: RAM-bufro anoncita al `ramfb`).
+        let framebuffer = informo
+            .framebuffer
+            .or_else(|| crate::arkitekturo::krei_frambufferon(alokilo));
+        let framebuffer = match framebuffer {
             Some(fb) => {
                 let fino = fb.bazo + fb.paŝo as u64 * fb.alto as u64;
-                match spaco.mapigi_intervalon(
-                    VirtuaAdreso::nova(fb.bazo),
-                    VirtuaAdreso::nova(fino),
-                    PaĝaPermesoj::SKRIBA_SENKAŜE,
-                    alokilo,
-                ) {
-                    Ok(()) => Some(fb),
-                    Err(eraro) => {
-                        crate::skribu!("[kerno] framebuffer-mapado malsukcesis: {}\n", eraro);
-                        None
+                // MMIO-frambufferio (x86) ankoraŭ mankas en la identeca mapo;
+                // RAM-frambufferio (arm64) jam estas identece mapita.
+                let jam_mapita = fb.bazo != 0
+                    && fb.paŝo != 0
+                    && spaco.traduki(VirtuaAdreso::nova(fb.bazo)).is_some()
+                    && spaco
+                        .traduki(VirtuaAdreso::nova(fino.saturating_sub(1)))
+                        .is_some();
+                if jam_mapita {
+                    Some(fb)
+                } else {
+                    match spaco.mapigi_intervalon(
+                        VirtuaAdreso::nova(fb.bazo),
+                        VirtuaAdreso::nova(fino),
+                        PaĝaPermesoj::SKRIBA_SENKAŜE,
+                        alokilo,
+                    ) {
+                        Ok(()) => Some(fb),
+                        Err(eraro) => {
+                            crate::skribu!("[kerno] framebuffer-mapado malsukcesis: {}\n", eraro);
+                            None
+                        }
                     }
                 }
             }
             None => None,
         };
-        #[cfg(target_arch = "aarch64")]
-        let framebuffer = ();
         testi_w_x(&spaco, informo.moduloj.first());
         spaco.ŝalti();
         procezo::agordi_kernan_spacon(spaco.radika_adreso());
         (spaco, framebuffer)
     };
 
-    #[cfg(target_arch = "x86_64")]
     match framebuffer {
         Some(fb) if crate::ekrano::pravalorizi(fb) => crate::skribu!(
             "[kerno] framebuffer {}x{}, {} bpp\n",
@@ -135,11 +147,9 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
             fb.alto,
             fb.bpp
         ),
-        Some(_) => crate::skribu!("[kerno] framebuffer ne taŭgas; nur COM1\n"),
-        None => crate::skribu!("[kerno] framebuffer ne havebla; nur COM1\n"),
+        Some(_) => crate::skribu!("[kerno] framebuffer ne taŭgas; nur {}\n", SERIA_KONZOLO),
+        None => crate::skribu!("[kerno] framebuffer ne havebla; nur {}\n", SERIA_KONZOLO),
     }
-    #[cfg(target_arch = "aarch64")]
-    crate::skribu!("[kerno] framebuffer ne havebla; nur PL011\n");
 
     crate::arkitekturo::inicialigi_kernostakon();
 
@@ -243,9 +253,26 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         tikoj
     );
 
-    // La memprovo venas laste: ĝi intence elvokas Ring 0 `#PF` kaj haltigas la
-    // kernon, do ĉiuj antaŭaj scenaroj jam raportis sian rezulton. Se SMAP
-    // mankas sed SMEP ekzistas, la pli malnova SMEP-provo ankoraŭ ruliĝas.
+    // La piksela fiksaĵo estas identa sur ambaŭ arkoj, kiam la frambufferio
+    // havas la saman geometrion; la haketo permesas kompari la du bildojn el
+    // la seria protokolo.
+    match crate::ekrano::testi_pikselojn() {
+        Some(raporto) => crate::skribu!(
+            "[ekrano] piksela fiksaĵo {}x{}, {} bpp, tiparo {}x{}; haketo 0x{:016x}\n",
+            raporto.larĝo,
+            raporto.alto,
+            raporto.bpp,
+            raporto.tiparo.0,
+            raporto.tiparo.1,
+            raporto.haketo
+        ),
+        None => crate::skribu!("[ekrano] piksela fiksaĵo preterlasita: frambufferio mankas\n"),
+    }
+
+    // La memprovo venas laste: ĝi intence elvokas Ring 0 `#PF` aŭ `EL1`-an
+    // datenan aborton kaj haltigas la kernon, do ĉiuj antaŭaj scenaroj jam
+    // raportis sian rezulton. Se SMAP mankas sed SMEP ekzistas, la pli malnova
+    // SMEP-provo ankoraŭ ruliĝas.
     #[cfg(target_arch = "x86_64")]
     if crate::arkitekturo::smap_aktiva() {
         crate::arkitekturo::testi_smap(&mut spaco, kadra_alokilo());
@@ -257,7 +284,11 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         );
     }
     #[cfg(target_arch = "aarch64")]
-    crate::skribu!("[memoro] firmiga provo preterlasita: PAN ne estas ŝaltita\n");
+    if crate::arkitekturo::pan_aktiva() {
+        crate::arkitekturo::testi_pan(&mut spaco, kadra_alokilo());
+    } else {
+        crate::skribu!("[memoro] firmiga provo preterlasita: la procesoro ne subtenas PAN\n");
+    }
     crate::arkitekturo::halti()
 }
 
@@ -268,6 +299,11 @@ const TESTAJ_FADENOJ: usize = 3;
 const RADIKA_NOMO: &str = "PML4";
 #[cfg(target_arch = "aarch64")]
 const RADIKA_NOMO: &str = "TTBR0";
+/// La seria konzolo de la platformo, por la starta raporto.
+#[cfg(target_arch = "x86_64")]
+const SERIA_KONZOLO: &str = "COM1";
+#[cfg(target_arch = "aarch64")]
+const SERIA_KONZOLO: &str = "PL011";
 /// La fadeno — kaj samnoma procezo — de la viktima `horizonto`.
 const UZANTA_FADENO_ID: u64 = TESTAJ_FADENOJ as u64 + 1;
 /// La spionprocezo: ĝi legas la duan sekretan paĝon, kiu ekzistas nur en la
