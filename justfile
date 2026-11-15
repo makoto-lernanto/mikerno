@@ -24,9 +24,10 @@ build: build-kerno
 run: build-kerno
     cargo run -p mikerno --release
 
-# Konstruu la kernon por arm64 (plata `Image`).
+# Konstruu la kernon por arm64 (plata `Image`) kaj la uzantan bildon.
 build-arm:
     cargo build -p mikerno --release --target aarch64-unknown-none
+    cargo build -p horizonto --release --target aarch64-unknown-none
     bash tools/elf-al-image.sh {{kerno_arm}} {{bildo_arm}}
 
 # Rulu la arm64-kernon sub QEMU (`virt`).

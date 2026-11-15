@@ -10,7 +10,6 @@ use crate::kunhavigita::Kunhavigita;
 use crate::memoro::virtuala::VirtuaAdreso;
 
 use super::objekto::{Fadeno, FadenoEnirpunkto, FadenoId, FadenoStato, ProcezaId};
-#[cfg(target_arch = "x86_64")]
 use super::procezo::{ProcezaEstado, marki};
 
 pub const MAKSAJ_FADENOJ: usize = 8;
@@ -100,7 +99,6 @@ impl Planisto {
             fadeno.stato = FadenoStato::Kuranta;
         }
         self.nuna_fadeno = Some(id);
-        #[cfg(target_arch = "x86_64")]
         self.stato_procezan(id, ProcezaEstado::Kuranta);
     }
 
@@ -115,7 +113,6 @@ impl Planisto {
 
     /// Spegulu la fadenan staton en la proceza tabelo; fadenoj de la nukleo
     /// (`procezo == 0`) ne havas procezan eron.
-    #[cfg(target_arch = "x86_64")]
     fn stato_procezan(&self, id: FadenoId, stato: ProcezaEstado) {
         let procezo = self.procezo_de(id);
         if procezo != 0 {
@@ -145,7 +142,6 @@ impl Planisto {
 
         fadeno.stato = FadenoStato::Preta;
         self.preta_vico.pusxi(nuna);
-        #[cfg(target_arch = "x86_64")]
         self.stato_procezan(nuna, ProcezaEstado::Preta);
 
         let sekva = self.elekti_proksiman().unwrap_or(nuna);
@@ -162,7 +158,6 @@ impl Planisto {
             fadeno.stato = FadenoStato::Blokitaj;
         }
         // Procezo sen kuranta fadeno ne plu estas "kuranta".
-        #[cfg(target_arch = "x86_64")]
         self.stato_procezan(id, ProcezaEstado::Preta);
         let sekva = self.elekti_proksiman().unwrap_or(RIPAZA_ID);
         self.kurigu(sekva);
@@ -182,20 +177,17 @@ impl Planisto {
 
     pub fn morti(&mut self, id: FadenoId) -> ! {
         crate::arkitekturo::malebligi_interrompojn();
-        #[cfg(target_arch = "x86_64")]
         let proceza = self.procezo_de(id);
         if let Some(fadeno) = self.fadenoj[id as usize].as_mut() {
             fadeno.stato = FadenoStato::Mortinta;
         }
         crate::skribu!("[planisto] fadeno {} finiĝis\n", id);
-        #[cfg(target_arch = "x86_64")]
         self.stato_procezan(id, ProcezaEstado::Mortinta);
 
         // La uzanta fadeno vivas same longe kiel sia procezo: je `SYS_FINI` aŭ
         // mortiga escepto ni liberigas la tutan adresan spacon antaŭ ol elekti
         // la sekvan fadenon. La kernaj mapoj kaj la statika kerna stako restas
         // validaj dum la ŝalto.
-        #[cfg(target_arch = "x86_64")]
         if proceza != 0
             && let Err(eraro) = super::procezo::detrui(proceza, super::kadra_alokilo())
         {
@@ -247,16 +239,12 @@ impl Planisto {
     }
 
     unsafe fn switch(&mut self, malnova: FadenoId, nova: FadenoId) {
-        #[cfg(target_arch = "x86_64")]
         let proceza = self.procezo_de(nova);
         // La fadenaj kontekstoj vivas en la kerna bildo, kiun ĉiu proceza
         // spaco kunhavas, do la ŝalto povas okazi antaŭ la registra konservo.
         // SAFETY: `switch` estas vokata nur kun interrompoj malŝaltitaj, kaj
         // la celo estas viva fadeno kun viva proceza aŭ kerna spaco.
-        #[cfg(target_arch = "x86_64")]
-        unsafe {
-            super::procezo::aktivigi(proceza)
-        };
+        unsafe { super::procezo::aktivigi(proceza) };
 
         let malnova =
             &mut self.fadenoj[malnova as usize].as_mut().unwrap().konteksto as *mut Kunteksto;
@@ -334,7 +322,6 @@ pub fn morti() -> ! {
     }
     // La IPC-purigo bezonas la pretan vicon (revokaj vekoj), do ĝi okazas
     // antaŭ ol `morti` prunteprenas la planiston.
-    #[cfg(target_arch = "x86_64")]
     {
         let proceza = {
             let planisto = planisto();

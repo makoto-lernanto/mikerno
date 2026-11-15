@@ -23,9 +23,13 @@ use crate::memoro::virtuala::{AdresaSpaco, FizikaAdreso, PaĝaEraro};
 use crate::memoro::{EniraEraro, EniraInformo};
 
 #[cfg(target_arch = "aarch64")]
+pub use arm64::StacGardo;
+#[cfg(target_arch = "aarch64")]
 pub use arm64::interrompo::InterrompaKadro;
 #[cfg(target_arch = "aarch64")]
 pub use arm64::planado::Kunteksto;
+#[cfg(target_arch = "aarch64")]
+pub use arm64::uzanta::ELF_MAŜINO;
 #[cfg(target_arch = "x86_64")]
 pub use malantaŭo::interrompo::{InterrompaKadro, escepto_speco};
 #[cfg(target_arch = "x86_64")]
@@ -88,6 +92,11 @@ pub fn firmiga_raporto() -> FirmigaRaporto {
     malantaŭo::firmigo::raporto()
 }
 
+#[cfg(target_arch = "aarch64")]
+pub fn firmiga_raporto() -> FirmigaRaporto {
+    arm64::firmiga_raporto()
+}
+
 /// Malŝaltu la uzantaliran fenestron de Ring 0 se la platformo havas unu.
 ///
 /// Vokata de la interrompa dispetĉo: la uzanto povas lasi `RFLAGS.AC=1`, kaj
@@ -112,11 +121,20 @@ pub fn analizi_eniron(starta_informo: *const u8, magio: u32) -> Result<EniraInfo
 /// konservi unu spacon por ĉiu procezo; la cetera kodo uzas la trait-on.
 #[cfg(target_arch = "x86_64")]
 pub type Spaco = malantaŭo::pagxado::X86AdresaSpaco;
+#[cfg(target_arch = "aarch64")]
+pub type Spaco = arm64::pagxado::ArmAdresaSpaco;
 
 /// Kreu freŝan, malplenan adresan spacon por la nukleo mem.
 #[cfg(target_arch = "x86_64")]
 pub fn krei_adresan_spacon(alokilo: &mut KadraAlokilo) -> Result<Spaco, PaĝaEraro> {
     <Spaco as AdresaSpaco>::krei(alokilo)
+}
+
+#[cfg(target_arch = "aarch64")]
+pub fn krei_adresan_spacon(
+    alokilo: &mut crate::memoro::kadro::KadraAlokilo,
+) -> Result<Spaco, crate::memoro::virtuala::PaĝaEraro> {
+    <Spaco as crate::memoro::virtuala::AdresaSpaco>::krei(alokilo)
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -159,13 +177,23 @@ pub fn pravalorizi_temporizilon() {
     malantaŭo::temporizilo::pravalorizi();
 }
 
-/// La fizika radiko, kiun `CR3` nun montras.
+#[cfg(target_arch = "aarch64")]
+pub fn pravalorizi_temporizilon() {
+    arm64::temporizilo::pravalorizi();
+}
+
+/// La fizika radiko, kiun `CR3` (aŭ `TTBR0_EL1`) nun montras.
 #[cfg(target_arch = "x86_64")]
 pub fn aktiva_adreso_spaco() -> u64 {
     malantaŭo::pagxado::aktiva_radiko().adreso()
 }
 
-/// Ŝaltu `CR3` al la donita radika paĝtabelo.
+#[cfg(target_arch = "aarch64")]
+pub fn aktiva_adreso_spaco() -> u64 {
+    arm64::pagxado::aktiva_radiko()
+}
+
+/// Ŝaltu `CR3` (aŭ `TTBR0_EL1`) al la donita radika paĝtabelo.
 ///
 /// # Sekureco
 /// Vidu `pagxado::ŝalti_radikon`.
@@ -174,11 +202,23 @@ pub unsafe fn ŝalti_adresan_spacon(radiko: u64) {
     unsafe { malantaŭo::pagxado::ŝalti_radikon(FizikaAdreso::nova(radiko)) }
 }
 
+#[cfg(target_arch = "aarch64")]
+pub unsafe fn ŝalti_adresan_spacon(radiko: u64) {
+    // SAFETY: la alvokanto garantias vivan radikon kaj interrompojn malŝaltitaj.
+    unsafe { arm64::pagxado::ŝalti_radikon(radiko) }
+}
+
 /// Pretigu la kernan stakon por transiroj Ring 3 → Ring 0.
+///
+/// Sur `arm64` la procesoro mem ŝaltas al `SP_EL1` ĉe escepto el `EL0`; la
+/// kerna stako venas el la planista kunteksto, do nenio agordendas.
 #[cfg(target_arch = "x86_64")]
 pub fn inicialigi_kernostakon() {
     malantaŭo::tss::inicialigi_kernostakon();
 }
+
+#[cfg(target_arch = "aarch64")]
+pub fn inicialigi_kernostakon() {}
 
 /// Agordu `TSS.RSP0` al la kerna stako de la nuna procezo.
 ///
@@ -208,6 +248,21 @@ pub unsafe fn eniri_uzanton(enirpunkto: u64, stakpinto: u64, reĝimo: u64, ident
     unsafe { malantaŭo::uzanta::eniri_uzanton(enirpunkto, stakpinto, reĝimo, identigilo) }
 }
 
+/// Transiru al `EL0`; la voko neniam revenas.
+///
+/// # Sekureco
+/// Vidu `arm64::uzanta::eniri_uzanton`.
+#[cfg(target_arch = "aarch64")]
+pub unsafe fn eniri_uzanton(enirpunkto: u64, stakpinto: u64, reĝimo: u64, identigilo: u64) -> ! {
+    unsafe { arm64::uzanta::eniri_uzanton(enirpunkto, stakpinto, reĝimo, identigilo) }
+}
+
+/// Voku la platforman sistemvokon el Ring 0/EL1.
+#[cfg(target_arch = "aarch64")]
+pub fn invoki_sistemvokon(numero: usize, argumentoj: [u64; 4]) -> u64 {
+    arm64::sistemvoko::invoki(numero, argumentoj)
+}
+
 #[cfg(target_arch = "x86_64")]
 pub fn temporizilaj_tikoj() -> u64 {
     malantaŭo::temporizilo::tikoj()
@@ -221,6 +276,11 @@ pub fn temporizilaj_tikoj() -> u64 {
 #[cfg(target_arch = "x86_64")]
 pub fn instali_sistemvokon() {
     malantaŭo::sistemvoko::instali();
+}
+
+#[cfg(target_arch = "aarch64")]
+pub fn instali_sistemvokon() {
+    arm64::instali_sistemvokon();
 }
 
 #[cfg(target_arch = "x86_64")]

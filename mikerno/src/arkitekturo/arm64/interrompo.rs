@@ -1,11 +1,22 @@
-//! `arm64`-esceptoj: la vektora tabelo `VBAR_EL1` kaj la interrompa kadro.
+//! `arm64`-esceptoj: la vektora tabelo `VBAR_EL1`, la interrompa kadro kaj la
+//! dispetĉo de `SVC` el `EL0`.
 //!
-//! La ŝelko konservas `x0`–`x30`, `ELR_EL1`, `SPSR_EL1`, `ESR_EL1` kaj
-//! `FAR_EL1` sur la aktiva stako, vokas Rust-on kaj revenas per `eret`.
+//! La ŝelko konservas `x0`–`x30`, `SP_EL0`, `ELR_EL1`, `SPSR_EL1`, `ESR_EL1`
+//! kaj `FAR_EL1` sur la aktiva stako (la kerna stako `SP_EL1` se la escepto
+//! venis el `EL0`), vokas Rust-on kaj revenas per `eret`.
 
 use core::arch::{asm, global_asm};
 
 use crate::arkitekturo::komuna::SistemvokaKadro;
+
+/// `ESR_EL1.EC` de `SVC` el AArch64.
+const EC_SVC64: u64 = 0x15;
+/// `ESR_EL1.EC` de nekonata instrukcio.
+const EC_NEKONATA: u64 = 0x10;
+const EC_INSTRUKCIA_ABORTO_EL0: u64 = 0x20;
+const EC_INSTRUKCIA_ABORTO_EL1: u64 = 0x21;
+const EC_DATENA_ABORTO_EL0: u64 = 0x24;
+const EC_DATENA_ABORTO_EL1: u64 = 0x25;
 
 /// La kadro, kiun la enira ŝelko konstruas sur la stako.
 #[repr(C)]
@@ -19,15 +30,32 @@ pub struct InterrompaKadro {
     pub vektoro: u64,
     pub erarkodo: u64,
     pub sp: u64,
-    _rezervo: u64,
+    /// La uzanta stakpinto (`SP_EL0`); sen signifo por kadroj el `EL1`.
+    pub sp_el0: u64,
     _indekso: u64,
 }
 
 const _: () = assert!(core::mem::size_of::<InterrompaKadro>() == 320);
 
+impl InterrompaKadro {
+    /// La escepta kodo el `ESR_EL1`.
+    pub fn escepta_kodo(&self) -> u64 {
+        (self.esr >> 26) & 0x3F
+    }
+
+    /// Ĉu la escepto estas `SVC` (AArch64) kaj do portas sistemvokan numeron?
+    pub fn estas_svc(&self) -> bool {
+        self.escepta_kodo() == EC_SVC64
+    }
+}
+
 impl SistemvokaKadro for InterrompaKadro {
     fn numero(&self) -> usize {
-        0
+        if self.estas_svc() {
+            (self.x[8] & 0xFFFF_FFFF) as usize
+        } else {
+            0
+        }
     }
 
     fn argumento(&self, indekso: usize) -> u64 {
@@ -47,7 +75,7 @@ impl SistemvokaKadro for InterrompaKadro {
     }
 
     fn erarkodo(&self) -> u64 {
-        self.erarkodo
+        self.escepta_kodo()
     }
 
     fn instrukcipunkto(&self) -> u64 {
@@ -55,7 +83,11 @@ impl SistemvokaKadro for InterrompaKadro {
     }
 
     fn stakmontrilo(&self) -> u64 {
-        self.sp
+        if self.el_uzanto() {
+            self.sp_el0
+        } else {
+            self.sp
+        }
     }
 
     fn stato(&self) -> u64 {
@@ -67,6 +99,11 @@ unsafe extern "C" {
     static __vektoroj: u8;
 }
 
+// Deŝovoj de la kadro (vidu `InterrompaKadro`).
+const O_SP_EL0: usize = 304;
+const O_SP: usize = 296;
+const O_INDEKSO: usize = 312;
+
 global_asm!(
     r#"
     .section .text
@@ -77,7 +114,7 @@ global_asm!(
         sub sp, sp, #320
         str x9, [sp, #72]
         mov x9, #\indekso
-        str x9, [sp, #312]
+        str x9, [sp, {o_indekso}]
         b \celo
     .endm
 
@@ -128,11 +165,13 @@ __vektoroj:
     str x9, [sp, #264]
     mrs x9, far_el1
     str x9, [sp, #272]
-    ldr x9, [sp, #312]
+    ldr x9, [sp, {o_indekso}]
     str x9, [sp, #280]
     str xzr, [sp, #288]
     add x9, sp, #320
-    str x9, [sp, #296]
+    str x9, [sp, {o_sp}]
+    mrs x9, sp_el0
+    str x9, [sp, {o_sp_el0}]
     mov x0, sp
     bl interrompa_dispetcho_arm64
 
@@ -140,6 +179,8 @@ __vektoroj:
     msr elr_el1, x9
     ldr x9, [sp, #256]
     msr spsr_el1, x9
+    ldr x9, [sp, {o_sp_el0}]
+    msr sp_el0, x9
     ldp x0, x1, [sp, #0]
     ldp x2, x3, [sp, #16]
     ldp x4, x5, [sp, #32]
@@ -159,7 +200,10 @@ __vektoroj:
     ldr x30, [sp, #240]
     add sp, sp, #320
     eret
-    "#
+    "#,
+    o_indekso = const O_INDEKSO,
+    o_sp = const O_SP,
+    o_sp_el0 = const O_SP_EL0,
 );
 
 /// Instalu la vektoran tabelon.
@@ -172,12 +216,57 @@ pub fn pravalorizi() {
     }
 }
 
+/// Ĉu la escepta kodo indikas aborton, kiun la uzanta procezo kaŭzis?
+fn uzanta_aborto(ec: u64) -> bool {
+    matches!(
+        ec,
+        EC_NEKONATA
+            | EC_INSTRUKCIA_ABORTO_EL0
+            | EC_INSTRUKCIA_ABORTO_EL1
+            | EC_DATENA_ABORTO_EL0
+            | EC_DATENA_ABORTO_EL1
+    )
+}
+
+fn aborta_nomo(ec: u64) -> &'static str {
+    match ec {
+        EC_INSTRUKCIA_ABORTO_EL0 | EC_INSTRUKCIA_ABORTO_EL1 => "instrukcia aborto",
+        EC_DATENA_ABORTO_EL0 | EC_DATENA_ABORTO_EL1 => "datena aborto",
+        _ => "nekonata escepto",
+    }
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn interrompa_dispetcho_arm64(kadro: *mut InterrompaKadro) {
     let kadro = unsafe { &mut *kadro };
     match kadro.vektoro {
         1 | 5 | 9 | 13 => super::gic::trakti(kadro),
         0 | 4 | 8 | 12 => {
+            let ec = kadro.escepta_kodo();
+            if ec == EC_SVC64 {
+                let rezulto = crate::kerno::sistemvoko::voki(
+                    kadro.numero(),
+                    kadro.x[0],
+                    kadro.x[1],
+                    kadro.x[2],
+                    kadro.el_uzanto(),
+                );
+                kadro.agordi_rezulton(rezulto);
+                return;
+            }
+            if kadro.el_uzanto() && uzanta_aborto(ec) {
+                crate::skribu!(
+                    "\n[eraro] procezo {}: {} ĉe rip=0x{:016x}, far=0x{:016x}, esr=0x{:x}; la procezo estas mortigata\n",
+                    crate::kerno::planisto::nuna_procezo(),
+                    aborta_nomo(ec),
+                    kadro.elr,
+                    kadro.far,
+                    kadro.esr
+                );
+                // `morti` detruas la procezan adresan spacon, elektas alian
+                // fadenon kaj neniam revenas al ĉi tiu kadro.
+                crate::kerno::planisto::morti()
+            }
             crate::skribu!(
                 "\n[kerno] escepto: ESR=0x{:x}, FAR=0x{:x}, ELR=0x{:x}, SPSR=0x{:x}\n",
                 kadro.esr,

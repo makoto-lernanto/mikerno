@@ -21,10 +21,12 @@ kaj protokolaj nomoj sekvu ĝin.
 | `virtuala adreso` | virtual address | |
 | `fizika adreso` | physical address | |
 | `adresa spaco` | address space | `AdresaSpaco`. |
-| `radika adreso` | root address | Fizika adreso de `PML4`, ŝargata en `CR3`. |
-| `aktivigi` | activate | Ŝalti la procezan `CR3` kaj `TSS.RSP0` antaŭ kuntekstŝanĝo. |
+| `radika adreso` | root address | Fizika adreso de `PML4` (`CR3`) aŭ de la radika `L0`-tabelo (`TTBR0_EL1`). |
+| `aktivigi` | activate | Ŝalti la procezan `CR3` aŭ `TTBR0_EL1` kaj `TSS.RSP0` antaŭ kuntekstŝanĝo. |
 | `paĝa tabelo` | page table | `PaĝaTablo`. |
 | `paĝa eraro` | page fault (#PF) | |
+| `datena aborto` | data abort | `ESR_EL1` EC `0x24`/`0x25`; EL0-aliro al folio sen la postulata permeso mortigas la procezon. |
+| `instrukcja aborto` | instruction abort | `ESR_EL1` EC `0x20`/`0x21`; traktata kiel `ProtektaEraro`. |
 | `ĝenerala protekta eraro` | general protection fault (#GP) | |
 | `interrompo` | interrupt | |
 | `interrompa peto` | interrupt request (IRQ) | Neniam uzu `IRQ` en identigiloj. |
@@ -48,7 +50,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `uzantspaco` | user space | |
 | `sistemvoko` | system call | `SYS_*` restas kiel ABI-prefikso. |
 | `sistemvoka vektoro` | syscall vector | `0x80`. |
-| `sistemvoka numero` | system call number | `rax` ĉe la voko. |
+| `sistemvoka numero` | system call number | `rax` (`x86_64`) aŭ `x8` (`arm64`) ĉe la voko. |
 | `sistemvoka dispetĉo` | system call dispatch | `sistemvoka_dispetĉo`. |
 | `uzanta montrilo` | user pointer | Kontrolata antaŭ ĉiu aliro, folio post folio. |
 | `anoncita regiono` | declared region | La bildo kaj la uzanta stako. |
@@ -163,7 +165,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `dua sekreta paĝo` | second secret page | `SEKRETA_DUA_ADRESO`; nur en la viktima spaco. |
 | `magia numero` | magic number | `MAGIA_NUMERO = 0x4D69_4B65_726E_6F21`. |
 | `viktimo` | victim | Procezo `4`; mapas la duan paĝon kaj pluvivas. |
-| `spiono` | spy | Procezo `5`; legas fremdan paĝon kaj ricevas `#PF`. |
+| `spiono` | spy | Procezo `5`; legas fremdan paĝon kaj ricevas `#PF` aŭ datenan aborton. |
 | `spioni` | spy on | `spioni(id)` en `horizonto`. |
 | `izolado` | isolation | `[memoro] izolado (bone)` komparas liberajn kadrojn. |
 | `samtempeco` | concurrency | Ambaŭ procezoj pretaj antaŭ unu `planisto::lanĉi()`. |
@@ -215,6 +217,9 @@ kaj protokolaj nomoj sekvu ĝin.
 | `elstara nivelo` | exception level | `CurrentEL`; EL2→EL1 per `HCR_EL2.RW` kaj `eret`. |
 | `identeca mapo` | identity map | Virtuala adreso egalas la fizikan. |
 | `L0-tabelo` / `L1-tabelo` | level-0 / level-1 table | 4-nivela paĝado kun 1 GiB-blokoj. |
+| `L2-tabelo` / `L3-tabelo` | level-2 / level-3 table | Privataj tabeloj por la uzanta fenestro (`UZANTA_BAZO..UZANTA_FINO`). |
+| `SVC64` | SVC from AArch64 | `ESR_EL1` EC `0x15`; la vektora ŝelko ĝin dispetĉas al `kerno::sistemvoko`. |
+| `EL0t` | EL0 with SP_EL0 | `SPSR_EL1 = 0` ĉe la unua `eret`; `SP_EL0` portas la uzantan stakon. |
 | `bloka ero` | block entry | Priskribo kun `AF`, `SH`, `PXN`/`UXN`. |
 | `kerna fino` | kernel end | `__kerna_fino`; eniras `image_size`. |
 | `funkciovoko` | hypervisor call | `hvc #0` por PSCI. |
@@ -329,7 +334,8 @@ eksteraj protokolaj nomoj:
 `SMEP`, `SMAP`, `KASLR`, `IOMMU`, `DMA`, `PCI`, `DMAR`, `IVRS`, `STAC`, `CLAC`,
 `KREI_FINPUNKTON`, `DONI`, `REVOKI`, `RICEVI_TEMPO`, `SENDI_TEMPO`, `FERMI`,
 `EBADF`, `EAGAIN`, `ENOSPC`, `EPIPE`, `EMSGSIZE`, `ETIMEDOUT`, `arm64`,
-`AArch64`, `EL0`, `EL1`, `EL2`, `SVC`, `GIC`, `GICv2`, `GICv3`, `PL011`, `FDT`,
+`AArch64`, `EL0`, `EL0t`, `EL1`, `EL2`, `SVC`, `SVC64`, `GIC`, `GICv2`,
+`GICv3`, `PL011`, `FDT`,
 `DTB`, `Image`, `TTBR0_EL1`, `TCR_EL1`, `MAIR_EL1`, `SCTLR_EL1`, `VBAR_EL1`,
 `ESR_EL1`, `FAR_EL1`, `ELR_EL1`, `SPSR_EL1`, `DAIF`, `CNTFRQ_EL0`,
 `CNTP_TVAL_EL0`, `CNTP_CTL_EL0`, `GICD_CTLR`, `GICD_ISENABLER`,

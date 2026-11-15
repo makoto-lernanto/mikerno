@@ -1,6 +1,6 @@
 # MiKerno-ARM — plano por la `arm64`-ŝpuro
 
-> Stato: 2026-11-14 · A0–A2 plenumitaj; A3–A4 planitaj
+> Stato: 2026-11-15 · A0–A3 plenumitaj; A4 planita
 >
 > Rilataj: [FLUOU.md](FLUOU.md) §9 (A06, A07), [MEJLOSTONOJ.md](MEJLOSTONOJ.md),
 > [VORTARO.md](VORTARO.md).
@@ -121,8 +121,8 @@ tools/run-qemu-arm.sh          # qemu-system-aarch64 -M virt
 
 `Tenilo` (32 bitoj), `Mesago` (96 bajtoj, `#[repr(C)]`) kaj la erar-kodoj
 restas bajte identaj; nur `libmikerno::syscall::invoki` kaj la kerna kadro
-estas platformaj. FLUOU A07 mencias la `x86_64`-registrojn; A3 ĝisdatigos la
-tekston al «la registroj estas platformaj, la semantiko komuna».
+estas platformaj. FLUOU A07 nun tekstas «la registra aranĝo estas platforma,
+la semantiko komuna».
 
 ## 7. Memormodelo
 
@@ -242,6 +242,30 @@ arkoj. La akcepto estas verda:
 [kerno] fina stato: 3 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
 ```
 
+A3 (2026-11-15, `0.4.3-arm.3`) ligas la komunan kernon al `EL0` kaj al la
+per-procesa `TTBR0_EL1`. `uzanta.rs` enhavas la `eret`-ŝelon (`SPSR_EL1 =
+EL0t`, `SP_EL0 = stakpinto`, `x0`/`x1` = reĝimo/identigilo);
+`sistemvoko.rs` liveras `svc #0` (`x8` = numero, `x0`–`x3` = argumentoj) kaj
+la vektora ŝelko dispetĉas `SVC64` al `kerno::sistemvoko::voki`. `pagxado.rs`
+konstruas la procezan spacon: la kernaj identecaj eroj (`0..4 GiB`) restas
+kunhavataj, la uzanta fenestro ricevas privatajn `L2`/`L3`-tabelojn; la radiko
+ŝaltiĝas per `TTBR0_EL1` dum la kuntekstŝanĝo. La komuna kerno raportas la
+`TTBR0`-radikon kaj `EL0t`-eniron, la frambufo kaj la APIC/SMAP-provoj restas
+nur `x86_64`, kaj `horizonto` konstruiĝas por `aarch64-unknown-none` kun
+ELF-maŝino `183`. La bildo liveriĝas kiel `-initrd` aŭ kiel ISO-modulo
+(`horizonto.elf`). La akcepto estas verda per ambaŭ vojoj:
+
+```text
+[kerno] horizonto 4 pretas: EL0t, SP_EL0=0x101000000, SPSR=0x0, enirpunkto 0x1000006ec
+[eraro] procezo 5: datena aborto ĉe rip=0x0000000100000400, far=0x0000000200001000, esr=0x92000007; la procezo estas mortigata
+[memoro] izolado (bone): 64998 kadroj antaŭ, 64998 post
+[kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+```
+
+La IPC-linioj (inkluzive `revoko`, `-9`, `-28`, `-32` kaj la negativajn
+Ring 3-kazojn) kongruas kun `x86_64`; sub UEFI la kadraj nombroj estas
+`58465` pro la firmvara memoro, dum la ceteraj linioj restas samaj.
+
 ## 12. Riskoj kaj malŝarĝoj
 
 | Risko | Malŝarĝo |
@@ -269,6 +293,8 @@ arkoj. La akcepto estas verda:
    (Farita.)
 6. A2: `VBAR_EL1`, GICv2, ĝenerala temporizilo, `DAIF`-gardo, kuntekstŝanĝo.
    (Farita; la akcepto estas verda.)
-7. A3: EL0 per `eret`, `svc #0`, uzantaj esceptoj.
+7. A3: EL0 per `eret`, `svc #0`, uzantaj esceptoj. (Farita; la akcepto estas
+   verda per `-kernel`/`-initrd` kaj per la UEFI-ISO.)
+8. A4: `ramfb` per `fw_cfg`, piksela fiksaĵo, `PAN` kaj dokumentaro.
 
-A0–A2 estas efektivigitaj; A3 komenciĝos nur post klara «ek» de la uzanto.
+A0–A3 estas efektivigitaj; A4 komenciĝos nur post klara «ek» de la uzanto.

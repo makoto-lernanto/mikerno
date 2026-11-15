@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-14 · Versio de la workspace: 0.4.3-arm.2
+> Stato: 2026-11-15 · Versio de la workspace: 0.4.3-arm.3
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -79,6 +79,32 @@ Akcepto (`just run-arm`):
 [kerno] fina stato: 3 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
 ```
 
+A3 (arm64) estas plenumita la 2026-11-15 en `0.4.3-arm.3`: `uzanta.rs` eniras
+`EL0` per `eret` (`SPSR_EL1 = EL0t`, `SP_EL0 = stakpinto`, `x0`/`x1` =
+reĝimo/identigilo), `sistemvoko.rs` liveras `svc #0` kun `x8` kiel voknumero
+kaj `x0`–`x3` kiel argumentoj, kaj la vektora ŝelko dispetĉas `SVC64` al la
+komuna `kerno::sistemvoko::voki`. La per-procezaj spacoj havas propran
+`TTBR0_EL1`: la kernaj identecaj eroj (`0..4 GiB`) restas kunhavataj, la
+uzanta fenestro ricevas privatajn `L2`/`L3`-tabelojn, kaj `horizonto`
+konstruiĝas por `aarch64-unknown-none` (ELF-maŝino `183`). La komuna kerno
+raportas `TTBR0`-radikon, `EL0t`-eniron kaj uzantajn datenajn abortojn; la
+frambufo kaj la APIC/SMAP-provoj restas nur `x86_64`. La `horizonto`-bildo
+liveriĝas kiel `-initrd` (`-kernel`-vojo) aŭ kiel ISO-modulo
+(`module_path: boot():/horizonto.elf`). Akcepto — la samaj IPC-linioj kiel
+`x86_64`, inkluzive `-32`, la sekretan paĝon kaj la spionan datenan aborton:
+
+```text
+[kerno] horizonto 4 pretas: EL0t, SP_EL0=0x101000000, SPSR=0x0, enirpunkto 0x1000006ec
+[eraro] procezo 5: datena aborto ĉe rip=0x0000000100000400, far=0x0000000200001000, esr=0x92000007; la procezo estas mortigata
+[memoro] izolado (bone): 64998 kadroj antaŭ, 64998 post
+[kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+```
+
+Sub UEFI la kadraj nombroj estas pli malgrandaj (`58465`) pro la memoro, kiun
+la firmvaro rezervas; la ceteraj linioj kongruas. La `x86_64`-konstruo kaj
+ties scenaro restas senŝanĝaj, kaj `fmt`, `clippy` (ambaŭ celoj) kaj
+`cargo build --workspace --release` estas verdaj.
+
 ### 1.2. Grando de la Ring 0-kodo
 
 `bash tools/kodlinioj.sh --linio` mezuras la Ring 0-fonton (`mikerno/src`,
@@ -88,6 +114,7 @@ Akcepto (`just run-arm`):
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-11-14 | 0.4.3-arm.1 | 41 | 8792 | 6780 | 1143 | 869 |
 | 2026-11-14 | 0.4.3-arm.2 | 45 | 9511 | 7343 | 1224 | 944 |
+| 2026-11-15 | 0.4.3-arm.3 | 47 | 10238 | 7903 | 1334 | 1001 |
 
 ---
 

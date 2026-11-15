@@ -66,11 +66,17 @@ fi
 #   Ctrl+A c   — ŝalti la monitoron (tie: `quit`)
 # PSCI `SYSTEM_OFF` (la halto de la kerno) finas QEMU-on; `-no-shutdown` ne
 # estas uzata, por ke tiu fino estu videbla al la testilo.
+INITRD="$ROOT/target/aarch64-unknown-none/release/horizonto"
+INITRD_ARGS=()
+if [[ -f "$INITRD" ]]; then
+    INITRD_ARGS=(-initrd "$INITRD")
+fi
 exec "$QEMU" \
     -M virt \
     -cpu "${QEMU_ARM_CPU:-cortex-a53}" \
     -m 256M \
     -kernel "$KERNEL" \
+    "${INITRD_ARGS[@]}" \
     -serial mon:stdio \
     -display none \
     -no-reboot

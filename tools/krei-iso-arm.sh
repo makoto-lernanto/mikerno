@@ -6,6 +6,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGO="$ROOT/target/aarch64-unknown-none/release/mikerno.img"
+UZANTO="$ROOT/target/aarch64-unknown-none/release/horizonto"
 RADIKO="$ROOT/iso_root_arm"
 EFI_IMAGO="$ROOT/efi-arm.img"
 ELIGO="$ROOT/mikerno-arm.iso"
@@ -17,14 +18,17 @@ for ilo in xorriso mkfs.fat mmd mcopy; do
     fi
 done
 
-if [[ ! -f "$IMAGO" ]]; then
-    echo "kerna bildo ne trovita: $IMAGO (ruligu: just build-arm)" >&2
-    exit 1
-fi
+for bildo in "$IMAGO" "$UZANTO"; do
+    if [[ ! -f "$bildo" ]]; then
+        echo "bildo ne trovita: $bildo (ruligu: just build-arm)" >&2
+        exit 1
+    fi
+done
 
 rm -rf "$RADIKO"
 mkdir -p "$RADIKO/EFI/BOOT"
 cp "$IMAGO" "$RADIKO/mikerno.img"
+cp "$UZANTO" "$RADIKO/horizonto.elf"
 cp "$ROOT/mikerno/boot/limine-arm.conf" "$RADIKO/limine.conf"
 cp "$ROOT/tools/limine/EFI/BOOT/BOOTAA64.EFI" "$RADIKO/EFI/BOOT/BOOTAA64.EFI"
 

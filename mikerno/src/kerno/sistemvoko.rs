@@ -303,7 +303,10 @@ fn kontroli_regionon(montrilo: u64, longo: usize, skriba: bool, el_ring3: bool) 
 /// Vokata de la unua fadeno: `SYS_CEDI` tie vere cedas la procesoron, dum en la
 /// praŝarĝa kunteksto ĝi nur revenus sen ŝanĝo.
 pub fn testi_ring0() {
+    #[cfg(target_arch = "x86_64")]
     let teksto = "saluton el Ring 0 tra int 0x80";
+    #[cfg(target_arch = "aarch64")]
+    let teksto = "saluton el Ring 0 tra svc #0";
     let skribo = invoki(
         SYS_SKRIBI,
         [teksto.as_ptr() as u64, teksto.len() as u64, 0, 0],
@@ -341,6 +344,7 @@ pub fn testi_ring0() {
     );
 }
 
+#[cfg(target_arch = "x86_64")]
 fn invoki(numero: usize, argumentoj: [u64; 4]) -> u64 {
     let rezulto: u64;
     // SAFETY: `int 0x80` eniras la IDT-pordon instalitan de ĉi tiu modulo; la
@@ -358,4 +362,9 @@ fn invoki(numero: usize, argumentoj: [u64; 4]) -> u64 {
         );
     }
     rezulto
+}
+
+#[cfg(target_arch = "aarch64")]
+fn invoki(numero: usize, argumentoj: [u64; 4]) -> u64 {
+    crate::arkitekturo::invoki_sistemvokon(numero, argumentoj)
 }

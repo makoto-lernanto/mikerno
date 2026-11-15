@@ -16,8 +16,8 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.4.3-arm.2 (workspace)
-- **Arkitekturo:** x86_64, unuprocesora; `arm64`-skeleto (antaŭeldono) en la branĉo `arm64`
+- **Versio:** 0.4.3-arm.3 (workspace)
+- **Arkitekturo:** x86_64, unuprocesora; `arm64`-malantaŭo (antaŭeldono, EL0 kaj `svc #0`) en la branĉo `arm64`
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
 - **Statuso:** funkcianta prototipo — vidu [Mejloŝtonoj](docs/MEJLOSTONOJ.md)
@@ -161,7 +161,7 @@ just build         # konstruas nur la kernon (= build-kerno)
 just run           # QEMU -kernel, rekte per la PVH-noto (sen ISO)
 just iso           # kreas mikerno.iso per Limine + Multiboot2
 just run-iso       # rulas la ISO-on (QEMU-fenestro montras la Limine-menuon)
-just run-arm       # arm64-skeleto: plata `Image` sub QEMU `virt` (branĉo arm64)
+just run-arm       # arm64: plata `Image` + `horizonto` kiel `-initrd` (branĉo arm64)
 just iso-arm       # UEFI-bootebla `mikerno-arm.iso` (Limine + plata `Image`)
 just run-iso-arm   # rulas `mikerno-arm.iso` per AAVMF
 just verify        # formalaj pruvoj per Kani (postulas `cargo kani`)
@@ -169,6 +169,10 @@ just verify        # formalaj pruvoj per Kani (postulas `cargo kani`)
 
 `just run-arm` bezonas la celan triopon `aarch64-unknown-none`
 (`rustup target add aarch64-unknown-none`) kaj `qemu-system-aarch64`.
+En la antaŭeldono `0.4.3-arm.3` la arm64-kerno eniras `EL0` per `eret`,
+plenumas `svc #0`, posedas per-procezajn `TTBR0`-spacojn kaj rulas la saman
+IPC-scenaron kiel `x86_64`; `horizonto` venas kiel `-initrd` aŭ kiel
+ISO-modulo.
 `just iso-arm` krome postulas `xorriso`, `mkfs.fat` (dosfstools) kaj
 `mmd`/`mcopy` (mtools); `just run-iso-arm` bezonas UEFI-firmwaren
 (`qemu-efi-aarch64`, alirebla kiel `QEMU_EFI.fd` aŭ per `QEMU_ARM_EFI`).
@@ -752,7 +756,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.4.3-arm.2!
+[MiKerno] Saluton, mi estas MiKerno v0.4.3-arm.3!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes

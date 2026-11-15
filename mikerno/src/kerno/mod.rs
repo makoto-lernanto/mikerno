@@ -1,47 +1,32 @@
 //! Kerna nukleo — arkitekture sendependa; la platformon ĝi tuŝas nur tra
 //! `crate::arkitekturo`.
 
-#[cfg(target_arch = "x86_64")]
 use crate::arkitekturo::Spaco;
-#[cfg(target_arch = "x86_64")]
 use crate::kunhavigita::Kunhavigita;
-#[cfg(target_arch = "x86_64")]
 use crate::memoro::EniraInformo;
-#[cfg(target_arch = "x86_64")]
 use crate::memoro::KADRA_GRANDO;
-#[cfg(target_arch = "x86_64")]
 use crate::memoro::Modulo;
-#[cfg(target_arch = "x86_64")]
 use crate::memoro::kadro::KadraAlokilo;
-#[cfg(target_arch = "x86_64")]
 use crate::memoro::virtuala::{
     AdresaSpaco, PaĝaPermesoj, PaĝaTablo, UZANTA_BAZO, UZANTA_STAKO_SUPRO, VirtuaAdreso,
 };
-#[cfg(target_arch = "x86_64")]
 use libmikerno::starto::{REĜIMO_SEKRETO, REĜIMO_SPIONO};
 
-#[cfg(target_arch = "x86_64")]
 pub mod ipc;
 pub mod objekto;
 pub mod planisto;
-#[cfg(target_arch = "x86_64")]
 pub mod procezo;
-#[cfg(target_arch = "x86_64")]
 pub mod sistemvoko;
-#[cfg(target_arch = "x86_64")]
 pub mod uzantspaco;
 
-#[cfg(target_arch = "x86_64")]
 static ALOKILO: Kunhavigita<KadraAlokilo> = Kunhavigita::nova(KadraAlokilo::nova());
 
 /// La tutmonda kadro-alokilo, uzata ankaŭ de la proceza detruo en la
 /// planisto. Vokenda kun interrompoj malŝaltitaj.
-#[cfg(target_arch = "x86_64")]
 pub fn kadra_alokilo() -> &'static mut KadraAlokilo {
     ALOKILO.akiri()
 }
 
-#[cfg(target_arch = "x86_64")]
 pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
     crate::skribu!(
         "[MiKerno] Saluton, mi estas MiKerno v{}!\n",
@@ -82,6 +67,7 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
 
     // La alokilo restas prunteprenita nur en ĉi tiu bloko: la planisto
     // aliras ĝin mem dum la proceza detruo, do longa `&mut` malhelpus.
+    #[cfg_attr(target_arch = "aarch64", allow(unused_mut, unused_variables))]
     let (mut spaco, framebuffer) = {
         let alokilo = kadra_alokilo();
         alokilo.pravalorizi(informo.memora_mapo, informo.rezervindaj, origino);
@@ -114,6 +100,7 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
             crate::skribu!("[kerno] identeca mapo malsukcesis: {}\n", eraro);
             return;
         }
+        #[cfg(target_arch = "x86_64")]
         let framebuffer = match informo.framebuffer {
             Some(fb) => {
                 let fino = fb.bazo + fb.paŝo as u64 * fb.alto as u64;
@@ -132,12 +119,15 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
             }
             None => None,
         };
+        #[cfg(target_arch = "aarch64")]
+        let framebuffer = ();
         testi_w_x(&spaco, informo.moduloj.first());
         spaco.ŝalti();
         procezo::agordi_kernan_spacon(spaco.radika_adreso());
         (spaco, framebuffer)
     };
 
+    #[cfg(target_arch = "x86_64")]
     match framebuffer {
         Some(fb) if crate::ekrano::pravalorizi(fb) => crate::skribu!(
             "[kerno] framebuffer {}x{}, {} bpp\n",
@@ -148,24 +138,34 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         Some(_) => crate::skribu!("[kerno] framebuffer ne taŭgas; nur COM1\n"),
         None => crate::skribu!("[kerno] framebuffer ne havebla; nur COM1\n"),
     }
+    #[cfg(target_arch = "aarch64")]
+    crate::skribu!("[kerno] framebuffer ne havebla; nur PL011\n");
 
     crate::arkitekturo::inicialigi_kernostakon();
 
-    let apic_id = {
-        let alokilo = kadra_alokilo();
-        match crate::arkitekturo::pravalorizi_apicon(&mut spaco, alokilo) {
-            Ok(id) => id,
-            Err(eraro) => {
-                crate::skribu!("[kerno] APIC malsukcesis: {}\n", eraro);
-                return;
+    #[cfg(target_arch = "x86_64")]
+    {
+        let apic_id = {
+            let alokilo = kadra_alokilo();
+            match crate::arkitekturo::pravalorizi_apicon(&mut spaco, alokilo) {
+                Ok(id) => id,
+                Err(eraro) => {
+                    crate::skribu!("[kerno] APIC malsukcesis: {}\n", eraro);
+                    return;
+                }
             }
-        }
-    };
-    crate::arkitekturo::pravalorizi_temporizilon();
-    crate::skribu!(
-        "[kerno] APIC {} kaj paĝado pretaj; temporizilo 100 Hz\n",
-        apic_id
-    );
+        };
+        crate::arkitekturo::pravalorizi_temporizilon();
+        crate::skribu!(
+            "[kerno] APIC {} kaj paĝado pretaj; temporizilo 100 Hz\n",
+            apic_id
+        );
+    }
+    #[cfg(target_arch = "aarch64")]
+    {
+        crate::arkitekturo::pravalorizi_temporizilon();
+        crate::skribu!("[kerno] GICv2 kaj paĝado pretaj; temporizilo 100 Hz\n");
+    }
 
     let modulo = informo.moduloj.first();
     match modulo {
@@ -246,6 +246,7 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
     // La memprovo venas laste: ĝi intence elvokas Ring 0 `#PF` kaj haltigas la
     // kernon, do ĉiuj antaŭaj scenaroj jam raportis sian rezulton. Se SMAP
     // mankas sed SMEP ekzistas, la pli malnova SMEP-provo ankoraŭ ruliĝas.
+    #[cfg(target_arch = "x86_64")]
     if crate::arkitekturo::smap_aktiva() {
         crate::arkitekturo::testi_smap(&mut spaco, kadra_alokilo());
     } else if crate::arkitekturo::smep_aktiva() {
@@ -255,29 +256,29 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
             "[memoro] firmiga provo preterlasita: la procesoro ne subtenas SMEP aŭ SMAP\n"
         );
     }
+    #[cfg(target_arch = "aarch64")]
+    crate::skribu!("[memoro] firmiga provo preterlasita: PAN ne estas ŝaltita\n");
     crate::arkitekturo::halti()
 }
 
-#[cfg(target_arch = "x86_64")]
 const STAKA_GRANDE: usize = 16 * 1024;
-#[cfg(target_arch = "x86_64")]
 const TESTAJ_FADENOJ: usize = 3;
-/// La fadeno — kaj samnoma procezo — de la viktima `horizonto`.
+/// La nomo de la radika tabelo en la proceza raporto.
 #[cfg(target_arch = "x86_64")]
+const RADIKA_NOMO: &str = "PML4";
+#[cfg(target_arch = "aarch64")]
+const RADIKA_NOMO: &str = "TTBR0";
+/// La fadeno — kaj samnoma procezo — de la viktima `horizonto`.
 const UZANTA_FADENO_ID: u64 = TESTAJ_FADENOJ as u64 + 1;
 /// La spionprocezo: ĝi legas la duan sekretan paĝon, kiu ekzistas nur en la
 /// viktima spaco.
-#[cfg(target_arch = "x86_64")]
 const SPIONA_FADENO_ID: u64 = UZANTA_FADENO_ID + 1;
 /// Ripeta ciklo de la reuzoprovo; libera identigilo, ne fadeno.
-#[cfg(target_arch = "x86_64")]
 const PROVA_PROCEZA_ID: u64 = 6;
-#[cfg(target_arch = "x86_64")]
 const REUZOJ: usize = 10;
 
 /// La scenaro, kiun `horizonto` plenumas: kontrolo de la propra sekreta paĝo
 /// aŭ spionado de la viktima dua paĝo.
-#[cfg(target_arch = "x86_64")]
 fn komenca_reĝimo(fadeno: u64) -> u64 {
     if fadeno == SPIONA_FADENO_ID {
         REĜIMO_SPIONO
@@ -288,7 +289,6 @@ fn komenca_reĝimo(fadeno: u64) -> u64 {
 
 /// Pruvu la liberigan vojon per proviza adresa spaco: kreu ĝin, mapu unu
 /// uzantan paĝon, detruu ĝin kaj komparu la nombron de liberaj kadroj.
-#[cfg(target_arch = "x86_64")]
 fn testi_liberigon(alokilo: &mut KadraAlokilo) {
     let antaŭ = alokilo.liberaj();
     let mut spaco = match crate::arkitekturo::krei_adresan_spacon(alokilo) {
@@ -324,7 +324,6 @@ fn testi_liberigon(alokilo: &mut KadraAlokilo) {
 /// Kontrolu la efektivajn W^X-permesojn de la kerna bildo kaj de la modulo.
 /// La valoroj estas legitaj el la paĝtabeloj de `spaco`, do la linio pruvas la
 /// bitojn `W`/`NX`, ne nur la intencon de la mapigaj alvokoj.
-#[cfg(target_arch = "x86_64")]
 fn testi_w_x(spaco: &Spaco, modulo: Option<&Modulo>) {
     let limoj = crate::memoro::virtuala::kernaj_limoj();
     let kodo = spaco.permesoj(VirtuaAdreso::nova(limoj.kodo.0));
@@ -352,10 +351,8 @@ fn testi_w_x(spaco: &Spaco, modulo: Option<&Modulo>) {
 }
 
 /// Prezento de `Option<PaĝaPermesoj>` por la W^X-linio.
-#[cfg(target_arch = "x86_64")]
 struct Priskribo(Option<PaĝaPermesoj>);
 
-#[cfg(target_arch = "x86_64")]
 impl core::fmt::Display for Priskribo {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self.0 {
@@ -365,14 +362,11 @@ impl core::fmt::Display for Priskribo {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
 #[repr(align(16))]
 struct FadenaStako(#[allow(dead_code)] [u8; STAKA_GRANDE]);
-#[cfg(target_arch = "x86_64")]
 static mut STAKOJ: [FadenaStako; TESTAJ_FADENOJ] =
     [const { FadenaStako([0; STAKA_GRANDE]) }; TESTAJ_FADENOJ];
 
-#[cfg(target_arch = "x86_64")]
 fn krei_testajn_fadenojn() -> Result<(), planisto::PlanistaEraro> {
     for indekso in 0..TESTAJ_FADENOJ {
         let id = indekso as u64 + 1;
@@ -389,7 +383,6 @@ fn krei_testajn_fadenojn() -> Result<(), planisto::PlanistaEraro> {
 
 /// Donu al ĉiu kerna testfadeno defaŭltan finpunkton; la kernaj fadenoj uzas
 /// la internan `sendi_mesagon`/`ricevi_mesagon`-vojon (sen kapablotabelo).
-#[cfg(target_arch = "x86_64")]
 fn registri_testajn_finpunktojn() {
     for id in 1..=TESTAJ_FADENOJ as u64 {
         if let Err(eraro) = ipc::registri_fadenon(id, 0) {
@@ -405,7 +398,6 @@ fn registri_testajn_finpunktojn() {
 /// Kreu kaj detruu la saman procezan spacon dek fojojn. Ĉiu ciklo muntas la
 /// bildon kaj preparas la stakon; la nombro de liberaj kadroj devas resti
 /// egala antaŭ kaj post la provo, do la detruo vere resorbas ĉion.
-#[cfg(target_arch = "x86_64")]
 fn testi_procezan_reuzon(kerna: &Spaco, modulo: &Modulo) {
     let alokilo = kadra_alokilo();
     let antaŭ = alokilo.liberaj();
@@ -458,7 +450,6 @@ fn testi_procezan_reuzon(kerna: &Spaco, modulo: &Modulo) {
 
 /// Detruu uzantan procezon kaj purigu ĝian IPC-staton; la finpunktoj, kiujn
 /// ĝi posedas, estas revokitaj antaŭ ol la adresa spaco malaperas.
-#[cfg(target_arch = "x86_64")]
 fn detrui_uzantan(id: u64) {
     ipc::purigi_procezon(id);
     let _ = procezo::detrui(id, kadra_alokilo());
@@ -467,7 +458,6 @@ fn detrui_uzantan(id: u64) {
 /// Kreu la procezon, ŝarĝu la bildon, mapu la sekretajn paĝojn kaj registru
 /// ĝian fadenon. La procezo restas `Preta`; la alvokanto lanĉas ĉiujn uzantajn
 /// procezojn per unu `planisto::lanĉi()`, por ke la planisto interplektu ilin.
-#[cfg(target_arch = "x86_64")]
 fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> bool {
     let id = match procezo::krei(proceza_id, kerna, kadra_alokilo()) {
         Ok(id) => id,
@@ -553,10 +543,11 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
         return false;
     };
     crate::skribu!(
-        "[procezo] {}: {:?}, kerna stako 0x{:x}, PML4 0x{:x}, kerna mapo {}, bildo nur en la proceza spaco {}, sekreta paĝo 0x{:x}\n",
+        "[procezo] {}: {:?}, kerna stako 0x{:x}, {} 0x{:x}, kerna mapo {}, bildo nur en la proceza spaco {}, sekreta paĝo 0x{:x}\n",
         id,
         stato,
         kerna_pinto,
+        RADIKA_NOMO,
         radiko.adreso(),
         if kerna_mapo { "kunhavata" } else { "MANKANTA" },
         if privata { "jes" } else { "NE" },
@@ -569,15 +560,22 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
         detrui_uzantan(id);
         return false;
     }
+    #[cfg(target_arch = "x86_64")]
     crate::skribu!(
         "[kerno] horizonto {} pretas: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x{:x}\n",
         id,
         enirpunkto
     );
+    #[cfg(target_arch = "aarch64")]
+    crate::skribu!(
+        "[kerno] horizonto {} pretas: EL0t, SP_EL0=0x{:x}, SPSR=0x0, enirpunkto 0x{:x}\n",
+        id,
+        UZANTA_STAKO_SUPRO,
+        enirpunkto
+    );
     true
 }
 
-#[cfg(target_arch = "x86_64")]
 fn uzanta_fadeno(id: u64) {
     let enirpunkto = {
         let Some(procezo) = procezo::akiri(id) else {
@@ -595,7 +593,6 @@ fn uzanta_fadeno(id: u64) {
     unsafe { crate::arkitekturo::eniri_uzanton(enirpunkto, UZANTA_STAKO_SUPRO, reĝimo, id) }
 }
 
-#[cfg(target_arch = "x86_64")]
 fn testa_fadeno(id: u64) {
     if id == 1 {
         sistemvoko::testi_ring0();
@@ -654,7 +651,6 @@ fn testa_fadeno(id: u64) {
     crate::skribu!("[fadeno {}] finas sian laboron\n", id);
 }
 
-#[cfg(target_arch = "x86_64")]
 fn teksto(mesago: &ipc::Mesago) -> &str {
     core::str::from_utf8(mesago.enhavo()).unwrap_or("<nevalida>")
 }
