@@ -30,7 +30,7 @@
 | M15 | `arm64`-malantaŭo: EL0, ABI 2, `ramfb`, `PAN` | Plenumita | identa piksela haketo sur ambaŭ arkoj |
 | M16 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
 | M17 | Konservado, dosiersistemo, ŝelo | Venonta | — |
-| M18 | CI, testoj, plena pruvaro | Venonta | — |
+| M18 | CI, testoj, plena pruvaro | Parte | GitHub Actions verde (fmt, clippy, konstruo, Kani); testoj kaj plena pruvaro mankas |
 | M19 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 
 ### 1.1. La `arm64`-ŝpuro (A0–A4), kunfandita en M15
@@ -723,11 +723,12 @@ signifas la defaŭltan `unwind`-valoron.
 
 - La pruvoj spegulas la logikon per 64-kadra modelo anstataŭ pruvi la
   produktan `KadraAlokilo`.
-- La formala pordego rulas nur loke (WSL2); neniu CI, neniu unuopa aŭ bitnivela
-  testo, neniu `miri` aŭ `loom`.
+- La formala pordego nun rulas en GitHub Actions (vidu §4.7); `cargo kani` ne
+  plu ruliĝas loke. Ankoraŭ mankas unuopa aŭ bitnivela testo, `miri` kaj
+  `loom`.
 
-**Sekva paŝo.** Instali Kani en CI, aldivi la pruvojn al la produkta kodo per
-etaj abstraktaĵoj, kaj aldoni testojn por la arkitekture sendependaj partoj
+**Sekva paŝo.** Alproksimigi la pruvojn al la produkta kodo per etaj
+abstraktaĵoj kaj aldoni testojn por la arkitekture sendependaj partoj
 (`MemoraMapo`, `Mesagujo`, `PretaVico`, `VirtuaAdreso`).
 
 ---
@@ -940,6 +941,51 @@ la pruvatan enhavon:
 
 Post la ŝanĝoj la pinto de CBMC ĉe la antaŭe kadukiĝinta pruvo malaltiĝis de
 pli ol 3 GB al malpli ol 1 GB, kaj la tuta pordo fariĝas verda.
+
+### 4.7 Nuba CI kaj forlaso de loka Kani (2026-11-15)
+
+**Kial.** Plena `cargo kani` en WSL2 elĉerpis la memon de la gastiganto kaj
+kelkfoje diskonektis la VM-on. La formala pordego translokiĝis al GitHub
+Actions; loke oni ne plu rulas Kani-on.
+
+**Konfiguro.** `.github/workflows/ci.yml` (`CI`) ruliĝas ĉe `push` al `main`
+kaj ĉe `pull_request`, kun nurlega permeso al la deponeja enhavo. Du taskoj:
+
+- `lint-and-build` — `actions/checkout@v4`; Rust 1.100.0 per
+  `dtolnay/rust-toolchain` kun la komponantoj `clippy` kaj `rustfmt` kaj la
+  celo `x86_64-unknown-none`; `just` per `taiki-e/install-action`; do
+  `cargo fmt --all -- --check`,
+  `cargo clippy --workspace --release -- -D warnings` kaj
+  `cargo build --workspace --release`.
+- `kani-verify` (`needs: lint-and-build`) — Rust 1.100.0 kun ambaŭ nudaj celoj
+  (`x86_64-unknown-none`, `aarch64-unknown-none`); la oficiala
+  `model-checking/kani-github-action@v1` nur por instali Kani kaj CBMC; do
+  `rustup default 1.100.0` kaj `just verify` (la plena pordego, inkluzive la
+  `arm64`-lintadon kaj `cargo kani`).
+
+**Trovitaĵoj.**
+
+- `dtolnay/rust-toolchain` instalas la minimuman profilon; sen eksplicitaj
+  `components` mankus `rustfmt` kaj `clippy`, do CI petas ilin eksplicite.
+- `just verify` lintas la kernon ankaŭ por `aarch64-unknown-none`; tial la
+  Kani-tasko instalas ambaŭ celojn.
+- La oficiala Kani-ago internŝaltas la defaŭltan ilarĉenon al `stable`; la
+  paŝo antaŭ `just verify` do restarigas `1.100.0`.
+- Timita konflikto inter `rust-version = "1.100"` kaj la `nightly` de Kani
+  0.68.0 ne okazis; `--ignore-rust-version` ne necesis.
+- La elŝuto de la kruda protokolo per la Actions API rifuziĝis sen administraj
+  rajtoj, do la stato de la runo estas legata el la taskaj kaj paŝaj statoj de
+  la API.
+
+**Rezulto.** Runo
+[#43725539875](https://github.com/makoto-lernanto/mikerno/actions/runs/43725539875)
+ĉe commit `7e31929` (2026-11-15): ambaŭ taskoj verdaj. `lint-and-build` daŭris
+≈14 s; `kani-verify` ≈2 min 40 s (instalo de Kani 19 s, `just verify` 2 min
+10 s).
+
+**Nova regulo.** Loke oni ne plu rulas `cargo kani` nek `just verify` (la lasta
+enhavas ĝin). Loke oni plenumas la sen-Kani-ajn kontrolojn de §9.2 unuope;
+Kani kaj la tuta `just verify` ruliĝas nur en CI.
 
 ---
 
@@ -1194,7 +1240,10 @@ Aldone, la liveraĵo de Fazo inkluzivu la akceptajn startojn difinitajn en
 [ARM.md](ARM.md) §11 aŭ en la koncerna mejloŝtono: `just run-arm`,
 `just run-iso-arm`, `tools/run-qemu.sh release` (PVH) kaj
 `tools/run-qemu.sh iso`. Do anstataŭ unu `just ci`, MiKerno havas la formalan
-pordegon `just verify` plus la platformajn akceptojn.
+pordegon `just verify` plus la platformajn akceptojn. Ekde 2026-11-15 la lasta
+paŝo de `just verify` — `cargo kani` — plenumiĝas nur en GitHub Actions
+(§4.7); loke oni rulas la antaŭajn kvin kontrolojn unuope kaj ne vokas
+`just verify`.
 
 ### 9.3. Jam ekzistantaj `#[allow]`-oj
 

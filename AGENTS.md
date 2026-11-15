@@ -43,12 +43,31 @@ Lokoj, kie la versio devas resti kongrua (kontrolataj de `tools/versio.sh`):
 Post versio-ŝanĝo rulu `bash tools/versio.sh --ĝisdatigi`; `just verify`
 rulas `--kontroli`.
 
+## CI kaj formala pordego
+
+- La sola loko por Kani estas GitHub Actions (`.github/workflows/ci.yml`):
+  `push` al `main` kaj `pull_request` rulas `lint-and-build` (fmt, clippy,
+  konstruo) kaj post ĝi `kani-verify` (`just verify`, inkluzive
+  `cargo kani`). Kani instaliĝas per `model-checking/kani-github-action@v1`
+  sur Rust 1.100.0.
+- Loke oni **ne** rulas `cargo kani` nek `just verify` (ankaŭ ĉi tiu enhavas
+  Kani); WSL2 elĉerpiĝas je memoro kaj diskonektiĝas. Loke oni rulas la
+  sen-Kani-ajn kontrolojn: `bash tools/versio.sh --kontroli`,
+  `cargo fmt --all -- --check`,
+  `cargo clippy --workspace --release -- -D warnings`,
+  `cargo clippy -p mikerno --release --target aarch64-unknown-none -- -D
+  warnings` kaj `cargo build --workspace --release`.
+- Post puŝo kontrolu la runon en la agoj-paĝo de la deponejo (aŭ per
+  `gh run watch`); la formala pordego estas verda nur kiam `kani-verify`
+  sukcesas. Detaloj kaj la unua diagnozo estas en `docs/MEJLOSTONOJ.md` §4.7.
+
 ## Laborfluo por unu Fazo
 
 1. Efektivigu nur la Fazon indikitan de la uzanto; ne komencu la sekvan.
-2. Post la efektivigo rulu la taŭgajn kontrolojn (`just verify` aŭ tiujn
-   indikitajn de la uzanto) kaj certigu, ke ili pasas. Rekonstruu la ISO-on
-   (`just iso`) kaj kontrolu ĝian praŝarĝon antaŭ la raporto.
+2. Post la efektivigo rulu loke la sen-Kani-ajn kontrolojn kaj tiujn indikitajn
+   de la uzanto, kaj certigu, ke ili pasas. La formalan pordegon (`just
+   verify`) plenumas la CI post la puŝo. Rekonstruu la ISO-on (`just iso`) kaj
+   kontrolu ĝian praŝarĝon antaŭ la raporto.
 3. Ĝisdatigu la version (laŭ la supra mapado; `bash tools/versio.sh
    --ĝisdatigi` por la dokumentoj), `docs/MEJLOSTONOJ.md` kaj
    `docs/VORTARO.md`.
@@ -64,6 +83,8 @@ rulas `--kontroli`.
   `git commit` aŭ `git push`.
 - Post la permeso, commitu ĉiujn ŝanĝojn de la nuna Fazo kaj puŝu ilin; la
   mesaĝo estu en Esperanto laŭ la stilo de la deponejo.
+- Post la puŝo atendu la CI-runon kaj raportu ĝian konkludon; ruĝa
+  `kani-verify` blokas pluan laboron ĝis la kaŭzo estas riparita.
 - Ne kunfandu plurajn Fazojn en unu commit, krom se la uzanto klare postulas
   tion.
 
