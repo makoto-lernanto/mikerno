@@ -18,7 +18,7 @@ use crate::kunhavigita::Kunhavigita;
 use crate::memoro::kadro::KadraAlokilo;
 use crate::memoro::virtuala::{AdresaSpaco, FizikaAdreso, PaĝaEraro};
 
-pub type ProcezaId = u64;
+pub use super::objekto::ProcezaId;
 
 /// La proceza tabelo havas 8 liniojn: `0` estas la kerno kaj `1..=7` estas
 /// uzantaj procezoj (C8).
@@ -174,23 +174,43 @@ fn kerna_radiko() -> Option<FizikaAdreso> {
 /// vivanta kaj devas kunhavigi la kernajn mapojn de la aktiva spaco; tion
 /// garantiis `krei_kunhavantan`.
 pub unsafe fn aktivigi(id: ProcezaId) {
-    let mut pinto = arkitekturo::defaŭlta_kernostako();
-    let radiko = if id == 0 {
-        kerna_radiko()
-    } else {
-        akiri(id).map(|procezo| {
-            pinto = procezo.kerna_stako_pinto;
-            procezo.radika_adreso()
-        })
-    };
-    if let Some(radiko) = radiko
-        && arkitekturo::aktiva_adreso_spaco() != radiko.adreso()
+    #[cfg(target_arch = "x86_64")]
     {
-        // SAFETY: la alvokanto garantias Ring 0 kun interrompoj malŝaltitaj;
-        // la celo estas viva kerna aŭ proceza `PML4` kun kunhavataj mapoj.
-        unsafe { arkitekturo::ŝalti_adresan_spacon(radiko.adreso()) };
+        let mut pinto = arkitekturo::defaŭlta_kernostako();
+        let radiko = if id == 0 {
+            kerna_radiko()
+        } else {
+            akiri(id).map(|procezo| {
+                pinto = procezo.kerna_stako_pinto;
+                procezo.radika_adreso()
+            })
+        };
+        if let Some(radiko) = radiko
+            && arkitekturo::aktiva_adreso_spaco() != radiko.adreso()
+        {
+            // SAFETY: la alvokanto garantias Ring 0 kun interrompoj malŝaltitaj;
+            // la celo estas viva kerna aŭ proceza `PML4` kun kunhavataj mapoj.
+            unsafe { arkitekturo::ŝalti_adresan_spacon(radiko.adreso()) };
+        }
+        arkitekturo::agordi_kernostakon(pinto);
     }
-    arkitekturo::agordi_kernostakon(pinto);
+
+    #[cfg(target_arch = "aarch64")]
+    {
+        // La kerna stako venas el la kuntekstoŝanĝo (`SP_EL1`), ne el aparta
+        // registro; ĉi tie sufiĉas ŝalti la `TTBR0`-on.
+        let radiko = if id == 0 {
+            kerna_radiko()
+        } else {
+            akiri(id).map(|procezo| procezo.radika_adreso())
+        };
+        if let Some(radiko) = radiko
+            && arkitekturo::aktiva_adreso_spaco() != radiko.adreso()
+        {
+            // SAFETY: sama kiel supre; `TTBR0` kunhavas la kernajn mapojn.
+            unsafe { arkitekturo::ŝalti_adresan_spacon(radiko.adreso()) };
+        }
+    }
 }
 
 static PROCEZOJ: Kunhavigita<[Option<Procezo>; MAKSAJ_PROCEZOJ]> =
@@ -262,13 +282,24 @@ pub fn detrui(id: ProcezaId, alokilo: &mut KadraAlokilo) -> Result<(), ProcezaEr
     let rezulto = procezo.adresa_spaco.detruu(alokilo);
     let post = alokilo.liberaj();
     match &rezulto {
-        Ok(()) => crate::skribu!(
-            "[procezo] {} detruita: {} privataj PDPT-oj, PML4 0x{:x}, {} kadroj liberigitaj\n",
-            id,
-            privataj,
-            radiko.adreso(),
-            post - antaŭ
-        ),
+        Ok(()) => {
+            #[cfg(target_arch = "x86_64")]
+            crate::skribu!(
+                "[procezo] {} detruita: {} privataj PDPT-oj, PML4 0x{:x}, {} kadroj liberigitaj\n",
+                id,
+                privataj,
+                radiko.adreso(),
+                post - antaŭ
+            );
+            #[cfg(target_arch = "aarch64")]
+            crate::skribu!(
+                "[procezo] {} detruita: {} privataj subtabeloj, TTBR0 0x{:x}, {} kadroj liberigitaj\n",
+                id,
+                privataj,
+                radiko.adreso(),
+                post - antaŭ
+            );
+        }
         Err(eraro) => crate::skribu!(
             "[procezo] {} detruo malsukcesis post {} kadroj: {}\n",
             id,

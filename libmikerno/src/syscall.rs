@@ -1,10 +1,12 @@
-//! Sistemvokaj numeroj kaj maldika `int 0x80`-envolvaĵo.
+//! Sistemvokaj numeroj kaj maldikaj envolvaĵoj.
 //!
-//! La DPL3-pordego estas instalita, do la samaj envolvaĵoj funkcias el Ring 0
-//! kaj Ring 3.
+//! Sur `x86_64` la voko trapasas la DPL3-pordegon `int 0x80`; sur `arm64` ĝi
+//! uzas `svc #0`. La sama bildo funkcias el Ring 0 kaj Ring 3.
 //!
-//! Registra ABI: `rax` = numero, `rdi`/`rsi`/`rdx`/`r10` = argumentoj,
-//! `rax` = rezulto. La kerno konservas la ceterajn ĝeneralajn registreojn.
+//! Registra ABI sur `x86_64`: `rax` = numero, `rdi`/`rsi`/`rdx`/`r10` =
+//! argumentoj, `rax` = rezulto. Sur `arm64`: `x8` = numero, `x0`–`x3` =
+//! argumentoj, `x0` = rezulto. La kerno konservas la ceterajn ĝeneralajn
+//! registreojn.
 
 use crate::kapablo::{Permesoj, Tenilo};
 use crate::mesago::Mesago;
@@ -67,8 +69,31 @@ pub unsafe fn invoki(numero: usize, argumentoj: [usize; 4]) -> isize {
     rezulto
 }
 
+/// Sur `arm64` la voko trapasas `svc #0`; la numero estas en `x8`.
+///
+/// # Safety
+/// La kerno interpretas la argumentojn laŭ la koncerna voko, ofte kiel
+/// uzantajn montrilojn. La vokanto respondecas, ke ili restas validaj dum la
+/// voko.
+#[cfg(target_arch = "aarch64")]
+pub unsafe fn invoki(numero: usize, argumentoj: [usize; 4]) -> isize {
+    let rezulto: isize;
+    unsafe {
+        core::arch::asm!(
+            "svc #0",
+            inlateout("x0") argumentoj[0] as isize => rezulto,
+            in("x1") argumentoj[1],
+            in("x2") argumentoj[2],
+            in("x3") argumentoj[3],
+            in("x8") numero,
+            options(nostack),
+        );
+    }
+    rezulto
+}
+
 /// Sur aliaj arkitekturoj la sistemo ankoraŭ ne ekzistas.
-#[cfg(not(target_arch = "x86_64"))]
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
 pub unsafe fn invoki(_numero: usize, _argumentoj: [usize; 4]) -> isize {
     -1
 }

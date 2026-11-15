@@ -6,10 +6,9 @@
 #   tools/run-qemu-arm.sh <vojo-al-kerno>
 #   tools/run-qemu-arm.sh --iso [<vojo-al-iso>]
 #
-# Ĉe la ISO la fenestro montras la UEFI/Limine-ekranon per `ramfb`; la kerna
-# eligo restas sur la seria konzolo (la arm64-kerno ankoraŭ ne havas
-# framebuffer-on). Por eliri: Ctrl+A x. `QEMU_DISPLAY=none` donas senkapan
-# ruladon.
+# Ĉe la ISO la fenestro montras la UEFI/Limine-ekranon kaj poste la kerman
+# frambufferion per `ramfb`; la kerna eligo ankoraŭ aperas sur la seria
+# konzolo. Por eliri: Ctrl+A x. `QEMU_DISPLAY=none` donas senkapan ruladon.
 
 set -euo pipefail
 
@@ -48,15 +47,18 @@ if [[ "$ARG" == "--iso" ]]; then
         echo "UEFI-firmware ne trovita; instalu qemu-efi-aarch64 aŭ agordu QEMU_ARM_EFI=/vojo/al/firmware" >&2
         exit 1
     fi
-    # `ramfb` donas framebuffer-on al la UEFI-firmware, do la fenestro montras
-    # la UEFI/Limine-ekranon; la kerna eligo restas sur la seria konzolo.
+    # `ramfb` donas framebuffer-on al la UEFI-firmware kaj al la kerno, do la
+    # fenestro montras la UEFI/Limine-ekranon kaj poste la kerman fiksaĵon; la
+    # kerna eligo restas sur la seria konzolo.
+    # AAVMF (2025.11) blokiĝas sub TCG kun `-cpu max` antaŭ ol atingi la
+    # praŝarĝilon; `cortex-a76` havas `PAN` kaj praŝarĝas la ISO-on.
     exec "$QEMU" \
         -M virt \
-        -cpu "${QEMU_ARM_CPU:-cortex-a53}" \
+        -cpu "${QEMU_ARM_CPU:-cortex-a76}" \
         -m 256M \
         -bios "$FIRMWARE" \
-        -device ramfb \
         -cdrom "$ISO" \
+        -device ramfb \
         -serial mon:stdio \
         -display "${QEMU_DISPLAY:-sdl}" \
         -no-reboot
@@ -65,9 +67,11 @@ fi
 if [[ -f "$ARG" ]]; then
     KERNEL="$ARG"
 else
+    # Oni pasigu la plataĵon `Image`, ne la ELF-on: QEMU liveras la DTB-on en
+    # `x0` nur kiam ĝi rekonas la Linux-`Image`-kapon.
     case "$ARG" in
-        debug)   KERNEL="$ROOT/target/aarch64-unknown-none/debug/mikerno" ;;
-        release) KERNEL="$ROOT/target/aarch64-unknown-none/release/mikerno" ;;
+        debug)   KERNEL="$ROOT/target/aarch64-unknown-none/debug/mikerno.img" ;;
+        release) KERNEL="$ROOT/target/aarch64-unknown-none/release/mikerno.img" ;;
         *) echo "uzado: $0 [debug|release|<kerno>|--iso [<iso>]]" >&2; exit 2 ;;
     esac
 fi
@@ -77,6 +81,12 @@ if [[ ! -f "$KERNEL" ]]; then
     exit 1
 fi
 
+INITRD="$ROOT/target/aarch64-unknown-none/release/horizonto"
+INITRD_ARGS=()
+if [[ -f "$INITRD" ]]; then
+    INITRD_ARGS=(-initrd "$INITRD")
+fi
+
 # `mon:stdio` muxas la serian konzolon kaj la QEMU-monitoron. Por eliri:
 #   Ctrl+A x   — tuj fini QEMU
 #   Ctrl+A c   — ŝalti la monitoron (tie: `quit`)
@@ -84,9 +94,11 @@ fi
 # estas uzata, por ke tiu fino estu videbla al la testilo.
 exec "$QEMU" \
     -M virt \
-    -cpu "${QEMU_ARM_CPU:-cortex-a53}" \
+    -cpu "${QEMU_ARM_CPU:-max}" \
     -m 256M \
     -kernel "$KERNEL" \
+    "${INITRD_ARGS[@]}" \
+    -device ramfb \
     -serial mon:stdio \
     -display none \
     -no-reboot

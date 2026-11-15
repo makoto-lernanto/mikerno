@@ -59,6 +59,7 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
             crate::skribu!("[kerno] {} ŝaltita; {}\n", trajto.nomo, trajto.priskribo);
         }
     }
+    #[cfg(target_arch = "x86_64")]
     crate::arkitekturo::testi_ac();
     testi_gardojn();
     crate::arkitekturo::instali_sistemvokon();
@@ -102,19 +103,36 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
             crate::skribu!("[kerno] identeca mapo malsukcesis: {}\n", eraro);
             return;
         }
-        let framebuffer = match informo.framebuffer {
+        // Se la praŝarĝilo ne liveras frambufferion, la platformo povas krei
+        // sian propran (arm64: RAM-bufro anoncita al `ramfb`).
+        let framebuffer = informo
+            .framebuffer
+            .or_else(|| crate::arkitekturo::krei_frambufferon(alokilo));
+        let framebuffer = match framebuffer {
             Some(fb) => {
                 let fino = fb.bazo + fb.paŝo as u64 * fb.alto as u64;
-                match spaco.mapigi_intervalon(
-                    VirtuaAdreso::nova(fb.bazo),
-                    VirtuaAdreso::nova(fino),
-                    PaĝaPermesoj::SKRIBA_SENKAŜE,
-                    alokilo,
-                ) {
-                    Ok(()) => Some(fb),
-                    Err(eraro) => {
-                        crate::skribu!("[kerno] framebuffer-mapado malsukcesis: {}\n", eraro);
-                        None
+                // MMIO-frambufferio (x86) ankoraŭ mankas en la identeca mapo;
+                // RAM-frambufferio (arm64) jam estas identece mapita.
+                let jam_mapita = fb.bazo != 0
+                    && fb.paŝo != 0
+                    && spaco.traduki(VirtuaAdreso::nova(fb.bazo)).is_some()
+                    && spaco
+                        .traduki(VirtuaAdreso::nova(fino.saturating_sub(1)))
+                        .is_some();
+                if jam_mapita {
+                    Some(fb)
+                } else {
+                    match spaco.mapigi_intervalon(
+                        VirtuaAdreso::nova(fb.bazo),
+                        VirtuaAdreso::nova(fino),
+                        PaĝaPermesoj::SKRIBA_SENKAŜE,
+                        alokilo,
+                    ) {
+                        Ok(()) => Some(fb),
+                        Err(eraro) => {
+                            crate::skribu!("[kerno] framebuffer-mapado malsukcesis: {}\n", eraro);
+                            None
+                        }
                     }
                 }
             }
@@ -125,6 +143,7 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         procezo::agordi_kernan_spacon(spaco.radika_adreso());
         (spaco, framebuffer)
     };
+    #[cfg(target_arch = "x86_64")]
     testi_cr3(spaco.radika_adreso().adreso());
 
     match framebuffer {
@@ -134,27 +153,35 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
             fb.alto,
             fb.bpp
         ),
-        Some(_) => crate::skribu!("[kerno] framebuffer ne taŭgas; nur COM1\n"),
-        None => crate::skribu!("[kerno] framebuffer ne havebla; nur COM1\n"),
+        Some(_) => crate::skribu!("[kerno] framebuffer ne taŭgas; nur {}\n", SERIA_KONZOLO),
+        None => crate::skribu!("[kerno] framebuffer ne havebla; nur {}\n", SERIA_KONZOLO),
     }
 
     crate::arkitekturo::inicialigi_kernostakon();
 
-    let apic_id = {
-        let alokilo = kadra_alokilo();
-        match crate::arkitekturo::pravalorizi_apicon(&mut spaco, alokilo) {
-            Ok(id) => id,
-            Err(eraro) => {
-                crate::skribu!("[kerno] APIC malsukcesis: {}\n", eraro);
-                return;
+    #[cfg(target_arch = "x86_64")]
+    {
+        let apic_id = {
+            let alokilo = kadra_alokilo();
+            match crate::arkitekturo::pravalorizi_apicon(&mut spaco, alokilo) {
+                Ok(id) => id,
+                Err(eraro) => {
+                    crate::skribu!("[kerno] APIC malsukcesis: {}\n", eraro);
+                    return;
+                }
             }
-        }
-    };
-    crate::arkitekturo::pravalorizi_temporizilon();
-    crate::skribu!(
-        "[kerno] APIC {} kaj paĝado pretaj; temporizilo 100 Hz\n",
-        apic_id
-    );
+        };
+        crate::arkitekturo::pravalorizi_temporizilon();
+        crate::skribu!(
+            "[kerno] APIC {} kaj paĝado pretaj; temporizilo 100 Hz\n",
+            apic_id
+        );
+    }
+    #[cfg(target_arch = "aarch64")]
+    {
+        crate::arkitekturo::pravalorizi_temporizilon();
+        crate::skribu!("[kerno] GICv2 kaj paĝado pretaj; temporizilo 100 Hz\n");
+    }
 
     let modulo = informo.moduloj.first();
     match modulo {
@@ -223,17 +250,20 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
 
     // Ĉiu temporizila interrompo devas ricevi EOI; mankanta EOI lasus la
     // APIC-ISR-biton ŝaltita kaj sufokus la sekvajn vekojn.
-    let konfirmoj = crate::arkitekturo::konfirmoj_interrompoj();
-    crate::skribu!(
-        "[apic] EOI ({}): {} konfirmoj, {} tikoj\n",
-        if konfirmoj >= tikoj {
-            "bone"
-        } else {
-            "MALBONE"
-        },
-        konfirmoj,
-        tikoj
-    );
+    #[cfg(target_arch = "x86_64")]
+    {
+        let konfirmoj = crate::arkitekturo::konfirmoj_interrompoj();
+        crate::skribu!(
+            "[apic] EOI ({}): {} konfirmoj, {} tikoj\n",
+            if konfirmoj >= tikoj {
+                "bone"
+            } else {
+                "MALBONE"
+            },
+            konfirmoj,
+            tikoj
+        );
+    }
 
     if let Some(antaŭ) = izolado_antaŭ {
         let post = {
@@ -272,9 +302,27 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         tikoj
     );
 
-    // La memprovo venas laste: ĝi intence elvokas Ring 0 `#PF` kaj haltigas la
-    // kernon, do ĉiuj antaŭaj scenaroj jam raportis sian rezulton. Se SMAP
-    // mankas sed SMEP ekzistas, la pli malnova SMEP-provo ankoraŭ ruliĝas.
+    // La piksela fiksaĵo estas identa sur ambaŭ arkoj, kiam la frambufferio
+    // havas la saman geometrion; la haketo permesas kompari la du bildojn el
+    // la seria protokolo.
+    match crate::ekrano::testi_pikselojn() {
+        Some(raporto) => crate::skribu!(
+            "[ekrano] piksela fiksaĵo {}x{}, {} bpp, tiparo {}x{}; haketo 0x{:016x}\n",
+            raporto.larĝo,
+            raporto.alto,
+            raporto.bpp,
+            raporto.tiparo.0,
+            raporto.tiparo.1,
+            raporto.haketo
+        ),
+        None => crate::skribu!("[ekrano] piksela fiksaĵo preterlasita: frambufferio mankas\n"),
+    }
+
+    // La memprovo venas laste: ĝi intence elvokas Ring 0 `#PF` aŭ `EL1`-an
+    // datenan aborton kaj haltigas la kernon, do ĉiuj antaŭaj scenaroj jam
+    // raportis sian rezulton. Se SMAP mankas sed SMEP ekzistas, la pli malnova
+    // SMEP-provo ankoraŭ ruliĝas.
+    #[cfg(target_arch = "x86_64")]
     if crate::arkitekturo::smap_aktiva() {
         crate::arkitekturo::testi_smap(&mut spaco, kadra_alokilo());
     } else if crate::arkitekturo::smep_aktiva() {
@@ -284,11 +332,27 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
             "[memoro] firmiga provo preterlasita: la procesoro ne subtenas SMEP aŭ SMAP\n"
         );
     }
+    #[cfg(target_arch = "aarch64")]
+    if crate::arkitekturo::pan_aktiva() {
+        crate::arkitekturo::testi_pan(&mut spaco, kadra_alokilo());
+    } else {
+        crate::skribu!("[memoro] firmiga provo preterlasita: la procesoro ne subtenas PAN\n");
+    }
     crate::arkitekturo::halti()
 }
 
 const STAKA_GRANDE: usize = 16 * 1024;
 const TESTAJ_FADENOJ: usize = 4;
+/// La nomo de la radika tabelo en la proceza raporto.
+#[cfg(target_arch = "x86_64")]
+const RADIKA_NOMO: &str = "PML4";
+#[cfg(target_arch = "aarch64")]
+const RADIKA_NOMO: &str = "TTBR0";
+/// La seria konzolo de la platformo, por la starta raporto.
+#[cfg(target_arch = "x86_64")]
+const SERIA_KONZOLO: &str = "COM1";
+#[cfg(target_arch = "aarch64")]
+const SERIA_KONZOLO: &str = "PL011";
 /// La fadeno — kaj samnoma procezo — de la viktima `horizonto`.
 const UZANTA_FADENO_ID: u64 = TESTAJ_FADENOJ as u64 + 1;
 /// La spionprocezo: ĝi legas la duan sekretan paĝon, kiu ekzistas nur en la
@@ -311,6 +375,7 @@ fn komenca_reĝimo(fadeno: u64) -> u64 {
 /// Pruvu la `CR3`-disciplinon post la unua ŝalto: `CR4.PCIDE` devas esti
 /// malŝaltita, la aktiva radiko devas esti la ĵus konstruita kerna `PML4`, kaj
 /// reŝalto al la sama radiko ne rajtas ŝanĝi ĝin.
+#[cfg(target_arch = "x86_64")]
 fn testi_cr3(radiko: u64) {
     let aktiva = crate::arkitekturo::aktiva_adreso_spaco();
     let sen_pcid = crate::arkitekturo::ne_pcide();
@@ -610,10 +675,11 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
         return false;
     };
     crate::skribu!(
-        "[procezo] {}: {:?}, kerna stako 0x{:x}, PML4 0x{:x}, kerna mapo {}, bildo nur en la proceza spaco {}, sekreta paĝo 0x{:x}\n",
+        "[procezo] {}: {:?}, kerna stako 0x{:x}, {} 0x{:x}, kerna mapo {}, bildo nur en la proceza spaco {}, sekreta paĝo 0x{:x}\n",
         id,
         stato,
         kerna_pinto,
+        RADIKA_NOMO,
         radiko.adreso(),
         if kerna_mapo { "kunhavata" } else { "MANKANTA" },
         if privata { "jes" } else { "NE" },
@@ -626,9 +692,17 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
         detrui_uzantan(id);
         return false;
     }
+    #[cfg(target_arch = "x86_64")]
     crate::skribu!(
         "[kerno] horizonto {} pretas: CS=0x23, SS=0x1B, RFLAGS=0x202, enirpunkto 0x{:x}\n",
         id,
+        enirpunkto
+    );
+    #[cfg(target_arch = "aarch64")]
+    crate::skribu!(
+        "[kerno] horizonto {} pretas: EL0t, SP_EL0=0x{:x}, SPSR=0x0, enirpunkto 0x{:x}\n",
+        id,
+        UZANTA_STAKO_SUPRO,
         enirpunkto
     );
     true

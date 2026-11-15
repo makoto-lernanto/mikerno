@@ -4,9 +4,10 @@
 # ISO krome UEFI-firmware.
 
 kerno := "target/x86_64-unknown-none/release/mikerno"
-bildo := "mikerno.iso"
+kerno_arm := "target/aarch64-unknown-none/release/mikerno"
 bildo_arm := "target/aarch64-unknown-none/release/mikerno.img"
 bildo_arm_iso := "mikerno-arm.iso"
+bildo := "mikerno.iso"
 
 default: build
 
@@ -24,6 +25,24 @@ build: build-kerno
 # Rulu la kernon rekte per QEMU (PVH, sen ISO).
 run: build-kerno
     bash tools/run-qemu.sh {{kerno}}
+
+# Konstruu la kernon por arm64 (plata `Image`) kaj la uzantan bildon.
+build-arm:
+    cargo build -p mikerno --release --target aarch64-unknown-none
+    cargo build -p horizonto --release --target aarch64-unknown-none
+    bash tools/elf-al-image.sh {{kerno_arm}} {{bildo_arm}}
+
+# Rulu la arm64-kernon sub QEMU (`virt`).
+run-arm: build-arm
+    bash tools/run-qemu-arm.sh {{bildo_arm}}
+
+# Kunmetu UEFI-booteblan ISO-on por arm64 (Limine + plata `Image`).
+iso-arm: build-arm
+    bash tools/krei-iso-arm.sh
+
+# Rulu la arm64-ISO-on sub QEMU kun UEFI-firmware.
+run-iso-arm: iso-arm
+    bash tools/run-qemu-arm.sh --iso {{bildo_arm_iso}}
 
 # Kunmetu praŝarĝeblan ISO-on (Limine + Multiboot2).
 iso: build-kerno
@@ -45,24 +64,15 @@ iso: build-kerno
 run-iso: iso
     bash tools/run-qemu.sh iso
 
-# Rulu la antaŭe konstruitan arm64-kernon sub QEMU (`virt`).
-# La bildo venas el la `arm64`-branĉo (`just build-arm`) kaj nur estas startigata.
-run-arm:
-    bash tools/run-qemu-arm.sh {{bildo_arm}}
-
-# La ISO devenas el la `arm64`-branĉo (`just iso-arm`) kaj nur estas startigata.
-# Rulu la arm64-ISO-on en QEMU kun fenestro kaj seria konzolo.
-run-iso-arm:
-    bash tools/run-qemu-arm.sh --iso {{bildo_arm_iso}}
-
 # Kontrolu, ke la dokumenta versio kongruas kun `Cargo.toml`.
 kontroli-version:
     bash tools/versio.sh --kontroli
 
-# Kompleta kvalita pordego: formato + lint + konstruo + versio + formala pruvo.
-# Kani ne subtenas tutmondan asemblaĵon; la pruvoj ne atingas ĝin.
+# Kompleta kvalita pordego: formato + lint (ambaŭ arkoj) + konstruo + versio +
+# formala pruvo. Kani ne subtenas tutmondan asemblaĵon; la pruvoj ne atingas ĝin.
 verify: kontroli-version
     cargo fmt --all -- --check
     cargo clippy --workspace --release -- -D warnings
+    cargo clippy -p mikerno --release --target aarch64-unknown-none -- -D warnings
     cargo build --workspace --release
     cargo kani -p mikerno -Z unstable-options --ignore-global-asm

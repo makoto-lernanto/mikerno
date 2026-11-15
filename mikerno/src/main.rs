@@ -1,5 +1,8 @@
 #![no_std]
 #![no_main]
+// Kelkaj komunaj memoro-tipoj (Multiboot2-regionspecoj, `EniraEraro`, la
+// identeca `SKRIBA`-permeso) havas sencon nur en la `x86_64`-eniro.
+#![cfg_attr(target_arch = "aarch64", allow(dead_code))]
 
 mod arkitekturo;
 mod ekrano;
@@ -25,6 +28,7 @@ macro_rules! skribu {
 ///
 /// Ĝi provas la KASLR-kopion kaj salton; se tio ne eblas, ĝi mem vokas la duan
 /// enirpunkton ĉe la liga bazo. Ĝi neniam revenas al la ŝelko.
+#[cfg(target_arch = "x86_64")]
 #[unsafe(no_mangle)]
 pub extern "C" fn kerna_eniro(starta_informo: *const u8, magio: u32) -> ! {
     arkitekturo::hazardigi(starta_informo, magio)
@@ -32,6 +36,7 @@ pub extern "C" fn kerna_eniro(starta_informo: *const u8, magio: u32) -> ! {
 
 /// Dua kerna enirpunkto: la bildo jam loĝas ĉe `bazo` (la liga bazo, se KASLR
 /// malsukcesis). `origino` estas la adreso, de kiu la bildo estis kopiita.
+#[cfg(target_arch = "x86_64")]
 #[unsafe(no_mangle)]
 pub extern "C" fn kerna_eniro_kopio(
     starta_informo: *const u8,

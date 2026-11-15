@@ -3,8 +3,7 @@
 use crate::arkitekturo::Kunteksto;
 use crate::memoro::virtuala::VirtuaAdreso;
 
-use super::procezo::ProcezaId;
-
+pub type ProcezaId = u64;
 pub type FadenoId = u64;
 pub type FadenoEnirpunkto = fn(FadenoId);
 

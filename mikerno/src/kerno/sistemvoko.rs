@@ -375,7 +375,10 @@ fn kontroli_regionon(montrilo: u64, longo: usize, skriba: bool, el_ring3: bool) 
 /// Vokata de la unua fadeno: `SYS_CEDI` tie vere cedas la procesoron, dum en la
 /// praŝarĝa kunteksto ĝi nur revenus sen ŝanĝo.
 pub fn testi_ring0() {
+    #[cfg(target_arch = "x86_64")]
     let teksto = "saluton el Ring 0 tra int 0x80";
+    #[cfg(target_arch = "aarch64")]
+    let teksto = "saluton el Ring 0 tra svc #0";
     let skribo = invoki(
         SYS_SKRIBI,
         [teksto.as_ptr() as u64, teksto.len() as u64, 0, 0],
@@ -394,6 +397,8 @@ pub fn testi_ring0() {
     let tro_longa = invoki(SYS_SENDI, [0, &tro_longa_mesago as *const _ as u64, 0, 0]);
     // `int 0x80` estas programa interrompo: la dispetĉo ne rajtas sendi EOI-on.
     // La mezuro okazas kun interrompoj malŝaltitaj, do tiko ne ŝajnigas EOI-on.
+    // `arm64` ne havas tiun vojon: `svc #0` ankaŭ estas programa escepto.
+    #[cfg(target_arch = "x86_64")]
     let sen_eoi = {
         let _gardo = crate::interrompo::InterrompaGardo::nova();
         let antaŭ = crate::arkitekturo::konfirmoj_interrompoj();
@@ -411,6 +416,7 @@ pub fn testi_ring0() {
     let fermi = invoki(SYS_FERMI, [0; 4]);
     let revoki = invoki(SYS_REVOKI, [0x100, 0, 0, 0]);
     let revok_argumento = invoki(SYS_REVOKI, [0x100, 1, 0, 0]);
+    #[cfg(target_arch = "x86_64")]
     crate::skribu!(
         "[sistemvoko] Ring 0-memtesto: skribo={}, nekonata={}, nula={}, troa={}, cedo={}, krei={}, doni={}, fermi={}, revoki={}, revok_argumento={}, tro_longa={}, sen_eoi={}\n",
         skribo as i64,
@@ -426,8 +432,24 @@ pub fn testi_ring0() {
         tro_longa as i64,
         sen_eoi
     );
+    #[cfg(target_arch = "aarch64")]
+    crate::skribu!(
+        "[sistemvoko] Ring 0-memtesto: skribo={}, nekonata={}, nula={}, troa={}, cedo={}, krei={}, doni={}, fermi={}, revoki={}, revok_argumento={}, tro_longa={}\n",
+        skribo as i64,
+        nekonata as i64,
+        nula as i64,
+        troa as i64,
+        cedo as i64,
+        krei as i64,
+        doni as i64,
+        fermi as i64,
+        revoki as i64,
+        revok_argumento as i64,
+        tro_longa as i64
+    );
 }
 
+#[cfg(target_arch = "x86_64")]
 fn invoki(numero: usize, argumentoj: [u64; 4]) -> u64 {
     let rezulto: u64;
     // SAFETY: `int 0x80` eniras la IDT-pordon instalitan de ĉi tiu modulo; la
@@ -445,4 +467,9 @@ fn invoki(numero: usize, argumentoj: [u64; 4]) -> u64 {
         );
     }
     rezulto
+}
+
+#[cfg(target_arch = "aarch64")]
+fn invoki(numero: usize, argumentoj: [u64; 4]) -> u64 {
+    crate::arkitekturo::invoki_sistemvokon(numero, argumentoj)
 }

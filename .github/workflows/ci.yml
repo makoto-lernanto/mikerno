@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+# The workflow only needs to read the repository.
+permissions:
+  contents: read
+
+jobs:
+  # Fast feedback: formatting, lints and a full workspace build.
+  lint-and-build:
+    name: Lint and build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # The workspace builds for x86_64-unknown-none by default
+      # (see .cargo/config.toml). The minimal rustup profile does not include
+      # rustfmt/clippy, so they are requested explicitly.
+      - name: Install Rust 1.100.0
+        uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          components: clippy, rustfmt
+          targets: x86_64-unknown-none
+
+      - name: Install just
+        uses: taiki-e/install-action@just
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: cargo clippy --workspace --release -- -D warnings
+
+      - name: Build workspace
+        run: cargo build --workspace --release
+
+  # Formal verification runs in its own job so that a long proof never blocks
+  # the fast feedback above.
+  kani-verify:
+    name: Kani formal verification
+    runs-on: ubuntu-latest
+    needs: lint-and-build
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # `just verify` also lints mikerno for aarch64-unknown-none, so both
+      # bare-metal targets must be installed.
+      - name: Install Rust 1.100.0
+        uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          components: clippy, rustfmt
+          targets: x86_64-unknown-none,aarch64-unknown-none
+
+      - name: Install just
+        uses: taiki-e/install-action@just
+
+      # The official action installs Kani together with its matching CBMC
+      # backend. It internally switches the default toolchain to stable, so the
+      # verification step below selects 1.100.0 again.
+      - name: Install Kani
+        uses: model-checking/kani-github-action@v1
+        with:
+          kani-version: latest
+          command: kani
+          args: --version
+
+      # Full quality gate: version check, fmt, clippy (both architectures),
+      # workspace build and `cargo kani`.
+      - name: Run just verify
+        run: |
+          rustup default 1.100.0
+          just verify

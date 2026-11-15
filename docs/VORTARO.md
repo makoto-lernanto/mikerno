@@ -21,11 +21,13 @@ kaj protokolaj nomoj sekvu ĝin.
 | `virtuala adreso` | virtual address | |
 | `fizika adreso` | physical address | |
 | `adresa spaco` | address space | `AdresaSpaco`. |
-| `radika adreso` | root address | Fizika adreso de `PML4`, ŝargata en `CR3`. |
+| `radika adreso` | root address | Fizika adreso de `PML4` (`CR3`) aŭ de la radika `L0`-tabelo (`TTBR0_EL1`). |
 | `radiko-ero` | root entry | `radiko_ero(cr3)` eltiras bitojn 51:12; la malaltaj 12 bitoj estas nulaj, ĉar `PCIDE` estas malŝaltita. |
-| `aktivigi` | activate | Ŝalti la procezan `CR3` kaj `TSS.RSP0` antaŭ kuntekstŝanĝo. |
+| `aktivigi` | activate | Ŝalti la procezan `CR3` aŭ `TTBR0_EL1` kaj `TSS.RSP0` antaŭ kuntekstŝanĝo. |
 | `paĝa tabelo` | page table | `PaĝaTablo`. |
 | `paĝa eraro` | page fault (#PF) | |
+| `datena aborto` | data abort | `ESR_EL1` EC `0x24`/`0x25`; EL0-aliro al folio sen la postulata permeso mortigas la procezon. |
+| `instrukcja aborto` | instruction abort | `ESR_EL1` EC `0x20`/`0x21`; traktata kiel `ProtektaEraro`. |
 | `ĝenerala protekta eraro` | general protection fault (#GP) | |
 | `interrompo` | interrupt | |
 | `interrompa peto` | interrupt request (IRQ) | Neniam uzu `IRQ` en identigiloj. |
@@ -49,7 +51,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `uzantspaco` | user space | |
 | `sistemvoko` | system call | `SYS_*` restas kiel ABI-prefikso. |
 | `sistemvoka vektoro` | syscall vector | `0x80`. |
-| `sistemvoka numero` | system call number | `rax` ĉe la voko. |
+| `sistemvoka numero` | system call number | `rax` (`x86_64`) aŭ `x8` (`arm64`) ĉe la voko. |
 | `sistemvoka dispetĉo` | system call dispatch | `sistemvoka_dispetĉo`. |
 | `uzanta montrilo` | user pointer | Kontrolata antaŭ ĉiu aliro, folio post folio. |
 | `anoncita regiono` | declared region | La bildo kaj la uzanta stako. |
@@ -106,7 +108,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `akiri kapablon` | acquire capability | `akiri_kapablon(procezo, tenilo, bezonataj)`: unua nivelo (fendo + tenilo + permesoj), dua nivelo (aktiva finpunkto kaj `fp_generacio`). |
 | `rajtoj-subaro` | rights subset | `dono_permesita`: `petitaj & !fontaj == 0`; malobservo redonas `-1`. |
 | `permesa malakcepto` | permission denial | La kapablo validas sed mankas la bito: `-1` (ne `-9`). |
-| `bootstrap-tenilo` | bootstrap handle | `BOOTSTRAP_TENILO = 0x100`: fendo `0`, unua generacio; transira distribuo antaŭ M16. |
+| `bootstrap-tenilo` | bootstrap handle | `BOOTSTRAP_TENILO = 0x100`: fendo `0`, unua generacio; transira distribuo antaŭ M17. |
 | `ricevanto` | receiver | `FinaPunktoObjekto.ricevanto`: la fadeno blokita en `RICEVI` sur la finpunkto; la sendinto ĝin vekas. |
 | `sendantoj` | blocked senders | `FinaPunktoObjekto.sendantoj: u16`: bitmasko de la fadenoj blokitaj en `SENDI` pro plena vico; bito `id − 1`. |
 | `senda bito` | sender bit | `senda_bito(fadeno) = 1 << (fadeno − 1)`; la vek-buklo traktas la plej malaltan biton kiel fadenon `1`. |
@@ -183,7 +185,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `dua sekreta paĝo` | second secret page | `SEKRETA_DUA_ADRESO`; nur en la viktima spaco. |
 | `magia numero` | magic number | `MAGIA_NUMERO = 0x4D69_4B65_726E_6F21`. |
 | `viktimo` | victim | Procezo `4`; mapas la duan paĝon kaj pluvivas. |
-| `spiono` | spy | Procezo `5`; legas fremdan paĝon kaj ricevas `#PF`. |
+| `spiono` | spy | Procezo `5`; legas fremdan paĝon kaj ricevas `#PF` aŭ datenan aborton. |
 | `spioni` | spy on | `spioni(id)` en `horizonto`. |
 | `izolado` | isolation | `[memoro] izolado (bone)` komparas liberajn kadrojn. |
 | `samtempeco` | concurrency | Ambaŭ procezoj pretaj antaŭ unu `planisto::lanĉi()`. |
@@ -202,7 +204,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `pinto` | top | |
 | `kreski malsupren` | grow downward | |
 | `frambufo` / `ekrano` | framebuffer / screen | Ekzistanta kodo uzas `framebuffer` kaj `ekrano`. |
-| `seria konzolo` | serial console | COM1. |
+| `seria konzolo` | serial console | COM1 sur `x86_64`; PL011 sur `arm64`. |
 | `tiparo` | font | |
 | `glifo` | glyph | |
 | `streko` | strike / font size | |
@@ -215,9 +217,9 @@ kaj protokolaj nomoj sekvu ĝin.
 | `ĉeesta` | present | |
 | `grandega paĝo` | huge page | |
 | `aliniiĝinta` | aligned | |
-| `ŝpuro` | track | Aparta disvolva linio; la ARM-ŝpuro ne anstataŭas M15–M17. |
+| `ŝpuro` | track | Aparta disvolva linio; la ARM-ŝpuro estis kunfandita en M15. |
 | `platforma malantaŭo` | platform backend | `malantaŭo` en `arkitekturo`; `x86_64` aŭ `arm64`. |
-| `interrompa kadro` | interrupt frame | `InterrompaKadro`: platforma tipo en `x86_64/interrompo.rs`. |
+| `interrompa kadro` | interrupt frame | `InterrompaKadro`: platforma tipo en `x86_64/interrompo.rs` aŭ `arm64/interrompo.rs`. |
 | `sistemvoka kadro` | system-call frame | `SistemvokaKadro`; la komuna kodo legas la registrojn per ĝi. |
 | `escepta speco` | exception kind | `EsceptoTipo`: `PaĝaEraro`, `ProtektaEraro`, `Nekonata`. |
 | `instali sistemvokon` | install system calls | `instali_sistemvokon()`; la malantaŭo registras sian enirmekanismon. |
@@ -231,6 +233,53 @@ kaj protokolaj nomoj sekvu ĝin.
 | `EOI-politiko` | EOI policy | `estas_apic_vektoro`: nur `0x20..0x80`; `int 0x80`, `int3` kaj la spuria `0xFF` restas ekstere. |
 | `sen EOI` | no EOI | `sen_eoi` en la Ring 0-memtesto: `int 0x80` ne rajtas pliigi la `EOI`-nombrilon. |
 | `ellasa revizio` | release review | Fazo 7: revizio de la ellasaj vojoj — `STAC`-gardo, `CR3`-ŝalto, `EOI` kaj liberigo/revoko. |
+| `plata bildo` | flat image | `Image`: senŝela binara bildo kun 64-bajta kapo. |
+| `Image-kapo` | Image header | `code0`/`code1`, `text_offset`, `image_size`, `flags`, magio `0x644d5241`. |
+| `FDT` | flattened device tree | Analizilo `arm64/fdt.rs`; la praŝarĝilo transdonas la `DTB` en `x0`. |
+| `DTB` | device tree blob | |
+| `PSCI` | Power State Coordination Interface | `SYSTEM_OFF` per `hvc #0`. |
+| `PL011` | ARM UART | Seria konzolo ĉe `0x0900_0000` sur QEMU `virt`. |
+| `elstara nivelo` | exception level | `CurrentEL`; EL2→EL1 per `HCR_EL2.RW` kaj `eret`. |
+| `identeca mapo` | identity map | Virtuala adreso egalas la fizikan. |
+| `L0-tabelo` / `L1-tabelo` | level-0 / level-1 table | 4-nivela paĝado kun 1 GiB-blokoj. |
+| `L2-tabelo` / `L3-tabelo` | level-2 / level-3 table | Privataj tabeloj por la uzanta fenestro (`UZANTA_BAZO..UZANTA_FINO`). |
+| `SVC64` | SVC from AArch64 | `ESR_EL1` EC `0x15`; la vektora ŝelko ĝin dispetĉas al `kerno::sistemvoko`. |
+| `EL0t` | EL0 with SP_EL0 | `SPSR_EL1 = 0` ĉe la unua `eret`; `SP_EL0` portas la uzantan stakon. |
+| `bloka ero` | block entry | Priskribo kun `AF`, `SH`, `PXN`/`UXN`. |
+| `kerna fino` | kernel end | `__kerna_fino`; eniras `image_size`. |
+| `funkciovoko` | hypervisor call | `hvc #0` por PSCI. |
+| `UEFI-ISO` | UEFI ISO | `mikerno-arm.iso`; El Torito + `BOOTAA64.EFI`. |
+| `El Torito` | El Torito | Elŝuta speco de ISO9660; la firmvaro legas la EFI-bildon. |
+| `UEFI-memormapo` | UEFI memory map | `/chosen/linux,uefi-mmap-*`; uzata kiam `/memory` mankas. |
+| `konvena memoro` | conventional memory | UEFI-tipo 7; la «uzebla» kvanto en la raporto. |
+| `AAVMF` | AArch64 UEFI firmware | `QEMU_EFI.fd`; uzata de `just run-iso-arm`. |
+| `vektora tabelo` | vector table | `VBAR_EL1`; 16 eniroj po 128 bajtoj; `__vektoroj` en `arm64/interrompo.rs`. |
+| `vektoro` | vector | La enira indekso 0–15 aŭ GIC-identigilo; `InterrompaKadro::vektoro`. |
+| `distribuilo` | distributor | GIC-distribuilo (`GICD_*`) ĉe `0x0800_0000`. |
+| `CPU-interfaco` | CPU interface | GICC (`GICC_*`) ĉe `0x0801_0000`. |
+| `aparta aparata interrompo` | private peripheral interrupt (PPI) | PPI 30 estas la ĝenerala temporizilo. |
+| `ĝenerala temporizilo` | generic timer | `CNTFRQ_EL0`, `CNTP_TVAL_EL0`, `CNTP_CTL_EL0`. |
+| `tika frekvenco` | tick rate | `FREKVENCO = 100` (100 Hz, 10 ms). |
+| `trampolino` | trampoline | `fadeno_trampolino`: la unua eniro de nova fadeno malmaskas `IRQ`. |
+| `fadeno-stako` | thread stack | `FadenaStako`; 16 KiB po fadeno. |
+| `stako-pinto` | stack top | `stako_pinto`; la enira stako finiĝas ĉe `__stako_supro`. |
+| `enira stako` | entry stack | La sekcio `.stako` ekster `.bss`, do la nula buklo ne tuŝas ĝin. |
+| `fw_cfg` | firmware configuration | La MMIO-aparato de QEMU (`qemu,fw-cfg-mmio`); dateno, selektilo kaj DMA. |
+| `selektilo` | selector | La 2-bajta grandendiana registro ĉe `fw_cfg + 0x08`. |
+| `dosierujo de fw_cfg` | fw_cfg file directory | Klavo `0x0019`; eroj po 64 bajtoj kun nomo kaj selektilo. |
+| `ramfb` | RAM framebuffer | La `fw_cfg`-dosiero `etc/ramfb`; `RAMFBCfg` 28 bajtoj. |
+| `kvarobla signo` | fourcc | `XR24` (`0x3432_5258`): XRGB8888 kun 32-bitaj pikseloj. |
+| `paŝo` | stride | Bajtoj po vico; `LARĜO * 4 = 5120`. |
+| `DMA-priskribo` | DMA descriptor | `DmaEro`: `kontrolo`, `longo`, `adreso`, ĉiuj grandendianaj. |
+| `kontiguaj kadroj` | contiguous frames | `aloki_kontiguajn(n)`: unua-taŭga serĉo kaj markado de `n` sinsekvaj kadroj. |
+| `piksela fiksaĵo` | pixel fixture | `testi_pikselojn`: gradiento, teksto, haketo; `PikselaRaporto`. |
+| `haketo` | hash | FNV-1a 64 super la videblaj pikseloj; komparebla inter la arkoj. |
+| `PXN` | privileged execute-never | PTE-bito: `EL1` ne plenumas `U=1`-foliojn. |
+| `UXN` | unprivileged execute-never | PTE-bito: `EL0` ne plenumas datumajn foliojn; la kodo havas `UXN = 0`. |
+| `PAN` | privileged access never | `ID_AA64MMFR1_EL1`; `msr pan, #0` malfermas, `#1` fermas la fenestron. |
+| `SPAN` | set PAN | `SCTLR_EL1.SPAN = 0`: ĉiu escepta eniro refermas la `PAN`-fenestron. |
+| `PAN-fenestro` | PAN window | `StacGardo` (arm64): malfermas ĉe profundo 0 kaj refermas per `Drop`. |
+| `PAN-malobservo` | PAN violation | `EC = 0x25` kun `FAR` en la uzanta fenestro; la kerno haltas. |
 
 ## FluoU — grafika uzinterfaco
 
@@ -326,10 +375,16 @@ eksteraj protokolaj nomoj:
 `SMEP`, `SMAP`, `KASLR`, `IOMMU`, `DMA`, `PCI`, `DMAR`, `IVRS`, `STAC`, `CLAC`,
 `KREI_FINPUNKTON`, `DONI`, `REVOKI`, `RICEVI_TEMPO`, `SENDI_TEMPO`, `FERMI`,
 `EBADF`, `EAGAIN`, `ENOSPC`, `EPIPE`, `EMSGSIZE`, `ETIMEDOUT`, `arm64`,
-`AArch64`, `EL0`, `EL1`, `EL2`, `SVC`, `GIC`, `GICv2`, `GICv3`, `PL011`, `FDT`,
+`AArch64`, `EL0`, `EL0t`, `EL1`, `EL2`, `SVC`, `SVC64`, `GIC`, `GICv2`,
+`GICv3`, `PL011`, `FDT`,
 `DTB`, `Image`, `TTBR0_EL1`, `TCR_EL1`, `MAIR_EL1`, `SCTLR_EL1`, `VBAR_EL1`,
 `ESR_EL1`, `FAR_EL1`, `ELR_EL1`, `SPSR_EL1`, `DAIF`, `CNTFRQ_EL0`,
-`CNTP_TVAL_EL0`, `CNTP_CTL_EL0`, `PXN`, `UXN`, `PAN`, `PSCI`, `WFI`, `HCR_EL2`.
+`CNTP_TVAL_EL0`, `CNTP_CTL_EL0`, `GICD_CTLR`, `GICD_ISENABLER`,
+`GICD_IPRIORITYR`, `GICD_ITARGETSR`, `GICC_CTLR`, `GICC_PMR`, `GICC_IAR`,
+`GICC_EOIR`, `PXN`, `UXN`, `PAN`, `PSCI`, `WFI`, `HCR_EL2`, `eret`, `svc`,
+`fw_cfg`, `FW_CFG_FILE_DIR`, `qemu,fw-cfg-mmio`, `etc/ramfb`, `ramfb`,
+`RAMFBCfg`, `XR24`, `FNV-1a`, `ID_AA64MMFR1_EL1`, `SCTLR_EL1.SPAN`, `msr pan`,
+`cortex-a76`.
 
 ## Reguloj
 

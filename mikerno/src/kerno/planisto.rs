@@ -9,8 +9,8 @@ use crate::interrompo::InterrompaGardo;
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::virtuala::VirtuaAdreso;
 
-use super::objekto::{Fadeno, FadenoEnirpunkto, FadenoId, FadenoStato};
-use super::procezo::{ProcezaEstado, ProcezaId, marki};
+use super::objekto::{Fadeno, FadenoEnirpunkto, FadenoId, FadenoStato, ProcezaId};
+use super::procezo::{ProcezaEstado, marki};
 
 pub const MAKSAJ_FADENOJ: usize = 8;
 const RIPAZA_ID: FadenoId = 0;

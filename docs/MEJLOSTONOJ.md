@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-15 · Versio de la workspace: 0.4.6
+> Stato: 2026-11-15 · Versio de la workspace: 0.5.0
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -27,24 +27,117 @@
 | M12 | Per-procesaj adresspacoj | Plenumita | W^X laŭ sekcioj, `CR0.WP`, proceza izolado (spiono `#PF`, viktimo pluvivas), egalaj kadroj |
 | M13 | Kerna memoro-firmigo: SMEP, SMAP, KASLR | Plenumita | SMEP, SMAP kaj KASLR pruvitaj per Ring 0-provoj kaj tri startoj |
 | M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Plenumita | Ring 0/Ring 3-scenaroj kaj AC/CR3/EOI-provoj verdaj (ABI 2) |
-| M15 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
-| M16 | Konservado, dosiersistemo, ŝelo | Venonta | — |
-| M17 | CI, testoj, plena pruvaro | Venonta | — |
-| M18 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
+| M15 | `arm64`-malantaŭo: EL0, ABI 2, `ramfb`, `PAN` | Plenumita | identa piksela haketo sur ambaŭ arkoj |
+| M16 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
+| M17 | Konservado, dosiersistemo, ŝelo | Venonta | — |
+| M18 | CI, testoj, plena pruvaro | Venonta | — |
+| M19 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 
-### 1.1. Aparta ŝpuro: MiKerno-ARM
+### 1.1. La `arm64`-ŝpuro (A0–A4), kunfandita en M15
 
-`arm64` estos konstruata kiel aparta ŝpuro kun fazoj A0–A4; ĝi ne anstataŭas
-nek antaŭenigas M15–M17. La plano, la nuna kouplingo al `x86_64` kaj la cela
-dosieruja strukturo estas en [ARM.md](ARM.md). Dum la ŝpuro la versio estas
-antaŭeldono (`0.4.3-arm.N`); la kunfanda numero estos elektita laŭ la tiama
-stato.
+`arm64` disvolviĝis kiel aparta ŝpuro kun fazoj A0–A4. Ĝi estis kunfandita en
+`main` la 2026-11-15 kaj fariĝis la mejloŝtono M15 (`0.5.0`); la antaŭe planitaj
+M15–M18 translokiĝis al M16–M19. La plano, la kouplingo al `x86_64` kaj la cela
+dosieruja strukturo estas en [ARM.md](ARM.md). Dum la ŝpuro la versio estis
+antaŭeldono (`0.4.3-arm.N`).
 
 A0 (arkitektura refaktoro, sen kondutŝanĝo) estas plenumita la 2026-11-14 en
 `0.4.3`: `Kunteksto`, `InterrompaKadro` kaj la escepta klasifiko translokiĝis
 al la malantaŭo; `SistemvokaKadro`, `FirmigaRaporto` kaj `ELF_MAŜINO` eniris la
 fasadon; `privataj_pdptoj` fariĝis `privataj_subtabeloj`. `just verify`, la
 PVH-vojo kaj la ISO-vojo restas verdaj.
+
+A1 (arm64-skeleto) estas plenumita la 2026-11-14 en `0.4.3-arm.1`: plata
+`Image` kun la 64-bajta kapo, EL2→EL1 per `HCR_EL2.RW`, PL011-konzolo,
+minimuma FDT-analizilo (memoro, initrd, seria adreso), identeca MMU per
+L0/L1-tabeloj kaj PSCI `SYSTEM_OFF`. `just run-arm` presas la version, la
+memoran linion kaj la serian konzolon, kaj paniko haltigas la maŝinon per
+PSCI. `just iso-arm` aldone kunmetas UEFI-booteblan `mikerno-arm.iso` per
+Limine 12.9.6 (`BOOTAA64.EFI`); sub UEFI la memora linio venas el la
+UEFI-memormapo en `/chosen`, do ĝi raportas konvenan memoron (229 MiB el
+256 MiB). La versio estas presata de la kerno, same kiel ĉe `x86_64`. La
+`x86_64`-konstruo kaj ties scenaro restas senŝanĝaj.
+
+A2 (arm64) estas plenumita la 2026-11-14 en `0.4.3-arm.2`: la vektora tabelo
+`VBAR_EL1` (16 eniroj po 128 bajtoj) kun plena kadro `x0`–`x30`, `ELR_EL1`,
+`SPSR_EL1`, `ESR_EL1` kaj `FAR_EL1`; GICv2 (distribuilo `0x0800_0000`,
+CPU-interfaco `0x0801_0000`, PPI 30, EOI antaŭ la traktilo); la ĝenerala
+temporizilo per `CNTFRQ_EL0`/`CNTP_TVAL_EL0` je 100 Hz; `DAIF`-gardo; kaj la
+kuntekstŝanĝo de la planisto (`x19`–`x30`, `sp`, `DAIF`, unua eniro per
+trampolino). La komuna `kerno::planisto` kaj `interrompo` nun kompiliĝas sur
+ambaŭ arkoj per `cfg`-gardoj, sen ŝanĝi la `x86_64`-konduton. La enira stako
+translokiĝis ekster `.bss`, do la nula buklo de la eniro ne tuŝas ĝin.
+Akcepto (`just run-arm`):
+
+```text
+[horloĝo] tiko 100
+[fadeno 1] 100 tikoj
+…
+[fadeno 3] vekis fadenon 2 ĉe 501 tikoj
+[fadeno 2] vekita ĉe 502 tikoj
+…
+[fadeno 1] finiĝis post 1000 tikoj
+[kerno] fina stato: 3 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+```
+
+A3 (arm64) estas plenumita la 2026-11-15 en `0.4.3-arm.3`: `uzanta.rs` eniras
+`EL0` per `eret` (`SPSR_EL1 = EL0t`, `SP_EL0 = stakpinto`, `x0`/`x1` =
+reĝimo/identigilo), `sistemvoko.rs` liveras `svc #0` kun `x8` kiel voknumero
+kaj `x0`–`x3` kiel argumentoj, kaj la vektora ŝelko dispetĉas `SVC64` al la
+komuna `kerno::sistemvoko::voki`. La per-procezaj spacoj havas propran
+`TTBR0_EL1`: la kernaj identecaj eroj (`0..4 GiB`) restas kunhavataj, la
+uzanta fenestro ricevas privatajn `L2`/`L3`-tabelojn, kaj `horizonto`
+konstruiĝas por `aarch64-unknown-none` (ELF-maŝino `183`). La komuna kerno
+raportas `TTBR0`-radikon, `EL0t`-eniron kaj uzantajn datenajn abortojn; la
+frambufo kaj la APIC/SMAP-provoj restas nur `x86_64`. La `horizonto`-bildo
+liveriĝas kiel `-initrd` (`-kernel`-vojo) aŭ kiel ISO-modulo
+(`module_path: boot():/horizonto.elf`). Akcepto — la samaj IPC-linioj kiel
+`x86_64`, inkluzive `-32`, la sekretan paĝon kaj la spionan datenan aborton:
+
+```text
+[kerno] horizonto 4 pretas: EL0t, SP_EL0=0x101000000, SPSR=0x0, enirpunkto 0x1000006ec
+[eraro] procezo 5: datena aborto ĉe rip=0x0000000100000400, far=0x0000000200001000, esr=0x92000007; la procezo estas mortigata
+[memoro] izolado (bone): 64998 kadroj antaŭ, 64998 post
+[kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+```
+
+Sub UEFI la kadraj nombroj estas pli malgrandaj (`58465`) pro la memoro, kiun
+la firmvaro rezervas; la ceteraj linioj kongruas. La `x86_64`-konstruo kaj
+ties scenaro restas senŝanĝaj, kaj `fmt`, `clippy` (ambaŭ celoj) kaj
+`cargo build --workspace --release` estas verdaj.
+
+A4 (arm64) estas plenumita la 2026-11-15 en `0.4.3-arm.4`: `fw_cfg.rs` legas
+la dosierujon de `fw_cfg`, trovas `etc/ramfb` kaj skribas per DMA 28-bajtan
+`RAMFBCfg` (1280×800, `XR24`, paŝo 5120) al kontiguaj, identece mapitaj
+kadroj; `ekrano` liveras la pikselan fiksaĵon (`testi_pikseloj`: gradiento,
+teksto kaj FNV-1a 64-haketo); `PXN`/`UXN` kaj `PAN` estas ŝaltataj, kaj la
+vektora ŝelko raportas `PAN`-malobservon. La FDT-analizilo nuligas la
+`reg`-staton ĉe ĉiu nodkomenco, do la PL011 ne plu heredas la `fw_cfg`-adreson.
+La akcepto estas la identa frambufa haketo sur ambaŭ arkoj:
+
+```text
+[kerno] PAN subtenata: jes
+[kerno] framebuffer 1280x800, 32 bpp
+[ekrano] piksela fiksaĵo 1280x800, 32 bpp, tiparo 12x24; haketo 0xecf1f6dbe1421575
+[eraro] PAN-malobservo: EL1 provis legi uzantan paĝon ĉe 0x0000000100000000 (esr=0x9600000f)
+```
+
+`just run-arm` (plata `Image`) kaj `just run-iso-arm` (Limine + AAVMF) liveras
+la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
+`cortex-a76`, ĉar AAVMF 2025.11 blokiĝas sub TCG kun `-cpu max`.
+
+### 1.2. Grando de la Ring 0-kodo
+
+`bash tools/kodlinioj.sh --linio` mezuras la Ring 0-fonton (`mikerno/src`,
+`*.rs`) antaŭ ĉiu commit. «Kodo» malatentas malplenajn kaj komentajn liniojn.
+
+| Dato | Versio | Dosieroj | Linioj | Kodo | Komento | Malplena |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-14 | 0.4.3-arm.1 | 41 | 8792 | 6780 | 1143 | 869 |
+| 2026-11-14 | 0.4.3-arm.2 | 45 | 9511 | 7343 | 1224 | 944 |
+| 2026-11-15 | 0.4.3-arm.3 | 47 | 10238 | 7903 | 1334 | 1001 |
+| 2026-11-15 | 0.4.3-arm.4 | 48 | 10731 | 8239 | 1455 | 1037 |
+| 2026-11-15 | 0.5.0 | 48 | 11818 | 9048 | 1669 | 1101 |
 
 ---
 
@@ -149,7 +242,7 @@ APIC-on; neniu paĝa eraro aperas dum la tuta testa scenaro.
 **Resto.** La identeca mapo jam respektas W^X laŭ sekcioj (0.2.5), SMEP
 (0.3.0) kaj SMAP (0.3.1) baras Ring 0 de uzantaj folioj, kaj KASLR (0.3.2)
 hazardigas la kernan bazadreson per ET_DYN-relokado; la per-procesa mapado
-venis en M12. IOMMU-izolado restas en M18.
+venis en M12. IOMMU-izolado restas en M19.
 
 ---
 
@@ -557,6 +650,49 @@ ekspluaton de konataj kernaj adresoj.
 
 ---
 
+### M15 — `arm64`-malantaŭo (kunfando de la ŝpuro)
+
+**Celo.** La sama kerno, la sama ABI 2 kaj la sama bildo sur `arm64`; nur la
+enirmekanismo kaj la registra aranĝo estas platformaj.
+
+**Efektivigo.** Kvar antaŭeldonoj en la branĉo `arm64` (A0–A4) kaj la
+kunfando:
+
+- A0 (`0.4.3`, sen kondutŝanĝo) — `Kunteksto`, `InterrompaKadro` kaj la
+  escepta klasifiko translokiĝis al la malantaŭo; `SistemvokaKadro`,
+  `FirmigaRaporto` kaj `ELF_MAŜINO` eniris la fasadon.
+- A1 (`0.4.3-arm.1`) — plata `Image` kun 64-bajta kapo, EL2→EL1 per
+  `HCR_EL2.RW`, PL011, minimuma FDT-analizilo, identeca MMU per 1 GiB-blokoj,
+  PSCI `SYSTEM_OFF` kaj UEFI-ISO per Limine (`BOOTAA64.EFI`).
+- A2 (`0.4.3-arm.2`) — `VBAR_EL1` kun plena kadro, GICv2, ĝenerala
+  temporizilo je 100 Hz, `DAIF`-gardo kaj kuntekstŝanĝo.
+- A3 (`0.4.3-arm.3`) — `EL0` per `eret`, `svc #0` (`x8` = numero, `x0`–`x3` =
+  argumentoj), per-procezaj `TTBR0_EL1`-spacoj kaj ELF-maŝino `183`.
+- A4 (`0.4.3-arm.4`) — `ramfb` per `fw_cfg`-DMA, piksela fiksaĵo,
+  `PXN`/`UXN`/`PAN` kaj `PAN`-malobserva raporto.
+- Kunfando (`0.5.0`, 2026-11-15) — la ABI 2-plena `voki` (kvar argumentoj) en
+  ambaŭ eniroj, `#[cfg]`-gardoj por la `x86_64`-nuraj pruvoj (`AC`, `CR3`,
+  `EOI`, SMEP/SMAP), `just verify` kun `clippy` por `aarch64-unknown-none`,
+  kaj la dokumentaro unuigita.
+
+**Pruvo.** Ambaŭ akceptoj estas verdaj; la frambufferio de `arm64` (per
+`-kernel` kaj per la UEFI-ISO) kaj la `x86_64`-ISO donas la saman haketon:
+
+```text
+[kerno] PAN subtenata: jes
+[kerno] framebuffer 1280x800, 32 bpp
+[ekrano] piksela fiksaĵo 1280x800, 32 bpp, tiparo 12x24; haketo 0xecf1f6dbe1421575
+[eraro] PAN-malobservo: EL1 provis legi uzantan paĝon ĉe 0x0000000100000000 (esr=0x9600000f)
+```
+
+La `x86_64`-vojoj (PVH kaj ISO) restas senŝanĝaj; `just verify` inkluzivas la
+`arm64`-lintadon kaj la Kani-pruvojn. Limigoj: SMP, IOMMU, KASLR kaj
+Kani-pruvoj por `arm64` ne estas parto de M15 (vidu [ARM.md](ARM.md) §2).
+
+**Versio.** 0.5.0 (kunfando de A0–A4).
+
+---
+
 ## 3. Partaj mejloŝtonoj
 
 ### M9 — Kvalita pordego
@@ -905,7 +1041,7 @@ voko redonas `-11` sen cedi, kaj `r10 = u32::MAX` blokas ĝis mesaĝo aŭ revoko
 
 ---
 
-### M15 — Temporiziloj kaj planado
+### M16 — Temporiziloj kaj planado
 
 **Celo.** Dormantaj fadenoj, prioritatoj kaj mezuro de plenumtempo.
 
@@ -917,7 +1053,7 @@ malsatigas fadenojn; la ripoza kunteksto restas senŝanĝa.
 
 ---
 
-### M16 — Konservado kaj ŝelo
+### M17 — Konservado kaj ŝelo
 
 **Celo.** Uzebla sistemo, ne nur demonstracio.
 
@@ -930,7 +1066,7 @@ procezon.
 
 ---
 
-### M17 — Inĝeniera matureco
+### M18 — Inĝeniera matureco
 
 **Celo.** Ripetebla, pruvita kaj dokumentita projekto.
 
@@ -943,7 +1079,7 @@ QEMU-smokan teston; la ISO estas artefakto de CI, ne permana dosiero.
 
 ---
 
-### M18 — Aparata izolado (post 1.0)
+### M19 — Aparata izolado (post 1.0)
 
 **Celo.** Malhelpi, ke aparato atingu arbitran fizikan memoron per DMA.
 
@@ -953,7 +1089,7 @@ QEMU-matrico kun `intel-iommu`.
 
 **Akceptkriterioj.** Aparato povas atingi nur siajn proprajn DMA-mapojn; nevalida
 mapo produktas raportitan `FAULT` anstataŭ silentan memoran korupton. Ĉi tiu
-mejloŝtono venas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo el M16.
+mejloŝtono venas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo el M17.
 
 ---
 
@@ -981,17 +1117,18 @@ mejloŝtono venas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo el M16.
 
 | Prioritate | Ŝuldo | Efiko | Rimedo |
 | --- | --- | --- | --- |
-| Alta | Neniu `fork`/`exec`; procezoj estas preparitaj de la praŝarĝo | Ne eblas dinamika lanĉo el Ring 3 | M16 (`fork`/`exec`) |
-| Alta | Ring 3-esceptoj krom `#PF`/`#GP` haltigas la sistemon | Ne rekaptebla eraro (ekz. `#UD`) | M12/M17 |
-| Alta | Neniu CI nek testoj | Regresoj nerimarkeblaj | M17 |
+| Alta | Neniu `fork`/`exec`; procezoj estas preparitaj de la praŝarĝo | Ne eblas dinamika lanĉo el Ring 3 | M17 (`fork`/`exec`) |
+| Alta | Ring 3-esceptoj krom `#PF`/`#GP` haltigas la sistemon | Ne rekaptebla eraro (ekz. `#UD`) | M12/M18 |
+| Alta | Neniu CI nek testoj | Regresoj nerimarkeblaj | M18 |
 | Alta | Malaktuala ISO | Konfuzaj testrezultoj | CI + versio |
 | Malalta | Dokumentoj kaj `Cargo.toml` povas malkongrui | Konfuzaj eldonoj | `tools/versio.sh --kontroli` en `just verify` |
 | Meza | IPC finpunkto = fadeno | Ne eblas sendependaj objektoj | M14 |
-| Meza | Sekreta paĝo estas unu fiksa mapado por procezo | Neniu ĝenerala `mmap`/`brk` por uzantaj datumoj | M16 |
-| Meza | Neniu IOMMU | Aparata DMA ne estas izolita | M18 |
+| Meza | Sekreta paĝo estas unu fiksa mapado por procezo | Neniu ĝenerala `mmap`/`brk` por uzantaj datumoj | M17 |
+| Meza | Neniu IOMMU | Aparata DMA ne estas izolita | M19 |
 | Meza | Framebuffer sen rulumo | Malbona uzsperto | M6-poste |
 | Malalta | `Kunhavigita::akiri` prenas `&self` | Facila misuzo | reviziita kaj dokumentita (Fazo 7) |
 | Malalta | Kani-modelo ≠ produkta kodo | Pruvoj ne rekte aplikeblas | M9 |
+| Malalta | Antaŭkonstituciaj `#[allow]`-oj sen `PERMESO-JUSTIFIKO` | Povas kaŝi neuzatan aŭ neŝatatan kodon | revizii dum M18 (§9.3) |
 
 ---
 
@@ -1009,6 +1146,64 @@ MiKerno atingos 1.0 kiam:
    QEMU-smoka testo estas devigaj.
 6. La dokumentaro (README, ĉi tiu dokumento, sistemvoka referenco) estas
    kompleta kaj kongrua kun la kodo.
+
+---
+
+## 9. Kvalita Konstitucio (neintertraktebla)
+
+> **Valideco.** Ekde la 2026-11-15 ĉiu Fazo devas konformi al ĉi tiu
+> konstitucio.
+>
+> **Ununura difino de «farita».** `just verify` finiĝas sen eraro **kaj** la
+> akcepto de la nuna Fazo montras la atenditajn liniojn (`arm64`: `just
+> run-arm` kaj `just run-iso-arm`; `x86_64`: la PVH- kaj ISO-startoj). **Ĉiu
+> ruĝa kontrolo signifas, ke la tasko ne estas farita**; oni ne rajtas diri, ke
+> ĝi «jam efektiviĝis».
+
+### 9.1. Tri neintertrakteblaj reguloj
+
+1. **Malpermesite ŝanĝi la kontrolon por ke ĝi pasu.** Oni ne aldonu
+   `#[allow(...)]`, ne malaltigu lint-nivelojn (`-D warnings` restas), ne
+   forigu aŭ komentu malsukcesajn testojn aŭ pruvojn, kaj ne uzu
+   `kani::assume` por mallarĝigi la enigan spacon kaj kaŝi kontraŭekzemplon.
+2. **Se `#[allow]` estas vere necesa**, skribu la kialon kiel komenton en
+   Esperanto kaj listigu ĝin aparte en la respondo, atendante la aprobon de la
+   uzanto:
+   ```rust
+   // PERMESO-JUSTIFIKO: la eroj de la fw_cfg-dosierujo havas fiksan longon
+   // de 64 bajtoj, do la indeksoj estas garantiitaj de la protokolo.
+   #[allow(clippy::indexing_slicing)]
+   ```
+3. **Ĉiu liveraĵo inkluzivu veran komandan eligon** — la finan resumon de
+   `cargo clippy`, la rezulton de `cargo kani` aŭ la tutan finan eligon de
+   `just verify`. Sen eligo = sen plenumo.
+
+### 9.2. La pordego de MiKerno
+
+La originala `just ci` ne ekzistas en MiKerno; la ekvivalento estas
+`just verify`, kiu vokas:
+
+- `bash tools/versio.sh --kontroli`;
+- `cargo fmt --all -- --check`;
+- `cargo clippy --workspace --release -- -D warnings`;
+- `cargo clippy -p mikerno --release --target aarch64-unknown-none -- -D warnings`;
+- `cargo build --workspace --release`;
+- `cargo kani -p mikerno -Z unstable-options --ignore-global-asm`.
+
+Aldone, la liveraĵo de Fazo inkluzivu la akceptajn startojn difinitajn en
+[ARM.md](ARM.md) §11 aŭ en la koncerna mejloŝtono: `just run-arm`,
+`just run-iso-arm`, `tools/run-qemu.sh release` (PVH) kaj
+`tools/run-qemu.sh iso`. Do anstataŭ unu `just ci`, MiKerno havas la formalan
+pordegon `just verify` plus la platformajn akceptojn.
+
+### 9.3. Jam ekzistantaj `#[allow]`-oj
+
+La esceptoj starigitaj antaŭ ĉi tiu konstitucio — la `cfg_attr`-aj
+`allow(dead_code)`/`allow(unused_imports)` por `aarch64`, la `allow(dead_code)`
+ĉe strukturaj bufroj kaj la `allow(clippy::mut_from_ref)` de `Kunhavigita` —
+restas registritaj kiel teknika ŝuldo (§7). Oni ne aldonu novajn sen la aprobo
+de la uzanto laŭ §9.1; kiam Fazo tuŝas ekzistantan escepton, ĝi ricevu
+`PERMESO-JUSTIFIKO`-komenton.
 
 ---
 

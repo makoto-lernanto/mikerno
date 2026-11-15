@@ -2,6 +2,10 @@
 //!
 //! Ĉi tiuj tipoj permesas al la nukleo pritrakti kadrojn kaj firmigajn
 //! raportojn sen koni la platforman aranĝon de la registroj.
+//!
+//! A1 ne ankoraŭ uzas ilin sur `arm64`; ili estos ligitaj en A3/A4.
+
+#![cfg_attr(target_arch = "aarch64", allow(dead_code))]
 
 /// Speco de procesora escepto, rekonita de la malantaŭo.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

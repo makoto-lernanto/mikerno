@@ -1,6 +1,6 @@
 # FluoU — deviga gvidilo pri la grafika uzinterfaco de Horizonto
 
-> Stato: 2026-11-14 · FluoU 0.1 · ABI 2 · MIT
+> Stato: 2026-11-15 · FluoU 0.1 · ABI 2 · MIT
 >
 > Ĉi tiu dokumento estas la norma gvidilo por ĉiu grafika programo sur
 > Horizonto. Ĝi anstataŭas la interagan prototipon «FluoU.html»: la prototipo
@@ -564,8 +564,9 @@ Ekrano
   `x86_64` kaj `arm64`. La CI `DEVI` kompari fiksaĵojn de la frambufo kaj
   malsukcesi ĉe iu ajn diferenco, krom dokumentita platforma escepto.
 - **A07.** La komuna ABI `DEVI` resti kongrua inter `libmikerno`, la kerno kaj
-  FluoU: `Tenilo`, `Mesaĝo`, la registra aranĝo `rax`/`rdi`/`rsi`/`rdx`/`r10`
-  kaj la voknumeroj de ABI 2.
+  FluoU: `Tenilo`, `Mesaĝo` kaj la voknumeroj de ABI 2. La registra aranĝo
+  estas platforma (`rax`/`rdi`/`rsi`/`rdx`/`r10` aŭ `x8`/`x0`–`x3`), la
+  semantiko komuna.
 - **A08.** La manifesto `DEVUS` esti subskribita kaj kontrolita antaŭ ŝargo;
   la kapabloj `DEVI` esti la minimuma aro, kiun la aplikaĵo bezonas.
 - **A09.** Ĉiu fenestro `DEVI` esti spurebla en la protokolo: aplikaĵo, tenilo,

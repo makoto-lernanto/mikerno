@@ -16,8 +16,8 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.4.6 (workspace)
-- **Arkitekturo:** x86_64, unuprocesora
+- **Versio:** 0.5.0 (workspace)
+- **Arkitekturo:** `x86_64` kaj `arm64` (AArch64), unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
 - **Statuso:** funkcianta prototipo — vidu [Mejloŝtonoj](docs/MEJLOSTONOJ.md)
@@ -81,7 +81,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 | Ring 3-escepta kapto: `#PF`/`#GP` mortigas la procezon kaj la sistemo daŭras | Funkcias | `interrompo/mod.rs` |
 | Samtempaj procezoj `4`/`5` kun sama sekreta adreso sed malsamaj kadroj | Funkcias | `kerno/mod.rs`, `kerno/uzantspaco.rs` |
 | Izolado de adresa spaco: spiono `#PF` ĉe nur-viktima paĝo, viktimo pluvivas | Funkcias | `horizonto/`, `interrompo/mod.rs` |
-| 26 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ipc.rs` |
+| 29 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ipc.rs` |
 
 > `horizonto` estas liverata kiel praŝarĝa modulo, muntata super 4 GiB kun la
 > bito `U` tra ĉiuj paĝtabelaj niveloj, kaj ekzekutas en Ring 3 per `iretq`.
@@ -137,18 +137,20 @@ cargo install just          # opcia
 | Ilo | Versio / noto |
 | --- | --- |
 | Rust | 1.100 aŭ pli nova (eldono 2024); projekto kontrolita per 1.100.0 |
-| Cela triopo | `x86_64-unknown-none` |
+| Cela triopo | `x86_64-unknown-none`; `aarch64-unknown-none` por `arm64` |
 | QEMU | `qemu-system-x86_64` (`sudo apt install qemu-system-x86`) |
 | QEMU (arm64) | Nur por `just run-arm` kaj `just run-iso-arm`: `qemu-system-aarch64`; por la ISO ankaŭ UEFI-firmware (`sudo apt install qemu-system-arm qemu-efi-aarch64`) |
-| xorriso | Nur por `just iso` (`sudo apt install xorriso`) |
+| xorriso | Nur por `just iso` kaj `just iso-arm` (`sudo apt install xorriso`) |
+| dosfstools / mtools | Nur por `just iso-arm` (`sudo apt install dosfstools mtools`) |
 | `just` | Opcia, sed rekomendata por la difinitaj taskoj |
-| bash | Lanĉilo de `tools/run-qemu.sh` |
+| bash | Lanĉilo de `tools/run-qemu.sh` kaj `tools/run-qemu-arm.sh` |
 | Kani | Nur por `just verify` (`cargo kani`) |
 
-Instalu la celan triopon:
+Instalu la celajn triopojn:
 
 ```sh
 rustup target add x86_64-unknown-none
+rustup target add aarch64-unknown-none   # por la ARM-ŝpuro
 ```
 
 ### Konstrui kaj ruli
@@ -159,10 +161,26 @@ just build         # konstruas nur la kernon (= build-kerno)
 just run           # QEMU -kernel, rekte per la PVH-noto (sen ISO)
 just iso           # kreas mikerno.iso per Limine + Multiboot2
 just run-iso       # rulas la ISO-on (QEMU-fenestro montras la Limine-menuon)
-just run-arm       # startigas la antaŭe konstruitan arm64-kernon (QEMU virt)
-just run-iso-arm   # startigas mikerno-arm.iso (arm64, QEMU virt + UEFI)
-just verify        # formalaj pruvoj per Kani (postulas `cargo kani`)
+just build-arm     # arm64: plata `Image` + `horizonto`
+just run-arm       # arm64: konstruas kaj startigas la platan `Image`
+just iso-arm       # UEFI-bootebla `mikerno-arm.iso` (Limine + plata `Image`)
+just run-iso-arm   # konstruas kaj rulas `mikerno-arm.iso` per AAVMF
+just verify        # formato, lint (ambaŭ arkoj), konstruo kaj Kani-pruvoj
 ```
+
+`just run-arm` bezonas la celan triopon `aarch64-unknown-none`
+(`rustup target add aarch64-unknown-none`) kaj `qemu-system-aarch64`.
+En `0.5.0` la arm64-kerno eniras `EL0` per `eret`,
+plenumas `svc #0`, posedas per-procezajn `TTBR0`-spacojn kaj rulas la saman
+IPC-scenaron kiel `x86_64`; `horizonto` venas kiel `-initrd` aŭ kiel
+ISO-modulo. La frambufo venas el `ramfb` per `fw_cfg` (1280×800, `XR24`),
+`PXN`/`UXN`/`PAN` estas aktivaj, kaj la piksela fiksaĵo donas la saman
+haketon kiel la `x86_64`-ISO.
+`just iso-arm` krome postulas `xorriso`, `mkfs.fat` (dosfstools) kaj
+`mmd`/`mcopy` (mtools); `just run-iso-arm` bezonas UEFI-firmwaren
+(`qemu-efi-aarch64`, alirebla kiel `QEMU_EFI.fd` aŭ per `QEMU_ARM_EFI`).
+La ISO-vojo implicite uzas `cortex-a76` (AAVMF 2025.11 blokiĝas sub TCG kun
+`-cpu max`); `QEMU_ARM_CPU` anstataŭigas la elekton.
 
 Ekvivalentaj rektaj komandoj:
 
@@ -487,7 +505,7 @@ kunhavas.
 restarigas la antaŭan `RFLAGS.IF`-staton ĉe `Drop`.
 
 Nuna limigo: unu finpunkto memoras nur unu blokitan ricevanton; `fork`/`exec`-
-distribuo de kapabloj venas en la sekvaj fazoj (M16).
+distribuo de kapabloj venas en la sekvaj fazoj (M17).
 
 ---
 
@@ -497,6 +515,9 @@ distribuo de kapabloj venas en la sekvaj fazoj (M16).
   reĝimo, `\n` → `\r\n`. Ĉi tio estas la arkitektura konzolo kaj ĉiam funkcias.
 - **Framebuffer** (`ekrano/`): 32-bpp Linuksa framebuffer el Multiboot2, desegnita
   per antaŭe rasterigitaj bitmapaj tiparoj derivitaj el **DejaVu Sans Mono**.
+  Sur `arm64` la frambufon kreas la kerno mem: `fw_cfg` liveras la dosieron
+  `etc/ramfb`, kaj `ramfb` montras kontiguajn RAM-kadrojn (1280×800, `XR24`,
+  paŝo 5120).
   Ekzistas kvar strekoj — 8×16, 12×24, 16×32 kaj 32×64 — kaj la konzolo elektas
   la plej grandan, kiu donas almenaŭ 80 kolumnojn kaj 24 vicojn, kun nombro da
   vicoj plej proksima al 33. Ĉiu streko enhavas la 95 ASCII-signojn kaj 16
@@ -757,7 +778,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 
 `just verify` unue kontrolas la dokumentan version per `tools/versio.sh
 --kontroli` kaj poste vokas
-`cargo kani -p mikerno -Z unstable-options --ignore-global-asm`; la 26 pruvoj
+`cargo kani -p mikerno -Z unstable-options --ignore-global-asm`; la 29 pruvoj
 (6 pri la kadro-alokilo, 20 pri la IPC) pruviĝis verde per Kani 0.68.0.
 
 ### Kion vi devus vidi
@@ -765,7 +786,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.4.6!
+[MiKerno] Saluton, mi estas MiKerno v0.5.0!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
@@ -856,9 +877,17 @@ horizonto: procezo vekis en Ring 3.
 [ipc] statistiko (bone): senditaj=41, ricevitaj=25, premregoj=2, revokoj=7, tempolimoj=3
 ...
 [kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+[ekrano] piksela fiksaĵo 1280x800, 32 bpp, tiparo 12x24; haketo 0xecf1f6dbe1421575    (ISO; PVH diras «preterlasita»)
 [memoro] SMAP-provo: Ring 0 provos legi la uzantan folion ĉe 0x100000000
 [eraro] procezo 0: SMAP-malobservo ĉe 0x0000000100000000 (erarkodo=0x1)
 ```
+
+La piksela fiksaĵo estas la sama sur `arm64`: `just run-arm` kaj
+`just run-iso-arm` presas `[ekrano] piksela fiksaĵo 1280x800, 32 bpp, tiparo
+12x24; haketo 0xecf1f6dbe1421575`, kaj ankaŭ `[memoro] PAN-provo: EL1 provos
+legi la uzantan folion ĉe 0x100000000` sekvata de `[eraro] PAN-malobservo`.
+Ambaŭ arkoj uzas la saman desegnaĵon (gradiento kaj teksto), la saman tiparon
+kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
 
 ---
 
@@ -999,7 +1028,7 @@ horizonto: procezo vekis en Ring 3.
   bildon al hazarda 2 MiB-aliniiĝinta bazo kaj relokas ĝin; la kerno restas en
   la malalta duono, do la identeca mapo kaj ĉiuj ekzistantaj scenaroj
   senŝanĝe funkcias. Alta-duona kerno ne estis necesa por tiu ĉi firmigo, kaj
-  IOMMU-izolado venas en M18 (post 1.0).
+  IOMMU-izolado venas en M19 (post 1.0).
 - **Unuprocesora**: neniu SMP, afineco, prioritatoj aŭ dormantaj temporiziloj.
 - **Fiksaj limoj**: 8 fadenoj, 16 mesaĝoj po fadeno, 64 bajtoj po mesaĝo,
   4 GiB fizika memoro.
@@ -1008,13 +1037,13 @@ horizonto: procezo vekis en Ring 3.
   kontrolo; `REVOKI` estas tutfinpunkta kaj proceza detruo purigas la
   kapablojn; plena vico premegas la sendanton anstataŭ perdi mesaĝojn; la
   tempaj vokoj ofertas senfinan, neblokan kaj milisekundan atendon kun absoluta
-  limdato; mankas nur `fork`/`exec`-distribuo de kapabloj (M16).
+  limdato; mankas nur `fork`/`exec`-distribuo de kapabloj (M17).
 - **Ring 3-esceptoj nur `#PF`/`#GP`**: tiuj du mortigas la procezon; aliaj
   esceptoj — ankaŭ el Ring 3 — restas fatalaj, kaj demando-paĝado ne
   ekzistas.
 - **Framebuffer**: nur 32 bpp, kvar fiksaj strekoj (8×16 … 32×64), 111 glifoj
   (95 ASCII + Esperanto + citiloj), malplenigo anstataŭ rulumo.
-- **Pruvoj**: 26 Kani-pruvoj spegulas la bitan logikon sur 64 kadroj kaj
+- **Pruvoj**: 29 Kani-pruvoj spegulas la bitan logikon sur 64 kadroj kaj
   malgrandaj lokaj kapablotabeloj; la produkta kodo mem ne estas pruvita.
   `just verify` postulas apartan Kani-instalon.
 - **Neniu CI nek testoharness**: la kontrolo estas `build` + `clippy` + `fmt` +
@@ -1064,7 +1093,7 @@ Enigitaj triaj komponantoj:
 
 | Komponanto | Loko | Noto |
 | --- | --- | --- |
-| Limine | `tools/limine/` | Praŝarĝilo por la ISO (Multiboot2) |
+| Limine | `tools/limine/` | Praŝarĝilo: Multiboot2 (`x86_64`) kaj Linux-protokolo (`arm64`) |
 | DejaVu Sans Mono (bitmapaj strekoj) | `mikerno/src/ekrano/fonto/` | Rasterigita el DejaVu Sans Mono; permesilo Bitstream Vera + Arev en `third_party/dejavu/LICENSE.txt` |
 | `tools/font/generi.py` | `tools/font/` | Generilo por la kvar strekoj; postulas Python 3 kaj Pillow |
 
