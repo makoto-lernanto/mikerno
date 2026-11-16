@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-16 · Versio de la workspace: 0.6.1
+> Stato: 2026-11-16 · Versio de la workspace: 0.6.2
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -144,6 +144,7 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-16 | 0.6.0 | 49 | 12172 | 9331 | 1710 | 1131 |
 | 2026-11-16 | 0.6.1 | 49 | 12394 | 9543 | 1703 | 1148 |
 | 2026-11-16 | 0.6.1 | 49 | 12394 | 9543 | 1703 | 1148 |
+| 2026-11-16 | 0.6.2 | 49 | 12536 | 9673 | 1704 | 1159 |
 
 ---
 
@@ -1271,6 +1272,61 @@ eltiris ilin aŭtomate; Kani ne estis rulita loke. La formala pordego de
 M16 Fazo 2 estas verda.
 
 **Versio.** 0.6.1 (Fazo 2).
+
+**Fazo 3 (0.6.2) — specimena plenumtempokontado.** La restanta M16-celo
+«mezuro de plenumtempo» ricevas po-fadenan tik-specimenadon, ne precizan
+murhorloĝan mezuron. La prioritata politiko, ABI 2 kaj unuprocesora modelo
+restas senŝanĝaj; SMP/IPI ne apartenas al ĉi tiu fazo.
+
+- `Planisto.plenumtikoj` enhavas saturiĝantan `u64`-nombrilon por ĉiu fadeno.
+  Ĉiu temporizila voko de `elekti_por_tiko(false)` aldonas unu specimenon al
+  la interrompita fadeno antaŭ la elekto de ĝia posteulo. Cedo, registrado,
+  blokado, veko kaj morto mem ne aldonas specimenon; `veturoj` plu nombras
+  elektojn, ne tempon.
+- Indekso 0 inkluzivas la ripozan kaj praŝarĝan kuntekston antaŭ la unua
+  planista lanĉo. Blokitaj kaj mortintaj fadenoj konservas siajn nombrojn,
+  sed ne ricevas novajn specimenojn dum aliaj kuntekstoj kuras.
+- `planisto::plenumtikoj()` kopias la tabelon sub `InterrompaGardo`. La fina
+  raporto legas la horloĝon kaj la specimenojn kun interrompoj malŝaltitaj,
+  montras ĉiun fadenon kaj kontrolas `sumo == horloĝo`, pozitivan ripozan
+  nombron kaj pozitivan nombron por ĉiu el la kvar laborantaj testfadenoj.
+- Ambaŭ temporiziloj liveras nominale 100 Hz: unu specimeno reprezentas
+  proksimuman 10-ms plenumtempon. Mallonga laboro inter interrompoj povas
+  ricevi nul specimenojn; ne estas sub-tika precizeco aŭ apartigo inter
+  uzantreĝima kaj kernreĝima laboro de la sama fadeno. Periodoj perditaj dum
+  malŝaltitaj interrompoj ne estas rekonstruitaj. La sumkontrolo validas
+  antaŭ saturiĝo aŭ horloĝa superfluo, ne kiel senfina tempa garantio.
+
+**Lokaj kontroloj (2026-11-16).** `just verify`, `just iso` kaj `just iso-arm`
+sukcesis. La kvar QEMU-vojoj atingis la finan staton kun 6 mortintaj,
+0 pretaj kaj 0 blokitaj fadenoj, sen `MALBONE`; la SMAP/PAN-provoj atingis
+la atenditajn protektajn esceptojn. La 100-ms dormo revenis post 10 tikoj,
+`maks_vekprokrasto=0`, kaj la antaŭokupa provo plu observis 4/8/16/4 tikojn.
+
+| Vojo | Sumo / horloĝo | Laboraj specimenoj | Ripozaj specimenoj |
+| --- | --- | --- | --- |
+| `x86_64` PVH | 1000 / 1000 | 64 | 936 |
+| `x86_64` BIOS-ISO | 1000 / 1000 | 70 | 930 |
+| `arm64` Image | 1000 / 1000 | 90 | 910 |
+| `arm64` UEFI-ISO | 1000 / 1000 | 79 | 921 |
+
+La malsamaj distribuoj estas realaj observaĵoj de apartaj praŝarĝoj, ne
+postulo de bit-identa tempo inter arkitekturoj. La tri lokaj kontadaj provoj
+sukcesis: tempopecoj donas 2/4/8 specimenojn dum 14 tikoj; ripetaj cedoj
+ŝanĝas elekton sed ne la specimenaron; ripozo, blokita stato, veko kaj morto
+konservas la ĝustan atribuon en fiksa scenaro.
+
+**Formala pordego — atendata.** Kvar novaj pruvoj en `kani_plenumtempo`:
+`tempopecoj_konservas_plenumtikojn`, `cedo_ne_kreas_tempon`,
+`ripozo_kaj_blokado_apartigas_tempon` kaj
+`nur_la_nuna_nombrigilo_ŝanĝiĝas_kaj_saturiĝas`. La unuaj tri reuzas la
+fiksajn lokajn scenarojn; la lasta kontrolas arbitran nunan identigilon kaj
+arbitrajn `u64`-nombrilojn por atribuo kaj saturiĝo de unu specimeno. La
+bloka/morta scenaro rekte modelas statŝanĝojn, ne la tutajn kuntekstŝaltajn
+vojojn. Kani ne estis rulita loke; la CI-matrico aŭtomate eltrovos la novajn
+pruvojn post la puŝo.
+
+**Versio.** 0.6.2 (Fazo 3).
 
 ---
 
