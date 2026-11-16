@@ -44,6 +44,7 @@ pub use malantaŭo::uzanta::ELF_MAŜINO;
 #[cfg(target_arch = "aarch64")]
 #[inline(never)]
 pub fn skribi_formaton(argumentoj: fmt::Arguments) {
+    let _gardo = crate::interrompo::InterrompaGardo::nova();
     arm64::seria::skribi_formaton(argumentoj);
     crate::ekrano::skribi_formaton(argumentoj);
 }

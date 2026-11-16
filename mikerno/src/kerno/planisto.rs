@@ -11,6 +11,7 @@ use crate::memoro::virtuala::VirtuaAdreso;
 
 use super::objekto::{Fadeno, FadenoEnirpunkto, FadenoId, FadenoStato, ProcezaId};
 use super::procezo::{ProcezaEstado, marki};
+use super::vekotemporizilo::Vekotemporizilo;
 
 pub const MAKSAJ_FADENOJ: usize = 8;
 const RIPAZA_ID: FadenoId = 0;
@@ -56,12 +57,30 @@ pub struct Planisto {
     fadenoj: [Option<Fadeno>; MAKSAJ_FADENOJ + 1],
     preta_vico: PretaVico,
     nuna_fadeno: Option<FadenoId>,
-    /// La absoluta temporizila tiko, ĉe kiu blokita fadeno tempolimiĝos; `0`
-    /// signifas sen limdato.
-    limdatoj: [u64; MAKSAJ_FADENOJ + 1],
+    /// La minimum-kupo de blokitaj fadenoj kun limdato; malplena limdato ne
+    /// estas ero.
+    vekoj: Vekotemporizilo,
     /// La fadeno vekiĝis pro sia limdato, ne pro operacio; la markon konsumas
     /// la atendanta voko.
     tempolimoj: [bool; MAKSAJ_FADENOJ + 1],
+    ŝaltoj: u64,
+    limdataj_blokoj: u64,
+    vekigoj: u64,
+    maks_vekprokrasto: u64,
+    veturoj: [u64; MAKSAJ_FADENOJ + 1],
+}
+
+/// Nombroj pri la planado ekde la starto; ilin montras la fina raporto.
+#[derive(Clone, Copy, Debug)]
+pub struct PlanistaStatistiko {
+    /// Kuntekstŝaltaj vokoj (`ŝalti_kuntekston`).
+    pub ŝaltoj: u64,
+    /// Blokadoj kun limdato (dormo aŭ IPC-tempolimo).
+    pub limdataj_blokoj: u64,
+    /// Vekoj pro limdato, ne pro operacio.
+    pub vekigoj: u64,
+    /// La plej granda prokrasto inter la limdato kaj la veko, en tikoj.
+    pub maks_vekprokrasto: u64,
 }
 
 impl Planisto {
@@ -72,8 +91,13 @@ impl Planisto {
             fadenoj,
             preta_vico: PretaVico::nova(),
             nuna_fadeno: None,
-            limdatoj: [0; MAKSAJ_FADENOJ + 1],
+            vekoj: Vekotemporizilo::nova(),
             tempolimoj: [false; MAKSAJ_FADENOJ + 1],
+            ŝaltoj: 0,
+            limdataj_blokoj: 0,
+            vekigoj: 0,
+            maks_vekprokrasto: 0,
+            veturoj: [0; MAKSAJ_FADENOJ + 1],
         }
     }
 
@@ -85,7 +109,7 @@ impl Planisto {
         if self.fadenoj[indekso].is_some() {
             return Err(PlanistaEraro::JamRegistrita);
         }
-        self.limdatoj[indekso] = 0;
+        let _ = self.vekoj.forigi(fadeno.id);
         self.tempolimoj[indekso] = false;
         self.preta_vico.pusxi(fadeno.id);
         self.fadenoj[indekso] = Some(fadeno);
@@ -108,6 +132,7 @@ impl Planisto {
         if let Some(fadeno) = self.fadenoj[id as usize].as_mut() {
             fadeno.stato = FadenoStato::Kuranta;
         }
+        self.veturoj[id as usize] = self.veturoj[id as usize].saturating_add(1);
         self.nuna_fadeno = Some(id);
         self.stato_procezan(id, ProcezaEstado::Kuranta);
     }
@@ -169,18 +194,18 @@ impl Planisto {
     /// la tempoliman markon anstataŭ la normalan operacian vekon.
     fn venkigi_tempolimojn(&mut self) {
         let nuna = crate::arkitekturo::temporizilaj_tikoj();
-        let mut id = 1;
-        while id <= MAKSAJ_FADENOJ {
-            let limdato = self.limdatoj[id];
-            if limdato != 0
-                && nuna >= limdato
-                && self.fadenoj[id].is_some_and(|fadeno| fadeno.stato == FadenoStato::Blokitaj)
-            {
-                self.limdatoj[id] = 0;
-                self.tempolimoj[id] = true;
-                self.veki(id as FadenoId);
+        while let Some((limdato, id)) = self.vekoj.pinti() {
+            if limdato > nuna {
+                break;
             }
-            id += 1;
+            self.vekoj.elpreni();
+            if self.fadenoj[id as usize].is_some_and(|fadeno| fadeno.stato == FadenoStato::Blokitaj)
+            {
+                self.tempolimoj[id as usize] = true;
+                self.maks_vekprokrasto = self.maks_vekprokrasto.max(nuna - limdato);
+                self.vekigoj = self.vekigoj.saturating_add(1);
+                self.veki_sen_limdato(id);
+            }
         }
     }
 
@@ -191,11 +216,12 @@ impl Planisto {
     /// Bloku la fadenon ĝis la absoluta tiko `limdato`; `0` signifas sen
     /// limdato. La marko de antaŭa tempolimo ĉiam malpleniĝas.
     pub fn bloki_kun_limdato(&mut self, id: FadenoId, limdato: u64) {
-        let indekso = id as usize;
-        if let Some(celo) = self.limdatoj.get_mut(indekso) {
-            *celo = limdato;
+        let _ = self.vekoj.forigi(id);
+        if limdato != 0 {
+            self.vekoj.enmeti(id, limdato);
+            self.limdataj_blokoj = self.limdataj_blokoj.saturating_add(1);
         }
-        if let Some(marko) = self.tempolimoj.get_mut(indekso) {
+        if let Some(marko) = self.tempolimoj.get_mut(id as usize) {
             *marko = false;
         }
         if let Some(fadeno) = self.fadenoj[id as usize].as_mut() {
@@ -209,9 +235,11 @@ impl Planisto {
     }
 
     pub fn veki(&mut self, id: FadenoId) {
-        if let Some(limdato) = self.limdatoj.get_mut(id as usize) {
-            *limdato = 0;
-        }
+        let _ = self.vekoj.forigi(id);
+        self.veki_sen_limdato(id);
+    }
+
+    fn veki_sen_limdato(&mut self, id: FadenoId) {
         let Some(fadeno) = self.fadenoj[id as usize].as_mut() else {
             return;
         };
@@ -232,9 +260,7 @@ impl Planisto {
 
     pub fn morti(&mut self, id: FadenoId) -> ! {
         crate::arkitekturo::malebligi_interrompojn();
-        if let Some(limdato) = self.limdatoj.get_mut(id as usize) {
-            *limdato = 0;
-        }
+        let _ = self.vekoj.forigi(id);
         if let Some(marko) = self.tempolimoj.get_mut(id as usize) {
             *marko = false;
         }
@@ -299,7 +325,22 @@ impl Planisto {
         (mortintaj, pretaj, blokitaj)
     }
 
+    pub fn statistiko(&self) -> PlanistaStatistiko {
+        PlanistaStatistiko {
+            ŝaltoj: self.ŝaltoj,
+            limdataj_blokoj: self.limdataj_blokoj,
+            vekigoj: self.vekigoj,
+            maks_vekprokrasto: self.maks_vekprokrasto,
+        }
+    }
+
+    /// Kiom da fojoj ĉiu fadeno estis elektita; indico `0` estas la ripoza.
+    pub fn veturoj(&self) -> [u64; MAKSAJ_FADENOJ + 1] {
+        self.veturoj
+    }
+
     unsafe fn switch(&mut self, malnova: FadenoId, nova: FadenoId) {
+        self.ŝaltoj = self.ŝaltoj.saturating_add(1);
         let proceza = self.procezo_de(nova);
         // La fadenaj kontekstoj vivas en la kerna bildo, kiun ĉiu proceza
         // spaco kunhavas, do la ŝalto povas okazi antaŭ la registra konservo.
@@ -367,6 +408,31 @@ pub fn bloki_ĝis_absoluta(limdato: u64) {
     }
 }
 
+/// Bloku la nunan fadenon almenaŭ `millisekundoj`. `false` se la vokanto ne
+/// estas planebla fadeno (la ripoza kunteksto); `0` revenas tuj sen bloki.
+pub fn dormi(millisekundoj: u64) -> bool {
+    if millisekundoj == 0 {
+        return true;
+    }
+    let _gardo = InterrompaGardo::nova();
+    let id = nuna_id();
+    if id == RIPAZA_ID {
+        return false;
+    }
+    let tikoj = millisekundoj.div_ceil(10).max(1);
+    let limdato = crate::arkitekturo::temporizilaj_tikoj().saturating_add(tikoj);
+    loop {
+        if crate::arkitekturo::temporizilaj_tikoj() >= limdato {
+            break;
+        }
+        planisto().bloki_kun_limdato(id, limdato);
+        // Fremda veko aŭ tempolimo lasas markon; ĝin konsumas ĉiu ripeto, do
+        // la sekva IPC-voko ne konfuzos ĝin kun propra limdato.
+        let _ = planisto().preni_tempolimon(id);
+    }
+    true
+}
+
 /// Ĉu la antaŭa blokado finiĝis pro tempolimo? La marko konsumiĝas, do ĉiu
 /// limdato raportiĝas unufoje. Vokenda kun interrompoj malŝaltitaj.
 pub fn preni_tempolimon() -> bool {
@@ -427,6 +493,14 @@ pub fn lanĉi() {
 
 pub fn raporto() -> (usize, usize, usize) {
     planisto().raporto()
+}
+
+pub fn statistiko() -> PlanistaStatistiko {
+    planisto().statistiko()
+}
+
+pub fn veturoj() -> [u64; MAKSAJ_FADENOJ + 1] {
+    planisto().veturoj()
 }
 
 /// Unua Rust-funkcio de nova fadeno, vokata de la muntita trampolino.

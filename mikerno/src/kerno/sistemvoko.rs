@@ -8,8 +8,8 @@
 use core::mem::size_of;
 
 use libmikerno::syscall::{
-    SYS_CEDI, SYS_DONI, SYS_FERMI, SYS_FINI, SYS_KREI_FINPUNKTON, SYS_REVOKI, SYS_RICEVI,
-    SYS_RICEVI_TEMPO, SYS_SENDI, SYS_SENDI_TEMPO, SYS_SKRIBI,
+    SYS_CEDI, SYS_DONI, SYS_DORMI, SYS_FERMI, SYS_FINI, SYS_KREI_FINPUNKTON, SYS_REVOKI,
+    SYS_RICEVI, SYS_RICEVI_TEMPO, SYS_SENDI, SYS_SENDI_TEMPO, SYS_SKRIBI,
 };
 use libmikerno::{Mesago, Permesoj, Tenilo};
 
@@ -69,7 +69,17 @@ pub fn voki(numero: usize, a0: u64, a1: u64, a2: u64, a3: u64, el_ring3: bool) -
         SYS_DONI => doni(a0, a1, a2),
         SYS_REVOKI => revoki(a0, a1),
         SYS_FERMI => fermi(a0),
+        SYS_DORMI => dormi(a0),
         _ => NEKONATA_VOKO,
+    }
+}
+
+/// `rdi` = daŭro en milisekundoj.
+fn dormi(millisekundoj: u64) -> u64 {
+    if planisto::dormi(millisekundoj) {
+        0
+    } else {
+        MALĜUSTA_ARG
     }
 }
 
@@ -368,6 +378,25 @@ fn kontroli_regionon(montrilo: u64, longo: usize, skriba: bool, el_ring3: bool) 
         return false;
     }
     true
+}
+
+/// Ring 0-memtesto de la dorma voko: la sama `int 0x80` / `svc #0`-vojo kiel
+/// por uzantaj procezoj. La pasaĵo estas mezurata en temporizilaj tikoj; pro
+/// planado ĝi rajtas malfrui je unu tiko.
+pub fn dorma_provo(id: u64, millisekundoj: u64) {
+    let antaŭ = crate::arkitekturo::temporizilaj_tikoj();
+    let kodo = invoki(SYS_DORMI, [millisekundoj, 0, 0, 0]) as i64;
+    let pasintaj = crate::arkitekturo::temporizilaj_tikoj() - antaŭ;
+    let petitaj = millisekundoj.div_ceil(10).max(1);
+    let bone = kodo == 0 && (petitaj..=petitaj + 1).contains(&pasintaj);
+    crate::skribu!(
+        "[fadeno {}] dormo ({}): petitaj {} ms, pasintaj {} tikoj (kodo {})\n",
+        id,
+        if bone { "bone" } else { "MALBONE" },
+        millisekundoj,
+        pasintaj,
+        kodo
+    );
 }
 
 /// Ring 0-memtesto de la dispetĉo kaj de la argumenta kontrolo.

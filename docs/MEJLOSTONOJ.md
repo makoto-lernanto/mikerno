@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-15 · Versio de la workspace: 0.5.0
+> Stato: 2026-11-16 · Versio de la workspace: 0.6.0
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -28,7 +28,7 @@
 | M13 | Kerna memoro-firmigo: SMEP, SMAP, KASLR | Plenumita | SMEP, SMAP kaj KASLR pruvitaj per Ring 0-provoj kaj tri startoj |
 | M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Plenumita | Ring 0/Ring 3-scenaroj kaj AC/CR3/EOI-provoj verdaj (ABI 2) |
 | M15 | `arm64`-malantaŭo: EL0, ABI 2, `ramfb`, `PAN` | Plenumita | identa piksela haketo sur ambaŭ arkoj |
-| M16 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Venonta | — |
+| M16 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Parte | dormo 100 ms = 10 tikoj; minimumo ≥ 17 veturoj; arm64-stabileco |
 | M17 | Konservado, dosiersistemo, ŝelo | Venonta | — |
 | M18 | CI, testoj, plena pruvaro | Parte | GitHub Actions verde (fmt, clippy, konstruo, Kani); testoj kaj plena pruvaro mankas |
 | M19 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
@@ -138,6 +138,7 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-15 | 0.4.3-arm.3 | 47 | 10238 | 7903 | 1334 | 1001 |
 | 2026-11-15 | 0.4.3-arm.4 | 48 | 10731 | 8239 | 1455 | 1037 |
 | 2026-11-15 | 0.5.0 | 48 | 11818 | 9048 | 1669 | 1101 |
+| 2026-11-16 | 0.6.0 | 49 | 12167 | 9334 | 1704 | 1129 |
 
 ---
 
@@ -1096,6 +1097,61 @@ loteria planado, statistiko, eventuala SMP-esploro kun IPI.
 
 **Akceptkriterioj.** Fadeno dormanta 100 ms vekiĝas en tolero; la planisto ne
 malsatigas fadenojn; la ripoza kunteksto restas senŝanĝa.
+
+**Fazo 1 (0.6.0).** La dorma vojo funkcias per unuopa min-kupo:
+
+- `Vekotemporizilo` (`kerno/vekotemporizilo.rs`) — kupo de `(limdato, FadenoId)`
+  kun `pozicioj`-tabelo por O(log n) enigo, forigo kaj elpreno sen alokado; la
+  kapacito estas `MAKSAJ_FADENOJ`. Reenmeto ĝisdatigas la limdaton anstataŭ
+  duobligi la eron.
+- `Planisto` — la tabelo `limdatoj` anstataŭiĝis per `vekoj`.
+  `venkigi_tempolimojn` elprenas ĉiujn limdatojn `≤ nuna tiko` el la pinto,
+  mezuras la prokraston kaj vekas la fadenojn. `veki` apartigis
+  `veki_sen_limdato`, do veko pro operacio ankaŭ forigas la eron el la kupo.
+- `planisto::dormi(millisekundoj)` — `ceil(ms/10)` tikoj en ciklo sub
+  `InterrompaGardo`; la ripoza kunteksto estas rifuzata per `false`. Fremda
+  veko aŭ tempolimo lasas markon, kiun la ciklo konsumas, do la sekva IPC-voko
+  ne konfuzas ĝin kun propra limdato.
+- `SYS_DORMI = 12` (`rdi` = daŭro en ms), `libmikerno::syscall::dormi`,
+  Ring 3-testo en `horizonto`; `ABI_VERSIO` restas `2`.
+- `PlanistaStatistiko` (`ŝaltoj`, `limdataj_blokoj`, `vekigoj`,
+  `maks_vekprokrasto`) kaj `veturoj` por la fina raporto.
+- Kani-pruvoj (nur CI): `pinto_estas_minimumo`, `elpreni_ordonas`,
+  `reenmeto_kaj_forigo`.
+
+**`arm64`-stabileco.** La longdaŭra malstabileco de la `arm64`-startoj
+montriĝis kiel frambuffera skribo unu vicon preter la fino: ĝi difektis la
+`TTBR0`-radikon de procezo 5 kaj kaŭzis esceptan buklon. La kaŭzo estis la
+`arm64`-vojo de `skribi_formaton`, kiu — malsimile al la `x86_64`-vojo — ne
+malŝaltis interrompojn; la temporizila traktilo do povis skribi en la konzolon
+meze de `novlinio`, kiam `y` estis transire egala al `vicoj`. La vojo nun
+prenas `InterrompaGardo`, kaj la konzola stato nur ŝanĝiĝas atome.
+
+**Pruvo.**
+
+```text
+[fadeno 4] dormo (bone): petitaj 30 ms, pasintaj 4 tikoj (kodo 0)
+[fadeno 2] dormo (bone): petitaj 50 ms, pasintaj 5 tikoj (kodo 0)
+[fadeno 3] dormo (bone): petitaj 70 ms, pasintaj 7 tikoj (kodo 0)
+[fadeno 1] dormo (bone): petitaj 100 ms, pasintaj 10 tikoj (kodo 0)
+[ring3] procezo 5: dormo (bone): kodo 0
+[ring3] procezo 6: dormo (bone): kodo 0
+[planisto] statistiko (bone): ŝaltoj=111, limdataj_blokoj=10, vekigoj=9, maks_vekprokrasto=0 tikoj
+[planisto] veturoj: 21 21 19 18; minimumo 18
+```
+
+**Akceptkriterioj — pruvitaj.**
+
+| Kriterio | Stato | Pruvo |
+| --- | --- | --- |
+| Fadeno dormanta 100 ms vekiĝas en tolero | **Pruvita** | `petitaj 100 ms, pasintaj 10 tikoj`; `maks_vekprokrasto=0` |
+| La planisto ne malsatigas fadenojn | **Pruvita** | ĉiu testa fadeno veturis ≥ 10 fojojn (la raporto bezonas `minimumo ≥ 10`); observitaj minimumoj 17–18 |
+| La ripoza kunteksto restas senŝanĝa | **Pruvita** | `planisto::dormi` redonas `false` por `RIPAZA_ID` (voko `-1`); la ripoza ciklo kaj ĝia stako ne ŝanĝiĝis |
+
+Ripetitaj `arm64`-startoj de la fina bildo (QEMU `virt`, `ramfb`) atingas la
+saman finan staton sen escepto; la `x86_64`-vojoj restas senŝanĝaj.
+
+**Versio.** 0.6.0 (Fazo 1).
 
 ---
 

@@ -46,6 +46,7 @@ pub extern "C" fn horizonto_start(reĝimo: u64, identigilo: u64) -> ! {
     testi_rajtojn(identigilo);
     testi_revokon(identigilo);
     testi_tempolimojn(identigilo);
+    testi_dormon(identigilo);
     testi_negativajn();
     match reĝimo {
         REĜIMO_SEKRETO => sekreta_provo(identigilo),
@@ -351,6 +352,18 @@ fn testi_tempolimojn(identigilo: u64) {
         sendo,
         senfina,
         troa
+    ));
+}
+
+/// Kontrolu, ke la dorma voko trapasas la Ring 3-vojon; la daŭron mezuras la
+/// kerna provo, ĉi tie sufiĉas la akcepto (`0`).
+fn testi_dormon(identigilo: u64) {
+    let kodo = biblioteko::dormi(20);
+    biblioteko::skribi_formaton(format_args!(
+        "[ring3] procezo {}: dormo ({}): kodo {}\n",
+        identigilo,
+        if kodo == 0 { "bone" } else { "MALBONE" },
+        kodo
     ));
 }
 

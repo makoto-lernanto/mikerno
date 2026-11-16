@@ -35,7 +35,7 @@ fluas tra la sama kadro.
 
 | ID | Kolono | Deviga signifo |
 | --- | --- | --- |
-| G01 | Unueco | Ĉiu grafika aplikaĵo `DEVI` esti konstruita per FluoU kaj deklari `gui = "fluoU"` en sia manifesto. |
+| G01 | Unueco | Ĉiu grafika aplikaĵo `DEVI` esti konstruita per FluoU kaj deklari `gu = "fluoU"` en sia manifesto. |
 | G02 | Kapablo | Renderado estas kapablo: sen `FENESTRO`-tenilo, ne ekzistas pikseloj. |
 | G03 | Paritateco | La sama kompona arbo `DEVI` doni la saman rezulton sur `x86_64` kaj `arm64`. |
 | G04 | Lingva unueco | Ĉiuj identigiloj, fontaj interfacaj tekstoj, dokumentaro kaj komandnomoj estas en Esperanto. |
@@ -550,7 +550,7 @@ Ekrano
 ```
 
 - **A01.** La ŝargilo `DEVI` malakcepti aplikaĵon, kies manifesto ne enhavas
-  `gui = "fluoU"`.
+  `gu = "fluoU"`.
 - **A02.** La manifesto `DEVI` deklari la kadran version (`fluo`) kaj la
   subtenatajn arkitekturojn. Nekongrua ĉefversio `DEVI` esti malakceptita.
 - **A03.** La kompozitoro `DEVI NE` akcepti fenestron sen valida
@@ -624,7 +624,7 @@ Aplikaĵo estas `KONFORMA` nur se ĉiuj jenaj kontroloj estas verdaj. Malsukceso
 
 | ID | Kontrolo |
 | --- | --- |
-| P01 | Manifesto sen `gui = "fluoU"` estas malakceptita. |
+| P01 | Manifesto sen `gu = "fluoU"` estas malakceptita. |
 | P02 | Aplikaĵo sen `FENESTRO`-tenilo ne desegnas pikselojn. |
 | P03 | La fenestra titolstrio havas la mezurojn, la ordon kaj la tri regilojn de §3; la helpaj surfacoj sekvas §3.5. |
 | P04 | Neniu trikolora ronda «trafiklumo» aperas ie ajn. |

@@ -19,6 +19,7 @@ pub mod planisto;
 pub mod procezo;
 pub mod sistemvoko;
 pub mod uzantspaco;
+mod vekotemporizilo;
 
 static ALOKILO: Kunhavigita<KadraAlokilo> = Kunhavigita::nova(KadraAlokilo::nova());
 
@@ -302,6 +303,30 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         tikoj
     );
 
+    let stat = planisto::statistiko();
+    let veturoj = planisto::veturoj();
+    let minimumo = veturoj
+        .iter()
+        .take(TESTAJ_FADENOJ + 1)
+        .skip(1)
+        .copied()
+        .min()
+        .unwrap_or(0);
+    let bone = minimumo >= 10 && stat.vekigoj >= 4 && stat.maks_vekprokrasto <= 1;
+    crate::skribu!(
+        "[planisto] statistiko ({}): ŝaltoj={}, limdataj_blokoj={}, vekigoj={}, maks_vekprokrasto={} tikoj\n",
+        if bone { "bone" } else { "MALBONE" },
+        stat.ŝaltoj,
+        stat.limdataj_blokoj,
+        stat.vekigoj,
+        stat.maks_vekprokrasto
+    );
+    crate::skribu!("[planisto] veturoj:");
+    for veturo in veturoj.iter().take(TESTAJ_FADENOJ + 1).skip(1) {
+        crate::skribu!(" {}", veturo);
+    }
+    crate::skribu!("; minimumo {}\n", minimumo);
+
     // La piksela fiksaĵo estas identa sur ambaŭ arkoj, kiam la frambufferio
     // havas la saman geometrion; la haketo permesas kompari la du bildojn el
     // la seria protokolo.
@@ -343,6 +368,11 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
 
 const STAKA_GRANDE: usize = 16 * 1024;
 const TESTAJ_FADENOJ: usize = 4;
+/// La dormodaŭroj de la testfadenoj en milisekundoj. Ili dormas kune ekde la
+/// starto, do la kupo tenas kvar malsamajn limdatojn kaj la vekoj sekvas ilin:
+/// 4 (30 ms), 2 (50 ms), 3 (70 ms), 1 (100 ms). La unua fadeno provas la
+/// akceptkriterion de M16.
+const DORMOJ_MS: [u64; TESTAJ_FADENOJ] = [100, 50, 70, 30];
 /// La nomo de la radika tabelo en la proceza raporto.
 #[cfg(target_arch = "x86_64")]
 const RADIKA_NOMO: &str = "PML4";
@@ -726,6 +756,7 @@ fn uzanta_fadeno(id: u64) {
 }
 
 fn testa_fadeno(id: u64) {
+    sistemvoko::dorma_provo(id, DORMOJ_MS[id as usize - 1]);
     if id == 1 {
         sistemvoko::testi_ring0();
         // La unua tempomesaĝo por fadeno 4 venas antaŭ la premrego, do ĝi estas

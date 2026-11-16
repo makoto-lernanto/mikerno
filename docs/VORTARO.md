@@ -125,7 +125,14 @@ kaj protokolaj nomoj sekvu ĝin.
 | `nebloka` | non-blocking | `r10 = 0` → `Atendo::Nebloka`; malplena vico redonas `PROVU_DENOVE = -11` sen cedi. |
 | `tempolima politiko` | timeout policy | `el_tempolimo`: `(r10 as u32).div_ceil(10)` tikoj; 1–9 ms restas unu tiko, neniam nulo. |
 | `absoluta limdato` | absolute deadline | `absoluta_limdato(atendo)` fiksas la limdaton ĉe la voko; `bloki_ĝis_absoluta` ne rekalkulas ĝin en la atenda buklo. |
-| `tempolima veko` | timeout wakeup | `venkigi_tempolimojn()` vekas ĉe `limdatoj[fadeno]`; `preni_tempolimon()` konsumas la markon; `IpcStatistiko.tempolimoj`. |
+| `tempolima veko` | timeout wakeup | `venkigi_tempolimojn()` elprenas el `vekoj` ĉiujn limdatojn `≤ nuna tiko`; `preni_tempolimon()` konsumas la markon; `IpcStatistiko.tempolimoj`. |
+| `vekotemporizilo` | wake timer | `Vekotemporizilo` en `kerno/vekotemporizilo.rs`: min-kupo de `(limdato, FadenoId)` kun pozicia tabelo; enigo, forigo kaj elpreno estas O(log n) sen alokado. |
+| `veka kupo` | wake heap | La kupo mem: unu ero por fadeno, kapacito `MAKSAJ_FADENOJ`; `pinti` montras la plej fruan limdaton. |
+| `dormi` | sleep | `SYS_DORMI` (12), `rdi` = daŭro en ms; `planisto::dormi` atendas `ceil(ms/10)` tikojn; la ripoza kunteksto ricevas `-1`. |
+| `planista statistiko` | scheduler statistics | `PlanistaStatistiko`: `ŝaltoj`, `limdataj_blokoj`, `vekigoj`, `maks_vekprokrasto`. |
+| `veturoj` | scheduler runs | `Planisto.veturoj[fadeno]`: kiom da fojoj ĉiu fadeno estis elektita; la fina raporto komparas la minimumon por pruvi, ke neniu malsatiĝas. |
+| `limdata bloko` | timed block | `limdataj_blokoj`: blokado kun limdato (dormo aŭ IPC-tempolimo). |
+| `maksimuma vekprokrasto` | maximum wakeup delay | `maks_vekprokrasto`: la plej granda distanco inter la limdato kaj la efektiva veko, en tikoj. |
 | `fonta filtro` | source filter | `RICEVI_TEMPO.rdx`: fadena id aŭ `0` (ajna); `ricevi_mesagon_atenda(fonto, atendo)` preterlasas fremdajn sendintojn. |
 | `ricevi kun tempolimo` / `sendi kun tempolimo` | receive / send with timeout | `ricevi_kun_tempolimo(tenilo, celo, fonto, ms)`, `sendi_kun_tempolimo(tenilo, mesago, ms)`. |
 | `restarigi procezon` | reset process tables | `inicialigi_procezon(id)`: la kapablotabelo estas statika laŭ identigilo, do `krei` restarigas ĝin por ke `BOOTSTRAP_TENILO` validu ankaŭ post reuzo. |
@@ -287,7 +294,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | --- | --- | --- |
 | `FluoU` | FluoU | Propra nomo: Fluo + Uzinterfaco; la deviga GUI-kadro de Horizonto. |
 | `uzinterfaco` | user interface | Neniam uzu `UI` en identigiloj. |
-| `grafika uzinterfaco` | graphical user interface (GUI) | Nur `FluoU` rajtas ĝin provizi. |
+| `grafika uzinterfaco (GU)` | graphical user interface (GUI) | Nur `FluoU` rajtas ĝin provizi. |
 | `fenestro` | window | Ĉiu fenestro posedas `FENESTRO`-tenilon. |
 | `titolstrio` | title bar | 32 DIP alta; samtempe trenareo. |
 | `fenestra regilo` | caption button | Tri: malgrandigi, pligrandigi/restarigi, fermi. |
@@ -328,7 +335,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `tenila ŝildeto` | handle badge | Montras `TENILO`. |
 | `protekta procezo` | protected process | `pid ≤ 3`; `mortigi` rifuzas. |
 | `piksela egaleco` | pixel parity | Inter `x86_64` kaj `arm64`. |
-| `aplikaja manifesto` | application manifest | Enhavas `gui = "fluoU"`. |
+| `aplikaja manifesto` | application manifest | Enhavas `gu = "fluoU"`. |
 | `izolita aplikaĵo` | sandboxed application | Minimumaj kapabloj. |
 | `kapabla renderado` | capability-based rendering | Sen tenilo ne ekzistas pikseloj. |
 | `rekta frambufa aliro` | direct framebuffer access | Malpermesita al aplikaĵoj. |

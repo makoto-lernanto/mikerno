@@ -106,6 +106,11 @@ pub fn cedi() -> isize {
     libmikerno::syscall::cedi()
 }
 
+/// Dormu almenaŭ la donitajn milisekundojn.
+pub fn dormi(millisekundoj: u64) -> isize {
+    libmikerno::syscall::dormi(millisekundoj)
+}
+
 /// Finu la nunan procezon. Se la kerno rifuzas, la procezo restas blokita.
 pub fn fini(kodo: usize) -> ! {
     let _ = libmikerno::syscall::fini(kodo);

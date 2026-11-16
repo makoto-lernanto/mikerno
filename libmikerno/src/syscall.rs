@@ -26,6 +26,9 @@ pub const SYS_REVOKI: usize = 8;
 pub const SYS_RICEVI_TEMPO: usize = 9;
 pub const SYS_SENDI_TEMPO: usize = 10;
 pub const SYS_FERMI: usize = 11;
+/// `rdi` = daŭro en milisekundoj; blokas la fadenon ĝis almenaŭ tiu tempo
+/// pasis. Aldonita en M16 Fazo 1; la ceteraj numeroj restas kongruaj.
+pub const SYS_DORMI: usize = 12;
 
 /// Senfina tempolimo (`r10`): la voko blokas ĝis la operacio eblas aŭ la
 /// finpunkto revokiĝas.
@@ -194,6 +197,12 @@ pub fn fini(kodo: usize) -> isize {
 /// Cedu la procesoron al la planisto.
 pub fn cedi() -> isize {
     unsafe { invoki(SYS_CEDI, [0; 4]) }
+}
+
+/// Dormu almenaŭ `millisekundoj`; `0` revenas tuj. Sukceso redonas `0`,
+/// malakcepto `-1` (la ripoza kunteksto ne povas dormi).
+pub fn dormi(millisekundoj: u64) -> isize {
+    unsafe { invoki(SYS_DORMI, [millisekundoj as usize, 0, 0, 0]) }
 }
 
 /// Kreu finpunkton kun la donitaj permesoj; sukceso redonas la krudan

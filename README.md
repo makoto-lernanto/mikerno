@@ -16,12 +16,12 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.5.0 (workspace)
+- **Versio:** 0.6.0 (workspace)
 - **Arkitekturo:** `x86_64` kaj `arm64` (AArch64), unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
 - **Statuso:** funkcianta prototipo — vidu [Mejloŝtonoj](docs/MEJLOSTONOJ.md)
-- **GUI:** deviga kadro FluoU — vidu [docs/FLUOU.md](docs/FLUOU.md)
+- **GU:** deviga kadro FluoU — vidu [docs/FLUOU.md](docs/FLUOU.md)
 
 ---
 
@@ -547,7 +547,7 @@ distribuo de kapabloj venas en la sekvaj fazoj (M17).
 - sistemvokaj numeroj: `SYS_SENDI = 1`, `SYS_RICEVI = 2`, `SYS_SKRIBI = 3`,
   `SYS_FINI = 4`, `SYS_CEDI = 5`, `SYS_KREI_FINPUNKTON = 6`, `SYS_DONI = 7`,
   `SYS_REVOKI = 8`, `SYS_RICEVI_TEMPO = 9`, `SYS_SENDI_TEMPO = 10`,
-  `SYS_FERMI = 11`,
+  `SYS_FERMI = 11`, `SYS_DORMI = 12`,
 - `Tenilo` — 32-bita kapabla tenilo (8 bitoj da indekso + 24 bitoj da
   generacio, generacio ekde `1`); la novaj erar-kodoj estas `-9`, `-11`, `-28`,
   `-32`, `-90` kaj `-110`,
@@ -786,7 +786,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.5.0!
+[MiKerno] Saluton, mi estas MiKerno v0.6.0!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
@@ -1001,7 +1001,7 @@ kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
 ├── third_party/dejavu/         # permesilo de la fonto
 └── docs/
     ├── ARM.md                  # plano por la arm64-ŝpuro
-    ├── FLUOU.md                # deviga GUI-gvidilo (FluoU)
+    ├── FLUOU.md                # deviga GU-gvidilo (FluoU)
     ├── FLUOU-montro.html       # vida montro de la gvidilo
     ├── MEJLOSTONOJ.md          # mejloŝtonoj kaj pruvaro
     └── VORTARO.md              # Esperanta terminologio
