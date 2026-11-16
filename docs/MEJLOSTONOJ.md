@@ -143,6 +143,7 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-16 | 0.6.0 | 49 | 12172 | 9331 | 1710 | 1131 |
 | 2026-11-16 | 0.6.0 | 49 | 12172 | 9331 | 1710 | 1131 |
 | 2026-11-16 | 0.6.1 | 49 | 12394 | 9543 | 1703 | 1148 |
+| 2026-11-16 | 0.6.1 | 49 | 12394 | 9543 | 1703 | 1148 |
 
 ---
 
@@ -1253,14 +1254,21 @@ La kvar vojoj raportis `maks_vekprokrasto=0`; la SMAP/PAN-fina provo atingis
 la atenditan protektan escepton. `x86_64` uzas `-no-shutdown`, do la testilo
 finis QEMU post la fina raporto; `arm64` finiĝis per la kerna halto.
 
-**Formala pordego — atendata.** Kvin determinismaj scenaroj estis aldonitaj
-al `planisto::kani_prioritatoj`: `pezaj_tempopecoj_sen_malsatigo`,
+**Formala pordego — sukcesinta.** La rulado
+[CI #7](https://github.com/makoto-lernanto/mikerno/actions/runs/43835937076)
+por komitero `aa4d933` finiĝis per `completed/success` la 2026-11-16:
+39/39 taskoj sukcesis (`lint-and-build`, `kani-prepare` kaj 37 Kani-pruvoj),
+sen malsukceso aŭ nuligo. La tuta rulado daŭris 10 min 51 s
+(09:00:39Z–09:11:30Z).
+
+Ĉiuj kvin novaj determinismaj scenaroj en `planisto::kani_prioritatoj`
+sukcesis: `pezaj_tempopecoj_sen_malsatigo`,
 `malalta_prioritato_atendas_maksimume_unu_rondon`, `egalprioritataj_rotacias`,
 `cedo_liberigas_tempopecon` kaj `blokitaj_ne_kuras_kaj_veko_ne_duobligas`.
 Ili kontrolas la montritajn fiksajn statojn (inkluzive ok fadenojn ĉe la plej
 longa ronda atendo), ne ĉiujn arbitrajn blokadajn historiojn. La CI-matrico
-eltiras ilin aŭtomate; Kani ne estis rulita loke, kaj Fazo 2 ankoraŭ ne havas
-verdan CI-konkludon; la formalan pordegon plenumos la CI post la puŝo.
+eltiris ilin aŭtomate; Kani ne estis rulita loke. La formala pordego de
+M16 Fazo 2 estas verda.
 
 **Versio.** 0.6.1 (Fazo 2).
 
