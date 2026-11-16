@@ -141,6 +141,7 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-16 | 0.6.0 | 49 | 12167 | 9334 | 1704 | 1129 |
 | 2026-11-16 | 0.6.0 | 49 | 12167 | 9333 | 1705 | 1129 |
 | 2026-11-16 | 0.6.0 | 49 | 12172 | 9331 | 1710 | 1131 |
+| 2026-11-16 | 0.6.0 | 49 | 12172 | 9331 | 1710 | 1131 |
 
 ---
 
@@ -1023,6 +1024,18 @@ regreso.
   kiu blokiĝas aŭ konsumas tro da memoro, estas nuligita de `timeout` kaj
   ĝia protokolo supreniĝas kiel artefakto; la ceteraj pruvoj finiĝas sendepende
   (`fail-fast: false`). `just verify` restas la loka pordego sen Kani.
+
+**Rezulto.** La unua matrica rulado ([#43819515923](https://github.com/makoto-lernanto/mikerno/actions/runs/43819515923),
+komitero `a777e1e`, 2026-11-16) estis tute verda: `lint-and-build` kaj
+`kani-prepare` sukcesis, kaj ĉiuj 32 pruvoj de la matrico sukcesis en 9 min 17 s
+(06:50:15Z–06:59:32Z), kun po unu protokolo `kani-0`…`kani-31` kiel artefakto.
+La plej longa pruvo estis `kerno::vekotemporizilo::kani_proofs::reenmeto_kaj_forigo`
+(400 s, sub la limo de 600 s); la sekvaj restis sub 90 s
+(`fifo_ordo_inter_fontoj` 89 s, `fonta_filtro_konservas_fremdajn` 78 s,
+`fifo_ordo` 59 s). La antaŭa, haltigita rulado
+([#43815916181](https://github.com/makoto-lernanto/mikerno/actions/runs/43815916181))
+estis devige nuligita kaj restas `completed/cancelled`; ĝia modloko ne plu
+ĝenas la pordon.
 
 ---
 
