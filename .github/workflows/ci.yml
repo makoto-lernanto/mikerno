@@ -22,10 +22,11 @@ jobs:
 
       # `just verify` lintas ankaŭ por aarch64-unknown-none; la minimuma
       # rustup-profila ne enhavas rustfmt/clippy, do ili estas petitaj.
+      # `llvm-tools-preview` liveras `rust-objcopy` por `build-arm`.
       - name: Install Rust 1.100.0
         uses: dtolnay/rust-toolchain@1.100.0
         with:
-          components: clippy, rustfmt
+          components: clippy, rustfmt, llvm-tools-preview
           targets: x86_64-unknown-none,aarch64-unknown-none
 
       - name: Install just
@@ -33,6 +34,12 @@ jobs:
 
       - name: Run just verify
         run: just verify
+
+      # `verify` nur lintas la arm64-kernon; ĉi tiu paŝo ankaŭ ligas ĝin kaj
+      # konvertas la ELF-on al la plata `Image`, do rompo en la arm64-bildo
+      # malkovriĝas en CI anstataŭ nur loke.
+      - name: Build arm64 image
+        run: just build-arm
 
   # Kani bezonas la liston de la pruvoj por la matrico. `cargo kani list`
   # skribas `kani-list.json` kun la plenaj (modulaj) nomoj de la pruvoj.

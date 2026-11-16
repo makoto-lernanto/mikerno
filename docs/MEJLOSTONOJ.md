@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-16 · Versio de la workspace: 0.6.2
+> Stato: 2026-11-16 · Versio de la workspace: 0.7.0
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -29,9 +29,10 @@
 | M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Plenumita | Ring 0/Ring 3-scenaroj kaj AC/CR3/EOI-provoj verdaj (ABI 2) |
 | M15 | `arm64`-malantaŭo: EL0, ABI 2, `ramfb`, `PAN` | Plenumita | identa piksela haketo sur ambaŭ arkoj |
 | M16 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Parte | dormo 100 ms = 10 tikoj; minimumo ≥ 17 veturoj; arm64-stabileco |
-| M17 | Konservado, dosiersistemo, ŝelo | Venonta | — |
+| M17 | Konservado, dosiersistemo, ŝelo | Parte | `virtio-blk` legas/skribas 64 sektorojn (PCI kaj MMIO) |
 | M18 | CI, testoj, plena pruvaro | Parte | GitHub Actions verde (fmt, clippy, konstruo, Kani); testoj kaj plena pruvaro mankas |
 | M19 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
+| M20 | Plena pruvaro kaj 1.0 | Venonta | — |
 
 ### 1.1. La `arm64`-ŝpuro (A0–A4), kunfandita en M15
 
@@ -148,6 +149,7 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-16 | 0.6.2 | 49 | 12536 | 9673 | 1704 | 1159 |
 | 2026-11-16 | 0.6.2 | 49 | 12554 | 9687 | 1707 | 1160 |
 | 2026-11-16 | 0.6.2 | 49 | 12554 | 9687 | 1707 | 1160 |
+| 2026-11-16 | 0.7.0 | 54 | 13568 | 10549 | 1753 | 1266 |
 
 ---
 
@@ -962,9 +964,11 @@ Actions; loke oni ne plu rulas Kani-on.
 kaj ĉe `pull_request`, kun nurlega permeso al la deponeja enhavo. Tri taskoj:
 
 - `lint-and-build` — `actions/checkout@v4`; Rust 1.100.0 per
-  `dtolnay/rust-toolchain` kun la komponantoj `clippy` kaj `rustfmt` kaj la
-  celoj `x86_64-unknown-none`, `aarch64-unknown-none`; `just` per
-  `taiki-e/install-action`; do `just verify` (sen Kani).
+  `dtolnay/rust-toolchain` kun la komponantoj `clippy`, `rustfmt` kaj
+  `llvm-tools-preview` kaj la celoj `x86_64-unknown-none`,
+  `aarch64-unknown-none`; `just` per `taiki-e/install-action`; do `just
+  verify` (sen Kani) kaj `just build-arm`, kiu ligas la arm64-kernon kaj
+  konvertas ĝin al la plata `Image`.
 - `kani-prepare` (`needs: lint-and-build`) — instalas Rust 1.100.0 kaj Kani,
   do `cargo kani -p mikerno … list --format json`; la plenaj nomoj de la
   pruvoj el `kani-list.json` pasas al la matrico kiel JSON.
@@ -980,7 +984,9 @@ kaj ĉe `pull_request`, kun nurlega permeso al la deponeja enhavo. Tri taskoj:
   `components` mankus `rustfmt` kaj `clippy`, do CI petas ilin eksplicite.
 - `just verify` lintas la kernon ankaŭ por `aarch64-unknown-none`; tial
   `lint-and-build` instalas ambaŭ celojn (la Kani-taskoj nur
-  `x86_64-unknown-none`).
+  `x86_64-unknown-none`). `just verify` tamen ne ligas la arm64-kernon, do
+  `lint-and-build` rulas ankaŭ `just build-arm`; `llvm-tools-preview` provizas
+  la `rust-objcopy`, kiun `tools/elf-al-image.sh` bezonas.
 - La oficiala Kani-ago internŝaltas la defaŭltan ilarĉenon al `stable`; la
   paŝoj antaŭ `just verify` kaj `cargo kani` do restarigas `1.100.0`.
 - Timita konflikto inter `rust-version = "1.100"` kaj la `nightly` de Kani
@@ -1362,16 +1368,141 @@ de M16 Fazo 3 estas verda.
 
 ---
 
-### M17 — Konservado kaj ŝelo
+### M17 — Konservado, dosiersistemo kaj ŝelo
 
-**Celo.** Uzebla sistemo, ne nur demonstracio.
+**Celo.** Transformi MiKerno-n el nura demonstracio al uzebla sistemo per aldono de daŭra konservado, dosierujaj operacioj kaj uzant-interaga ŝelo.
 
-**Taskoj.** `virtio-blk`-pelilo, simpla dosiersistemo (ekz. FAT aŭ propra
-read-only), ŝelo kun la devigaj Esperantaj komandnomoj `eldiri`, `listi`,
-`legi`, `procezoj` kaj `mortigi` (FluoU §2.1); anglaj formoj ne ekzistas.
+**Taskoj.** `virtio-blk`-pelilo, simpla nurlega dosiersistemo (SNDS), uzantspaca heap-alokilo, ELF-ŝargo el dosiero (`exec`), kaj ŝelo kun la devigaj Esperantaj komandnomoj (`eldiri`, `listi`, `legi`, `procezoj`, `mortigi`, `lanĉi`).
 
-**Akceptkriterioj.** La ŝelo rulas en Ring 3, legas dosieron kaj lanĉas duan
-procezon.
+#### 1. Fazoj de Efektivigo
+
+##### Fazo 1: `virtio-blk` pelilo kaj PCI-bazo (Versio 0.7.0)
+*   **Enhavo**:
+    *   Minimuma PCI-konfigura spaca legilo (nur por QEMU).
+    *   `virtio` moderna interfaco (MMIO por `arm64`, PCI por `x86_64`).
+    *   Virtio-vicoj (Virtqueues) kun DMA-bazitaj priskribiloj.
+    *   Bloka legi/skribi API en la kerno (`kerno/konservado/virtio_blk.rs`).
+*   **Decidoj**:
+    *   C17.1: Ni subtenas nur `virtio-blk` por QEMU; reala SATA/NVMe restas por post 1.0.
+    *   C17.2: DMA-bufruj estas alokitaj en la kerna spaco kaj mapitaj al la aparato; ni uzas `UnsafeCell` kun striktaj `core::sync::atomic` bariloj.
+
+##### Fazo 2: Simpl NurLega Dosiersistemo - SNDS (Versio 0.7.1)
+*   **Enhavo**:
+    *   Propra, ekstreme simpla nurlega dosiersistemo (`SimplaDosiersistemo`).
+    *   Strukturo: Superbloko, Inoda tabelo, Dosierujaj eroj (nomo + inoda indekso), Datumblokoj.
+    *   Ilo `tools/krei_snds_img.sh` por paki dosierujon en `mikerno.snds` dum konstruo.
+    *   Kerna API: `malfermi`, `legi`, `listi_dosierujon`.
+*   **Decidoj**:
+    *   C17.3: Ni evitas FAT12/16 pro ĝia komplekseco kaj endianness-problemoj. SNDS estas big-endian aŭ little-endian laŭ la gastiganto (defaŭlte little-endian).
+    *   C17.4: Maksimuma dosierlongo estas 64 KiB por eviti komplikajn nekontiguajn blokojn en ĉi tiu fazo.
+
+##### Fazo 3: Uzantspaca heap kaj `exec` (Versio 0.7.2)
+*   **Enhavo**:
+    *   Nova sistemvoko `SYS_BRK` (13) por etendi la uzantan datumsegmenton.
+    *   Simpla `bump` aŭ `free-list` heap-alokilo en `horizonto/src/biblioteko.rs`.
+    *   Nova sistemvoko `SYS_EXEC` (14): legas ELF-dosieron el SNDS, validigas ĝin, kreas novan adresan spacon, kaj lanĉas ĝin en Ring 3.
+*   **Decidoj**:
+    *   C17.5: `SYS_EXEC` anstataŭigas la nunan procezon (kiel `execve`), ne kreas novan (kiel `fork`). `fork` restas kiel teknika ŝuldo.
+    *   C17.6: La ŝelo uzas `SYS_BRK` por allokigi bufrujn por enigaj linioj.
+
+##### Fazo 4: Ŝelo kaj bazaj komandoj (Versio 0.7.3)
+*   **Enhavo**:
+    *   La `horizonto` bildo fariĝas plena ŝelo (`ŝelo.rs`).
+    *   Lega bufrujo el COM1 (seria konzolo) aŭ frambuffera klavaro (se havebla).
+    *   Komandoj:
+        *   `eldiri <teksto>`: presas al la konzolo.
+        *   `listi [dosierujo]`: listigas dosierojn en SNDS.
+        *   `legi <dosiero>`: legas kaj presas dosieran enhavon.
+        *   `procezoj`: montras la tabelon de vivaj procezoj (per IPC al la kerno).
+        *   `mortigi <id>`: sendas `SYS_FINI` aŭ revokas kapablojn al la celata procezo.
+        *   `lanĉi <dosiero>`: vokas `SYS_EXEC`.
+
+##### Fazo 5: Arkitektura adaptado kaj purigo (Versio 0.7.4)
+*   **Enhavo**:
+    *   Certigi, ke `virtio-blk` MMIO-vojo funkcias sur `arm64` (QEMU `virt`).
+    *   Ĝisdatigi `just verify` kaj CI por inkluzivi la novajn komandojn.
+    *   Forigi provizorajn `#[allow]`-ojn aldonitajn dum M17.
+
+#### 1a. Fazo 1 — efektivigita (0.7.0)
+
+**Transporta tavolo.** `arkitekturo/komuna.rs` difinas `VirtioTransporto`,
+`VirtioSpeco` kaj la modernajn (virtio 1.0) registrajn alirojn: trajtoj, vico,
+priskribilaj adresoj, sciigo kaj kapacito. Sur `x86_64` la aparato troviĝas per
+la PCI-konfigura spaco (`pci.rs`); la modernaj kapabloj (`common`, `notify`,
+`device`) estas legataj el la kapablolisto, la BAR-oj mapiĝas nekaŝeble, kaj la
+buso/memoro-mastroj ŝaltiĝas. Sur `arm64` la MMIO-fenestro
+`0x0a000000..0x0a004000` estas mapita nekaŝeble kaj la unua moderna
+`virtio-blk` (`magio=0x74726976`, versio 2, aparato 2, vendor QEMU) elektiĝas.
+QEMU bezonas `-global virtio-mmio.force-legacy=false`, alie la MMIO-aparato
+restas en la malnova (versio 1) formato.
+
+**Pelilo.** `mikerno/src/konservado/virtio_blk.rs` interkonsentas nur
+`VIRTIO_F_VERSION_1`; aliaj trajtoj estas rifuzataj per malplena
+`driver_features`. Unu vico de ok priskribiloj uziĝas por la petoj. La vico,
+la disponebla ringo, la uzita ringo kaj la petbufro (16-bajta `BlkKapo`,
+1-bajta stato, 512-bajta datumoj) loĝas en kvar sinsekvaj kadroj el
+`KadraAlokilo`; la aparato atingas ilin per la identeca mapo. Antaŭ la sciigo
+kaj antaŭ ĉiu legado de la uzita ringo staras `fence(Ordering::SeqCst)`.
+`Vico` mem tenas la sekvan disponeblan indekson kaj la lastan uzitan indekson;
+ĉiu peto atendas la uzitan ringon per polusa buklo (sen interrompoj).
+
+**Kerna API kaj memprovo.** `legi_blokon`, `skribi_blokon` kaj `kapacito` estas
+la publika surfaco; la pelilo komenciĝas post la temporizilo. La memprovo legas
+la unuajn 64 sektorojn, kalkulas FNV-1a-haketon, skribas determinisman ŝablonon
+en la lastan sektoron, relegas ĝin, kaj restarigas la originalon. La testdisko
+(64 sektoroj po 512 bajtoj) venas el `tools/krei-testan-diskon.sh`; ambaŭ
+QEMU-scripts aldonas `-drive`/`-device` kaj `-snapshot`, do la memprovo ne
+ŝanĝas la dosieron.
+
+**Lokaj rezultoj (2026-11-16, versio 0.7.0).**
+
+| Vojo | Transporto | Linio |
+| --- | --- | --- |
+| x86_64 PVH | PCI | `[konservado] virtio-blk: 64 sektoroj legitaj, haketo 0xc139f0538c943325` |
+| x86_64 BIOS-ISO | PCI | sama haketo; `skribo kaj restarigo (bone)` |
+| arm64 Image | MMIO | sama haketo; `skribo kaj restarigo (bone)` |
+| arm64 UEFI-ISO | MMIO | sama haketo; `skribo kaj restarigo (bone)` |
+
+**Riparitaj kaŭzoj dum la unua efektivigo.** La PCI-kapablolisto ne estas
+sinsekva (0x98 → 0x84 → 0x70 …), do la serĉo ne rajtas postuli kreskantan
+montrilon. La disponebla indekso devas progresi post ĉiu peto; alie la aparato
+vidas nur la unuan peton. La MMIO-statuso estas 32-bita registro: bajta
+legado/skribado ne atingas la aparaton, do la trajta interkonsento ŝajne
+malsukcesas. Ĉiuj tri estis riparitaj kaj la kvar vojoj estas verdaj.
+
+**Limigoj.** Nur modernaj transportoj, nur QEMU, polusa atendo, unu vico, po
+unu sektoro per peto, sen IOMMU (M19) kaj sen interrompoj por la fino de DMA.
+
+**Versio.** 0.7.0 (Fazo 1).
+
+#### 2. Evitindaj Eraroj (Konsiloj por la Arkitekto)
+
+1.  **Virtio kaj Memoro-Bariloj**: Virtio-vicoj postulas striktan ordigon de skriboj. En Rust, uzu `core::sync::atomic::compiler_fence(Ordering::SeqCst)` antaŭ ol sciigi la aparaton pri novaj priskribiloj. Malsukceso kaŭzos silentan datuman korupton.
+2.  **SMAP/SMEP en Ring 3**: Kiam la ŝelo (Ring 3) petas al la kerno legi dosieron, la kerno ne povas rekte skribi al la uzanta bufrujo sen `STAC`-fenestro. Uzu provizoran kernan bufrujon, kopiu la datumojn, kaj transdonu ilin per `SYS_RICEVI` (IPC) aŭ kopiu ilin al la uzanta spaco per sekura `kopii_al_uzanto` funkcio.
+3.  **SNDS Bilda Generado**: La `tools/krei_snds_img.sh` skripto devas esti sendependa de platformo (uzu `python3` anstataŭ `bash`-specifaj iloj se eble), por ke CI en GitHub Actions (Ubuntu) kaj loka WSL2 produktu identajn haketojn.
+4.  **Mortigo de la Ŝelo**: Se la ŝelo mem mortas (`SYS_FINI`), la sistemo ne havas uzant-interfacon. La kerno devas havi specialan kazon: se procezo 1 (la ŝelo) mortas, la kerno aŭtomate lanĉas ĝin denove el SNDS.
+
+#### 3. Akceptkriterioj
+
+| Kriterio | Stato | Pruvo (Elĉerpaĵo de QEMU) |
+| :--- | :--- | :--- |
+| `virtio-blk` legas blokojn | Plenumita (Fazo 1) | `[konservado] virtio-blk: 64 sektoroj legitaj, haketo 0xc139f0538c943325`; skribo kaj restarigo verdaj (PCI kaj MMIO) |
+| SNDS estas muntita kaj legebla | Pruvota | `[dosiersistemo] SNDS: 4 dosieroj, 1 dosierujo. Haketo: 0x...` |
+| `SYS_BRK` funkcias en Ring 3 | Pruvota | `[ring3] heap: alokita 4096 bajtoj ĉe 0x...` |
+| Ŝelo startas kaj akceptas enigon | Pruvota | `mikerno> ` (kursoro klinitas) |
+| `listi` kaj `legi` funkcias | Pruvota | `mikerno> listi` -> `bonveno.txt` <br> `mikerno> legi bonveno.txt` -> `Saluton, MiKerno!` |
+| `procezoj` kaj `mortigi` funkcias | Pruvota | `mikerno> procezoj` -> `1: ŝelo, 2: fono` <br> `mikerno> mortigi 2` -> `[procezo] 2 detruita` |
+| `lanĉi` startas novan ELF | Pruvota | `mikerno> lanĉi saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS` |
+| `arm64` vojo restas verda | Pruvota | `just run-iso-arm` montras la saman ŝelan interagadon per PL011. |
+
+#### 4. Teknika Ŝuldo Post M17
+
+| Prioritate | Ŝuldo | Rimedo |
+| :--- | :--- | :--- |
+| Alta | Neniu `fork`; nur `exec` | Post 1.0 (postulas kopiadon de adresaj spacoj) |
+| Meza | SNDS estas nurlega | M17-poste: aldoni `skribi` kaj `krei` |
+| Meza | Neniu IOMMU por `virtio` DMA | M19 (Aparata izolado) |
+| Malalta | Ŝelo uzas polusan legadon (polling) por COM1 | M18: uzi interromp-bazitan I/O |
 
 ---
 

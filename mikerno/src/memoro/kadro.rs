@@ -83,8 +83,7 @@ impl KadraAlokilo {
 
     /// Aloku `n` sinsekvajn kadrojn kaj redonu la unuan. `None` se ne ekzistas
     /// sufiĉe longa libera intervalo. La kadroj restas okupataj ĝis eksplicita
-    /// `liberigi`. Nur `arm64` uzas ĝin (`ramfb`).
-    #[cfg(target_arch = "aarch64")]
+    /// `liberigi`. Uzata de `ramfb` (arm64) kaj de la virtio-vicoj.
     pub fn aloki_kontiguajn(&mut self, n: usize) -> Option<Kadro> {
         if n == 0 || n > MAKSA_KADROJ {
             return None;

@@ -186,6 +186,10 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         crate::skribu!("[kerno] GICv2 kaj paĝado pretaj; temporizilo 100 Hz\n");
     }
 
+    if let Err(eraro) = crate::konservado::pravalorizi(&mut spaco, kadra_alokilo()) {
+        crate::skribu!("[konservado] virtio-blk (MALBONE): {eraro}\n");
+    }
+
     let modulo = informo.moduloj.first();
     match modulo {
         Some(modulo) => testi_procezan_reuzon(&spaco, modulo),

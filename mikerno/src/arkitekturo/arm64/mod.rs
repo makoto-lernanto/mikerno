@@ -16,6 +16,7 @@ pub mod seria;
 pub mod sistemvoko;
 pub mod temporizilo;
 pub mod uzanta;
+pub mod virtio_mmio;
 
 use crate::arkitekturo::komuna::{FirmigaRaporto, FirmigaTrajto};
 use crate::memoro::KADRA_GRANDO;

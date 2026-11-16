@@ -48,6 +48,19 @@ kaj protokolaj nomoj sekvu ĝin.
 | `interrompa priskriba tabelo` | interrupt descriptor table (IDT) | `InterrompaPriskribaTabelo`. |
 | `taska stata segmento` | task state segment (TSS) | `TaskaStataSegmento`. |
 | `priskribo` | descriptor | |
+| `konservado` | storage | Modulo `konservado`; blokaj legado kaj skribado. |
+| `bloko` | block | 512-bajta unuo (`BLOKA_GRANDO`). |
+| `sektoro` | sector | Numero de bloko ĉe la aparato. |
+| `virtio-blk` | virtio block device | Protokola nomo restas angla. |
+| `transporto` | transport | `VirtioTransporto`; `VirtioSpeco::{Pcia, Mmio}`. |
+| `trajto` | feature | `legi_trajtojn`, `agordi_trajtojn`. |
+| `virtio-vico` | virtqueue | `Vico`: priskribiloj, disponebla ringo, uzita ringo. |
+| `priskribilo` | descriptor | `Priskribilo`; ankaŭ GDT/IDT-priskriboj. |
+| `disponebla ringo` | available ring | `Disponebla`. |
+| `uzita ringo` | used ring | `Uzita`, `UzitaEro`. |
+| `sciigi` | notify | `sciigi(vico)`; vica pordo, ne interrompo. |
+| `kapablo` | capability | `Kapo`, `Kapoj`; PCI-kapablo. |
+| `testdisko` | test disk | `tools/krei-testan-diskon.sh`. |
 | `selektilo` | selector | |
 | `pordego` | gate | |
 | `interrompa pordego` | interrupt gate | Malŝaltas `RFLAGS.IF`. |
@@ -401,7 +414,8 @@ eksteraj protokolaj nomoj:
 `GICD_IPRIORITYR`, `GICD_ITARGETSR`, `GICC_CTLR`, `GICC_PMR`, `GICC_IAR`,
 `GICC_EOIR`, `PXN`, `UXN`, `PAN`, `PSCI`, `WFI`, `HCR_EL2`, `eret`, `svc`,
 `fw_cfg`, `FW_CFG_FILE_DIR`, `qemu,fw-cfg-mmio`, `etc/ramfb`, `ramfb`,
-`RAMFBCfg`, `XR24`, `FNV-1a`, `ID_AA64MMFR1_EL1`, `SCTLR_EL1.SPAN`, `msr pan`,
+`RAMFBCfg`, `XR24`, `FNV-1a`, `virtio-blk`, `virtio-pci`, `virtio-mmio`,
+`virtqueue`, `BAR`, `ID_AA64MMFR1_EL1`, `SCTLR_EL1.SPAN`, `msr pan`,
 `cortex-a76`.
 
 ## Reguloj

@@ -25,6 +25,19 @@ if [[ -z "$QEMU" ]]; then
     fi
 fi
 
+# La testdisko servas al la virtio-blk-memprovo (M17). `-snapshot` certigas, ke
+# la memprovo ne modifu la dosieron eĉ se la restarigo malsukcesus.
+TESTDISKO="$ROOT/target/testdisko.img"
+if [[ ! -f "$TESTDISKO" ]]; then
+    "$ROOT/tools/krei-testan-diskon.sh" "$TESTDISKO" >/dev/null
+fi
+DISKA_ARGS=(
+    -drive "file=$TESTDISKO,format=raw,if=none,id=disk0"
+    -device "virtio-blk-device,drive=disk0"
+    -global "virtio-mmio.force-legacy=false"
+    -snapshot
+)
+
 if [[ "$ARG" == "--iso" ]]; then
     ISO="${2:-$ROOT/mikerno-arm.iso}"
     if [[ ! -f "$ISO" ]]; then
@@ -59,6 +72,7 @@ if [[ "$ARG" == "--iso" ]]; then
         -bios "$FIRMWARE" \
         -cdrom "$ISO" \
         -device ramfb \
+        "${DISKA_ARGS[@]}" \
         -serial mon:stdio \
         -display "${QEMU_DISPLAY:-sdl}" \
         -no-reboot
@@ -99,6 +113,7 @@ exec "$QEMU" \
     -kernel "$KERNEL" \
     "${INITRD_ARGS[@]}" \
     -device ramfb \
+    "${DISKA_ARGS[@]}" \
     -serial mon:stdio \
     -display none \
     -no-reboot

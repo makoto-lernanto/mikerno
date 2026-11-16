@@ -74,6 +74,18 @@ fi
 # degradon sur procesoro sen la trajtoj.
 CPU_ARGS=(-cpu "${QEMU_CPU:-qemu64,+smep,+smap}")
 
+# La testdisko servas al la virtio-blk-memprovo (M17). `-snapshot` certigas, ke
+# la memprovo ne modifu la dosieron eĉ se la restarigo malsukcesus.
+TESTDISKO="$ROOT/target/testdisko.img"
+if [[ ! -f "$TESTDISKO" ]]; then
+    "$ROOT/tools/krei-testan-diskon.sh" "$TESTDISKO" >/dev/null
+fi
+DISKA_ARGS=(
+    -drive "file=$TESTDISKO,format=raw,if=none,id=disk0"
+    -device "virtio-blk-pci,drive=disk0,disable-legacy=on"
+    -snapshot
+)
+
 # `mon:stdio` muxas la serian konzolon kaj la QEMU-monitoron sur la sama
 # terminalo. Ctrl+C tiam sendiĝas al la guest kiel bajto 0x03 anstataŭ fini
 # QEMU. Por eliri uzu:
@@ -87,6 +99,7 @@ if [[ -n "$ISO" ]]; then
         -cdrom "$ISO" \
         -m 256M \
         "${CPU_ARGS[@]}" \
+        "${DISKA_ARGS[@]}" \
         -serial mon:stdio \
         "${DISPLAY_ARGS[@]}" \
         -no-reboot \
@@ -105,6 +118,7 @@ exec "$QEMU" \
     "${INITRD[@]}" \
     -m 256M \
     "${CPU_ARGS[@]}" \
+    "${DISKA_ARGS[@]}" \
     -serial mon:stdio \
     -display none \
     -no-reboot \

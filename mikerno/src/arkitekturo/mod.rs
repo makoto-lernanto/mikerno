@@ -164,6 +164,23 @@ pub fn krei_adresan_spacon(
     <Spaco as crate::memoro::virtuala::AdresaSpaco>::krei(alokilo)
 }
 
+/// Trovu la platforman virtio-blk-transporton kaj mapu ĝiajn registraĵojn.
+#[cfg(target_arch = "x86_64")]
+pub fn virtio_blk_transporto(
+    spaco: &mut dyn AdresaSpaco,
+    alokilo: &mut KadraAlokilo,
+) -> Result<komuna::VirtioTransporto, &'static str> {
+    malantaŭo::virtio_pci::transporto(spaco, alokilo)
+}
+
+#[cfg(target_arch = "aarch64")]
+pub fn virtio_blk_transporto(
+    spaco: &mut dyn crate::memoro::virtuala::AdresaSpaco,
+    alokilo: &mut crate::memoro::kadro::KadraAlokilo,
+) -> Result<komuna::VirtioTransporto, &'static str> {
+    arm64::virtio_mmio::transporto(spaco, alokilo)
+}
+
 #[cfg(target_arch = "aarch64")]
 pub use arm64::procesoro::{ebligi_interrompojn, interrompoj_ebligitaj, malebligi_interrompojn};
 #[cfg(target_arch = "x86_64")]

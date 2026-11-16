@@ -8,6 +8,7 @@ mod arkitekturo;
 mod ekrano;
 mod interrompo;
 mod kerno;
+mod konservado;
 mod kunhavigita;
 mod memoro;
 

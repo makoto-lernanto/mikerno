@@ -28,7 +28,7 @@ La versio havas la formon `0.x.y` kaj rilatas al la mejloŝtonoj:
 Ekzemple: la Fazoj 1/2/3 de M13 respondas al `0.3.0` / `0.3.1` / `0.3.2`.
 La formo `0.x.y` validas ekde M10; M0–M9 apartenas al la historio `0.0.x`.
 
-Nuna versio: `0.6.2` (M16, Fazo 3: specimena plenumtempokontado).
+Nuna versio: `0.7.0` (M17, Fazo 1: `virtio-blk`-pelilo kaj PCI/MMIO-transportoj).
 
 La sola fonto de la versio estas `[workspace.package] version` en `Cargo.toml`.
 La kerno legas ĝin per `env!("CARGO_PKG_VERSION")`, do `just run` kaj la ISO
@@ -47,7 +47,8 @@ rulas `--kontroli`.
 
 - La sola loko por Kani estas GitHub Actions (`.github/workflows/ci.yml`):
   `push` al `main` kaj `pull_request` rulas `lint-and-build` (`just verify`,
-  sen Kani), poste `kani-prepare` kaj la matricon `kani-verify`. La matrico
+  sen Kani, plus `just build-arm` por la plata arm64-`Image`), poste
+  `kani-prepare` kaj la matricon `kani-verify`. La matrico
   havas unu taskon por ĉiu pruvo; ĉiu tasko rulas
   `timeout -k 10 600 cargo kani … --exact --harness <pruvo>` (10 min) sub
   `timeout-minutes: 30`, kaj suprenigas sian protokolon kiel artefakton eĉ
