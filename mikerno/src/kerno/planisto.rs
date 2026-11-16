@@ -71,7 +71,6 @@ pub struct Planisto {
     vekigoj: u64,
     maks_vekprokrasto: u64,
     veturoj: [u64; MAKSAJ_FADENOJ + 1],
-    plenumtikoj: [u64; MAKSAJ_FADENOJ + 1],
 }
 
 /// Nombroj pri la planado ekde la starto; ilin montras la fina raporto.
@@ -103,7 +102,6 @@ impl Planisto {
             vekigoj: 0,
             maks_vekprokrasto: 0,
             veturoj: [0; MAKSAJ_FADENOJ + 1],
-            plenumtikoj: [0; MAKSAJ_FADENOJ + 1],
         }
     }
 
@@ -163,11 +161,6 @@ impl Planisto {
     }
 
     fn elekti_por_tiko(&mut self, cedo: bool) -> Option<FadenoId> {
-        // La specimeno apartenas al la interrompita fadeno, ne al la sekva elektito.
-        if !cedo {
-            let indekso = self.nuna_id() as usize;
-            self.plenumtikoj[indekso] = self.plenumtikoj[indekso].saturating_add(1);
-        }
         let nuna = self.nuna_fadeno?;
         if nuna == RIPAZA_ID {
             return self.elekti_proksiman();
@@ -514,11 +507,6 @@ pub fn veturoj() -> [u64; MAKSAJ_FADENOJ + 1] {
     planisto().veturoj()
 }
 
-pub fn plenumtikoj() -> [u64; MAKSAJ_FADENOJ + 1] {
-    let _gardo = InterrompaGardo::nova();
-    planisto().plenumtikoj
-}
-
 /// Unua Rust-funkcio de nova fadeno, vokata de la muntita trampolino.
 #[unsafe(no_mangle)]
 pub extern "C" fn fadeno_eniro(id: FadenoId) -> ! {
@@ -642,114 +630,6 @@ pub fn testi_prioritatojn() {
             nomo,
             if bone { "bone" } else { "MALBONE" }
         );
-    }
-}
-
-fn plenumtempa_provo() -> bool {
-    let mut planisto = testa_planisto([Prioritato::Malalta, Prioritato::Normala, Prioritato::Alta]);
-    for _ in 0..14 {
-        if let Some(sekva) = planisto.elekti_por_tiko(false) {
-            planisto.kurigu(sekva);
-        }
-    }
-    planisto.plenumtikoj == [0, 2, 4, 8, 0, 0, 0, 0, 0]
-}
-
-fn ceda_kontada_provo() -> bool {
-    let mut planisto = testa_planisto([Prioritato::Alta; 3]);
-    planisto.elekti_por_tiko(false);
-    let antaŭ = planisto.plenumtikoj;
-    for _ in 0..6 {
-        let sekva = planisto.elekti_por_tiko(true).unwrap();
-        planisto.kurigu(sekva);
-    }
-    planisto.plenumtikoj == antaŭ && planisto.veturoj[1] == 3
-}
-
-fn ripoza_kontada_provo() -> bool {
-    let mut planisto = Planisto::nova();
-    planisto.elekti_por_tiko(false);
-    if planisto.plenumtikoj[0] != 1 {
-        return false;
-    }
-    let fadeno = Fadeno::nova(1, 0, VirtuaAdreso::nova(0), |_| {});
-    planisto.aldoni_fadenon(fadeno).unwrap();
-    planisto.kurigu(RIPAZA_ID);
-    let sekva = planisto.elekti_por_tiko(false).unwrap();
-    planisto.kurigu(sekva);
-    planisto.elekti_por_tiko(false);
-    planisto.fadenoj[1].as_mut().unwrap().stato = FadenoStato::Blokitaj;
-    planisto.kurigu(RIPAZA_ID);
-    planisto.elekti_por_tiko(false);
-    planisto.veki_sen_limdato(1);
-    let sekva = planisto.elekti_por_tiko(false).unwrap();
-    planisto.kurigu(sekva);
-    planisto.elekti_por_tiko(false);
-    planisto.fadenoj[1].as_mut().unwrap().stato = FadenoStato::Mortinta;
-    planisto.kurigu(RIPAZA_ID);
-    planisto.elekti_por_tiko(false);
-    planisto.plenumtikoj == [5, 2, 0, 0, 0, 0, 0, 0, 0]
-}
-
-pub fn testi_plenumtempon() {
-    for (nomo, bone) in [
-        ("plenumtikoj laŭ tempopecoj", plenumtempa_provo()),
-        ("cedo ne aldonas plenumtikojn", ceda_kontada_provo()),
-        (
-            "ripozo, blokado kaj morto konservas kontadon",
-            ripoza_kontada_provo(),
-        ),
-    ] {
-        crate::skribu!(
-            "[planisto] {} ({})\n",
-            nomo,
-            if bone { "bone" } else { "MALBONE" }
-        );
-    }
-}
-
-#[cfg(kani)]
-mod kani_plenumtempo {
-    use super::*;
-
-    #[kani::proof]
-    #[kani::unwind(16)]
-    fn tempopecoj_konservas_plenumtikojn() {
-        assert!(plenumtempa_provo());
-    }
-
-    #[kani::proof]
-    #[kani::unwind(12)]
-    fn cedo_ne_kreas_tempon() {
-        assert!(ceda_kontada_provo());
-    }
-
-    #[kani::proof]
-    #[kani::unwind(12)]
-    fn ripozo_kaj_blokado_apartigas_tempon() {
-        assert!(ripoza_kontada_provo());
-    }
-
-    #[kani::proof]
-    #[kani::unwind(12)]
-    fn nur_la_nuna_nombrigilo_ŝanĝiĝas_kaj_saturiĝas() {
-        let mut planisto = Planisto::nova();
-        let id = kani::any::<u8>() as usize % (MAKSAJ_FADENOJ + 1);
-        let antaŭ: [u64; MAKSAJ_FADENOJ + 1] = kani::any();
-        planisto.plenumtikoj = antaŭ;
-        if id != RIPAZA_ID as usize {
-            planisto.fadenoj[id] = Some(Fadeno::nova(id as u64, 0, VirtuaAdreso::nova(0), |_| {}));
-        }
-        planisto.kurigu(id as u64);
-        planisto.elekti_por_tiko(false);
-        for (indekso, valoro) in antaŭ.into_iter().enumerate() {
-            let atendita = if indekso == id {
-                valoro.saturating_add(1)
-            } else {
-                valoro
-            };
-            assert_eq!(planisto.plenumtikoj[indekso], atendita);
-        }
     }
 }
 
