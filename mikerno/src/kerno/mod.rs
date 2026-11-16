@@ -242,14 +242,14 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
 
     // Observu la sistemon dek sekundojn (1000 tikoj) post la fadenoj.
     crate::interrompo::ebligi_interrompojn();
-    let tikoj = loop {
-        let nuna = crate::arkitekturo::temporizilaj_tikoj();
-        if nuna >= 1000 {
-            break nuna;
+    loop {
+        if crate::arkitekturo::temporizilaj_tikoj() >= 1000 {
+            break;
         }
         crate::arkitekturo::atendi_interrompon();
-    };
+    }
     crate::interrompo::malebligi_interrompojn();
+    let tikoj = crate::arkitekturo::temporizilaj_tikoj();
 
     // Ĉiu temporizila interrompo devas ricevi EOI; mankanta EOI lasus la
     // APIC-ISR-biton ŝaltita kaj sufokus la sekvajn vekojn.
@@ -328,6 +328,27 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         crate::skribu!(" {}", veturo);
     }
     crate::skribu!("; minimumo {}\n", minimumo);
+
+    let plenumtikoj = planisto::plenumtikoj();
+    let sumo = plenumtikoj.iter().copied().fold(0u64, u64::saturating_add);
+    let laboraj = plenumtikoj[1..]
+        .iter()
+        .copied()
+        .fold(0u64, u64::saturating_add);
+    let bone = sumo == tikoj
+        && plenumtikoj[0] > 0
+        && plenumtikoj[1..=TESTAJ_FADENOJ].iter().all(|&n| n > 0);
+    crate::skribu!(
+        "[planisto] plenumtempo ({}): sumo={}, horloĝo={}, laboraj={}, ripozaj={} tikoj; nominale 10 ms/specimeno\n",
+        if bone { "bone" } else { "MALBONE" },
+        sumo,
+        tikoj,
+        laboraj,
+        plenumtikoj[0]
+    );
+    for (id, nombro) in plenumtikoj.iter().enumerate() {
+        crate::skribu!("[planisto] plenumtikoj: fadeno {} = {}\n", id, nombro);
+    }
 
     // La piksela fiksaĵo estas identa sur ambaŭ arkoj, kiam la frambufferio
     // havas la saman geometrion; la haketo permesas kompari la du bildojn el
@@ -535,6 +556,7 @@ static mut STAKOJ: [FadenaStako; TESTAJ_FADENOJ] =
 
 fn krei_testajn_fadenojn() -> Result<(), planisto::PlanistaEraro> {
     planisto::testi_prioritatojn();
+    planisto::testi_plenumtempon();
     let prioritatoj = [
         objekto::Prioritato::Malalta,
         objekto::Prioritato::Normala,

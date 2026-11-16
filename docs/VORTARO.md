@@ -137,6 +137,10 @@ kaj protokolaj nomoj sekvu ĝin.
 | `veka kupo` | wake heap | La kupo mem: unu ero por fadeno, kapacito `MAKSAJ_FADENOJ`; `pinti` montras la plej fruan limdaton. |
 | `dormi` | sleep | `SYS_DORMI` (12), `rdi` = daŭro en ms; `planisto::dormi` atendas `ceil(ms/10)` tikojn; la ripoza kunteksto ricevas `-1`. |
 | `planista statistiko` | scheduler statistics | `PlanistaStatistiko`: `ŝaltoj`, `limdataj_blokoj`, `vekigoj`, `maks_vekprokrasto`. |
+| `plenumtikoj` | sampled execution ticks | `Planisto.plenumtikoj` kaj `planisto::plenumtikoj()`: po-fadena saturiĝanta nombrilo; unu specimeno por ricevita temporizila interrompo, atribuita antaŭ ŝalto; indekso 0 inkluzivas ripozon kaj praŝarĝon. |
+| `specimena plenumtempokontado` | sampled execution-time accounting | Nominale 10 ms/specimeno sur ambaŭ arkitekturoj; ne preciza murhorloĝa tempo, nek apartigo de uzanta/kernreĝima tempo; cedo ne kreas specimenon. |
+| `plenumtempaj provoj` | execution-accounting checks | `testi_plenumtempon`, `plenumtempa_provo`, `ceda_kontada_provo`, `ripoza_kontada_provo`; `kani_plenumtempo` ankaŭ kontrolas arbitran nombrilon, apartigon kaj saturiĝon. |
+| `samaj_plenumtikoj` | element-wise accounting comparison | Komparas du nombrotabelojn elementon post elemento anstataŭ per tuta-tabela egaleco, por ke Kani ne devu malvolvi la kompilan 72-bajtan `memcmp`; la asertoj restas samaj. |
 | `veturoj` | scheduler runs | `Planisto.veturoj[fadeno]`: kiom da fojoj ĉiu fadeno estis elektita; la fina raporto komparas la minimumon por pruvi, ke neniu malsatiĝas. |
 | `limdata bloko` | timed block | `limdataj_blokoj`: blokado kun limdato (dormo aŭ IPC-tempolimo). |
 | `maksimuma vekprokrasto` | maximum wakeup delay | `maks_vekprokrasto`: la plej granda distanco inter la limdato kaj la efektiva veko, en tikoj. |
