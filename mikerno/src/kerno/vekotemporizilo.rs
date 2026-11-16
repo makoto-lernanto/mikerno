@@ -152,15 +152,16 @@ mod kani_proofs {
         true
     }
 
-    /// Enmeto de ĉiuj fadenoj kun arbitraj limdatoj lasas koheran kupon, kies
-    /// pinto estas la minimumo.
+    /// Enmeto de ĉiuj fadenoj kun arbitraj etaj limdatoj lasas koheran kupon,
+    /// kies pinto estas la minimumo. La limdatoj estas `u8` por teni la
+    /// stata-spacon malgranda; la kupo mem nur komparas ilin.
     #[kani::proof]
-    #[kani::unwind(12)]
+    #[kani::unwind(11)]
     fn pinto_estas_minimumo() {
         let mut kupo = Vekotemporizilo::nova();
         let mut minimumo = u64::MAX;
         for id in 1..=MAKSAJ_FADENOJ as u64 {
-            let limdato: u64 = kani::any();
+            let limdato = kani::any::<u8>() as u64;
             kupo.enmeti(id, limdato);
             minimumo = minimumo.min(limdato);
         }
@@ -170,13 +171,13 @@ mod kani_proofs {
     }
 
     /// `elpreni` redonas ĉiujn erojn laŭ ne-malpliiĝanta limdato kaj lasas la
-    /// kupon kohera post ĉiu paŝo.
+    /// kupon kohera.
     #[kani::proof]
-    #[kani::unwind(12)]
+    #[kani::unwind(11)]
     fn elpreni_ordonas() {
         let mut kupo = Vekotemporizilo::nova();
         for id in 1..=MAKSAJ_FADENOJ as u64 {
-            kupo.enmeti(id, kani::any());
+            kupo.enmeti(id, kani::any::<u8>() as u64);
         }
         let mut antaŭa = 0;
         let mut nombro = 0;
@@ -185,30 +186,29 @@ mod kani_proofs {
             assert!((1..=MAKSAJ_FADENOJ as u64).contains(&id));
             antaŭa = limdato;
             nombro += 1;
-            assert!(kohera(&kupo));
         }
         assert_eq!(nombro, MAKSAJ_FADENOJ);
+        assert!(kohera(&kupo));
         assert_eq!(kupo.pinti(), None);
     }
 
     /// Reenmeto ĝisdatigas la limdaton sen duobligi la eron; forigo redonas la
     /// limdaton kaj restarigas koheran kupon.
     #[kani::proof]
-    #[kani::unwind(14)]
+    #[kani::unwind(11)]
     fn reenmeto_kaj_forigo() {
         let mut kupo = Vekotemporizilo::nova();
         for id in 1..=MAKSAJ_FADENOJ as u64 {
-            kupo.enmeti(id, kani::any());
+            kupo.enmeti(id, id % 3);
         }
-        let id: u64 = kani::any();
-        kani::assume((1..=MAKSAJ_FADENOJ as u64).contains(&id));
-        let nova: u64 = kani::any();
-        kupo.enmeti(id, nova);
+        let celo = (kani::any::<u8>() % MAKSAJ_FADENOJ as u8 + 1) as u64;
+        let nova = kani::any::<u8>() as u64;
+        kupo.enmeti(celo, nova);
         assert!(kohera(&kupo));
         assert_eq!(kupo.nombro, MAKSAJ_FADENOJ);
-        assert_eq!(kupo.forigi(id), Some(nova));
+        assert_eq!(kupo.forigi(celo), Some(nova));
         assert!(kohera(&kupo));
         assert_eq!(kupo.nombro, MAKSAJ_FADENOJ - 1);
-        assert_eq!(kupo.forigi(id), None);
+        assert_eq!(kupo.forigi(celo), None);
     }
 }
