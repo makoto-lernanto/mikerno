@@ -68,11 +68,10 @@ run-iso: iso
 kontroli-version:
     bash tools/versio.sh --kontroli
 
-# Kompleta kvalita pordego: formato + lint (ambaŭ arkoj) + konstruo + versio +
-# formala pruvo. Kani ne subtenas tutmondan asemblaĵon; la pruvoj ne atingas ĝin.
+# Loka kvalita pordego: versio + formato + lint (ambaŭ arkoj) + konstruo.
+# Kani ruliĝas nur en CI, kiel aparta tasko por ĉiu pruvo (vidu ci.yml).
 verify: kontroli-version
     cargo fmt --all -- --check
     cargo clippy --workspace --release -- -D warnings
     cargo clippy -p mikerno --release --target aarch64-unknown-none -- -D warnings
     cargo build --workspace --release
-    cargo kani -p mikerno -Z unstable-options --ignore-global-asm

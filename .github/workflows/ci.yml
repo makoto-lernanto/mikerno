@@ -6,52 +6,22 @@ on:
       - main
   pull_request:
 
-# The workflow only needs to read the repository.
+# La laborfluo nur legas la deponejon.
 permissions:
   contents: read
 
 jobs:
-  # Fast feedback: formatting, lints and a full workspace build.
+  # Rapida rimensaĝo: versio, formato, lint (ambaŭ arkoj) kaj konstruo.
   lint-and-build:
     name: Lint and build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      # The workspace builds for x86_64-unknown-none by default
-      # (see .cargo/config.toml). The minimal rustup profile does not include
-      # rustfmt/clippy, so they are requested explicitly.
-      - name: Install Rust 1.100.0
-        uses: dtolnay/rust-toolchain@1.100.0
-        with:
-          components: clippy, rustfmt
-          targets: x86_64-unknown-none
-
-      - name: Install just
-        uses: taiki-e/install-action@just
-
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-
-      - name: Run Clippy
-        run: cargo clippy --workspace --release -- -D warnings
-
-      - name: Build workspace
-        run: cargo build --workspace --release
-
-  # Formal verification runs in its own job so that a long proof never blocks
-  # the fast feedback above.
-  kani-verify:
-    name: Kani formal verification
-    runs-on: ubuntu-latest
-    needs: lint-and-build
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      # `just verify` also lints mikerno for aarch64-unknown-none, so both
-      # bare-metal targets must be installed.
+      # `just verify` lintas ankaŭ por aarch64-unknown-none; la minimuma
+      # rustup-profila ne enhavas rustfmt/clippy, do ili estas petitaj.
       - name: Install Rust 1.100.0
         uses: dtolnay/rust-toolchain@1.100.0
         with:
@@ -61,9 +31,29 @@ jobs:
       - name: Install just
         uses: taiki-e/install-action@just
 
-      # The official action installs Kani together with its matching CBMC
-      # backend. It internally switches the default toolchain to stable, so the
-      # verification step below selects 1.100.0 again.
+      - name: Run just verify
+        run: just verify
+
+  # Kani bezonas la liston de la pruvoj por la matrico. `cargo kani list`
+  # skribas `kani-list.json` kun la plenaj (modulaj) nomoj de la pruvoj.
+  kani-prepare:
+    name: Prepare Kani harness list
+    runs-on: ubuntu-latest
+    needs: lint-and-build
+    timeout-minutes: 30
+    outputs:
+      pruvoj: ${{ steps.listo.outputs.pruvoj }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust 1.100.0
+        uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          targets: x86_64-unknown-none
+
+      # La oficiala ago instalas Kani kun kongrua CBMC. Ĝi interne ŝaltas
+      # `stable`, do la sekvaj paŝoj restarigas 1.100.0.
       - name: Install Kani
         uses: model-checking/kani-github-action@v1
         with:
@@ -71,9 +61,63 @@ jobs:
           command: kani
           args: --version
 
-      # Full quality gate: version check, fmt, clippy (both architectures),
-      # workspace build and `cargo kani`.
-      - name: Run just verify
+      - name: List harnesses
+        id: listo
         run: |
           rustup default 1.100.0
-          just verify
+          cargo kani -p mikerno -Z unstable-options --ignore-global-asm \
+            list --format json
+          nombro=$(jq '."standard-harnesses" | [.[][]] | length' kani-list.json)
+          echo "Pruvoj: $nombro"
+          test "$nombro" -gt 0
+          echo "pruvoj=$(jq -c '."standard-harnesses" | [.[][]] | to_entries | map({indekso: .key, pruvo: .value})' kani-list.json)" >> "$GITHUB_OUTPUT"
+
+  # Unu pruvo por tasko: pruvo, kiu blokiĝas, estas nuligita de `timeout`
+  # post 10 minutoj kaj ĝia protokolo supreniĝas; la ceteraj finiĝas sendepende.
+  kani-verify:
+    name: Kani formal verification (${{ matrix.pruvo }})
+    runs-on: ubuntu-latest
+    needs: kani-prepare
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.kani-prepare.outputs.pruvoj) }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust 1.100.0
+        uses: dtolnay/rust-toolchain@1.100.0
+        with:
+          targets: x86_64-unknown-none
+
+      - name: Install Kani
+        uses: model-checking/kani-github-action@v1
+        with:
+          kani-version: latest
+          command: kani
+          args: --version
+
+      # `--exact` malhelpas, ke prefiksa nomo (ekz. `fifo_ordo`) ankaŭ
+      # elektu `fifo_ordo_inter_fontoj`.
+      - name: Run one harness
+        shell: bash
+        env:
+          PRUVO: ${{ matrix.pruvo }}
+        run: |
+          rustup default 1.100.0
+          set -o pipefail
+          echo "Pruvo: $PRUVO (limo 600 s)"
+          timeout -k 10 600 cargo kani -p mikerno -Z unstable-options \
+            --ignore-global-asm --exact --harness "$PRUVO" 2>&1 | tee kani.log
+
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kani-${{ matrix.indekso }}
+          path: kani.log
+          if-no-files-found: warn
+          overwrite: true
+          retention-days: 7

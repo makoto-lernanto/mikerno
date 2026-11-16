@@ -46,28 +46,31 @@ rulas `--kontroli`.
 ## CI kaj formala pordego
 
 - La sola loko por Kani estas GitHub Actions (`.github/workflows/ci.yml`):
-  `push` al `main` kaj `pull_request` rulas `lint-and-build` (fmt, clippy,
-  konstruo) kaj post ĝi `kani-verify` (`just verify`, inkluzive
-  `cargo kani`). Kani instaliĝas per `model-checking/kani-github-action@v1`
-  sur Rust 1.100.0.
-- Loke oni **ne** rulas `cargo kani` nek `just verify` (ankaŭ ĉi tiu enhavas
-  Kani); WSL2 elĉerpiĝas je memoro kaj diskonektiĝas. Loke oni rulas la
-  sen-Kani-ajn kontrolojn: `bash tools/versio.sh --kontroli`,
+  `push` al `main` kaj `pull_request` rulas `lint-and-build` (`just verify`,
+  sen Kani), poste `kani-prepare` kaj la matricon `kani-verify`. La matrico
+  havas unu taskon por ĉiu pruvo; ĉiu tasko rulas
+  `timeout -k 10 600 cargo kani … --exact --harness <pruvo>` (10 min) sub
+  `timeout-minutes: 30`, kaj suprenigas sian protokolon kiel artefakton eĉ
+  ĉe malsukceso. Kani instaliĝas per
+  `model-checking/kani-github-action@v1` sur Rust 1.100.0.
+- Loke oni **ne** rulas `cargo kani`; WSL2 elĉerpiĝas je memoro kaj
+  diskonektiĝas. `just verify` nun enhavas nur la sen-Kani-ajn kontrolojn kaj
+  estas loke rulebla: `bash tools/versio.sh --kontroli`,
   `cargo fmt --all -- --check`,
   `cargo clippy --workspace --release -- -D warnings`,
   `cargo clippy -p mikerno --release --target aarch64-unknown-none -- -D
   warnings` kaj `cargo build --workspace --release`.
 - Post puŝo kontrolu la runon en la agoj-paĝo de la deponejo (aŭ per
-  `gh run watch`); la formala pordego estas verda nur kiam `kani-verify`
-  sukcesas. Detaloj kaj la unua diagnozo estas en `docs/MEJLOSTONOJ.md` §4.7.
+  `gh run watch`); la formala pordego estas verda nur kiam la tuta matrico
+  `kani-verify` sukcesas. Detaloj estas en `docs/MEJLOSTONOJ.md` §4.7–§4.8.
 
 ## Laborfluo por unu Fazo
 
 1. Efektivigu nur la Fazon indikitan de la uzanto; ne komencu la sekvan.
-2. Post la efektivigo rulu loke la sen-Kani-ajn kontrolojn kaj tiujn indikitajn
-   de la uzanto, kaj certigu, ke ili pasas. La formalan pordegon (`just
-   verify`) plenumas la CI post la puŝo. Rekonstruu la ISO-on (`just iso`) kaj
-   kontrolu ĝian praŝarĝon antaŭ la raporto.
+2. Post la efektivigo rulu loke `just verify` (sen Kani) kaj la kontrolojn
+   indikitajn de la uzanto, kaj certigu, ke ili pasas. La formalan pordegon
+   (la CI-matricon `kani-verify`) plenumas la CI post la puŝo. Rekonstruu la
+   ISO-on (`just iso`) kaj kontrolu ĝian praŝarĝon antaŭ la raporto.
 3. Ĝisdatigu la version (laŭ la supra mapado; `bash tools/versio.sh
    --ĝisdatigi` por la dokumentoj), `docs/MEJLOSTONOJ.md` kaj
    `docs/VORTARO.md`.
