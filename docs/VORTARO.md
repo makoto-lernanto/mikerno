@@ -365,8 +365,13 @@ kaj protokolaj nomoj sekvu ĝin.
 | `rekta frambufa aliro` | direct framebuffer access | Malpermesita al aplikaĵoj. |
 | `vida montro` | visual demo | `docs/FLUOU-montro.html`; nur Esperanta, derivita el la ĵetonoj de tiu ĉi gvidilo. |
 | `sceno` | scene | Sekcio de la vida montro: fenestro, Eniro, Ligo. |
-| `enira tavolo` | palette overlay | Eniro levita super la paĝo per `Ctrl+K`. |
+| `enira tavolo` | palette overlay | Eniro levita super la paĝo per `Ctrl+E`. |
 | `malantaŭa kurteno` | backdrop | Mallumigita fono sub la enira tavolo; klako fermas. |
+| `retejo` | website | `docs/index.html`, `docs/retejo.css` kaj `docs/retejo.js`; la fonto estas Esperanta. |
+| `reteja versio` | site version | `data-versio` sur la `<html>`-etikedo; kontrolata de `tools/versio.sh`. |
+| `mapada tavolo` | mapping layer | Aparta traduka dosiero por montrataj tekstoj; ne anstataŭas la fonton. |
+| `angla mapado` | English mapping | `docs/tradukoj/angla.js`; nur montrataj tekstoj, sen novaj identigiloj. |
+| `reteja sceno` | site scene | Sekcio de la retejo, ekzemple `#kapabloj` aŭ `#fluou`. |
 
 ## Komandoj de Ligo
 
@@ -437,7 +442,10 @@ eksteraj protokolaj nomoj:
    ilin rekte en komponantoj.
 9. `docs/FLUOU-montro.html` estas nur Esperanta kaj spegulas la regulojn de
    `docs/FLUOU.md`; kiam la gvidilo ŝanĝiĝas, ĝisdatigu ankaŭ la montron.
-10. La helpaj surfacoj `Eniro` kaj `Ligo` uzas 32-DIP-an titolstrian skemon:
+10. La retejo `docs/index.html` uzas la samajn FluoU-ĵetonojn kiel la vidmontro;
+    la angla mapado restas en `docs/tradukoj/angla.js` kaj ne rajtas ŝanĝi
+    identigilojn, protokolajn nomojn aŭ komandnomojn.
+11. La helpaj surfacoj `Eniro` kaj `Ligo` uzas 32-DIP-an titolstrian skemon:
     ikono maldekstre, titolo centre. `Ligo` estas vera fenestro, do ĝi montras
     la tri regilojn dekstre (stato antaŭ ili); `Eniro` ne havas fenestrajn
     regilojn kaj fermiĝas per `Esc` aŭ klako sur la malantaŭa kurteno.

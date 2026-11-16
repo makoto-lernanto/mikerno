@@ -418,7 +418,7 @@ desegni proprajn regilojn.
 Eniro estas la tutsistema komanda paletro. Ĝi estas FluoU-aplikaĵo kun
 `Akrila` materialo kaj `Revelo` emfazo.
 
-- **E01.** `Ctrl+K` `DEVI` malfermi Eniron el ĉiu aplikaĵo; `Esc` fermas ĝin.
+- **E01.** `Ctrl+E` `DEVI` malfermi Eniron el ĉiu aplikaĵo; `Esc` fermas ĝin.
 - **E02.** Eniro `DEVI` subteni tri reĝimojn:
   1. ordinara serĉo laŭ Esperantaj nomoj, identigiloj kaj priskriboj;
   2. kalkulo post la prefikso `=`;

@@ -22,6 +22,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
 - **Statuso:** funkcianta prototipo — vidu [Mejloŝtonoj](docs/MEJLOSTONOJ.md)
 - **GU:** deviga kadro FluoU — vidu [docs/FLUOU.md](docs/FLUOU.md)
+- **Retejo:** [makoto-lernanto.github.io/mikerno](https://makoto-lernanto.github.io/mikerno/)
 
 ---
 

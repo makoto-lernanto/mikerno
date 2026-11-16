@@ -1049,6 +1049,37 @@ La plej longa pruvo estis `kerno::vekotemporizilo::kani_proofs::reenmeto_kaj_for
 estis devige nuligita kaj restas `completed/cancelled`; ĝia modloko ne plu
 ĝenas la pordon.
 
+### 4.9 La retejo (2026-11-16)
+
+**Celo.** Prezenti MiKernon per unu memstara paĝo, kiu uzas la samajn FluoU
+0.1-ĵetonojn kiel la vidmontraĵo, sen nova koloro, mezuro aŭ materialo.
+
+**Lokoj.**
+
+- `docs/index.html` — la fonta paĝo (Esperanto).
+- `docs/retejo.css` — la FluoU-ĵetonoj, la fenestra modelo, la materialoj kaj
+  la respondecaj reguloj.
+- `docs/retejo.js` — temo, akcentoj, lingva mapado, fenestraj regiloj,
+  `Ctrl+E`-Eniro, logaj langetoj, kopiado kaj la movoj.
+- `docs/tradukoj/angla.js` — la angla mapada tavolo; la fontaj tekstoj restas
+  Esperantaj kaj la ĉina ne eniras la retejan fonton.
+- `docs/.nojekyll` — malŝaltas la Ĝekilan antaŭtrakton por la statikaj dosieroj.
+
+**Enhavo.** La paĝo montras la realajn ISO-logojn de ambaŭ arkoj, la
+frambufan haketon, la ses tavolojn, la mejloŝtonojn M0–M18, la elŝutojn kun
+SHA-256 kaj la FluoU-komponantojn. La versio venas el `data-versio` kaj estas
+kontrolata de `tools/versio.sh`; la elŝutaj ligiloj ankaŭ anstataŭigas la
+version per JavaScript.
+
+**Publikigo.** La celita adreso estas
+[`https://makoto-lernanto.github.io/mikerno/`](https://makoto-lernanto.github.io/mikerno/).
+Ĝi bezonas GitHub Pages kun «Deploy from a branch», branĉo `main` kaj dosierujo
+`/docs`; tiu agordo ankoraŭ devas esti ŝaltita en la deponejaj agordoj.
+
+**Kontroloj.** `bash tools/versio.sh --kontroli` kaj loka HTTP-servo liveras
+la paĝon kaj la tradukajn dosierojn; la foliumila kontrola trairo restas farebla
+sur la publikigita adreso.
+
 ---
 
 ## 5. Venontaj mejloŝtonoj

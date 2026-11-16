@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="eo" data-versio="0.7.0">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-t="meta.titolo">MiKerno — eta kerno en Rust por du arkoj</title>
+  <meta name="description" data-t-meta="meta.priskribo"
+    content="MiKerno estas eta, memstara kaj pruvebla unuprocesora kerno verkita en Rust, kun la sama konduto sur x86_64 kaj arm64.">
+  <meta name="theme-color" content="#0A0D1C">
+  <meta property="og:title" content="MiKerno — eta kerno en Rust por du arkoj"
+    data-t-meta="meta.titolo">
+  <meta property="og:description"
+    content="Eta, memstara kaj pruvebla unuprocesora kerno verkita en Rust, kun la sama konduto sur x86_64 kaj arm64."
+    data-t-meta="meta.priskribo">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://makoto-lernanto.github.io/mikerno/">
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%2357E389'/%3E%3Cstop offset='1' stop-color='%235B7CFA'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='32' y='45' font-family='Segoe UI,sans-serif' font-size='38' font-weight='800' text-anchor='middle' fill='%230A0D1C'%3EM%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="retejo.css">
+  <script src="tradukoj/angla.js" defer></script>
+  <script src="retejo.js" defer></script>
+</head>
+<body>
+  <a class="salto" href="#cxefa" data-t="salto">Salti al la enhavo</a>
+
+  <header class="kapo">
+    <a class="marko" href="#hejmo" aria-label="MiKerno — hejmo" data-t-aria="marko.aria">
+      <span class="marka-ikono" aria-hidden="true">M</span>
+      <span class="marka-teksto">
+        <strong>MiKerno</strong>
+        <span data-t="marko.sub">eta kerno · du arkoj</span>
+      </span>
+      <span class="versio" data-versio-montri>0.7.0</span>
+    </a>
+
+    <nav class="navigado" aria-label="Ĉefaj sekcioj" data-t-aria="nav.aria">
+      <a href="#kapabloj" data-t="nav.kapabloj">Kapabloj</a>
+      <a href="#fluou" data-t="nav.fluou">FluoU</a>
+      <a href="#arkitekturo" data-t="nav.arkitekturo">Arĥitekturo</a>
+      <a href="#mejlosxtonoj" data-t="nav.mejlosxtonoj">Mejloŝtonoj</a>
+      <a href="#eligo" data-t="nav.eligo">Eligo</a>
+      <a href="#elssxuti" data-t="nav.elssxuti">Elŝuti</a>
+    </nav>
+
+    <div class="agordoj">
+      <button class="buto subtila enira-lancho" id="eniroButono" type="button"
+        aria-label="Malfermi Eniron (Ctrl+E)" data-t-aria="eniro.malfermi">
+        <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6">
+          <circle cx="7" cy="7" r="4.4"></circle>
+          <path d="M10.4 10.4 14 14"></path>
+        </svg>
+        <span data-t="nav.eniro">Eniro</span>
+        <kbd>Ctrl</kbd><kbd>E</kbd>
+      </button>
+
+      <div class="akcentoj" role="group" aria-label="Akcento" data-t-aria="akcento.regiloj">
+        <button class="akcento-elektilo" type="button" data-akcento="oro" style="--koloro:#FFB454"
+          aria-label="Akcento: oro" title="oro" aria-pressed="false"></button>
+        <button class="akcento-elektilo" type="button" data-akcento="koralo" style="--koloro:#FF5C8A"
+          aria-label="Akcento: koralo" title="koralo" aria-pressed="false"></button>
+        <button class="akcento-elektilo" type="button" data-akcento="cxielo" style="--koloro:#4CC9FF"
+          aria-label="Akcento: ĉielo" title="ĉielo" aria-pressed="false"></button>
+        <button class="akcento-elektilo" type="button" data-akcento="verdo" style="--koloro:#57E389"
+          aria-label="Akcento: verdo" title="verdo" aria-pressed="true"></button>
+        <button class="akcento-elektilo" type="button" data-akcento="viola" style="--koloro:#A78BFA"
+          aria-label="Akcento: viola" title="viola" aria-pressed="false"></button>
+        <button class="akcento-elektilo" type="button" data-akcento="bluo" style="--koloro:#5B7CFA"
+          aria-label="Akcento: bluo" title="bluo" aria-pressed="false"></button>
+      </div>
+
+      <label class="sxaltilo" title="Ŝalti inter la malluma kaj hela temoj"
+        data-t-title="temo.sxalti">
+        <span id="temoEtikedo">Malluma</span>
+        <input type="checkbox" id="temoSxaltilo" checked aria-label="Malluma temo">
+      </label>
+
+      <div class="lingvo" role="group" aria-label="Lingvo / Language">
+        <button type="button" data-lingvo="eo" aria-pressed="true">EO</button>
+        <button type="button" data-lingvo="en" aria-pressed="false">EN</button>
+      </div>
+
+      <a class="buto norma fonto-ligilo" href="https://github.com/makoto-lernanto/mikerno">
+        <svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+          <path
+            d="M8 .8a7.2 7.2 0 0 0-2.3 14c.4.1.5-.2.5-.4v-1.4c-2 .4-2.4-.9-2.4-.9-.3-.8-.8-1-.8-1-.7-.5.1-.5.1-.5.7.1 1.1.7 1.1.7.7 1.1 1.7.8 2.1.6.1-.5.3-.8.5-1-1.6-.2-3.3-.8-3.3-3.5 0-.8.3-1.4.7-1.9-.1-.2-.3-.9.1-1.8 0 0 .6-.2 1.9.7a6.6 6.6 0 0 1 3.5 0c1.3-.9 1.9-.7 1.9-.7.4.9.2 1.6.1 1.8.4.5.7 1.1.7 1.9 0 2.7-1.7 3.3-3.3 3.5.3.3.6.8.6 1.6v2c0 .2.1.5.5.4A7.2 7.2 0 0 0 8 .8Z">
+          </path>
+        </svg>
+        <span data-t="nav.fonto">Fonto</span>
+      </a>
+    </div>
+  </header>
+
+  <main id="cxefa">
+    <section class="heroo" id="hejmo">
+      <div class="heroo-teksto" data-aperu>
+        <p class="supera-etikedo">
+          MiKerno <span data-versio-montri>0.7.0</span> · x86_64 + arm64 · Rust no_std
+        </p>
+        <h1><span>MiKerno</span></h1>
+        <p class="heroo-moto" data-t="hero.moto">«La estonteco nun.»</p>
+        <p class="heroo-priskribo" data-t="hero.teksto">
+          Eta, memstara unuprocesora kerno verkita tute en Rust — sen eksteraj
+          dependaĵoj, sen C en la kerno, kaj kun la sama konduto sur x86_64 kaj
+          arm64. Legebla, hoblebla, pruvebla.
+        </p>
+        <div class="principoj">
+          <span class="principo vigla" data-t="hero.principo1">sen dependaĵoj</span>
+          <span class="principo">Ring 3</span>
+          <span class="principo">ABI 2</span>
+          <span class="principo" data-t="hero.principo4">41 pruvoj</span>
+          <span class="principo">FluoU</span>
+        </div>
+        <div class="heroo-butonoj">
+          <a class="buto akcenta granda" href="https://github.com/makoto-lernanto/mikerno/releases/tag/v0.7.0"
+            data-versio-ligo>
+            <span data-t="hero.butono.elssxuti">Elŝuti</span>
+            <span data-versio-montri>0.7.0</span>
+          </a>
+          <a class="buto norma granda" href="https://github.com/makoto-lernanto/mikerno"
+            data-t="hero.butono.fonto">Rigardi la fonton</a>
+          <a class="buto subtila granda" href="https://github.com/makoto-lernanto/mikerno/blob/main/docs/FLUOU.md"
+            data-t="hero.butono.gvidilo">Legi la gvidilon</a>
+        </div>
+        <p class="heroo-noto" data-t="hero.noto">MIT · ISO por QEMU · x86_64 kaj arm64</p>
+      </div>
+
+      <div class="fenestra-scene" data-scene>
+        <div class="fenestro heroa-fenestro revelo" data-fenestro="heroo">
+          <div class="titolstrio" data-treni>
+            <div class="titola-flanko">
+              <svg class="aplika-ikono" viewBox="0 0 16 16" aria-hidden="true">
+                <rect x="1.5" y="2.5" width="13" height="11" rx="2" fill="none" stroke="currentColor"
+                  stroke-width="1.2"></rect>
+                <path d="M1.5 5.5h13" stroke="currentColor" stroke-width="1.2"></path>
+                <circle cx="4" cy="4" r=".7" fill="currentColor"></circle>
+              </svg>
+              <span class="sildeto">SISTEMO</span>
+            </div>
+            <div class="titola-centro">
+              <span class="titolo" data-t="pri.titolo">Pri MiKerno</span>
+            </div>
+            <div class="regiloj" role="group" aria-label="Fenestraj regiloj" data-t-aria="fenestro.regiloj">
+              <button type="button" data-ago="malgrandigi" title="Malgrandigi" aria-label="Malgrandigi">
+                <svg viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
+                  <path d="M2 5h6"></path>
+                </svg>
+              </button>
+              <button type="button" data-ago="pligrandigi" title="Pligrandigi" aria-label="Pligrandigi">
+                <svg class="ikono-pligrandigi" viewBox="0 0 10 10" aria-hidden="true" fill="none"
+                  stroke="currentColor" stroke-width="1.2">
+                  <rect x="1.8" y="1.8" width="6.4" height="6.4"></rect>
+                </svg>
+                <svg class="ikono-restarigi" viewBox="0 0 10 10" aria-hidden="true" fill="none"
+                  stroke="currentColor" stroke-width="1.1">
+                  <rect x="1.6" y="3" width="5.4" height="5.4"></rect>
+                  <path d="M3.4 3V1.6h5v5H6.9"></path>
+                </svg>
+              </button>
+              <button type="button" class="fermi" data-ago="fermi" title="Fermi" aria-label="Fermi">
+                <svg viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
+                  <path d="M2 2l6 6M8 2 2 8"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="fenestra-korpo pria-korpo">
+            <div class="pri-chelo"><span data-t="pri.versio">Versio</span><strong><span data-versio-montri>0.7.0</span></strong></div>
+            <div class="pri-chelo"><span data-t="pri.arkitekturo">Arĥitekturo</span><strong>x86_64 + arm64</strong></div>
+            <div class="pri-chelo"><span data-t="pri.lingvo">Lingvo</span><strong>Rust · no_std</strong></div>
+            <div class="pri-chelo"><span data-t="pri.planisto">Planisto</span><strong data-t="pri.planisto.valoro">antaŭokupa · 100 Hz</strong></div>
+            <div class="pri-chelo"><span data-t="pri.konservado">Konservado</span><strong>virtio-blk · 64</strong></div>
+            <div class="pri-chelo"><span data-t="pri.pruvoj">Pruvoj</span><strong>41 · Kani</strong></div>
+            <div class="pri-chelo"><span>CI</span><strong>43/43 · <span data-t="pri.verda">verda</span></strong></div>
+          </div>
+          <div class="fenestra-piedo">
+            <span class="stato-punkto" aria-hidden="true"></span>
+            <span data-t="pri.ci">CI verda: 43/43 taskoj</span>
+            <span class="sildeto tenila">TENILO 0x0101</span>
+          </div>
+        </div>
+        <div class="restarigo" data-restarigo="heroo" hidden>
+          <h3 data-t="fenestro.kasxita">Fenestro kaŝita</h3>
+          <p data-t="fenestro.kasxita.teksto">La fenestro atendas en la labortablo.</p>
+          <button class="buto akcenta" type="button" data-restarigi="heroo" data-t="fenestro.remalfermi">Remalfermi</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="statistiko" aria-label="Ŝlosilaj nombroj" data-t-aria="stat.aria" data-aperu>
+      <div class="statistikero"><strong>2</strong><span data-t="stat.arkoj">arkoj</span></div>
+      <div class="statistikero"><strong>41</strong><span data-t="stat.pruvoj">formalaj pruvoj</span></div>
+      <div class="statistikero"><strong>11</strong><span data-t="stat.sistemvokoj">sistemvokoj</span></div>
+      <div class="statistikero"><strong>100 Hz</strong><span data-t="stat.temporizilo">temporizilo</span></div>
+    </section>
+
+    <section class="sceno" id="kapabloj" data-aperu>
+      <div class="scena-kapo">
+        <span class="scena-numero">01</span>
+        <div>
+          <h2 data-t="kapabloj.titolo">Kio estas ene</h2>
+          <p data-t="kapabloj.teksto">De la unua instrukcio ĝis Ring 3: ĉiu tavolo estas legebla, hoblebla
+            kaj pruvita per reala starto aŭ formala kontrolo.</p>
+        </div>
+      </div>
+
+      <div class="kartaro">
+        <article class="karto revelo">
+          <span class="karta-ikono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+              <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+              <path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"></path>
+            </svg>
+          </span>
+          <h3 data-t="kapabloj.k1.titolo">Sen dependaĵoj</h3>
+          <p data-t="kapabloj.k1.teksto">#![no_std], #![no_main], neniuj eksteraj Rust-kestoj kaj neniu C
+            en la kerno. Nur la lingvo, la aparataro kaj la dokumentaro.</p>
+          <span class="sildeto">Rust 2024</span>
+        </article>
+
+        <article class="karto revelo">
+          <span class="karta-ikono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="m12 3 9 5-9 5-9-5 9-5Z"></path>
+              <path d="m3 13 9 5 9-5M3 17l9 5 9-5"></path>
+            </svg>
+          </span>
+          <h3 data-t="kapabloj.k2.titolo">Unu kodo, du arkoj</h3>
+          <p data-t="kapabloj.k2.teksto">La sama IPC-scenaro kaj la sama piksela haketo sur x86_64 kaj
+            arm64. Unu malantaŭo, du platformoj.</p>
+          <span class="sildeto">x86_64 · arm64</span>
+        </article>
+
+        <article class="karto revelo">
+          <span class="karta-ikono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M12 3 20 6v6c0 5-3.4 8.2-8 9-4.6-.8-8-4-8-9V6l8-3Z"></path>
+              <path d="m8.5 12 2.3 2.3 4.7-5"></path>
+            </svg>
+          </span>
+          <h3 data-t="kapabloj.k3.titolo">Ring 3 kaj kapabloj</h3>
+          <p data-t="kapabloj.k3.teksto">Dek unu sistemvokoj, ABI 2, Tenilo kaj Mesaĝo. Ĉiu aliro al
+            memoro, dosieroj kaj ekrano venas per eksplicita kapablo.</p>
+          <span class="sildeto">ABI 2</span>
+        </article>
+
+        <article class="karto revelo">
+          <span class="karta-ikono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
+              stroke-linejoin="round">
+              <circle cx="12" cy="12" r="8.5"></circle>
+              <path d="m8 12.2 2.6 2.6L16.5 9"></path>
+            </svg>
+          </span>
+          <h3 data-t="kapabloj.k4.titolo">Formala pruvaro</h3>
+          <p data-t="kapabloj.k4.teksto">Kani pruvas la kadro-alokilon kaj la IPC-kernon en CI: 41 pruvoj,
+            unu tasko por ĉiu pruvo, kun 10-minuta limo.</p>
+          <span class="sildeto">Kani</span>
+        </article>
+
+        <article class="karto revelo">
+          <span class="karta-ikono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
+              stroke-linejoin="round">
+              <rect x="3" y="4.5" width="18" height="15" rx="2"></rect>
+              <path d="M3 8.5h18M6 6.5h.01M8.5 6.5h.01"></path>
+            </svg>
+          </span>
+          <h3>FluoU</h3>
+          <p data-t="kapabloj.k5.teksto">La deviga vida lingvo de Horizonto: tri materialoj, ses akcentoj,
+            fenestroj laŭ la Windows-modelo kaj neniuj hazardaj koloroj.</p>
+          <span class="sildeto">FluoU 0.1</span>
+        </article>
+
+        <article class="karto revelo">
+          <span class="karta-ikono" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
+              stroke-linejoin="round">
+              <ellipse cx="12" cy="6" rx="7.5" ry="3"></ellipse>
+              <path d="M4.5 6v12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6"></path>
+              <path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"></path>
+            </svg>
+          </span>
+          <h3 data-t="kapabloj.k6.titolo">Konservado</h3>
+          <p data-t="kapabloj.k6.teksto">virtio-blk legas kaj skribas 64 sektorojn tra PCI sur x86_64 kaj
+            MMIO sur arm64; la memprovo restarigas la enhavon.</p>
+          <span class="sildeto">virtio-blk</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="sceno" id="fluou" data-aperu>
+      <div class="scena-kapo">
+        <span class="scena-numero">02</span>
+        <div>
+          <h2 data-t="fluou.titolo">Vida lingvo, ne hazarda stilo</h2>
+          <p data-t="fluou.teksto">Ĉi tiu retejo mem uzas la FluoU-ĵetonojn: la samajn kolorojn, materialojn,
+            mezurojn kaj movon kiel la specifita interfaco. La deviga teksto restas FLUOU.md.</p>
+        </div>
+      </div>
+
+      <div class="labortablo" data-scene>
+        <div class="fenestro fenestro-demo revelo" data-fenestro="fluou">
+          <div class="titolstrio" data-treni>
+            <div class="titola-flanko">
+              <svg class="aplika-ikono" viewBox="0 0 16 16" aria-hidden="true">
+                <rect x="1.5" y="2.5" width="13" height="11" rx="2" fill="none" stroke="currentColor"
+                  stroke-width="1.2"></rect>
+                <path d="M1.5 5.5h13" stroke="currentColor" stroke-width="1.2"></path>
+              </svg>
+              <span class="sildeto">FluoU 0.1</span>
+            </div>
+            <div class="titola-centro">
+              <span class="titolo" data-t="fluou.fenestro.titolo">FluoU — komponantoj</span>
+            </div>
+            <div class="regiloj" role="group" aria-label="Fenestraj regiloj" data-t-aria="fenestro.regiloj">
+              <button type="button" data-ago="malgrandigi" title="Malgrandigi" aria-label="Malgrandigi">
+                <svg viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
+                  <path d="M2 5h6"></path>
+                </svg>
+              </button>
+              <button type="button" data-ago="pligrandigi" title="Pligrandigi" aria-label="Pligrandigi">
+                <svg class="ikono-pligrandigi" viewBox="0 0 10 10" aria-hidden="true" fill="none"
+                  stroke="currentColor" stroke-width="1.2">
+                  <rect x="1.8" y="1.8" width="6.4" height="6.4"></rect>
+                </svg>
+                <svg class="ikono-restarigi" viewBox="0 0 10 10" aria-hidden="true" fill="none"
+                  stroke="currentColor" stroke-width="1.1">
+                  <rect x="1.6" y="3" width="5.4" height="5.4"></rect>
+                  <path d="M3.4 3V1.6h5v5H6.9"></path>
+                </svg>
+              </button>
+              <button type="button" class="fermi" data-ago="fermi" title="Fermi" aria-label="Fermi">
+                <svg viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
+                  <path d="M2 2l6 6M8 2 2 8"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="fenestra-korpo fluou-korpo">
+            <aside class="flanko">
+              <div class="flanka-etikedo" data-t="fluou.dokumentoj">Dokumentoj</div>
+              <button type="button" class="dosiero elektita">
+                <span>komponantoj.fluo</span><span class="sildeto tenila">0x0101</span>
+              </button>
+              <button type="button" class="dosiero">
+                <span>materialoj.fluo</span><span class="sildeto tenila">0x0102</span>
+              </button>
+              <button type="button" class="dosiero">
+                <span>movado.fluo</span><span class="sildeto tenila">0x0103</span>
+              </button>
+              <div class="flanka-etikedo" data-t="fluou.agordoj">Agordoj</div>
+              <label class="sxaltilo">
+                <span data-t="fluou.akrila">Akrila nebulo</span>
+                <input type="checkbox" checked aria-label="Akrila nebulo">
+              </label>
+            </aside>
+
+            <div class="redaktilo">
+              <div class="ilobreto">
+                <button class="buto akcenta" type="button" data-t="fluou.butono.akcenta">Akcenta</button>
+                <button class="buto norma" type="button" data-t="fluou.butono.norma">Norma</button>
+                <button class="buto dangxera" type="button" data-t="fluou.butono.dangxera">Danĝera</button>
+                <span class="spaco"></span>
+                <button class="buto subtila" type="button" id="malfermiEniron">
+                  <span data-t="fluou.butono.eniro">Malfermi Eniron</span> <kbd>Ctrl</kbd><kbd>E</kbd>
+                </button>
+              </div>
+              <p class="demo-teksto" data-t="fluou.demo.teksto">Ĉiu fenestro havas 32 DIP altan titolstrian
+                strion, centritan titolon kaj la tri regilojn dekstre. La fenestra radiuso estas 8 DIP; la
+                regiloj mem estas ortangulaj.</p>
+              <div class="informa-strio">
+                <span class="semantiko" data-t="fluou.informo.semantiko">Sukceso</span>
+                <span data-t="fluou.informo.teksto">Vidaĵo laŭ FluoU 0.1</span>
+                <span class="sildeto">TENILO 0x0101</span>
+              </div>
+              <div class="progreso">
+                <div class="progresa-etikedo"><span data-t="fluou.progreso">Sinkronigo</span><span>62%</span></div>
+                <div class="progresa-trako"><div class="progresa-plenigo" style="width:62%"></div></div>
+              </div>
+              <div class="demo-etikedoj">
+                <span class="sildeto tenila">TENILO 0x0101</span>
+                <span class="sildeto">ABI 2</span>
+                <span class="sildeto">Mika · Akrila · Revelo</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="restarigo" data-restarigo="fluou" hidden>
+          <h3 data-t="fenestro.kasxita">Fenestro kaŝita</h3>
+          <p data-t="fenestro.kasxita.teksto">La fenestro atendas en la labortablo.</p>
+          <button class="buto akcenta" type="button" data-restarigi="fluou" data-t="fenestro.remalfermi">Remalfermi</button>
+        </div>
+      </div>
+
+      <div class="materialoj">
+        <article class="materialo revelo">
+          <span class="materiala-specimeno mika" aria-hidden="true"></span>
+          <h3>Mika</h3>
+          <p data-t="fluou.mika">Netravidebla bazo kun 7% da akcenta nuanco el la fonbildo.</p>
+        </article>
+        <article class="materialo revelo">
+          <span class="materiala-specimeno akrila" aria-hidden="true"></span>
+          <h3>Akrila</h3>
+          <p data-t="fluou.akrila.teksto">Fona nebulo 24 DIP, saturiĝo 1,5 kaj grajno por transiraj surfacoj.</p>
+        </article>
+        <article class="materialo revelo">
+          <span class="materiala-specimeno revelo-specimeno" aria-hidden="true"></span>
+          <h3>Revelo</h3>
+          <p data-t="fluou.revelo">Montrilsekva randobrilo 55% por interagaj kartoj kaj randoj.</p>
+        </article>
+      </div>
+
+      <p class="scena-ligiloj">
+        <a href="FLUOU.md">FLUOU.md</a>
+        <span aria-hidden="true">·</span>
+        <a href="FLUOU-montro.html" data-t="fluou.montro">Vida montro</a>
+      </p>
+    </section>
+
+    <section class="sceno" id="arkitekturo" data-aperu>
+      <div class="scena-kapo">
+        <span class="scena-numero">03</span>
+        <div>
+          <h2 data-t="ark.titolo">Ses tavoloj, unu fluo</h2>
+          <p data-t="ark.teksto">La kapabloj malsupreniras; la mesaĝoj supreniras. Neniu aplikaĵo tuŝas la
+            frambufon rekte.</p>
+        </div>
+      </div>
+
+      <div class="tavoloj">
+        <article class="tavolo revelo">
+          <span class="tavola-numero">1</span>
+          <div><h3 data-t="ark.t1.titolo">Aplikaĵo</h3><p data-t="ark.t1.teksto">horizonto · Ring 3 / EL0 — uzanta procezo kun propra adresa spaco kaj minimumaj kapabloj.</p></div>
+          <span class="sildeto">Ring 3</span>
+        </article>
+        <div class="sago" aria-hidden="true">↓</div>
+        <article class="tavolo revelo">
+          <span class="tavola-numero">2</span>
+          <div><h3>FluoU 0.1</h3><p data-t="ark.t2.teksto">Komponantoj, materialoj kaj movo; fenestroj ekzistas nur kun FENESTRO-tenilo.</p></div>
+          <span class="sildeto">fluoU</span>
+        </article>
+        <div class="sago" aria-hidden="true">↓</div>
+        <article class="tavolo revelo">
+          <span class="tavola-numero">3</span>
+          <div><h3>libmikerno</h3><p data-t="ark.t3.teksto">Komuna kontrakto inter la kerno kaj uzantspaco: ABI 2, Tenilo kaj Mesaĝo.</p></div>
+          <span class="sildeto">ABI 2</span>
+        </article>
+        <div class="sago" aria-hidden="true">↓</div>
+        <article class="tavolo revelo">
+          <span class="tavola-numero">4</span>
+          <div><h3>MiKerno</h3><p data-t="ark.t4.teksto">Planisto, IPC, memoro, interrompoj kaj virtio-blk sur x86_64 kaj arm64.</p></div>
+          <span class="sildeto">x86_64 · arm64</span>
+        </article>
+        <div class="sago" aria-hidden="true">↓</div>
+        <article class="tavolo revelo">
+          <span class="tavola-numero">5</span>
+          <div><h3 data-t="ark.t5.titolo">Kompozitoro</h3><p data-t="ark.t5.teksto">Izolita servo, kiu akceptas nur fenestrojn kun valida FENESTRO-tenilo.</p></div>
+          <span class="sildeto">FENESTRO</span>
+        </article>
+        <div class="sago" aria-hidden="true">↓</div>
+        <article class="tavolo revelo">
+          <span class="tavola-numero">6</span>
+          <div><h3 data-t="ark.t6.titolo">Ekrano</h3><p data-t="ark.t6.teksto">1280×800, 32 bpp; la sama piksela haketo sur ambaŭ arkoj.</p></div>
+          <span class="sildeto">1280×800</span>
+        </article>
+      </div>
+
+      <p class="ark-noto" data-t="ark.noto">FluoU 0.1 priskribas la kompozitoron kiel izolitan servon; la nuna
+        prototipo jam havas la kerman kaj Ring 3-tavolojn.</p>
+    </section>
+
+    <section class="sceno" id="mejlosxtonoj" data-aperu>
+      <div class="scena-kapo">
+        <span class="scena-numero">04</span>
+        <div>
+          <h2 data-t="mej.titolo">De la unua instrukcio al konservado</h2>
+          <p data-t="mej.teksto">Ĉiu paŝo havas pruvon: starto, haketo, provaĵo aŭ verda CI-rezulto.</p>
+        </div>
+      </div>
+
+      <ol class="tempo">
+        <li class="mejlosxtono revelo">
+          <span class="tempa-punkto" aria-hidden="true"></span>
+          <div class="mejla-kapo"><strong>M0</strong><span class="stato plenumita" data-t="stato.plenumita">Plenumita</span></div>
+          <h3 data-t="mej.m0.titolo">Workspace kaj pipeline</h3>
+          <p data-t="mej.m0.teksto">Tri kestoj, unu konstruo.</p>
+        </li>
+        <li class="mejlosxtono revelo">
+          <span class="tempa-punkto" aria-hidden="true"></span>
+          <div class="mejla-kapo"><strong>M4</strong><span class="stato plenumita" data-t="stato.plenumita">Plenumita</span></div>
+          <h3 data-t="mej.m4.titolo">GDT, IDT, TSS</h3>
+          <p data-t="mej.m4.teksto">256 vektoroj kaj int 0x80-pordego.</p>
+        </li>
+        <li class="mejlosxtono revelo">
+          <span class="tempa-punkto" aria-hidden="true"></span>
+          <div class="mejla-kapo"><strong>M7</strong><span class="stato plenumita" data-t="stato.plenumita">Plenumita</span></div>
+          <h3 data-t="mej.m7.titolo">Antaŭokupa planisto</h3>
+          <p data-t="mej.m7.teksto">Rondiga planisto kun ok fadenoj.</p>
+        </li>
+        <li class="mejlosxtono revelo">
+          <span class="tempa-punkto" aria-hidden="true"></span>
+          <div class="mejla-kapo"><strong>M8</strong><span class="stato plenumita" data-t="stato.plenumita">Plenumita</span></div>
+          <h3 data-t="mej.m8.titolo">Mesaĝa IPC</h3>
+          <p data-t="mej.m8.teksto">Finpunktoj, kapabloj, blokado kaj vekado.</p>
+        </li>
+        <li class="mejlosxtono revelo">
+          <span class="tempa-punkto" aria-hidden="true"></span>
+          <div class="mejla-kapo"><strong>M11</strong><span class="stato plenumita" data-t="stato.plenumita">Plenumita</span></div>
+          <h3 data-t="mej.m11.titolo">Ring 3</h3>
+          <p data-t="mej.m11.teksto">int 0x80 el uzantspaco.</p>
+        </li>
+        <li class="mejlosxtono revelo">
+          <span class="tempa-punkto" aria-hidden="true"></span>
+          <div class="mejla-kapo"><strong>M12</strong><span class="stato plenumita" data-t="stato.plenumita">Plenumita</span></div>
+          <h3 data-t="mej.m12.titolo">Per-procesaj spacoj</h3>
+          <p data-t="mej.m12.teksto">Spiono ricevas #PF; la viktimo pluvivas.</p>
+        </li>
+        <li class="mejlosxtono revelo">
+          <span class="tempa-punkto" aria-hidden="true"></span>
+          <div class="mejla-kapo"><strong>M13</strong><span class="stato plenumita" data-t="stato.plenumita">Plenumita</span></div>
+          <h3 data-t="mej.m13.titolo">Memoro-firmigo</h3>
+          <p data-t="mej.m13.teksto">SMEP, SMAP kaj KASLR.</p>
+        </li>
+        <li class="mejlosxtono revelo">
+          <span class="tempa-punkto" aria-hidden="true"></span>
+          <div class="mejla-kapo"><strong>M15</strong><span class="stato plenumita" data-t="stato.plenumita">Plenumita</span></div>
+          <h3 data-t="mej.m15.titolo">arm64</h3>
+          <p data-t="mej.m15.teksto">EL0, ABI 2, ramfb kaj PAN.</p>
+        </li>
+        <li class="mejlosxtono revelo nuna">
+          <span class="tempa-punkto" aria-hidden="true"></span>
+          <div class="mejla-kapo"><strong>M17</strong><span class="stato nuna" data-t="stato.nun">Nun</span></div>
+          <h3 data-t="mej.m17.titolo">Konservado</h3>
+          <p data-t="mej.m17.teksto">virtio-blk tra PCI kaj MMIO.</p>
+        </li>
+        <li class="mejlosxtono revelo">
+          <span class="tempa-punkto" aria-hidden="true"></span>
+          <div class="mejla-kapo"><strong>M18</strong><span class="stato parte" data-t="stato.parte">Parte</span></div>
+          <h3 data-t="mej.m18.titolo">CI kaj pruvaro</h3>
+          <p data-t="mej.m18.teksto">43/43 taskoj verdaj; testoj ankoraŭ venas.</p>
+        </li>
+      </ol>
+
+      <p class="scena-ligiloj">
+        <a href="https://github.com/makoto-lernanto/mikerno/blob/main/docs/MEJLOSTONOJ.md"
+          data-t="mej.ligilo">Ĉiuj mejloŝtonoj en la dokumentaro</a>
+      </p>
+    </section>
+
+    <section class="sceno" id="eligo" data-aperu>
+      <div class="scena-kapo">
+        <span class="scena-numero">05</span>
+        <div>
+          <h2 data-t="eligo.titolo">Ne vidaĵo — la konzolo</h2>
+          <p data-t="eligo.teksto">La seria eligo de la nuna ISO sub QEMU, kun la virtio-blk-memprovo.
+            La du arkoj produktas la saman frambufan haketon.</p>
+        </div>
+      </div>
+
+      <div class="terminala-scene" data-scene>
+        <div class="terminalo revelo" data-fenestro="ligo">
+          <div class="terminala-kapo" data-treni>
+            <div class="terminala-flanko">
+              <span class="terminala-sigilo" aria-hidden="true">❯_</span>
+              <span class="sildeto">ABI 2</span>
+            </div>
+            <div class="terminala-centro">
+              <span class="terminala-titolo" data-t="eligo.fenestro.titolo">Ligo — seria eligo</span>
+            </div>
+            <div class="terminala-dekstro">
+              <span class="terminala-stato" data-t="eligo.stato">Konektita</span>
+              <span class="sildeto" data-versio-montri>0.7.0</span>
+              <div class="regiloj terminala-regiloj" role="group" aria-label="Fenestraj regiloj de Ligo"
+                data-t-aria="fenestro.regiloj">
+                <button type="button" data-ago="malgrandigi" title="Malgrandigi" aria-label="Malgrandigi">
+                  <svg viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
+                    <path d="M2 5h6"></path>
+                  </svg>
+                </button>
+                <button type="button" data-ago="pligrandigi" title="Pligrandigi" aria-label="Pligrandigi">
+                  <svg class="ikono-pligrandigi" viewBox="0 0 10 10" aria-hidden="true" fill="none"
+                    stroke="currentColor" stroke-width="1.2">
+                    <rect x="1.8" y="1.8" width="6.4" height="6.4"></rect>
+                  </svg>
+                  <svg class="ikono-restarigi" viewBox="0 0 10 10" aria-hidden="true" fill="none"
+                    stroke="currentColor" stroke-width="1.1">
+                    <rect x="1.6" y="3" width="5.4" height="5.4"></rect>
+                    <path d="M3.4 3V1.6h5v5H6.9"></path>
+                  </svg>
+                </button>
+                <button type="button" class="fermi" data-ago="fermi" title="Fermi" aria-label="Fermi">
+                  <svg viewBox="0 0 10 10" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">
+                    <path d="M2 2l6 6M8 2 2 8"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="logaj-langetoj" role="tablist" aria-label="Arkitekturo de la eligo"
+            data-t-aria="eligo.langetoj">
+            <button type="button" role="tab" aria-selected="true" data-logbutono="x86">x86_64 · PCI</button>
+            <button type="button" role="tab" aria-selected="false" data-logbutono="arm">arm64 · MMIO</button>
+            <span class="spaco"></span>
+            <button type="button" class="buto subtila malgranda" data-kopii="eligoX86"
+              data-t="eligo.kopii">Kopii</button>
+          </div>
+
+          <div class="terminala-korpo">
+            <pre class="log" id="eligoX86" data-log="x86" aria-label="Seria eligo de x86_64"
+              data-t-aria="eligo.x86.aria"><span class="linio">[MiKerno] Saluton, mi estas MiKerno v0.7.0!</span>
+<span class="linio">[kerno] KASLR: kerna bazo 0x3c00000 (deŝovo 0x3b00000)</span>
+<span class="linio">[kerno] SMEP subtenata: jes</span>
+<span class="linio">[kerno] SMAP subtenata: jes</span>
+<span class="linio">[kerno] memoro: 7 regionoj, 255 MiB uzeblaj</span>
+<span class="linio">[kerno] framebuffer 1280x800, 32 bpp</span>
+<span class="linio sukceso">[konservado] virtio-blk (PCI): 64 sektoroj, 512 bajtoj po sektoro</span>
+<span class="linio sukceso">[konservado] virtio-blk: 64 sektoroj legitaj, haketo 0xc139f0538c943325</span>
+<span class="linio sukceso">[konservado] virtio-blk: skribo kaj restarigo (bone)</span>
+<span class="linio akcento">[ekrano] piksela fiksaĵo 1280x800, 32 bpp, tiparo 12x24; haketo 0xecf1f6dbe1421575</span>
+<span class="linio">[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj</span></pre>
+            <pre class="log" id="eligoArm" data-log="arm" aria-label="Seria eligo de arm64"
+              data-t-aria="eligo.arm.aria" hidden><span class="linio">[MiKerno] Saluton, mi estas MiKerno v0.7.0!</span>
+<span class="linio">[kerno] PXN subtenata: jes</span>
+<span class="linio">[kerno] UXN subtenata: jes</span>
+<span class="linio">[kerno] PAN subtenata: jes</span>
+<span class="linio">[kerno] memoro: 7 regionoj, 226 MiB uzeblaj</span>
+<span class="linio">[kerno] framebuffer 1280x800, 32 bpp</span>
+<span class="linio sukceso">[konservado] virtio-blk (MMIO): 64 sektoroj, 512 bajtoj po sektoro</span>
+<span class="linio sukceso">[konservado] virtio-blk: 64 sektoroj legitaj, haketo 0xc139f0538c943325</span>
+<span class="linio sukceso">[konservado] virtio-blk: skribo kaj restarigo (bone)</span>
+<span class="linio akcento">[ekrano] piksela fiksaĵo 1280x800, 32 bpp, tiparo 12x24; haketo 0xecf1f6dbe1421575</span>
+<span class="linio">[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj</span></pre>
+          </div>
+
+          <div class="terminala-piedo">
+            <span data-t="eligo.noto">Elektitaj linioj el la reala eligo; la plena protokolo estas en MEJLOSTONOJ.md.</span>
+            <span class="sildeto tenila">haketo 0xecf1f6dbe1421575</span>
+          </div>
+        </div>
+        <div class="restarigo" data-restarigo="ligo" hidden>
+          <h3 data-t="fenestro.kasxita">Fenestro kaŝita</h3>
+          <p data-t="fenestro.kasxita.teksto">La fenestro atendas en la labortablo.</p>
+          <button class="buto akcenta" type="button" data-restarigi="ligo"
+            data-t="fenestro.remalfermi">Remalfermi</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="sceno" id="elssxuti" data-aperu>
+      <div class="scena-kapo">
+        <span class="scena-numero">06</span>
+        <div>
+          <h2 data-t="elssxuti.titolo">Elŝuti kaj starti</h2>
+          <p data-t="elssxuti.teksto">Du ISO-bildoj por QEMU. Ambaŭ estis startigitaj senkape antaŭ la
+            eldono; la konzola eligo supre venas el ili.</p>
+        </div>
+      </div>
+
+      <div class="elssxutoj">
+        <article class="elssxuto revelo">
+          <div class="elssxuta-kapo">
+            <h3>x86_64</h3>
+            <span class="sildeto">Limine + Multiboot2</span>
+          </div>
+          <p data-t="elssxuti.x86.teksto">PCI · 1280×800-frambufo · SMEP/SMAP</p>
+          <dl>
+            <div><dt data-t="elssxuti.grando">Grando</dt><dd data-t="elssxuti.x86.grando">4,44 MiB</dd></div>
+            <div><dt>SHA-256</dt><dd><code id="hashX86">4afacbc00239d7b9127cdb2b8086ba66ce1d961722f7493281e96f8fc00e0897</code></dd></div>
+          </dl>
+          <div class="elssxuta-butonoj">
+            <a class="buto akcenta"
+              href="https://github.com/makoto-lernanto/mikerno/releases/download/v0.7.0/mikerno.iso"
+              data-versio-ligo data-t="elssxuti.elssxuti">Elŝuti</a>
+            <button class="buto norma" type="button" data-kopii="hashX86" data-t="elssxuti.kopii">Kopii SHA-256</button>
+          </div>
+        </article>
+
+        <article class="elssxuto revelo">
+          <div class="elssxuta-kapo">
+            <h3>arm64</h3>
+            <span class="sildeto">UEFI + plata Image</span>
+          </div>
+          <p data-t="elssxuti.arm.teksto">MMIO · ramfb · PAN/PXN/UXN</p>
+          <dl>
+            <div><dt data-t="elssxuti.grando">Grando</dt><dd data-t="elssxuti.arm.grando">4,95 MiB</dd></div>
+            <div><dt>SHA-256</dt><dd><code id="hashArm">af405daa3aa573315902382c2fe30d744cd3fbc541a26dc9b858cc8c1c364de4</code></dd></div>
+          </dl>
+          <div class="elssxuta-butonoj">
+            <a class="buto akcenta"
+              href="https://github.com/makoto-lernanto/mikerno/releases/download/v0.7.0/mikerno-arm.iso"
+              data-versio-ligo data-t="elssxuti.elssxuti">Elŝuti</a>
+            <button class="buto norma" type="button" data-kopii="hashArm" data-t="elssxuti.kopii">Kopii SHA-256</button>
+          </div>
+        </article>
+      </div>
+
+      <div class="elssxuta-noto">
+        <p data-t-html="elssxuti.noto">Por la plena memprovo, inkluzive de virtio-blk, uzu la deponejon:
+          <code>just run-iso</code> aŭ <code>just run-iso-arm</code>. La ISO mem praŝarĝas sen la testdisko.</p>
+        <p><a href="https://github.com/makoto-lernanto/mikerno#rapida-starto"
+            data-t="elssxuti.gvidilo">Rapida starto en README</a></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="piedo">
+    <div>
+      <strong>MiKerno <span data-versio-montri>0.7.0</span></strong>
+      <span data-t="piedo.teksto">MIT · La retejo uzas la FluoU-vidan lingvon; la deviga teksto restas FLUOU.md.</span>
+    </div>
+    <div class="piedaj-ligiloj">
+      <a href="https://github.com/makoto-lernanto/mikerno">GitHub</a>
+      <a href="https://github.com/makoto-lernanto/mikerno/blob/main/README.md">README</a>
+      <a href="https://github.com/makoto-lernanto/mikerno/blob/main/docs/MEJLOSTONOJ.md" data-t="piedo.mejlosxtonoj">Mejloŝtonoj</a>
+      <a href="https://github.com/makoto-lernanto/mikerno/blob/main/docs/VORTARO.md" data-t="piedo.vortaro">Vortaro</a>
+      <a href="FLUOU.md">FLUOU.md</a>
+      <a href="FLUOU-montro.html" data-t="piedo.montro">Vida montro</a>
+    </div>
+    <p class="pieda-noto" data-t="piedo.autoro">Ideo: Makoto Lernanto · kodo kaj dokumentaro: Qoder.</p>
+  </footer>
+
+  <div class="enira-tavolo" id="eniraTavolo" hidden></div>
+  <section class="eniro" id="eniroPaletro" role="dialog" aria-modal="true" aria-labelledby="eniraTitolo"
+    hidden>
+    <div class="enira-titolstrio">
+      <div class="enira-titola-flanko">
+        <svg class="enira-titola-ikono" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor"
+          stroke-width="1.5">
+          <circle cx="7" cy="7" r="4.4"></circle>
+          <path d="M10.4 10.4 14 14"></path>
+        </svg>
+        <span class="sildeto">FluoU</span>
+      </div>
+      <div class="enira-titola-centro">
+        <span class="enira-titolo" id="eniraTitolo" data-t="eniro.titolo">Eniro</span>
+      </div>
+      <div class="enira-titola-dekstro">
+        <span class="enira-modo" id="eniraModo" data-t="eniro.modo.sercho">Serĉo</span>
+      </div>
+    </div>
+    <div class="enira-kapo">
+      <input class="enira-sercho" id="eniraSercho" type="text" autocomplete="off" autocapitalize="off"
+        spellcheck="false" role="combobox" aria-expanded="true" aria-controls="enirajRezultoj"
+        aria-autocomplete="list" placeholder="Serĉu sekciojn, dokumentojn aŭ ligojn…"
+        data-t-placeholder="eniro.sercho">
+    </div>
+    <div class="eniraj-rezultoj" id="enirajRezultoj" role="listbox" aria-label="Rezultoj de Eniro"
+      data-t-aria="eniro.rezultoj"></div>
+    <div class="enira-piedo">
+      <span><kbd>↑</kbd><kbd>↓</kbd> <span data-t="eniro.navigi">navigi</span></span>
+      <span><kbd>Enter</kbd> <span data-t="eniro.ruli">ruli</span></span>
+      <span><kbd>Tab</kbd> <span data-t="eniro.kompletigi">kompletigi</span></span>
+      <span><kbd>Esc</kbd> <span data-t="eniro.fermi">fermi</span></span>
+      <span class="enira-versio">MiKerno <span data-versio-montri>0.7.0</span></span>
+    </div>
+  </section>
+
+  <div class="fulmomesagxoj" id="fulmomesagxoj" aria-live="polite" aria-label="Fulmomesaĝoj"
+    data-t-aria="fulmo.aria"></div>
+</body>
+</html>

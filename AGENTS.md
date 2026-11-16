@@ -17,6 +17,8 @@ dosieron.
   inkluzive la ĉinan (vidu `docs/FLUOU.md` §2.2). La mapada tavolo ne
   anstataŭas la Esperantajn fontajn tekstojn kaj ne rajtas ŝanĝi identigilojn,
   protokolajn nomojn aŭ komandnomojn; se ĝi mankas, la fonta teksto montriĝas.
+  La retejo havas Esperantan fonton kaj apartan anglan mapadon en
+  `docs/tradukoj/angla.js`; la ĉina restas ekster la reteja fonta tavolo.
 
 ## Versioj
 
@@ -39,6 +41,7 @@ Lokoj, kie la versio devas resti kongrua (kontrolataj de `tools/versio.sh`):
 - `README.md` — `**Versio:** 0.x.y (workspace)`
 - `docs/MEJLOSTONOJ.md` — `Versio de la workspace` en la kapo
 - `AGENTS.md` — `Nuna versio`
+- `docs/index.html` — `data-versio="0.x.y"` en la `<html>`-etikedo
 
 Post versio-ŝanĝo rulu `bash tools/versio.sh --ĝisdatigi`; `just verify`
 rulas `--kontroli`.
@@ -105,7 +108,7 @@ rulas `--kontroli`.
 ## Vida montro
 
 - `docs/FLUOU-montro.html` estas memstara, nur-Esperanta vidmontraĵo de
-  `docs/FLUOU.md`: fenestra modelo, Eniro (`Ctrl+K`) kaj Ligo.
+  `docs/FLUOU.md`: fenestra modelo, Eniro (`Ctrl+E`) kaj Ligo.
 - Ĝi ne estas normo; la deviga teksto restas `docs/FLUOU.md`. Se la gvidilo
   ŝanĝiĝas, ĝisdatigu la montron samtempe.
 - La montro uzas la samajn ĵetonojn, materialojn kaj regilojn; ne enkonduku
