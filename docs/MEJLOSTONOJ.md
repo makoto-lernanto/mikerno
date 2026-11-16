@@ -1470,6 +1470,20 @@ vidas nur la unuan peton. La MMIO-statuso estas 32-bita registro: bajta
 legado/skribado ne atingas la aparaton, do la trajta interkonsento ŝajne
 malsukcesas. Ĉiuj tri estis riparitaj kaj la kvar vojoj estas verdaj.
 
+**Nuba CI (2026-11-16).** Runo
+[#43886335925](https://github.com/makoto-lernanto/mikerno/actions/runs/43886335925)
+ĉe `0e5b627`: ĉiuj 43 taskoj verdaj — `lint-and-build` (19 s, inkluzive
+`just build-arm` por la plata arm64-`Image`), `kani-prepare` (53 s) kaj 41
+pruvoj de la matrico `kani-verify`; la tuta runo daŭris 11 min 45 s. La
+arm64-bildo do estas ankaŭ ligata kaj konvertata en CI, ne nur lintata.
+
+**Eldono.** Release
+[`v0.7.0`](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.7.0)
+enhavas `mikerno.iso` (SHA-256
+`4afacbc00239d7b9127cdb2b8086ba66ce1d961722f7493281e96f8fc00e0897`) kaj
+`mikerno-arm.iso` (SHA-256
+`af405daa3aa573315902382c2fe30d744cd3fbc541a26dc9b858cc8c1c364de4`).
+
 **Limigoj.** Nur modernaj transportoj, nur QEMU, polusa atendo, unu vico, po
 unu sektoro per peto, sen IOMMU (M19) kaj sen interrompoj por la fino de DMA.
 
