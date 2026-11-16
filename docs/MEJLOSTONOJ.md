@@ -147,6 +147,7 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-16 | 0.6.1 | 49 | 12394 | 9543 | 1703 | 1148 |
 | 2026-11-16 | 0.6.2 | 49 | 12536 | 9673 | 1704 | 1159 |
 | 2026-11-16 | 0.6.2 | 49 | 12554 | 9687 | 1707 | 1160 |
+| 2026-11-16 | 0.6.2 | 49 | 12554 | 9687 | 1707 | 1160 |
 
 ---
 
@@ -1325,27 +1326,37 @@ scenaro.
 `cedo_ne_kreas_tempon` kaj `ripozo_kaj_blokado_apartigas_tempon` malsukcesis
 ĉe `memcmp.unwind.0`. La tuta-tabela egaleco de naŭ `u64`-oj malvolviĝis al
 72-bajta `memcmp`, kiu postulis pli ol la fiksitaj 12 aŭ 16 malvolvaj paŝoj;
-la kvara, simbola pruvo kaj la ceteraj laboroj sukcesis. La antaŭa konkludo, ke
-la videblaj Rust-bukloj difinas la malvolvan bezonon, estis troa: la kompilo
-aldonas sian propran bajtan buklon.
+la kvara, simbola pruvo sukcesis. La antaŭa konkludo, ke la videblaj
+Rust-bukloj difinas la malvolvan bezonon, estis troa: la kompilo aldonas sian
+propran bajtan buklon.
+
+Aldone `vekotemporizilo::kani_proofs::reenmeto_kaj_forigo` estis nuligita de la
+600-sekunda `timeout`: la unua solver-voko daŭris 532 sekundojn kaj la dua ne
+finiĝis antaŭ la limo. En la antaŭa verda CI la sama pruvo bezonis proksimume
+9 minutojn kaj 31 sekundojn, do temas pri randa plenumtempo, ne pri nova
+kontraŭekzemplo; en tiu antaŭa CI ĉiuj asertoj estis verdaj.
 
 Por ne lasi ruĝan `main`, `f0781f5` estis malfarita per la nemaliga reverta
 komit `1407460`, kiu revenigis la validigitan Fazon 2 (`0.6.1`) al la deponejo.
 Poste la Fazo 3-ŝanĝoj estis reaplikitaj loke kaj la tri egalecoj anstataŭitaj
-per la helpa `samaj_plenumtikoj`, kiu komparas elementon post elemento. Ĉiuj
-asertoj, la naŭ kontadaj eroj (inkluzive nuloj) kaj la malvolvaj kontroloj
-restas; neniu kontrolo estis malŝaltita aŭ malstreĉita. La riparita versio
-atendas novan CI-runon.
+per la helpa `samaj_plenumtikoj`, kiu komparas naŭ erojn per skalaraj komparoj.
+Ĉiuj asertoj, la naŭ kontadaj eroj (inkluzive nuloj) kaj la malvolvaj kontroloj
+restas; neniu kontrolo estis malŝaltita aŭ malstreĉita.
 
-**Formala pordego — atendata.** Kvar novaj pruvoj en `kani_plenumtempo`:
+**Formala pordego — verda (CI #10).** La riparita Fazo 3 estis puŝita kiel
+`70e1e3e`; CI #10 (run 43843897740) finiĝis sukcese: 43 el 43 laboroj kaj 41
+Kani-pruvoj, de 2026-11-16 09:53:51Z ĝis 10:02:52Z (9 min 1 s). La kvar novaj
+pruvoj en `kani_plenumtempo` sukcesis:
 `tempopecoj_konservas_plenumtikojn`, `cedo_ne_kreas_tempon`,
 `ripozo_kaj_blokado_apartigas_tempon` kaj
 `nur_la_nuna_nombrigilo_ŝanĝiĝas_kaj_saturiĝas`. La unuaj tri reuzas la
 fiksajn lokajn scenarojn; la lasta kontrolas arbitran nunan identigilon kaj
 arbitrajn `u64`-nombrilojn por atribuo kaj saturiĝo de unu specimeno. La
 bloka/morta scenaro rekte modelas statŝanĝojn, ne la tutajn kuntekstŝaltajn
-vojojn. Kani ne estis rulita loke; la CI-matrico aŭtomate eltrovos la novajn
-pruvojn post la puŝo.
+vojojn. La heapa pruvo `vekotemporizilo::kani_proofs::reenmeto_kaj_forigo`,
+kiu en CI #8 trafis la templimon, sukcesis ĉi-foje en 7 min 48 s. Kani ne estis
+rulita loke; la CI-matrico eltrovis ĉiujn pruvojn aŭtomate. La formala pordego
+de M16 Fazo 3 estas verda.
 
 **Versio.** 0.6.2 (Fazo 3).
 
