@@ -14,6 +14,13 @@ kaj protokolaj nomoj sekvu ĝin.
 | `privata` | private | Proceza fenestro, kiun aliaj procezoj ne vidas. |
 | `kunhavigi` | share | Kernaj mapoj restas komunaj inter procezoj. |
 | `planisto` | scheduler | Neniam uzu `scheduler`. |
+| `prioritato` | scheduling priority | `Prioritato::{Malalta, Normala, Alta}`; novaj fadenoj defaŭlte estas `Normala`; nur la kerno fiksas la prioritaton. |
+| `tempopeco` | time slice / quantum | `Prioritato::tempopeco`: 1/2/4 temporizilaj tikoj; pezita cirkla planado, ne absoluta prioritata antaŭeco. |
+| `restaj_tikoj` | remaining quantum ticks | `Planisto.restaj_tikoj`; cedo fordonas la restaĵon, nova elekto rekomencas la tempopecon. |
+| `elekti_por_tiko` | tick selection | Elektas nur ĉe fino de tempopeco aŭ eksplicita cedo; `planumi_kun_cedo` plenumas la eventualan kuntekstŝalton. |
+| `prioritataj provoj` | priority scheduling checks | `testa_planisto`, `prioritata_provo`, `maksimuma_atenda_provo`, `egaleca_provo`, `ceda_provo`, `bloka_provo`; `testi_prioritatojn` raportas la kvin fiksajn scenarojn; la CI-pruvoj estas en `kani_prioritatoj`. |
+| `maksimuma preta atendo` | maximum ready wait | `MAKSA_PRETA_ATENDO = 28` tikoj por konstante preta fadeno: sep aliaj tempopecoj de maksimume kvar tikoj, sub regulaj planistaj vokoj. |
+| `antaŭokupa provo` | preemption test | `antaŭokupa_provo`, `ANTAŬOKUPAJ_PRETOJ`, `ANTAŬOKUPA_KOMENCO`: kvar testfadenoj trapasas barilon sen cedo kaj observas tikojn dum komuna 32-tika intervalo. |
 | `pagxo`, `paĝo` | page | Identigiloj uzas `pagx` aŭ `paĝ`. |
 | `pagxado` | paging | Modula nomo. |
 | `kadro` | frame | Neniam uzu `frame`. |

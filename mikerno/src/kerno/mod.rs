@@ -1,6 +1,8 @@
 //! Kerna nukleo — arkitekture sendependa; la platformon ĝi tuŝas nur tra
 //! `crate::arkitekturo`.
 
+use core::sync::atomic::{AtomicU64, Ordering};
+
 use crate::arkitekturo::Spaco;
 use crate::interrompo::InterrompaGardo;
 use crate::kunhavigita::Kunhavigita;
@@ -368,6 +370,8 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
 
 const STAKA_GRANDE: usize = 16 * 1024;
 const TESTAJ_FADENOJ: usize = 4;
+static ANTAŬOKUPAJ_PRETOJ: AtomicU64 = AtomicU64::new(0);
+static ANTAŬOKUPA_KOMENCO: AtomicU64 = AtomicU64::new(0);
 /// La dormodaŭroj de la testfadenoj en milisekundoj. Ili dormas kune ekde la
 /// starto, do la kupo tenas kvar malsamajn limdatojn kaj la vekoj sekvas ilin:
 /// 4 (30 ms), 2 (50 ms), 3 (70 ms), 1 (100 ms). La unua fadeno provas la
@@ -530,15 +534,19 @@ static mut STAKOJ: [FadenaStako; TESTAJ_FADENOJ] =
     [const { FadenaStako([0; STAKA_GRANDE]) }; TESTAJ_FADENOJ];
 
 fn krei_testajn_fadenojn() -> Result<(), planisto::PlanistaEraro> {
-    for indekso in 0..TESTAJ_FADENOJ {
+    planisto::testi_prioritatojn();
+    let prioritatoj = [
+        objekto::Prioritato::Malalta,
+        objekto::Prioritato::Normala,
+        objekto::Prioritato::Alta,
+        objekto::Prioritato::Malalta,
+    ];
+    for (indekso, prioritato) in prioritatoj.into_iter().enumerate() {
         let id = indekso as u64 + 1;
         let pinto = &raw const STAKOJ as u64 + id * STAKA_GRANDE as u64;
-        planisto::aldoni_fadenon(planisto::pretigi_fadenon(
-            id,
-            0,
-            VirtuaAdreso::nova(pinto),
-            testa_fadeno,
-        ))?;
+        let mut fadeno = planisto::pretigi_fadenon(id, 0, VirtuaAdreso::nova(pinto), testa_fadeno);
+        fadeno.prioritato = prioritato;
+        planisto::aldoni_fadenon(fadeno)?;
     }
     Ok(())
 }
@@ -866,12 +874,44 @@ fn testa_fadeno(id: u64) {
         }
         planisto::cedi();
     }
+    antaŭokupa_provo(id);
     crate::skribu!("[fadeno {}] finas sian laboron\n", id);
 }
 
-/// Fadeno 1 plenigas la vicon de fadeno 2 per `MAKSAJ_MESAGOJ` mesaĝoj; la
-/// sekva sendo blokas ĝis la ricevanto liberigas lokon. La mesaĝo mem portas
-/// falsan `sendinto` (`999`), kiun la kerno devas anstataŭigi.
+// La barilo sen cedo povas pasi nur se la temporizilo antaŭokupas la fadenojn.
+fn antaŭokupa_provo(id: u64) {
+    ANTAŬOKUPAJ_PRETOJ.fetch_or(1 << (id - 1), Ordering::Relaxed);
+    while ANTAŬOKUPAJ_PRETOJ.load(Ordering::Relaxed) != (1 << TESTAJ_FADENOJ) - 1 {
+        core::hint::black_box(id);
+    }
+    let propono = crate::arkitekturo::temporizilaj_tikoj() + 1;
+    let komenco =
+        match ANTAŬOKUPA_KOMENCO.compare_exchange(0, propono, Ordering::Relaxed, Ordering::Relaxed)
+        {
+            Ok(_) => propono,
+            Err(komenco) => komenco,
+        };
+    let mut lasta = u64::MAX;
+    let mut observitaj = 0;
+    loop {
+        let tiko = crate::arkitekturo::temporizilaj_tikoj();
+        if tiko >= komenco + 32 {
+            break;
+        }
+        if tiko >= komenco && tiko != lasta {
+            observitaj += 1;
+            lasta = tiko;
+        }
+        core::hint::black_box(id);
+    }
+    crate::skribu!(
+        "[fadeno {}] antaŭokupa laboro sen cedo ({}): {} observitaj tikoj\n",
+        id,
+        if observitaj >= 2 { "bone" } else { "MALBONE" },
+        observitaj
+    );
+}
+
 fn premrega_sendo() {
     let mesago = ipc::Mesago::nova(77, 999, 0, "premrego".as_bytes());
     let mut senditaj = 0;
@@ -895,6 +935,16 @@ fn premrega_sendo() {
 /// estas la senda fadeno (`1`), ne la `999` de la mesaĝo, kaj `ricevonto` estas
 /// la finpunkta identigilo (`2`).
 fn premrega_ricevo() {
+    loop {
+        let premregoj = {
+            let _gardo = InterrompaGardo::nova();
+            ipc::nuna_statistiko().premregoj
+        };
+        if premregoj != 0 {
+            break;
+        }
+        planisto::cedi();
+    }
     let mut nombro = 0;
     let mut idento = (0u64, 0u64);
     for _ in 0..=ipc::MAKSAJ_MESAGOJ {
@@ -948,7 +998,7 @@ fn tempolima_provo(id: u64) {
     let bone = nebloka == -11
         && nebloka_daŭro == 0
         && tempolimo == -110
-        && (5..=6).contains(&tempolima_daŭro)
+        && (5..=5 + planisto::MAKSA_PRETA_ATENDO + 1).contains(&tempolima_daŭro)
         && tempa_kodo == 0
         && tempa_tipo == 90
         && senfina_kodo == 0

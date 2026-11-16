@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-16 · Versio de la workspace: 0.6.0
+> Stato: 2026-11-16 · Versio de la workspace: 0.6.1
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -142,6 +142,7 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-16 | 0.6.0 | 49 | 12167 | 9333 | 1705 | 1129 |
 | 2026-11-16 | 0.6.0 | 49 | 12172 | 9331 | 1710 | 1131 |
 | 2026-11-16 | 0.6.0 | 49 | 12172 | 9331 | 1710 | 1131 |
+| 2026-11-16 | 0.6.1 | 49 | 12394 | 9543 | 1703 | 1148 |
 
 ---
 
@@ -1201,6 +1202,67 @@ Ripetitaj `arm64`-startoj de la fina bildo (QEMU `virt`, `ramfb`) atingas la
 saman finan staton sen escepto; la `x86_64`-vojoj restas senŝanĝaj.
 
 **Versio.** 0.6.0 (Fazo 1).
+
+**Fazo 2 (0.6.1) — prioritata planado.** La preta vico restas FIFO; la
+prioritato pezas la tempopecon anstataŭ doni absolutan antaŭecon:
+
+- `Prioritato::{Malalta, Normala, Alta}` en `kerno/objekto.rs` donas respektive
+  1, 2 kaj 4 tikojn (nominale 10, 20 kaj 40 ms). Novaj fadenoj defaŭlte havas
+  `Normala`; la kerno fiksas la prioritaton antaŭ registrado. Neniu nova
+  sistemvoko, loteria planado aŭ SMP-ŝanĝo; `ABI_VERSIO` restas `2`.
+- `Planisto.restaj_tikoj` malpliiĝas ĉe temporizila planado. Je elĉerpiĝo la
+  nuna fadeno iras al la vosto; `cedi` tuj fordonas la restaĵon. Blokado kaj
+  morto tuj elektas alian pretan fadenon, kaj veko aldonas ĉe la vosto sen
+  duobligo; ĉiu nova elekto rekomencas la tempopecon.
+- Konstante preta fadeno atendas maksimume unu rondon: kun ok fadenoj,
+  `MAKSA_PRETA_ATENDO = (8 − 1) × 4 = 28` tikoj. Tio estas limo en regulaj
+  planistaj tikoj, ne senkondiĉa murhorloĝa garantio dum interrompoj estas
+  malŝaltitaj. Alta prioritato ne povas senlime preterpasi malaltan.
+- Limdata veko kaj efektiva kurado estas apartaj: `maks_vekprokrasto` plu
+  devas esti ≤ 1 tiko. La dormaj kaj IPC-tempolimaj revenprovoj toleras ĝis
+  unu preta rondo plus unu tiko; la antaŭa unu-tika revenlimo de Fazo 1 ne
+  validas por la novaj tempopecoj. La komenca ISO-provo montris 30-ms dormon
+  revenantan post 5 tikoj malgraŭ senprokrasta veko; tio motivis la apartigon.
+- La premrega ricevanto atendas la unuan registritan sendblokadon antaŭ ol
+  malplenigi la vicon, do la testo ne dependas de la tempopecoj. Kvar kernaj
+  fadenoj kun prioritatoj malalta/normala/alta/malalta trapasas barilon sen
+  cedo kaj poste laboras dum komuna 32-tika intervalo; sen reala antaŭokupo
+  la barilo ne povas pasi.
+
+**Lokaj kontroloj (2026-11-16).** `just verify` sukcesis sen Kani: versio,
+formato, Clippy por ambaŭ arkitekturoj kaj workspace-konstruo. `just iso` kaj
+`just iso-arm` estis rekonstruitaj; QEMU-praŝarĝoj per `x86_64` PVH kaj BIOS-ISO,
+`arm64` Image kaj UEFI-ISO ĉiuj atingis la finan staton sen `MALBONE`:
+
+```text
+[planisto] prioritata rondo 1:2:4 (bone):
+[planisto] maksimuma preta atendo 28 tikoj (bone):
+[planisto] egalprioritata ordo (bone):
+[planisto] tuja cedo (bone):
+[planisto] blokado, ripozo kaj veko (bone):
+[fadeno 1] antaŭokupa laboro sen cedo (bone): 4 observitaj tikoj
+[fadeno 2] antaŭokupa laboro sen cedo (bone): 8 observitaj tikoj
+[fadeno 3] antaŭokupa laboro sen cedo (bone): 16 observitaj tikoj
+[fadeno 4] antaŭokupa laboro sen cedo (bone): 4 observitaj tikoj
+[fadeno 1] dormo (bone): petitaj 100 ms, pasintaj 10 tikoj (kodo 0)
+[ipc] statistiko (bone): senditaj=41, ricevitaj=25, premregoj=2, revokoj=7, tempolimoj=3
+[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
+```
+
+La kvar vojoj raportis `maks_vekprokrasto=0`; la SMAP/PAN-fina provo atingis
+la atenditan protektan escepton. `x86_64` uzas `-no-shutdown`, do la testilo
+finis QEMU post la fina raporto; `arm64` finiĝis per la kerna halto.
+
+**Formala pordego — atendata.** Kvin determinismaj scenaroj estis aldonitaj
+al `planisto::kani_prioritatoj`: `pezaj_tempopecoj_sen_malsatigo`,
+`malalta_prioritato_atendas_maksimume_unu_rondon`, `egalprioritataj_rotacias`,
+`cedo_liberigas_tempopecon` kaj `blokitaj_ne_kuras_kaj_veko_ne_duobligas`.
+Ili kontrolas la montritajn fiksajn statojn (inkluzive ok fadenojn ĉe la plej
+longa ronda atendo), ne ĉiujn arbitrajn blokadajn historiojn. La CI-matrico
+eltiras ilin aŭtomate; Kani ne estis rulita loke, kaj Fazo 2 ankoraŭ ne havas
+verdan CI-konkludon; la formalan pordegon plenumos la CI post la puŝo.
+
+**Versio.** 0.6.1 (Fazo 2).
 
 ---
 

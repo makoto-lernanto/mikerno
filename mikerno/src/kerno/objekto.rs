@@ -16,6 +16,23 @@ pub enum FadenoStato {
     Mortinta,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Prioritato {
+    Malalta,
+    Normala,
+    Alta,
+}
+
+impl Prioritato {
+    pub const fn tempopeco(self) -> u8 {
+        match self {
+            Self::Malalta => 1,
+            Self::Normala => 2,
+            Self::Alta => 4,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct Fadeno {
     pub id: FadenoId,
@@ -23,6 +40,7 @@ pub struct Fadeno {
     pub procezo: ProcezaId,
     pub stako_pinto: VirtuaAdreso,
     pub stato: FadenoStato,
+    pub prioritato: Prioritato,
     pub konteksto: Kunteksto,
     pub enirpunkto: Option<FadenoEnirpunkto>,
 }
@@ -39,6 +57,7 @@ impl Fadeno {
             procezo,
             stako_pinto,
             stato: FadenoStato::Preta,
+            prioritato: Prioritato::Normala,
             konteksto: Kunteksto::nova(),
             enirpunkto: Some(enirpunkto),
         }
@@ -51,6 +70,7 @@ impl Fadeno {
             procezo: 0,
             stako_pinto: VirtuaAdreso::nova(0),
             stato: FadenoStato::Kuranta,
+            prioritato: Prioritato::Normala,
             konteksto: Kunteksto::nova(),
             enirpunkto: None,
         }

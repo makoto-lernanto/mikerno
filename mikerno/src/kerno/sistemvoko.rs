@@ -380,15 +380,14 @@ fn kontroli_regionon(montrilo: u64, longo: usize, skriba: bool, el_ring3: bool) 
     true
 }
 
-/// Ring 0-memtesto de la dorma voko: la sama `int 0x80` / `svc #0`-vojo kiel
-/// por uzantaj procezoj. La pasaĵo estas mezurata en temporizilaj tikoj; pro
-/// planado ĝi rajtas malfrui je unu tiko.
+// Limdata veko ne signifas tujan kuradon: la preta vico povas postuli unu rondon.
 pub fn dorma_provo(id: u64, millisekundoj: u64) {
     let antaŭ = crate::arkitekturo::temporizilaj_tikoj();
     let kodo = invoki(SYS_DORMI, [millisekundoj, 0, 0, 0]) as i64;
     let pasintaj = crate::arkitekturo::temporizilaj_tikoj() - antaŭ;
     let petitaj = millisekundoj.div_ceil(10).max(1);
-    let bone = kodo == 0 && (petitaj..=petitaj + 1).contains(&pasintaj);
+    let tolero = planisto::MAKSA_PRETA_ATENDO + 1;
+    let bone = kodo == 0 && (petitaj..=petitaj + tolero).contains(&pasintaj);
     crate::skribu!(
         "[fadeno {}] dormo ({}): petitaj {} ms, pasintaj {} tikoj (kodo {})\n",
         id,

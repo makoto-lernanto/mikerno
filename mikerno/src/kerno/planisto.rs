@@ -9,11 +9,13 @@ use crate::interrompo::InterrompaGardo;
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::virtuala::VirtuaAdreso;
 
-use super::objekto::{Fadeno, FadenoEnirpunkto, FadenoId, FadenoStato, ProcezaId};
+use super::objekto::{Fadeno, FadenoEnirpunkto, FadenoId, FadenoStato, Prioritato, ProcezaId};
 use super::procezo::{ProcezaEstado, marki};
 use super::vekotemporizilo::Vekotemporizilo;
 
 pub const MAKSAJ_FADENOJ: usize = 8;
+pub const MAKSA_PRETA_ATENDO: u64 =
+    (MAKSAJ_FADENOJ as u64 - 1) * Prioritato::Alta.tempopeco() as u64;
 const RIPAZA_ID: FadenoId = 0;
 
 /// Cirkla vico kun unu plia loko, do `kapo == vosto` ĉiam signifas malplena.
@@ -57,6 +59,7 @@ pub struct Planisto {
     fadenoj: [Option<Fadeno>; MAKSAJ_FADENOJ + 1],
     preta_vico: PretaVico,
     nuna_fadeno: Option<FadenoId>,
+    restaj_tikoj: u8,
     /// La minimum-kupo de blokitaj fadenoj kun limdato; malplena limdato ne
     /// estas ero.
     vekoj: Vekotemporizilo,
@@ -91,6 +94,7 @@ impl Planisto {
             fadenoj,
             preta_vico: PretaVico::nova(),
             nuna_fadeno: None,
+            restaj_tikoj: 0,
             vekoj: Vekotemporizilo::nova(),
             tempolimoj: [false; MAKSAJ_FADENOJ + 1],
             ŝaltoj: 0,
@@ -131,6 +135,7 @@ impl Planisto {
     fn kurigu(&mut self, id: FadenoId) {
         if let Some(fadeno) = self.fadenoj[id as usize].as_mut() {
             fadeno.stato = FadenoStato::Kuranta;
+            self.restaj_tikoj = fadeno.prioritato.tempopeco();
         }
         self.veturoj[id as usize] = self.veturoj[id as usize].saturating_add(1);
         self.nuna_fadeno = Some(id);
@@ -155,39 +160,38 @@ impl Planisto {
         }
     }
 
-    /// Vokata el la temporizila interrompo: veku la fadenojn, kies limdato
-    /// pasis, poste rotaciu la nunan fadenon aŭ, se la ripoza kunteksto regas,
-    /// planu la pretajn fadenojn.
-    pub fn planumi(&mut self) {
-        self.venkigi_tempolimojn();
-        let Some(nuna) = self.nuna_fadeno else {
-            return;
-        };
+    fn elekti_por_tiko(&mut self, cedo: bool) -> Option<FadenoId> {
+        let nuna = self.nuna_fadeno?;
         if nuna == RIPAZA_ID {
-            if let Some(sekva) = self.elekti_proksiman() {
-                self.kurigu(sekva);
-                unsafe { self.switch(RIPAZA_ID, sekva) };
-            }
-            return;
+            return self.elekti_proksiman();
         }
-        let Some(fadeno) = self.fadenoj[nuna as usize].as_mut() else {
-            return;
-        };
+        let fadeno = self.fadenoj[nuna as usize].as_mut()?;
         if fadeno.stato != FadenoStato::Kuranta {
-            return;
+            return None;
         }
-
+        if !cedo && self.restaj_tikoj > 1 {
+            self.restaj_tikoj -= 1;
+            return None;
+        }
         fadeno.stato = FadenoStato::Preta;
         self.preta_vico.pusxi(nuna);
         self.stato_procezan(nuna, ProcezaEstado::Preta);
+        Some(self.elekti_proksiman().unwrap_or(nuna))
+    }
 
-        let sekva = self.elekti_proksiman().unwrap_or(nuna);
-        if sekva == nuna {
-            self.kurigu(nuna);
-            return;
+    fn planumi_kun_cedo(&mut self, cedo: bool) {
+        self.venkigi_tempolimojn();
+        let nuna = self.nuna_id();
+        if let Some(sekva) = self.elekti_por_tiko(cedo) {
+            self.kurigu(sekva);
+            if sekva != nuna {
+                unsafe { self.switch(nuna, sekva) };
+            }
         }
-        self.kurigu(sekva);
-        unsafe { self.switch(nuna, sekva) };
+    }
+
+    pub fn planumi(&mut self) {
+        self.planumi_kun_cedo(false);
     }
 
     /// Veku ĉiujn blokitajn fadenojn, kies limdato jam pasis. La vekito vidas
@@ -386,7 +390,7 @@ pub fn planumi() {
 /// Koopera cedo; interrompoj restas malŝaltitaj dum la ŝanĝo.
 pub fn cedi() {
     let _gardo = InterrompaGardo::nova();
-    planisto().planumi();
+    planisto().planumi_kun_cedo(true);
 }
 
 /// Bloku la nunan fadenon. La vokanto tenas interrompojn malŝaltitaj.
@@ -513,4 +517,153 @@ pub extern "C" fn fadeno_eniro(id: FadenoId) -> ! {
         enirpunkto(id);
     }
     planisto().morti(id)
+}
+
+fn testa_planisto<const N: usize>(prioritatoj: [Prioritato; N]) -> Planisto {
+    let mut planisto = Planisto::nova();
+    for (indekso, prioritato) in prioritatoj.into_iter().enumerate() {
+        let id = indekso as u64 + 1;
+        let mut fadeno = Fadeno::nova(id, 0, VirtuaAdreso::nova(0), |_| {});
+        fadeno.prioritato = prioritato;
+        planisto.aldoni_fadenon(fadeno).unwrap();
+    }
+    let unua = planisto.elekti_proksiman().unwrap();
+    planisto.kurigu(unua);
+    planisto
+}
+
+fn prioritata_provo() -> bool {
+    let mut planisto = testa_planisto([Prioritato::Malalta, Prioritato::Normala, Prioritato::Alta]);
+    let mut tikoj = [0u8; 3];
+    for _ in 0..14 {
+        tikoj[planisto.nuna_id() as usize - 1] += 1;
+        if let Some(sekva) = planisto.elekti_por_tiko(false) {
+            planisto.kurigu(sekva);
+        }
+    }
+    tikoj == [2, 4, 8] && planisto.nuna_id() == 1 && planisto.restaj_tikoj == 1
+}
+
+fn maksimuma_atenda_provo() -> bool {
+    let mut prioritatoj = [Prioritato::Alta; MAKSAJ_FADENOJ];
+    prioritatoj[0] = Prioritato::Malalta;
+    let mut planisto = testa_planisto(prioritatoj);
+    let sekva = planisto.elekti_por_tiko(false).unwrap();
+    planisto.kurigu(sekva);
+    for _ in 0..MAKSA_PRETA_ATENDO {
+        if planisto.nuna_id() == 1 {
+            return false;
+        }
+        if let Some(sekva) = planisto.elekti_por_tiko(false) {
+            planisto.kurigu(sekva);
+        }
+    }
+    planisto.nuna_id() == 1
+}
+
+fn egaleca_provo() -> bool {
+    let mut planisto = testa_planisto([Prioritato::Normala; 3]);
+    for tiko in 0..12 {
+        if planisto.nuna_id() != (tiko / 2 % 3 + 1) as u64 {
+            return false;
+        }
+        if let Some(sekva) = planisto.elekti_por_tiko(false) {
+            planisto.kurigu(sekva);
+        }
+    }
+    planisto.nuna_id() == 1
+}
+
+fn ceda_provo() -> bool {
+    let mut planisto = testa_planisto([Prioritato::Alta; 3]);
+    for id in [2, 3, 1] {
+        if planisto.elekti_por_tiko(true) != Some(id) {
+            return false;
+        }
+        planisto.kurigu(id);
+    }
+    planisto.restaj_tikoj == 4
+}
+
+fn bloka_provo() -> bool {
+    let mut planisto = testa_planisto([Prioritato::Alta; 3]);
+    planisto.fadenoj[1].as_mut().unwrap().stato = FadenoStato::Blokitaj;
+    let sekva = planisto.elekti_proksiman().unwrap();
+    planisto.kurigu(sekva);
+    planisto.veki_sen_limdato(1);
+    planisto.veki_sen_limdato(1);
+    for id in [3, 1] {
+        if planisto.elekti_por_tiko(true) != Some(id) {
+            return false;
+        }
+        planisto.kurigu(id);
+    }
+    planisto.fadenoj[1].as_mut().unwrap().stato = FadenoStato::Blokitaj;
+    planisto.fadenoj[2].as_mut().unwrap().stato = FadenoStato::Blokitaj;
+    planisto.fadenoj[3].as_mut().unwrap().stato = FadenoStato::Mortinta;
+    if planisto.elekti_proksiman().is_some() {
+        return false;
+    }
+    planisto.kurigu(RIPAZA_ID);
+    if planisto.elekti_por_tiko(false).is_some() {
+        return false;
+    }
+    planisto.veki_sen_limdato(1);
+    planisto.veki_sen_limdato(1);
+    if planisto.elekti_por_tiko(false) != Some(1) {
+        return false;
+    }
+    planisto.kurigu(1);
+    planisto.restaj_tikoj == 4 && planisto.preta_vico.pop().is_none()
+}
+
+pub fn testi_prioritatojn() {
+    for (nomo, bone) in [
+        ("prioritata rondo 1:2:4", prioritata_provo()),
+        ("maksimuma preta atendo 28 tikoj", maksimuma_atenda_provo()),
+        ("egalprioritata ordo", egaleca_provo()),
+        ("tuja cedo", ceda_provo()),
+        ("blokado, ripozo kaj veko", bloka_provo()),
+    ] {
+        crate::skribu!(
+            "[planisto] {} ({}):\n",
+            nomo,
+            if bone { "bone" } else { "MALBONE" }
+        );
+    }
+}
+
+#[cfg(kani)]
+mod kani_prioritatoj {
+    use super::*;
+
+    #[kani::proof]
+    #[kani::unwind(16)]
+    fn pezaj_tempopecoj_sen_malsatigo() {
+        assert!(prioritata_provo());
+    }
+
+    #[kani::proof]
+    #[kani::unwind(32)]
+    fn malalta_prioritato_atendas_maksimume_unu_rondon() {
+        assert!(maksimuma_atenda_provo());
+    }
+
+    #[kani::proof]
+    #[kani::unwind(14)]
+    fn egalprioritataj_rotacias() {
+        assert!(egaleca_provo());
+    }
+
+    #[kani::proof]
+    #[kani::unwind(12)]
+    fn cedo_liberigas_tempopecon() {
+        assert!(ceda_provo());
+    }
+
+    #[kani::proof]
+    #[kani::unwind(12)]
+    fn blokitaj_ne_kuras_kaj_veko_ne_duobligas() {
+        assert!(bloka_provo());
+    }
 }
