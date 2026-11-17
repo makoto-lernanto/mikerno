@@ -327,6 +327,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `restarigi` | restore | Revenigas la antaŭan grandecon. |
 | `fermi` | close | Fenestra ago; ne konfuzu kun `FERMI` de kapabloj. Ruĝa nur en la ŝveba stato de la ferma regilo. |
 | `trafiklumo` | traffic light | La macOS-regilo; malpermesita en FluoU. |
+| `Mito` | Windows key | La tradicia `Win`-klavo; la efektiva klavkombino de Eniro. `Ctrl+E` estas nur provizora solvo. |
 | `komponanto` | component | Publika API de FluoU. |
 | `ĵetono` | design token | Koloro, mezuro, movo aŭ denseco. |
 | `materialo` | material | Nur `Mika`, `Akrila` kaj `Revelo`. |
@@ -365,7 +366,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `rekta frambufa aliro` | direct framebuffer access | Malpermesita al aplikaĵoj. |
 | `vida montro` | visual demo | `docs/FLUOU-montro.html`; nur Esperanta, derivita el la ĵetonoj de tiu ĉi gvidilo. |
 | `sceno` | scene | Sekcio de la vida montro: fenestro, Eniro, Ligo. |
-| `enira tavolo` | palette overlay | Eniro levita super la paĝo per `Ctrl+E`. |
+| `enira tavolo` | palette overlay | Eniro levita super la paĝo per `Ctrl+E` (provizora klavo; estonte `Mito`). |
 | `malantaŭa kurteno` | backdrop | Mallumigita fono sub la enira tavolo; klako fermas. |
 | `retejo` | website | `docs/index.html`, `docs/retejo.css` kaj `docs/retejo.js`; la fonto estas Esperanta. |
 | `reteja versio` | site version | `data-versio` sur la `<html>`-etikedo; kontrolata de `tools/versio.sh`. |

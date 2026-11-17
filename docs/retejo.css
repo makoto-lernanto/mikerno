@@ -1098,6 +1098,13 @@ main {
   color: var(--teksto2);
 }
 
+.demo-noto {
+  margin: -4px 0 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--teksto2);
+}
+
 .informa-strio {
   display: flex;
   align-items: center;

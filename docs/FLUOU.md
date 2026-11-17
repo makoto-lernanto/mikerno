@@ -419,6 +419,8 @@ Eniro estas la tutsistema komanda paletro. Ĝi estas FluoU-aplikaĵo kun
 `Akrila` materialo kaj `Revelo` emfazo.
 
 - **E01.** `Ctrl+E` `DEVI` malfermi Eniron el ĉiu aplikaĵo; `Esc` fermas ĝin.
+  **Noto.** Tiu ĉi klavo estas nur provizora solvo: la efektiva klavkombino
+  de Horizonto estos la tradicia `Win`-klavo, kiun ni nomas **Mito**.
 - **E02.** Eniro `DEVI` subteni tri reĝimojn:
   1. ordinara serĉo laŭ Esperantaj nomoj, identigiloj kaj priskriboj;
   2. kalkulo post la prefikso `=`;

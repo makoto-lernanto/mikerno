@@ -2013,7 +2013,9 @@
             La tutsistema komanda paletro kun materialo <strong>Akrila</strong>.
             Tajpu nomon, <code>=</code> por kalkuli aŭ <code>&gt;</code> por
             delegi al Ligo. Premu <kbd>Ctrl</kbd>+<kbd>E</kbd> ie ajn sur la
-            paĝo por levi ĝin al tavolo.
+            paĝo por levi ĝin al tavolo. Tiu ĉi klavo estas nur provizora
+            solvo; la efektiva klavkombino estos <strong>Mito</strong>, la
+            tradicia <kbd>Win</kbd>-klavo.
           </p>
         </div>
       </div>
@@ -2048,7 +2050,7 @@
             <span><kbd>Enter</kbd> ruli</span>
             <span><kbd>Tab</kbd> kompletigi</span>
             <span><kbd>Esc</kbd> fermi</span>
-            <span><kbd>Ctrl</kbd>+<kbd>E</kbd> levi</span>
+            <span><kbd>Ctrl</kbd>+<kbd>E</kbd> levi (provizore)</span>
           </div>
         </div>
 
@@ -2694,7 +2696,7 @@
         case "pri": pri(); return;
         case "temo": temoElLigo(argumentoj); return;
         case "akcento": akcentoElLigo(argumentoj); return;
-        case "eniro": malfermiEniron(); linio("Eniro malfermita. Premu Ctrl+E ie ajn.", "sukceso"); return;
+        case "eniro": malfermiEniron(); linio("Eniro malfermita. Premu Ctrl+E (provizore) ie ajn; estonte Mito.", "sukceso"); return;
         case "purigi": terminalaKorpo.innerHTML = ""; bonvenon(); return;
         case "filtri": case "ordigi": case "unua": case "sumi":
         case "nombri": case "montri": case "teksto":
@@ -3125,6 +3127,7 @@
     eniraTavolo.addEventListener("click", fermiEniron);
 
     window.addEventListener("keydown", (e) => {
+      // Provizora klavo: la fina klavkombino estos Mito (la tradicia Win-klavo).
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "e") {
         e.preventDefault();
         malfermiEniron();

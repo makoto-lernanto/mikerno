@@ -1004,6 +1004,8 @@
     }
 
     document.addEventListener("keydown", (evento) => {
+      // Provizora klavo: Horizonto uzos la tradician Win-klavon (`Mito`),
+      // kiun la foliumilo ne transdonas al la paĝo.
       if ((evento.ctrlKey || evento.metaKey) && evento.key.toLowerCase() === "e") {
         evento.preventDefault();
         malfermiEniron();

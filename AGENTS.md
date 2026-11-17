@@ -108,7 +108,8 @@ rulas `--kontroli`.
 ## Vida montro
 
 - `docs/FLUOU-montro.html` estas memstara, nur-Esperanta vidmontraĵo de
-  `docs/FLUOU.md`: fenestra modelo, Eniro (`Ctrl+E`) kaj Ligo.
+  `docs/FLUOU.md`: fenestra modelo, Eniro (`Ctrl+E`, provizore; estonte
+  `Mito`) kaj Ligo.
 - Ĝi ne estas normo; la deviga teksto restas `docs/FLUOU.md`. Se la gvidilo
   ŝanĝiĝas, ĝisdatigu la montron samtempe.
 - La montro uzas la samajn ĵetonojn, materialojn kaj regilojn; ne enkonduku

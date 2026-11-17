@@ -150,6 +150,7 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-16 | 0.6.2 | 49 | 12554 | 9687 | 1707 | 1160 |
 | 2026-11-16 | 0.6.2 | 49 | 12554 | 9687 | 1707 | 1160 |
 | 2026-11-16 | 0.7.0 | 54 | 13568 | 10549 | 1753 | 1266 |
+| 2026-11-17 | 0.7.0 | 54 | 13568 | 10549 | 1753 | 1266 |
 
 ---
 
@@ -1060,7 +1061,8 @@ estis devige nuligita kaj restas `completed/cancelled`; ĝia modloko ne plu
 - `docs/retejo.css` — la FluoU-ĵetonoj, la fenestra modelo, la materialoj kaj
   la respondecaj reguloj.
 - `docs/retejo.js` — temo, akcentoj, lingva mapado, fenestraj regiloj,
-  `Ctrl+E`-Eniro, logaj langetoj, kopiado kaj la movoj.
+  `Ctrl+E`-Eniro (provizora; estonte `Mito`), logaj langetoj, kopiado kaj la
+  movoj.
 - `docs/tradukoj/angla.js` — la angla mapada tavolo; la fontaj tekstoj restas
   Esperantaj kaj la ĉina ne eniras la retejan fonton.
 - `docs/.nojekyll` — malŝaltas la Ĝekilan antaŭtrakton por la statikaj dosieroj.

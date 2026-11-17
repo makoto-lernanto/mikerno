@@ -22,6 +22,8 @@ window.TRADUKOJ_ANGLA = {
   "nav.eniro": "Eniro",
   "nav.fonto": "Source",
   "eniro.malfermi": "Open Eniro (Ctrl+E)",
+  "eniro.provizora":
+    "Stopgap shortcut: Ctrl+E. Later: Mito, the traditional Windows key.",
   "akcento.regiloj": "Accent",
   "temo.sxalti": "Switch between the dark and light themes",
 
@@ -90,6 +92,8 @@ window.TRADUKOJ_ANGLA = {
   "fluou.butono.eniro": "Open Eniro",
   "fluou.demo.teksto":
     "Every window has a 32 DIP title bar, a centred title and the three controls on the right. The window radius is 8 DIP; the controls themselves are square.",
+  "fluou.eniro.provizora":
+    "The Ctrl+E shortcut is a stopgap. The real shortcut will be Mito, the traditional Windows key.",
   "fluou.informo.semantiko": "Success",
   "fluou.informo.teksto": "A view according to FluoU 0.1",
   "fluou.progreso": "Sync",
