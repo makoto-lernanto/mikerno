@@ -482,7 +482,7 @@ code {
 /* ── Ĉefa enpaĝigo ───────────────────────────────────────────────────── */
 main {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -616,12 +616,25 @@ main {
 }
 
 .fenestro.pligrandigita {
-  position: absolute;
-  inset: 0;
-  z-index: 6;
+  position: fixed;
+  inset: 16px;
+  z-index: 85;
   width: auto;
   height: auto;
+  max-width: none;
   border-radius: 0;
+}
+
+.fenestro.pligrandigita .fluou-korpo {
+  min-height: 0;
+}
+
+.fenestro.pligrandigita .fluou-korpo > * {
+  min-height: 0;
+}
+
+.fenestro.pligrandigita .redaktilo {
+  overflow: auto;
 }
 
 .revelo {
