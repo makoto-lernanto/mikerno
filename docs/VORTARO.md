@@ -10,6 +10,21 @@ kaj protokolaj nomoj sekvu ĝin.
 | `fadeno` | thread | Neniam uzu `thread`. |
 | `procezo` | process | `Procezo`; neniam uzu `process`. |
 | `IK` | IPC (interproceza komunikado) | La modulo `kerno/ik.rs`; antaŭe `ipc`. |
+| `DI` | Continuous Integration (CI) | Daŭra Integrado: la laborfluo `di.yml` kaj la matrico `kani-kontroli`. |
+| `KI` | command-line interface (CLI) | Komandliniaj Iloj; en Versio la dosierujo `versio-ki`. |
+| `EAS` | content-addressable storage (CAS) | Enhavadresita Stokado; en Versio `libversio::stokado`. |
+| `komito` | commit | `Komito`; la komando `vs komitu`. Neniam uzu `commit`. |
+| `tirpeto` | pull request (PR) | `pull_request` restas kiel la nomo de la GitHub-events. |
+| `Cargo-laborloko` | Cargo workspace | La radika `[workspace]` en `Cargo.toml`. |
+| `kesto` | crate | `crate` restas kiel la Rust-ŝlosilvorto. |
+| `pruvo` | Kani harness / proof | Unu funkcio markita per `#[kani::proof]`; la matrico `kani-kontroli`. |
+| `statika analizo` | lint | `cargo clippy`; neniam uzu `lint` en tekstoj. |
+| `Eldono` | GitHub Release | Publikigita versio kun la ISO-aktivaĵoj. |
+| `aktivaĵo` | release asset | Dosiero alŝutita al Eldono. |
+| `interfaco` | interface / API | `API` restas nur en eksteraj protokolaj nomoj. |
+| `etendiana` | little-endian | La malalta bajto unue; 512-bajtaj sektoroj de SNDS. |
+| `grandendiana` | big-endian | La alta bajto unue; la `fw_cfg`-registroj. |
+| `ĉefmemoro` | RAM | Neniam uzu `ram` en identigiloj; `ramfb` restas protokola nomo. |
 | `proceza identigilo` | process id | `ProcezaId`; `0` estas la nukleo; en `RSI` ĉe la Ring 3-eniro. |
 | `proceza stato` | process state | `ProcezaEstado`: `Preta`, `Kuranta`, `Mortinta`. |
 | `privata` | private | Proceza fenestro, kiun aliaj procezoj ne vidas. |
@@ -311,7 +326,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `fw_cfg` | firmware configuration | La MMIO-aparato de QEMU (`qemu,fw-cfg-mmio`); dateno, selektilo kaj DMA. |
 | `selektilo` | selector | La 2-bajta grandendiana registro ĉe `fw_cfg + 0x08`. |
 | `dosierujo de fw_cfg` | fw_cfg file directory | Klavo `0x0019`; eroj po 64 bajtoj kun nomo kaj selektilo. |
-| `ramfb` | ĉefmemoro framebuffer | La `fw_cfg`-dosiero `etc/ramfb`; `RAMFBCfg` 28 bajtoj. |
+| `ramfb` | RAM framebuffer | La `fw_cfg`-dosiero `etc/ramfb`; `RAMFBCfg` 28 bajtoj. |
 | `kvarobla signo` | fourcc | `XR24` (`0x3432_5258`): XRGB8888 kun 32-bitaj pikseloj. |
 | `paŝo` | stride | Bajtoj po vico; `LARĜO * 4 = 5120`. |
 | `DMA-priskribo` | DMA descriptor | `DmaEro`: `kontrolo`, `longo`, `adreso`, ĉiuj grandendianaj. |
@@ -341,7 +356,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `fermi` | close | Fenestra ago; ne konfuzu kun `FERMI` de kapabloj. Ruĝa nur en la ŝveba stato de la ferma regilo. |
 | `trafiklumo` | traffic light | La macOS-regilo; malpermesita en FluoU. |
 | `Mito` | Windows key | La tradicia `Win`-klavo; la efektiva klavkombino de Eniro. `Ctrl+E` estas nur provizora solvo. |
-| `komponanto` | component | Publika API de FluoU. |
+| `komponanto` | component | Publika interfaco de FluoU. |
 | `ĵetono` | design token | Koloro, mezuro, movo aŭ denseco. |
 | `materialo` | material | Nur `Mika`, `Akrila` kaj `Revelo`. |
 | `Mika` | Mica | Propra materiala nomo; netravidebla bazo. |
