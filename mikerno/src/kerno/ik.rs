@@ -1025,7 +1025,7 @@ pub fn revoki_defaŭltan(fadeno: FadenoId) -> Result<(), IkEraro> {
 /// La tabeloj estas statikaj laŭ proceza identigilo, do sen restarigo nova
 /// procezo heredus la generaciojn de antaŭa procezo kun la sama identigilo
 /// (aŭ de la Ring 0-memtestoj). Tiam la fenda `0` ne havus la unuan generacion
-/// kaj la fiksa `BOOTSTRAP_TENILO` (`0x100`) ne plu validus.
+/// kaj la fiksa `KOMENCA_TENILO` (`0x100`) ne plu validus.
 pub fn inicialigi_procezon(procezo: ProcezaId) {
     if let Some(tabelo) = kapabloj(procezo) {
         *tabelo = Kapablotabelo::nova();

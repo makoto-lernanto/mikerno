@@ -1,8 +1,8 @@
 //! PL011 UART-surmetilo, demandata reĝimo.
 //!
 //! QEMU `virt` metas la unuan PL011-on ĉe `0x0900_0000`. La adreso venas el
-//! la FDT; la fiksa valoro restas nur kiel diagnoza fallback antaŭ ol la FDT
-//! estas analizita.
+//! la FDT; la fiksa valoro restas nur kiel diagnoza rezerva agordo antaŭ ol la
+//! FDT estas analizita.
 
 use core::arch::asm;
 use core::fmt::{self, Write};

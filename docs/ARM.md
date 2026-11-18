@@ -317,7 +317,7 @@ La `x86_64`-ISO (Limine, 1280×800, tiparo 12×24) presas la saman
 
 | Risko | Malŝarĝo |
 | --- | --- |
-| FDT-analizado tro kreskas | Minimuma analizilo por `memory`, `initrd`, `serial`, `intc`, `timer` kaj `fw-cfg`; fiksa `virt`-fallback nur por diagnozo |
+| FDT-analizado tro kreskas | Minimuma analizilo por `memory`, `initrd`, `serial`, `intc`, `timer` kaj `fw-cfg`; fiksa `virt`-rezerva agordo nur por diagnozo |
 | EL2 kontraŭ EL1 ĉe starto | `CurrentEL`-kontrolo kaj malgranda EL2→EL1-ŝelo |
 | GICv2 kontraŭ GICv3 | GICv2 unue, eksplicita `gic-version=2`; GICv3 poste |
 | `PAN` mankas sur `cortex-a53` | Solvita en A4: la `-kernel`-vojo uzas `-cpu max`; la UEFI-ISO uzas `cortex-a76`, ĉar AAVMF 2025.11 blokiĝas sub TCG kun `max`; la raporto montras la aktivan firmigon |

@@ -97,7 +97,7 @@ impl Tenilo {
 /// `horizonto` povas uzi sian propran finpunkton sen antaŭa `KREI_FINPUNKTON`.
 /// Ĉi tio estas la transira kapabla distribuo antaŭ `fork`/`exec` (M16), ne
 /// ĝenerala API.
-pub const BOOTSTRAP_TENILO: Tenilo = Tenilo(1 << 8);
+pub const KOMENCA_TENILO: Tenilo = Tenilo(1 << 8);
 
 /// Nomita finpunkto, de kiu oni derivas kapablon.
 #[repr(C)]

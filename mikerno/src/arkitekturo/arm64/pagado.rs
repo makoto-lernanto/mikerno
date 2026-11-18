@@ -444,7 +444,7 @@ impl AdresaSpaco for ArmAdresaSpaco {
         }
 
         // MMIO de QEMU `virt`: GIC-distribuilo, GIC-CPU-interfaco, PL011 kaj
-        // `fw_cfg` (la adreso venas el la FDT, kun fiksa fallback).
+        // `fw_cfg` (la adreso venas el la FDT, kun fiksa rezerva valoro).
         let fw_cfg = super::fw_cfg::bazo();
         for (komenco, fino) in [
             (0x0800_0000u64, 0x0800_1000u64),

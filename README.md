@@ -189,7 +189,7 @@ Ekvivalentaj rektaj komandoj:
 ```sh
 cargo build --workspace --release
 cargo build -p mikerno --release
-cargo run -p mikerno --release          # uzas la `runner`-on el .cargo/config.toml
+cargo run -p mikerno --release          # uzas la agordon `runner` el .cargo/config.toml
 ```
 
 `.cargo/config.toml` fiksas la celon `x86_64-unknown-none` kaj lanĉas QEMU per
@@ -493,7 +493,7 @@ kunhavas.
   eksdata tenilo `-9`; la montrila kontrolo venas antaŭ la tenila (C11);
 - la finpunkta generacio estas pliigata ĉe revoko kaj ĉe proceza detruo, do
   neniu malnova tenilo reviviĝas;
-- `registri_fadenon` instalas la transiran `BOOTSTRAP_TENILO` (`0x100`: fendo
+- `registri_fadenon` instalas la transiran `KOMENCA_TENILO` (`0x100`: fendo
   `0`, unua generacio) por ĉiu procezo, do `horizonto` povas uzi sian
   defaŭltan finpunkton sen antaŭa `KREI_FINPUNKTON`;
 - proceza detruo (ankaŭ la antaŭaj erarvojoj de `prepari_uzantan_procezon`)
@@ -545,7 +545,7 @@ distribuo de kapabloj venas en la sekvaj fazoj (M17).
 `libmikerno` fiksas la komunan kontrakton:
 
 - `Mesago` (`#[repr(C)]`, 64-bajta datumaro, `tipo`, `sendinto`, `ricevonto`),
-- `FinaPunkto`, `Kapablo`, `Permesoj`, `Tenilo`, `BOOTSTRAP_TENILO`,
+- `FinaPunkto`, `Kapablo`, `Permesoj`, `Tenilo`, `KOMENCA_TENILO`,
 - sistemvokaj numeroj: `SYS_SENDI = 1`, `SYS_RICEVI = 2`, `SYS_SKRIBI = 3`,
   `SYS_FINI = 4`, `SYS_CEDI = 5`, `SYS_KREI_FINPUNKTON = 6`, `SYS_DONI = 7`,
   `SYS_REVOKI = 8`, `SYS_RICEVI_TEMPO = 9`, `SYS_SENDI_TEMPO = 10`,

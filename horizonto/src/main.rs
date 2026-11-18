@@ -21,7 +21,7 @@ use libmikerno::syscall::{
     SENFINA_TEMPOLIMO, SYS_KREI_FINPUNKTON, SYS_REVOKI, SYS_RICEVI, SYS_RICEVI_TEMPO, SYS_SENDI,
     SYS_SKRIBI, invoki,
 };
-use libmikerno::{BOOTSTRAP_TENILO, Mesago, Permesoj, Tenilo};
+use libmikerno::{KOMENCA_TENILO, Mesago, Permesoj, Tenilo};
 
 /// La mesaĝa aranĝo devas kongrui bajte kun la kerno (kun `libmikerno`).
 const _: () = {
@@ -135,13 +135,13 @@ fn spioni(identigilo: u64) -> ! {
 
 /// A1: la kerno, ne la uzanto, plenigas `sendinto`/`ricevonto`.
 ///
-/// La procezo sendas al si mem tra sia defaŭlta kapablo (`BOOTSTRAP_TENILO`,
+/// La procezo sendas al si mem tra sia defaŭlta kapablo (`KOMENCA_TENILO`,
 /// fendo `0`). La du identigiloj estas intence falsitaj (`999`); post la sendo
 /// la kerno anstataŭigas ilin per la vera sendinto kaj la celo; la neuzata
 /// resto de la datumaro devas resti nula.
 fn testi_identon(identigilo: u64) {
     let sendata = Mesago::nova(0x4901, 999, 999, b"idento");
-    let sendo = biblioteko::sendi(BOOTSTRAP_TENILO, &sendata);
+    let sendo = biblioteko::sendi(KOMENCA_TENILO, &sendata);
     if sendo != 0 {
         biblioteko::skribi_formaton(format_args!(
             "[ring3] procezo {}: idento (MALBONE): sendo={}\n",
@@ -150,7 +150,7 @@ fn testi_identon(identigilo: u64) {
         return;
     }
     let mut ricevita = Mesago::malplena();
-    let ricevo = biblioteko::ricevi(BOOTSTRAP_TENILO, &mut ricevita);
+    let ricevo = biblioteko::ricevi(KOMENCA_TENILO, &mut ricevita);
     let resto_nula = ricevita.datumaro()[sendata.longo()..]
         .iter()
         .all(|bajto| *bajto == 0);
@@ -317,20 +317,20 @@ fn testi_revokon(identigilo: u64) {
 /// tempolimon.
 fn testi_tempolimojn(identigilo: u64) {
     let mut celo = Mesago::malplena();
-    let nebloka = biblioteko::ricevi_kun_tempolimo(BOOTSTRAP_TENILO, &mut celo, 1, 0);
-    let tempolimo = biblioteko::ricevi_kun_tempolimo(BOOTSTRAP_TENILO, &mut celo, 1, 50);
+    let nebloka = biblioteko::ricevi_kun_tempolimo(KOMENCA_TENILO, &mut celo, 1, 0);
+    let tempolimo = biblioteko::ricevi_kun_tempolimo(KOMENCA_TENILO, &mut celo, 1, 50);
     let mesaĝo = Mesago::nova(0x4C01, 0, 0, b"tempolimo");
-    let sendo = biblioteko::sendi_kun_tempolimo(BOOTSTRAP_TENILO, &mesaĝo, 0);
+    let sendo = biblioteko::sendi_kun_tempolimo(KOMENCA_TENILO, &mesaĝo, 0);
     let mut ricevita = Mesago::malplena();
     let senfina =
-        biblioteko::ricevi_kun_tempolimo(BOOTSTRAP_TENILO, &mut ricevita, 0, SENFINA_TEMPOLIMO);
+        biblioteko::ricevi_kun_tempolimo(KOMENCA_TENILO, &mut ricevita, 0, SENFINA_TEMPOLIMO);
     // SAFETY: la tenilo kaj la celo estas validaj; la tempolimo intence superas
     // `u32::MAX`, do la kerno rifuzas ĝin antaŭ ol legi aŭ skribi la mesaĝon.
     let troa = unsafe {
         invoki(
             SYS_RICEVI_TEMPO,
             [
-                BOOTSTRAP_TENILO.nombro() as usize,
+                KOMENCA_TENILO.nombro() as usize,
                 &mut celo as *mut Mesago as usize,
                 0,
                 u32::MAX as usize + 1,

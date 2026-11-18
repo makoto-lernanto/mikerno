@@ -154,6 +154,7 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-17 | 0.7.0 | 54 | 13568 | 10549 | 1753 | 1266 |
 | 2026-11-18 | 0.7.1 | 55 | 14043 | 10972 | 1771 | 1300 |
 | 2026-11-18 | 0.7.1 | 55 | 14042 | 10971 | 1771 | 1300 |
+| 2026-11-18 | 0.7.1 | 55 | 14042 | 10971 | 1771 | 1300 |
 
 ---
 
@@ -170,7 +171,7 @@ uzantspaco, riproduktebla per unu komando.
   `edition = "2024"`, `rust-version = "1.85"` (altigita al `1.100` la
   2026-11-13; vidu §4.5), `resolver = "2"`.
 - `.cargo/config.toml` — cela triopo `x86_64-unknown-none`, `rust-lld`,
-  `relocation-model=pic`, kaj runner al `bash tools/run-qemu.sh` (WSL2/Linux).
+  `relocation-model=pic`, kaj la agordo `runner` al `bash tools/run-qemu.sh` (WSL2/Linux).
 - `justfile` — `konstrui-ciujn`, `konstrui-kerno`, `konstrui`, `ruli`,
   `iso`, `ruli-iso`, `kontroli`.
 - `build.rs` en la kerno kaj en `horizonto` — ĉiu kesto liveras sian propran
@@ -948,12 +949,12 @@ la pruvatan enhavon:
 
 1. La vicaj pruvoj uzas **malplenan datumaron**: `iu_mesago` fariĝis
    `Mesago::nova(tipo, 0, 0, &[])`. La vica ordo dependas nur de `tipo` kaj de
-   la fonto; simbolaj payload-bajtoj nur pligrandigis la formulon.
+   la fonto; simbolaj bajtoj de la datumaro nur pligrandigis la formulon.
 2. `unwind` malkreskis al **8** en la du FIFO-pruvoj (maksimume tri mesaĝoj kaj
    tri `preni_de`-paŝoj) kaj al **20** kie la pruvo trairas la plenajn 16
    fendojn (`plena_mesagujo_rifuzas`, `preno_konservas_la_invarianton`).
 3. `plenlonga_mesago` kun `unwind 70` aparte pruvas la plenan 64-bajtan buferan
-   limon, do la malplena payload ne malstreĉas tiun garantion.
+   limon, do la malplena datumaro ne malstreĉas tiun garantion.
 
 Post la ŝanĝoj la pinto de CBMC ĉe la antaŭe kadukiĝinta pruvo malaltiĝis de
 pli ol 3 GB al malpli ol 1 GB, kaj la tuta pordo fariĝas verda.
@@ -1098,7 +1099,7 @@ sur la publikigita adreso.
 | --- | --- | --- |
 | 1 | 0.4.0 | ABI 2: `Tenilo` (indekso + generacio), `Permesoj::REVOKI/PLENAJ`, erar-kodoj `-9/-11/-28/-32/-90/-110`, vokoj 6–11 rezervitaj (`-2`), `ABI_VERSIO = 2`; A1-identeca pruvo; 13 Kani-pruvoj |
 | 2 | 0.4.1 | `FinaPunktoObjekto`-tabelo `FINAJ_PUNKTOJ`, generacioj, referenckalkulo, minimuma kapablotabelo, `KREI_FINPUNKTON`(6)/`FERMI`(11); malnova vojo per defaulta finpunkto |
-| 3 | 0.4.2 | Permes-kontroloj, `DONI`(7), `SENDI`/`RICEVI` transiras al `rdi` = tenilo, du-nivela generacia kontrolo, `BOOTSTRAP_TENILO`; la fonta filtro venas kun `RICEVI_TEMPO` en Fazo 6 |
+| 3 | 0.4.2 | Permes-kontroloj, `DONI`(7), `SENDI`/`RICEVI` transiras al `rdi` = tenilo, du-nivela generacia kontrolo, `KOMENCA_TENILO`; la fonta filtro venas kun `RICEVI_TEMPO` en Fazo 6 |
 | 4 | 0.4.3 | `REVOKI`(8) tutfinpunkta, revokaj vekoj `-32`, purigo ĉe proceza detruo, `Result<Mesago, IkEraro>` |
 | 5 | 0.4.4 | Plen-vica premrego (sendblokado), identeco, `-90`, `IkStatistiko` |
 | 6 | 0.4.5 | `RICEVI_TEMPO`(9)/`SENDI_TEMPO`(10), `Atendo::{Senfina, Nebloka, Tempa}`, absoluta limdato por ĉiu voko, `-110`, `-11` |
@@ -1127,8 +1128,8 @@ sur la publikigita adreso.
   disciplina kaj la kialo estas la `STAC`-vivo, ne la kuntekstŝanĝo.
 - **C8.** La kapablotabelo havas 8 liniojn (`[[KapabloEniro; 16]; 8]`); linio
   `0` (kerno) restas ĉiam malplena.
-- **C9.** Ne ekzistas novaj plenigaĵoj; testoj pruvas nulan payload-reston kaj
-  la identecan transprenon.
+- **C9.** Ne ekzistas novaj plenigaĵoj; testoj pruvas nulan reston de la datumaro
+  kaj la identecan transprenon.
 - **C10.** Fazo 2 liveras verajn `Tenilo`-jn (minimuma kapablotabelo); Fazo 3
   ŝanĝas `rdi` al tenilo sen duobla modelo.
 - **C11.** Montrila kontrolo okazas **antaŭ** tenila kontrolo; la malnovaj
@@ -1150,7 +1151,7 @@ sur la publikigita adreso.
 | --- | --- | --- | --- |
 | 2026-11-13 | 1. ABI 2: `Tenilo`, permesoj, erar-kodoj, rezervitaj vokoj, A1-testo | 0.4.0 | `[ring3] procezo 4/5: idento (bone): sendinto=4/5 (uzanto asertis 999), ricevonto=4/5, resto_nula=jes`; `tenilo_kodigo_roundtrip`; 13 Kani-pruvoj; `size -A`: `.text` 76159, `.rodata` 50212, `.data` 4496, `.bss` 380928 B (bazo por la buĝeto C3) |
 | 2026-11-13 | 2. `FinaPunktoObjekto`, generacioj, referencoj, kapablotabelo, `KREI_FINPUNKTON`(6)/`FERMI`(11), defaŭlta finpunkto | 0.4.1 | `[ik] tabeloj (bone): kreitaj=13, plena=true, fermitaj=13, duobla_fermo=true, nova_generacio=true, malnova_tenilo=true, kerno=true`; `[ring3] procezo 4: finpunktoj (bone): tenilo=1025, fermo=0, duobla=-9, malvalida=-9, nulaj_permesoj=-1, nekonataj_permesoj=-1, rekrea=1281, malnova=-9`; `[ring3] negativaj (F2): celo6=-3, celo0=-3`; `[fadeno 2] ricevis mesaĝon: tipo 1, ricevonto 2 (finpunkta id)`; A1 senŝanĝa; 16 Kani-pruvoj; `size -A`: `.text` 89871, `.rodata` 50724, `.data` 34808, `.bss` 364544 B — ĉefmemora kresko (`.data`+`.bss`) 13928 B ≤ 20 KiB (C3) |
-| 2026-11-13 | 3. Permes-kontroloj, `DONI`(7), `SENDI`/`RICEVI` per tenilo, du-nivela kontrolo, `BOOTSTRAP_TENILO` | 0.4.2 | `[ik] rajtoj (bone): sendi per RICEVI-nura → -1, ricevi per SENDI-nura → -1`; `[ik] izolado de kapabloj (bone): procezo 7 uzas tenilon de procezo 6 → -9`; `[ik] dono (bone): rajtoj 0b011 → 0b010, eskalado 0b100 → -1`; `[ring3] procezo 4: rajtoj (bone): sendi_per_ricevi=-1, ricevi_per_sendi=-1`; `[ring3] negativaj (F3): tenilo6=-9, tenilo0=-9`; `[sistemvoko] Ring 0-memtesto: skribo=0, nekonata=-2, nula=-1, troa=-1, cedo=0, krei=-28, doni=-9, fermi=-9`; `[ik] tabeloj`, A1 kaj `finpunktoj` senŝanĝaj; 20 Kani-pruvoj; `size -A`: `.text` 86431, `.rodata` 51288, `.data` 36056, `.bss` 364544 B — ĉefmemora kresko (`.data`+`.bss`) 1248 B (C3) |
+| 2026-11-13 | 3. Permes-kontroloj, `DONI`(7), `SENDI`/`RICEVI` per tenilo, du-nivela kontrolo, `KOMENCA_TENILO` | 0.4.2 | `[ik] rajtoj (bone): sendi per RICEVI-nura → -1, ricevi per SENDI-nura → -1`; `[ik] izolado de kapabloj (bone): procezo 7 uzas tenilon de procezo 6 → -9`; `[ik] dono (bone): rajtoj 0b011 → 0b010, eskalado 0b100 → -1`; `[ring3] procezo 4: rajtoj (bone): sendi_per_ricevi=-1, ricevi_per_sendi=-1`; `[ring3] negativaj (F3): tenilo6=-9, tenilo0=-9`; `[sistemvoko] Ring 0-memtesto: skribo=0, nekonata=-2, nula=-1, troa=-1, cedo=0, krei=-28, doni=-9, fermi=-9`; `[ik] tabeloj`, A1 kaj `finpunktoj` senŝanĝaj; 20 Kani-pruvoj; `size -A`: `.text` 86431, `.rodata` 51288, `.data` 36056, `.bss` 364544 B — ĉefmemora kresko (`.data`+`.bss`) 1248 B (C3) |
 | 2026-11-14 | 4. `REVOKI`(8) tutfinpunkta, revokaj vekoj `-32`, purigo ĉe proceza detruo, `Result<Mesago, IkEraro>` | 0.4.3 | `[ik] revoko (bone): sen_revoki=-1, revoko=0, donita=-9, fermo=-9, duobla=-9`; `[fadeno 1] revokis la defaŭltan finpunkton de fadeno 3`; `[fadeno 3] revoka veko (bone): kodo -32`; `[ik] purigo de procezo 4/5: 1 kapabloj liberigitaj, 1 finpunktoj revokitaj`; `[ring3] procezo 4: revoko (bone): argumento=-1, sen_revoki=-1, fermo_sen=0, revoko=0, sendo=-9, fermo=-9, duobla=-9`; `[sistemvoko] Ring 0-memtesto: …, revoki=-9, revok_argumento=-1`; 21 Kani-pruvoj; `size -A`: `.text` 92799, `.rodata` 51808, `.data` 36104, `.bss` 364544 B — ĉefmemora kresko (`.data`+`.bss`) 48 B (C3) |
 | 2026-11-14 | 5. Sendblokado ĉe plena vico, masko de sendintoj, `-90`, `IkStatistiko` | 0.4.4 | `[fadeno 1] premrego (bone): 17 mesaĝoj senditaj; la lasta atendis liberan lokon`; `[fadeno 2] premrego (bone): 17 mesaĝoj, idento sendinto=1, ricevonto=2`; `[fadeno 2] sendblokada revoko (bone): enmetitaj=16, kodo=-32`; `[fadeno 3] revokis finpunkton 1; vekas la blokitan sendanton`; `[sistemvoko] Ring 0-memtesto: …, tro_longa=-90`; `[ik] statistiko (bone): senditaj=37, ricevitaj=21, premregoj=2, revokoj=7`; `[kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj`; 23 Kani-pruvoj; `size -A`: `.text` 99551, `.rodata` 52336, `.data` 36424, `.bss` 364544 B — ĉefmemora kresko (`.data`+`.bss`) 320 B (C3) |
 | 2026-11-14 | 6. `RICEVI_TEMPO`(9)/`SENDI_TEMPO`(10), `-110`, `-11`, absoluta limdato | 0.4.5 | `[fadeno 4] tempolimoj (bone): nebloka=-11 (0 tikoj), tempolimo=-110 (5 tikoj), mesaĝo=0/tipo 90, senfina=0/tipo 91`; `[ring3] procezo 5: tempolimoj (bone): nebloka=-11, tempolimo=-110, sendo=0, senfina=0, troa=-1`; `[ring3] procezo 6: tempolimoj (bone): nebloka=-11, tempolimo=-110, sendo=0, senfina=0, troa=-1`; `[memoro] izolado (bone): 64809 kadroj antaŭ, 64809 post`; `[ik] statistiko (bone): senditaj=41, ricevitaj=25, premregoj=2, revokoj=7, tempolimoj=3`; `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj`; 26 Kani-pruvoj; `size -A`: `.text` 102719, `.rodata` 52908, `.data` 36488, `.bss` 380928 B — ĉefmemora kresko (`.data`+`.bss`) 16448 B ≤ 20 KiB (C3) |
@@ -1372,8 +1373,8 @@ Rust-bukloj difinas la malvolvan bezonon, estis troa: la kompilo aldonas sian
 propran bajtan buklon.
 
 Aldone `vekotemporizilo::kani_proofs::reenmeto_kaj_forigo` estis nuligita de la
-600-sekunda `timeout`: la unua solver-voko daŭris 532 sekundojn kaj la dua ne
-finiĝis antaŭ la limo. En la antaŭa verda DI la sama pruvo bezonis proksimume
+600-sekunda `timeout`: la unua voko de la solvilo daŭris 532 sekundojn kaj la dua
+ne finiĝis antaŭ la limo. En la antaŭa verda DI la sama pruvo bezonis proksimume
 9 minutojn kaj 31 sekundojn, do temas pri randa plenumtempo, ne pri nova
 kontraŭekzemplo; en tiu antaŭa DI ĉiuj asertoj estis verdaj.
 
