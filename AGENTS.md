@@ -99,19 +99,23 @@ rulas `--kontroli`.
 
 ## Eldono de ISO
 
-- Post ĉiu verda CI por Fazo (la tuta matrico `kani-verify` verda), konstruu
-  `just iso` kaj `just iso-arm` el la puŝita kodo, kontrolu la praŝarĝojn de
-  ambaŭ (`QEMU_DISPLAY=none bash tools/run-qemu.sh iso` kaj
+- Post ĉiu finita tasko (ne nur Fazo), kiu ŝanĝas la kernon, la lanĉilojn aŭ
+  la enhavon de la SNDS-bildo, kaj post verda CI, konstruu `just iso` kaj
+  `just iso-arm` el la puŝita kodo, kontrolu la praŝarĝojn de ambaŭ
+  (`QEMU_DISPLAY=none bash tools/run-qemu.sh iso` kaj
   `QEMU_DISPLAY=none bash tools/run-qemu-arm.sh --iso`) kaj alŝutu ilin al la
-  GitHub Release de la nuna versio.
-- Se la Release ankoraŭ ne ekzistas, uzu `gh release create v0.x.y
-  mikerno.iso mikerno-arm.iso --target <plena koda SHA> --title …
-  --notes-file …`. La etikedo montru al la koda commit de la Fazo, ne al
-  posta dokumenta commit; la Release estu `Latest`, ne antaŭeldono, krom se
-  la uzanto diras alie.
-- Se ĝi jam ekzistas, anstataŭigu la assetojn per `gh release upload v0.x.y
-  mikerno.iso mikerno-arm.iso --clobber` kaj ĝisdatigu la SHA-256 en la
-  priskribo.
+  GitHub Release de la nuna versio. Nur-dokumenta tasko ne ŝanĝas la
+  ISO-enhavon; tiam ne rekonstruu, sed kontrolu, ke la lasta Release ankoraŭ
+  kongruas kun la nuna kodo.
+- Se la Release por la nuna versio ankoraŭ ne ekzistas, uzu `gh release
+  create v0.x.y mikerno.iso mikerno-arm.iso --target <plena koda SHA>
+  --title … --notes-file …`. La etikedo montru al la koda commit de la Fazo,
+  ne al posta dokumenta commit; la Release estu `Latest`, ne antaŭeldono,
+  krom se la uzanto diras alie.
+- Se ĝi jam ekzistas (ankaŭ kiam la versio ne ŝanĝiĝis), anstataŭigu la
+  assetojn per `gh release upload v0.x.y mikerno.iso mikerno-arm.iso
+  --clobber` kaj ĝisdatigu la SHA-256 en la priskribo kaj en
+  `docs/MEJLOSTONOJ.md`.
 - La priskribo enhavu la SHA-256 de ambaŭ ISO-oj kaj la ĉefajn akceptajn
   liniojn; la sama informo iru en `docs/MEJLOSTONOJ.md`.
 - Neniam alŝutu ISO-ojn konstruitajn el nepuŝita aŭ malverda kodo.
