@@ -1580,11 +1580,14 @@ la formala pordego restas la ekzistanta matrico.
 
 **Eldono.** [`v0.7.1`](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.7.1)
 (etikedo ĉe `cbfca8b`) enhavas `mikerno.iso` (SHA-256
-`cde117efe029995b602e09bf80773523cd467ae68872d27dd57878e29b1a140a`) kaj
+`8ce4d37bdbb8ed9c1a7289b5e3c61aa992e58ddfc4f99783162a50a5b0e915ad`) kaj
 `mikerno-arm.iso` (SHA-256
-`bb6749659b1771b5cd6c0a7414049a41f68cdb3656fe1e29e198892a2260c26b`). La du
-ISO-oj estis rekonstruitaj el la puŝita kodo kaj praŝarĝitaj; la dekstraj
-elŝutaj ligiloj de la retejo montras al ĉi tiu etikedo.
+`32f87672070866eb684e5ffe0c7987fec62c4d88f7095ddfa60d4e835ccf6bbd`). La du
+ISO-oj estis rekonstruitaj el la puŝita kodo `7dc09b0` (esperantigo de la
+terminaro) post la verda DI-runo
+[#44319290324](https://github.com/makoto-lernanto/mikerno/actions/runs/44319290324),
+kaj praŝarĝitaj; la dekstraj elŝutaj ligiloj de la retejo montras al ĉi tiu
+etikedo.
 
 **Limigoj.** Nurlega; unu ebeno da dosierujoj sen aparta VFS; dosiero estas
 kontigua ene de sia inodo; neniu kaŝmemoro; la bildo estas fiksita dum
