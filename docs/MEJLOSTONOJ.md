@@ -1579,6 +1579,15 @@ anoncoj estis ĝeneralaj avertoj pri Node.js 20, kiuj ne rilatas la kodon.
 La SNDS-memprovo ne havas propran Kani-pruvon; ĝi ruliĝas en la startoj, dum
 la formala pordego restas la ekzistanta matrico.
 
+**Eldono.** Release
+[`v0.7.1`](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.7.1)
+(etikedo ĉe `cbfca8b`) enhavas `mikerno.iso` (SHA-256
+`cde117efe029995b602e09bf80773523cd467ae68872d27dd57878e29b1a140a`) kaj
+`mikerno-arm.iso` (SHA-256
+`bb6749659b1771b5cd6c0a7414049a41f68cdb3656fe1e29e198892a2260c26b`). La du
+ISO-oj estis rekonstruitaj el la puŝita kodo kaj praŝarĝitaj; la dekstraj
+elŝutaj ligiloj de la retejo montras al ĉi tiu etikedo.
+
 **Limigoj.** Nurlega; unu ebeno da dosierujoj sen aparta VFS; dosiero estas
 kontigua ene de sia inodo; neniu kaŝmemoro; la bildo estas fiksita dum
 konstruo (ĝisdatigo postulas novan bildon); maksimuma dosiero 64 KiB (C17.4).

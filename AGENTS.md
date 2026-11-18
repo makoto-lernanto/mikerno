@@ -74,7 +74,9 @@ rulas `--kontroli`.
 2. Post la efektivigo rulu loke `just verify` (sen Kani) kaj la kontrolojn
    indikitajn de la uzanto, kaj certigu, ke ili pasas. La formalan pordegon
    (la CI-matricon `kani-verify`) plenumas la CI post la puŝo. Rekonstruu la
-   ISO-on (`just iso`) kaj kontrolu ĝian praŝarĝon antaŭ la raporto.
+   ISO-ojn (`just iso` kaj `just iso-arm`), kontrolu iliajn praŝarĝojn kaj,
+   post verda CI, alŝutu ilin al la Release de la nuna versio (vidu «Eldono
+   de ISO») antaŭ la raporto.
 3. Ĝisdatigu la version (laŭ la supra mapado; `bash tools/versio.sh
    --ĝisdatigi` por la dokumentoj), `docs/MEJLOSTONOJ.md` kaj
    `docs/VORTARO.md`.
@@ -94,6 +96,25 @@ rulas `--kontroli`.
   `kani-verify` blokas pluan laboron ĝis la kaŭzo estas riparita.
 - Ne kunfandu plurajn Fazojn en unu commit, krom se la uzanto klare postulas
   tion.
+
+## Eldono de ISO
+
+- Post ĉiu verda CI por Fazo (la tuta matrico `kani-verify` verda), konstruu
+  `just iso` kaj `just iso-arm` el la puŝita kodo, kontrolu la praŝarĝojn de
+  ambaŭ (`QEMU_DISPLAY=none bash tools/run-qemu.sh iso` kaj
+  `QEMU_DISPLAY=none bash tools/run-qemu-arm.sh --iso`) kaj alŝutu ilin al la
+  GitHub Release de la nuna versio.
+- Se la Release ankoraŭ ne ekzistas, uzu `gh release create v0.x.y
+  mikerno.iso mikerno-arm.iso --target <plena koda SHA> --title …
+  --notes-file …`. La etikedo montru al la koda commit de la Fazo, ne al
+  posta dokumenta commit; la Release estu `Latest`, ne antaŭeldono, krom se
+  la uzanto diras alie.
+- Se ĝi jam ekzistas, anstataŭigu la assetojn per `gh release upload v0.x.y
+  mikerno.iso mikerno-arm.iso --clobber` kaj ĝisdatigu la SHA-256 en la
+  priskribo.
+- La priskribo enhavu la SHA-256 de ambaŭ ISO-oj kaj la ĉefajn akceptajn
+  liniojn; la sama informo iru en `docs/MEJLOSTONOJ.md`.
+- Neniam alŝutu ISO-ojn konstruitajn el nepuŝita aŭ malverda kodo.
 
 ## Vortaro
 
