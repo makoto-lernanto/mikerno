@@ -59,7 +59,7 @@ if [[ "$ARG" == "--iso" ]]; then
         echo "UEFI-firmware ne trovita; instalu qemu-efi-aarch64 aŭ agordu QEMU_ARM_EFI=/vojo/al/firmware" >&2
         exit 1
     fi
-    # `ramfb` donas framebuffer-on al la UEFI-firmware kaj al la kerno, do la
+    # `ramfb` donas frambufon al la UEFI-firmware kaj al la kerno, do la
     # fenestro montras la UEFI/Limine-ekranon kaj poste la kerman fiksaĵon; la
     # kerna eligo restas sur la seria konzolo.
     # AAVMF (2025.11) blokiĝas sub TCG kun `-cpu max` antaŭ ol atingi la
@@ -90,7 +90,7 @@ else
 fi
 
 if [[ ! -f "$KERNEL" ]]; then
-    echo "kerna bildo ne trovita: $KERNEL (ruligu: just build-arm)" >&2
+    echo "kerna bildo ne trovita: $KERNEL (ruligu: just konstrui-arm)" >&2
     exit 1
 fi
 
@@ -100,7 +100,7 @@ if [[ -f "$INITRD" ]]; then
     INITRD_ARGS=(-initrd "$INITRD")
 fi
 
-# `mon:stdio` muxas la serian konzolon kaj la QEMU-monitoron. Por eliri:
+# `mon:stdio` miksas la serian konzolon kaj la QEMU-monitoron. Por eliri:
 #   Ctrl+A x   — tuj fini QEMU
 #   Ctrl+A c   — ŝalti la monitoron (tie: `quit`)
 # PSCI `SYSTEM_OFF` (la halto de la kerno) finas QEMU-on; `-no-shutdown` ne

@@ -1,7 +1,7 @@
 //! Horizonto: uzanta procezo (Ring 3).
 //!
 //! La kerno liveras ĉi tiun bildon kiel praŝarĝan modulon, muntas ĝin super
-//! 4 GiB kaj transiras al `horizonto_start` per `iretq`. La vokprotokolo estas
+//! 4 GiB kaj transiras al `horizonto_komenco` per `iretq`. La vokprotokolo estas
 //! `int 0x80` kun la registra aranĝo el `libmikerno`. La sama bildo plenumas
 //! du rolojn: la viktimo kontrolas sian sekretan paĝon kaj finas normale, dum
 //! la spiono legas la duan paĝon, kiun nur la viktimo mapis.
@@ -39,7 +39,7 @@ const SALUTO: &str = "horizonto: procezo vekis en Ring 3.\n";
 /// Enirpunkto de uzanta procezo. `reĝimo` venas en `rdi` kaj `identigilo` en
 /// `rsi` el la kerna `iretq`-transiro.
 #[unsafe(no_mangle)]
-pub extern "C" fn horizonto_start(reĝimo: u64, identigilo: u64) -> ! {
+pub extern "C" fn horizonto_komenco(reĝimo: u64, identigilo: u64) -> ! {
     biblioteko::skribi(SALUTO);
     testi_identon(identigilo);
     testi_finpunktojn(identigilo);
@@ -382,7 +382,10 @@ fn testi_negativajn() {
             invoki(SYS_SKRIBI, [0, 8, 0, 0]),
             invoki(SYS_SKRIBI, [0x1000, 8, 0, 0]),
             invoki(SYS_SKRIBI, [SALUTO.as_ptr() as usize, 4097, 0, 0]),
-            invoki(SYS_RICEVI, [0, horizonto_start as *const () as usize, 0, 0]),
+            invoki(
+                SYS_RICEVI,
+                [0, horizonto_komenco as *const () as usize, 0, 0],
+            ),
         )
     };
     if nekonata == -2 && nula == -1 && kerna == -1 && troa == -1 && nurlega == -1 {

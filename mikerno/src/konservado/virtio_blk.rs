@@ -219,25 +219,25 @@ fn nuligi(bazo: Kadro, kadroj: usize) {
 
 impl Konservado {
     fn nova(trafiko: VirtioTransporto, alokilo: &mut KadraAlokilo) -> Result<Self, Eraro> {
-        trafiko.agordi_status(0);
+        trafiko.agordi_staton(0);
         for _ in 0..1000 {
-            if trafiko.status() == 0 {
+            if trafiko.stato() == 0 {
                 break;
             }
         }
-        if trafiko.status() != 0 {
+        if trafiko.stato() != 0 {
             return Err(Eraro::Transporto("la aparato ne restariĝis"));
         }
 
-        trafiko.agordi_status(STATUS_ACK);
-        trafiko.agordi_status(STATUS_ACK | STATUS_DRIVER);
+        trafiko.agordi_staton(STATUS_ACK);
+        trafiko.agordi_staton(STATUS_ACK | STATUS_DRIVER);
         if trafiko.legi_trajtojn(1) & 1 == 0 {
             return Err(Eraro::Transporto("la aparato ne ofertas virtio 1.0"));
         }
         trafiko.agordi_trajtojn(0, 0);
         trafiko.agordi_trajtojn(1, 1);
-        trafiko.agordi_status(STATUS_ACK | STATUS_DRIVER | STATUS_FEATURES_OK);
-        let stato = trafiko.status();
+        trafiko.agordi_staton(STATUS_ACK | STATUS_DRIVER | STATUS_FEATURES_OK);
+        let stato = trafiko.stato();
         if stato & STATUS_FAILED != 0 || stato & STATUS_FEATURES_OK == 0 {
             return Err(Eraro::Transporto("la trajta interkonsento malsukcesis"));
         }
@@ -257,7 +257,7 @@ impl Konservado {
             bazo + OFSETO_UZITA,
         );
         trafiko.ebligi_vicon();
-        trafiko.agordi_status(STATUS_ACK | STATUS_DRIVER | STATUS_FEATURES_OK | STATUS_DRIVER_OK);
+        trafiko.agordi_staton(STATUS_ACK | STATUS_DRIVER | STATUS_FEATURES_OK | STATUS_DRIVER_OK);
 
         let kapacito = trafiko.kapacito();
         Ok(Self {

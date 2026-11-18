@@ -14,9 +14,9 @@ kodo, la protokoloj kaj la dokumentaro estas en Esperanto.
 
 La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
-reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
+reĝimo ĝis antaŭokupa planisto, mesaĝa IK kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.7.1 (workspace)
+- **Versio:** 0.7.1 (Cargo-laborloko)
 - **Arkitekturo:** `x86_64` kaj `arm64` (AArch64), unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -35,8 +35,8 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 5. [Memoro](#memoro)
 6. [Interrompoj, APIC kaj temporizilo](#interrompoj-apic-kaj-temporizilo)
 7. [Planisto](#planisto)
-8. [IPC kaj kapabloj](#ipc-kaj-kapabloj)
-9. [Eligo: COM1 kaj framebuffer](#eligo-com1-kaj-framebuffer)
+8. [IK kaj kapabloj](#ik-kaj-kapabloj)
+9. [Eligo: COM1 kaj frambufo](#eligo-com1-kaj-frambufo)
 10. [Uzantspaco](#uzantspaco)
 11. [Konstruado kaj kontrolado](#konstruado-kaj-kontrolado)
 12. [Testa scenaro](#testa-scenaro)
@@ -56,25 +56,25 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 | Memora mapo el la praŝarĝilo, rezervitaj regionoj | Funkcias | `mb2.rs`, `pvh.rs`, `memoro/mod.rs` |
 | Modula liverado: Multiboot2 tipo 3 kaj PVH-modlisto (`horizonto`) | Funkcias | `mb2.rs`, `pvh.rs`, `memoro/mod.rs` |
 | Bitmapa kadro-alokilo por la unuaj 4 GiB, kun `liberigi` kaj rekuzo | Funkcias | `memoro/kadro.rs` |
-| Kaskada forigo de adresa spaco (`detruu`) kun liberigo de paĝtabeloj | Funkcias | `arkitekturo/x86_64/pagxado.rs` |
-| Preciza liberigo de privataj `PDPT`-oj (inkl. `PML4[0]`) sen tuŝi kunhavatajn kernajn mapojn | Funkcias | `pagxado.rs`, `kerno/procezo.rs` |
-| Per-procesa adresa spaco: privata PML4, kunhavataj kernaj mapoj (`krei_kunhavantan`) | Funkcias | `kerno/procezo.rs`, `pagxado.rs` |
+| Kaskada forigo de adresa spaco (`detruu`) kun liberigo de paĝtabeloj | Funkcias | `arkitekturo/x86_64/pagado.rs` |
+| Preciza liberigo de privataj `PDPT`-oj (inkl. `PML4[0]`) sen tuŝi kunhavatajn kernajn mapojn | Funkcias | `pagado.rs`, `kerno/procezo.rs` |
+| Per-procesa adresa spaco: privata PML4, kunhavataj kernaj mapoj (`krei_kunhavantan`) | Funkcias | `kerno/procezo.rs`, `pagado.rs` |
 | Proceza detruo ĉe `SYS_FINI` kaj ĉe mortiga Ring 3-escepto (`#PF`, `#GP`) | Funkcias | `kerno/planisto.rs`, `interrompo/mod.rs` |
 | `CR3`-ŝalto dum kuntekstŝanĝo kaj per-procesa `TSS.RSP0` (16 KiB kerna stako) | Funkcias | `kerno/planisto.rs`, `kerno/procezo.rs`, `tss.rs` |
 | Strikta uzanta mapado (`mapi_uzantan`): fenestra limkontrolo kaj devigata bito `U` | Funkcias | `memoro/virtuala.rs`, `kerno/uzantspaco.rs` |
-| 4-nivela paĝado (PML4 → PDPT → PD → PT), NX, PCD | Funkcias | `arkitekturo/x86_64/pagxado.rs` |
+| 4-nivela paĝado (PML4 → PDPT → PD → PT), NX, PCD | Funkcias | `arkitekturo/x86_64/pagado.rs` |
 | SMEP: Ring 0 ne povas plenumi uzantajn foliojn (`CR4.SMEP`), kun CPUID-provo kaj gracia malŝalto | Funkcias | `arkitekturo/x86_64/firmigo.rs`, `procesoro.rs` |
 | SMAP: Ring 0 legas/skribas uzantajn foliojn nur en `STAC`/`CLAC`-fenestroj (`CR4.SMAP`), kun RAII-gardo | Funkcias | `arkitekturo/x86_64/firmigo.rs`, `kerno/sistemvoko.rs` |
 | GDT, 256-vektora IDT, escepta raportado | Funkcias | `gdt.rs`, `idt.rs`, `interrompo/mod.rs` |
 | Uzantaj DPL3-segmentoj kaj `int 0x80`-pordego (interrompa, `0xEE`) | Funkcias | `gdt.rs`, `idt.rs`, `kerno/sistemvoko.rs` |
 | Dek unu sistemvokoj per `int 0x80`: `SKRIBI`/`FINI`/`CEDI`/`SENDI`/`RICEVI`/`KREI_FINPUNKTON`/`DONI`/`REVOKI`/`FERMI`/`RICEVI_TEMPO`/`SENDI_TEMPO`, unueca `Mesago`, montrila kontrolo | Funkcias (Ring 0 kaj 3) | `kerno/sistemvoko.rs`, `arkitekturo/x86_64/sistemvoko.rs` |
-| ABI 2: `Tenilo` kun du-nivela generacia kontrolo, kapablotabelo, `KREI_FINPUNKTON`/`DONI`/`REVOKI`/`FERMI`, revokaj vekoj `-32`, sendblokado ĉe plena vico, `-90`, `IpcStatistiko`, tempolimoj `-110`/`-11`, purigo ĉe proceza detruo | Funkcias (ekde 0.4.5) | `libmikerno/`, `kerno/ipc.rs` |
+| ABI 2: `Tenilo` kun du-nivela generacia kontrolo, kapablotabelo, `KREI_FINPUNKTON`/`DONI`/`REVOKI`/`FERMI`, revokaj vekoj `-32`, sendblokado ĉe plena vico, `-90`, `IkStatistiko`, tempolimoj `-110`/`-11`, purigo ĉe proceza detruo | Funkcias (ekde 0.4.5) | `libmikerno/`, `kerno/ik.rs` |
 | TSS kun `RSP0` por Ring 3 → Ring 0 | Funkcias | `tss.rs` |
 | xAPIC (MMIO), malŝalto de 8259-PIC, spuria vektoro `0xFF` | Funkcias | `apic.rs` |
 | 100 Hz perioda temporizilo, kalibrita kontraŭ la PIT | Funkcias | `temporizilo.rs` |
 | Antaŭokupa rondiga planisto, 8 fadenoj + ripoza kunteksto | Funkcias | `kerno/planisto.rs` |
-| Mesaĝa IPC: finpunktoj, kapabloj, blokado/vekado | Funkcias | `kerno/ipc.rs` |
-| Framebuffer-teksta konzolo (4 strekoj, 8×16 … 32×64) kaj COM1 | Funkcias | `ekrano/`, `seria.rs` |
+| Mesaĝa IK: finpunktoj, kapabloj, blokado/vekado | Funkcias | `kerno/ik.rs` |
+| Frambufa teksta konzolo (4 strekoj, 8×16 … 32×64) kaj COM1 | Funkcias | `ekrano/`, `seria.rs` |
 | Komuna kerna/uzanta ABI (`libmikerno`) | Difinita | `libmikerno/` |
 | Uzanta fenestro super 4 GiB, ELF64-ŝargo kun bito `U`, 64 KiB stako | Funkcias | `kerno/uzantspaco.rs`, `memoro/virtuala.rs` |
 | Ring 3-transiro per `iretq` (`CS=0x23`, `SS=0x1B`, `IF=1`) | Funkcias | `arkitekturo/x86_64/uzanta.rs` |
@@ -82,7 +82,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 | Ring 3-escepta kapto: `#PF`/`#GP` mortigas la procezon kaj la sistemo daŭras | Funkcias | `interrompo/mod.rs` |
 | Samtempaj procezoj `4`/`5` kun sama sekreta adreso sed malsamaj kadroj | Funkcias | `kerno/mod.rs`, `kerno/uzantspaco.rs` |
 | Izolado de adresa spaco: spiono `#PF` ĉe nur-viktima paĝo, viktimo pluvivas | Funkcias | `horizonto/`, `interrompo/mod.rs` |
-| 29 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ipc.rs` |
+| 29 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ik.rs` |
 
 > `horizonto` estas liverata kiel praŝarĝa modulo, muntata super 4 GiB kun la
 > bito `U` tra ĉiuj paĝtabelaj niveloj, kaj ekzekutas en Ring 3 per `iretq`.
@@ -130,7 +130,7 @@ cargo install just          # opcia
 - **Loko de la deponejo.** Klonu en la Linuksan dosiersistemon (ekz.
   `~/mikerno`), ne en `/mnt/c/…`: la 9p-muntado estas multe pli malrapida, kaj
   Kani/CBMC povas elĉerpi la memoron dum la konstruo.
-- **Kani** (nur por `just verify`) instaliĝas aparte per
+- **Kani** (nur en DI) instaliĝas aparte per
   `cargo install --locked kani-verifier` kaj `cargo kani setup`.
 
 ### Postuloj
@@ -140,13 +140,13 @@ cargo install just          # opcia
 | Rust | 1.100 aŭ pli nova (eldono 2024); projekto kontrolita per 1.100.0 |
 | Cela triopo | `x86_64-unknown-none`; `aarch64-unknown-none` por `arm64` |
 | QEMU | `qemu-system-x86_64` (`sudo apt install qemu-system-x86`) |
-| QEMU (arm64) | Nur por `just run-arm` kaj `just run-iso-arm`: `qemu-system-aarch64`; por la ISO ankaŭ UEFI-firmware (`sudo apt install qemu-system-arm qemu-efi-aarch64`) |
+| QEMU (arm64) | Nur por `just ruli-arm` kaj `just ruli-iso-arm`: `qemu-system-aarch64`; por la ISO ankaŭ UEFI-firmware (`sudo apt install qemu-system-arm qemu-efi-aarch64`) |
 | xorriso | Nur por `just iso` kaj `just iso-arm` (`sudo apt install xorriso`) |
 | dosfstools / mtools | Nur por `just iso-arm` (`sudo apt install dosfstools mtools`) |
 | `just` | Opcia, sed rekomendata por la difinitaj taskoj |
 | bash | Lanĉilo de `tools/run-qemu.sh` kaj `tools/run-qemu-arm.sh` |
 | python3 | SNDS-bildo por `tools/krei_snds_img.sh` (kutime jam instalita) |
-| Kani | Nur por `just verify` (`cargo kani`) |
+| Kani | Nur en DI (`cargo kani`) |
 
 Instalu la celajn triopojn:
 
@@ -158,28 +158,28 @@ rustup target add aarch64-unknown-none   # por la ARM-ŝpuro
 ### Konstrui kaj ruli
 
 ```sh
-just build-all     # konstruas la tutan workspace (kerno, libmikerno, horizonto)
-just build         # konstruas nur la kernon (= build-kerno)
-just run           # QEMU -kernel, rekte per la PVH-noto (sen ISO)
+just konstrui-ciujn     # konstruas la tutan Cargo-laborlokon (kerno, libmikerno, horizonto)
+just konstrui         # konstruas nur la kernon (= konstrui-kerno)
+just ruli           # QEMU -kernel, rekte per la PVH-noto (sen ISO)
 just iso           # kreas mikerno.iso per Limine + Multiboot2
-just run-iso       # rulas la ISO-on (QEMU-fenestro montras la Limine-menuon)
-just build-arm     # arm64: plata `Image` + `horizonto`
-just run-arm       # arm64: konstruas kaj startigas la platan `Image`
+just ruli-iso       # rulas la ISO-on (QEMU-fenestro montras la Limine-menuon)
+just konstrui-arm     # arm64: plata `Image` + `horizonto`
+just ruli-arm       # arm64: konstruas kaj startigas la platan `Image`
 just iso-arm       # UEFI-bootebla `mikerno-arm.iso` (Limine + plata `Image`)
-just run-iso-arm   # konstruas kaj rulas `mikerno-arm.iso` per AAVMF
-just verify        # formato, lint (ambaŭ arkoj), konstruo kaj Kani-pruvoj
+just ruli-iso-arm   # konstruas kaj rulas `mikerno-arm.iso` per AAVMF
+just kontroli        # formato, statika analizo (ambaŭ arkoj) kaj konstruo
 ```
 
-`just run-arm` bezonas la celan triopon `aarch64-unknown-none`
+`just ruli-arm` bezonas la celan triopon `aarch64-unknown-none`
 (`rustup target add aarch64-unknown-none`) kaj `qemu-system-aarch64`.
 En `0.5.0` la arm64-kerno eniras `EL0` per `eret`,
 plenumas `svc #0`, posedas per-procezajn `TTBR0`-spacojn kaj rulas la saman
-IPC-scenaron kiel `x86_64`; `horizonto` venas kiel `-initrd` aŭ kiel
+IK-scenaron kiel `x86_64`; `horizonto` venas kiel `-initrd` aŭ kiel
 ISO-modulo. La frambufo venas el `ramfb` per `fw_cfg` (1280×800, `XR24`),
 `PXN`/`UXN`/`PAN` estas aktivaj, kaj la piksela fiksaĵo donas la saman
 haketon kiel la `x86_64`-ISO.
 `just iso-arm` krome postulas `xorriso`, `mkfs.fat` (dosfstools) kaj
-`mmd`/`mcopy` (mtools); `just run-iso-arm` bezonas UEFI-firmwaren
+`mmd`/`mcopy` (mtools); `just ruli-iso-arm` bezonas UEFI-firmwaren
 (`qemu-efi-aarch64`, alirebla kiel `QEMU_EFI.fd` aŭ per `QEMU_ARM_EFI`).
 La ISO-vojo implicite uzas `cortex-a76` (AAVMF 2025.11 blokiĝas sub TCG kun
 `-cpu max`); `QEMU_ARM_CPU` anstataŭigas la elekton.
@@ -206,12 +206,12 @@ monitoron (tie `quit`). La `-serial mon:stdio` muntado estas necesa ĉar `Ctrl+C
 alie sendiĝas al la guest kiel bajto `0x03`. En WSL2 sen WSLg uzu
 `QEMU_DISPLAY=none` por la ISO-vojo.
 
-`just run-arm` kaj `just run-iso-arm` startigas bildojn el la `arm64`-branĉo:
+`just ruli-arm` kaj `just ruli-iso-arm` startigas bildojn el la `arm64`-branĉo:
 la unua lanĉas la antaŭe konstruitan kernon (`mikerno.img`), la dua la ISO-on en
 QEMU kun UEFI. Ĉe la ISO la fenestro montras la UEFI/Limine-ekranon; la kerna
 eligo venas per la seria konzolo en la terminalo, ĉar la arm64-kerno ankoraŭ ne
-havas framebuffer. Sen WSLg uzu `QEMU_DISPLAY=none just run-iso-arm`. La bildoj
-estas kreataj per `just build-arm` kaj `just iso-arm` en la `arm64`-branĉo;
+havas frambufon. Sen WSLg uzu `QEMU_DISPLAY=none just ruli-iso-arm`. La bildoj
+estas kreataj per `just konstrui-arm` kaj `just iso-arm` en la `arm64`-branĉo;
 `main` nur startigas ilin.
 
 > **Atentu:** `mikerno.iso` kaj `iso_root/` estas ignorataj de git. Post ĉiu
@@ -223,13 +223,13 @@ estas kreataj per `just build-arm` kaj `just iso-arm` en la `arm64`-branĉo;
 
 ## Arĥitekturo
 
-La workspace havas tri crate-ojn:
+La Cargo-laborloko havas tri kestojn:
 
-| Crate | Speco | Rolo |
+| Kesto | Speco | Rolo |
 | --- | --- | --- |
-| `mikerno` | `no_std` binara | La kerno: praŝarĝo, memoro, interrompoj, planisto, IPC, konzolo |
+| `mikerno` | `no_std` binara | La kerno: praŝarĝo, memoro, interrompoj, planisto, IK, konzolo |
 | `libmikerno` | `no_std` biblioteko | Komunaj `#[repr(C)]`-difinoj: mesaĝoj, kapabloj, sistemvokaj numeroj |
-| `horizonto` | `no_std` binara | La unua uzanta procezo, ligita jam super 4 GiB (`0x1_0000_0000`) |> **Noto:** la tuta workspace uzas `code-model=large`, ĉar `horizonto` estas
+| `horizonto` | `no_std` binara | La unua uzanta procezo, ligita jam super 4 GiB (`0x1_0000_0000`) |> **Noto:** la tuta Cargo-laborloko uzas `code-model=large`, ĉar `horizonto` estas
 > ligita super 4 GiB. La kerno estas ligita kun `relocation-model=pic` (ET_DYN)
 > por KASLR; `horizonto` ligas kun `-no-pie` kaj restas ET_EXEC kun statikaj
 > relokoj. Neniu dinamika ligilo aŭ ekstera dependaĵo aperas.
@@ -270,11 +270,11 @@ kerna_eniro_kopio                    main.rs
 kerno::ĉefa                          kerno/mod.rs
   · kadro-alokilo ← memora mapo + rezervoj (inkl. praŝarĝaj moduloj)
   · provo de liberigo: proviza PML4 → mapo → `detruu`, kadroj reakiritaj
-  · nova PML4 (4 KiB paĝoj), identeca mapo, framebuffer (PCD)
+  · nova PML4 (4 KiB paĝoj), identeca mapo, frambufo (PCD)
   · modulaj regionoj identece mapitaj, CR3 ŝalto, konzolo, TSS/RSP0
   · APIC + temporizilo (100 Hz)
   · reuzoprovo: 10× krei/munti/detrui procezan spacon, liberaj kadroj egalaj
-  · IPC-testo, 3 testaj fadenoj (procezo 0), planisto
+  · IK-testo, 3 testaj fadenoj (procezo 0), planisto
   · procezoj 4 (`REĜIMO_SEKRETO`) kaj 5 (`REĜIMO_SPIONO`) preparitaj kune,
     ambaŭ Pretaj, interrompoj malŝaltitaj; unu `planisto::lanĉi()`
   · sama virtuala sekreta paĝo `0x2_0000_0000`, malsamaj kadroj kaj id
@@ -297,7 +297,7 @@ subtenas du protokolojn samtempe:
    estas `0x336e_c578` (`pvh.rs`). `horizonto` venas per `-initrd` kiel ero de
    `modlist_paddr` (32-bajta `hvm_modlist_entry`).
 2. **Multiboot2** — Limine el ISO. La kapo petas la memormapon (etikedo 6) kaj
-   32-bitan framebuffer-on (etikedo 5). `EAX` estas `0x36d7_6289`, `EBX` montras
+   32-bitan frambufon (etikedo 5). `EAX` estas `0x36d7_6289`, `EBX` montras
    al la informo (`mb2.rs`). `horizonto` venas per `module_path:` en
    `limine.conf` kiel etikedo de tipo 3.
 
@@ -311,7 +311,7 @@ de `.boot_text`: GDT ĉe `0x200`, GDT-montrilo ĉe `0x220`, Multiboot2-kapo ĉe
 nova spaco mapas skribebla.
 
 Post la unua Rust-voko `hazardigo` (`hazardigo.rs`) legas la memormapon,
-elektas hazardan 2 MiB-aliniiĝintan bazon en uzebla RAM (aŭ `RDRAND`, aŭ
+elektas hazardan 2 MiB-aliniiĝintan bazon en uzebla ĉefmemoro (aŭ `RDRAND`, aŭ
 `RDTSC` miksita per SplitMix64), kopias la bildon tien, aplikas la
 `R_X86_64_RELATIVE`-relokojn al la kopio kaj saltas en ĝin per
 `kerna_salto_al_kopio`. Se la kondiĉoj mankas, la bildo restas ĉe la liga bazo
@@ -359,7 +359,7 @@ komparas la nombrojn de liberaj kadroj.
 - la malaltan 1 MiB kaj ĉiujn uzeblajn regionojn identece kiel RW+NX,
 - la kernan bildon laŭ sekciaj limoj el `boot/linker.ld`: `.text` (`RX`),
   `.rodata` (`R`+`NX`) kaj `.data`/`.bss` (`RW`+`NX`),
-- la framebuffer-on (`SKRIBA_SENKAŜE`: skribebla, neplenumebla, `PCD`),
+- la frambufon (`SKRIBA_SENKAŜE`: skribebla, neplenumebla, `PCD`),
 - la APIC-MMIO-on (`SKRIBA`).
 
 `EFER.NXE` kaj `CR0.WP` estas ŝaltitaj antaŭ ol oni uzas la biton 63 aŭ
@@ -368,7 +368,7 @@ nurlega paĝo estas vera barilo, ne konsilo. `mapigi` rifuzas nealiniiĝintajn
 adresojn kaj jam mapitajn foliojn (`Konflikto`); `traduki` komprenas ankaŭ 2 MiB
 grandegajn paĝojn. Neniu paĝo estas samtempe skribebla kaj plenumebla. La
 praŝarĝa modulo estas mapita nurlega antaŭ la identeca mapado, do ĝiaj paĝoj
-restas `R`+`NX` anstataŭ fariĝi skribebla RAM. `permesoj(adreso)` legas la
+restas `R`+`NX` anstataŭ fariĝi skribebla ĉefmemoro. `permesoj(adreso)` legas la
 efektivajn bitojn el la folio, kaj la starta memtesto printas
 `[memoro] W^X (bone): .text RX, .rodata R NX, .data/.bss RW NX, modulo R NX`.
 
@@ -429,7 +429,7 @@ ciferpremo kaj ŝaltas `U` ĉe la folio kaj ĉiuj gepatraj niveloj.
   uzas artefaritan stakon kun `fadeno_trampolino`, kiu ŝaltas interrompojn kaj
   transdonas la fadenan identigilon en la unua argumento;
 - ĉiu fadeno havas 16 KiB stakon; la testaj stakoj estas statikaj;
-- antaŭ ĉiu `switch` la planisto aktivigas la celan procezon: se la fizika
+- antaŭ ĉiu `ŝanĝi` la planisto aktivigas la celan procezon: se la fizika
   radiko diferencas de la aktiva `CR3`, ĝi ŝaltas `CR3` al la proceza `PML4`;
   samtempe ĝi agordas `TSS.RSP0` al la proceza 16 KiB-a kerna stako (aŭ al la
   defaŭlta kerna stako por procezo `0`);
@@ -442,7 +442,7 @@ ciferpremo kaj ŝaltas `U` ĉe la folio kaj ĉiuj gepatraj niveloj.
   detruas la procezan spacon, do la planisto elektas la ripozan kuntekston,
   reŝaltas la kernan `CR3` kaj la observado daŭras.
 
-`switch` revenas nur kiam la malnova kunteksto estas planita denove. La ripoza
+`ŝanĝi` revenas nur kiam la malnova kunteksto estas planita denove. La ripoza
 kunteksto konservas sian interrompan kadron sur la stako, do `planumi` povas
 reveni tra la dispetĉo kaj `iretq` kiam la ripoza fadeno rekaptas la procesoron.
 La `CR3`-ŝalto okazas antaŭ la registra konservo: la fadenaj kontekstoj, la
@@ -451,9 +451,9 @@ kunhavas.
 
 ---
 
-## IPC kaj kapabloj
+## IK kaj kapabloj
 
-`kerno/ipc.rs` difinas minimuman mesaĝan IPC-on:
+`kerno/ik.rs` difinas minimuman mesaĝan IK-on:
 
 - `FinaPunktoObjekto` posedas la mesaĝvicon kaj la atendoliston; finpunktaj
   tabeloj portas `stato`, `generacio`, `referencoj` kaj identigilon;
@@ -474,7 +474,7 @@ kunhavas.
   finpunkto vekas ĉiujn atendantojn per `-32`;
 - `SENDI` redonas `-90` (`TRO_LONGA_MESAGO`), se `Mesago.longo` superas
   `MAKSA_MESAGA_LONGO`;
-- `IpcStatistiko` nombras la enmetitajn kaj prenitajn mesaĝojn, la premregojn,
+- `IkStatistiko` nombras la enmetitajn kaj prenitajn mesaĝojn, la premregojn,
   la revokojn kaj la tempolimajn vekojn; la starta scenaro printas ĝin apud la
   planista raporto;
 - `RICEVI_TEMPO` (9) kaj `SENDI_TEMPO` (10) interpretas `r10` laŭ C15:
@@ -497,7 +497,7 @@ kunhavas.
   `0`, unua generacio) por ĉiu procezo, do `horizonto` povas uzi sian
   defaŭltan finpunkton sen antaŭa `KREI_FINPUNKTON`;
 - proceza detruo (ankaŭ la antaŭaj erarvojoj de `prepari_uzantan_procezon`)
-  vokas `ipc::purigi_procezon`: ĝi malpliigas la referencojn de fremdaj
+  vokas `ik::purigi_procezon`: ĝi malpliigas la referencojn de fremdaj
   finpunktoj, liberigas ĉiujn kapablofendojn de la procezo kaj revokas la
   finpunktojn, kiujn ĝi posedis;
 - la kernaj fadenoj (procezo `0`) ne havas kapablotabelon; ili uzas la
@@ -511,20 +511,20 @@ distribuo de kapabloj venas en la sekvaj fazoj (M17).
 
 ---
 
-## Eligo: COM1 kaj framebuffer
+## Eligo: COM1 kaj frambufo
 
 - **COM1** (`seria.rs`): 16550 UART ĉe `0x3F8`, 115200 baudoj, 8N1, demandata
   reĝimo, `\n` → `\r\n`. Ĉi tio estas la arkitektura konzolo kaj ĉiam funkcias.
-- **Framebuffer** (`ekrano/`): 32-bpp Linuksa framebuffer el Multiboot2, desegnita
+- **Frambufo** (`ekrano/`): 32-bita Linuksa frambufo el Multiboot2, desegnita
   per antaŭe rasterigitaj bitmapaj tiparoj derivitaj el **DejaVu Sans Mono**.
   Sur `arm64` la frambufon kreas la kerno mem: `fw_cfg` liveras la dosieron
-  `etc/ramfb`, kaj `ramfb` montras kontiguajn RAM-kadrojn (1280×800, `XR24`,
+  `etc/ramfb`, kaj `ramfb` montras kontiguajn ĉefmemorajn kadrojn (1280×800, `XR24`,
   paŝo 5120).
   Ekzistas kvar strekoj — 8×16, 12×24, 16×32 kaj 32×64 — kaj la konzolo elektas
   la plej grandan, kiu donas almenaŭ 80 kolumnojn kaj 24 vicojn, kun nombro da
   vicoj plej proksima al 33. Ĉiu streko enhavas la 95 ASCII-signojn kaj 16
   aldonajn glifojn: `ĉ Ĉ ĝ Ĝ ĥ Ĥ ĵ Ĵ ŝ Ŝ ŭ Ŭ` kaj `« » ‹ ›`. Aliaj
-  ne-ASCII-signoj fariĝas `?`. Postuloj: bazo 4-bajte aliniiĝinta, `bpp == 32`,
+  ne-ASCII-signoj fariĝas `?`. Postuloj: bazo 4-bajte aliniiĝinta, `bitoj_po_pikselo == 32`,
   larĝo ≥ 320, alto ≥ 32, `paŝo ≥ larĝo × 4`. La seriala eligo restas plena
   UTF-8. Kiam la tekstfluo atingas la fundon, la ekrano estas malplenigita (ne
   vere rulumita).
@@ -533,7 +533,7 @@ distribuo de kapabloj venas en la sekvaj fazoj (M17).
   1920×1080 → 16×32 (120×33), 2560×1440 → 16×32 (160×45), 3840×2160 → 32×64
   (120×33). La strekoj estas generataj per `tools/font/generi.py`; la fonto
   mem ne estas enŝovita, nur la bitaj tabeloj.
-- Se framebuffer mankas (Xen-PVH aŭ malnova firmvaro), la konzolo restas
+- Se frambufo mankas (Xen-PVH aŭ malnova firmvaro), la konzolo restas
   malŝaltita kaj la eligo okazas nur sur COM1.
 
 ---
@@ -555,7 +555,7 @@ distribuo de kapabloj venas en la sekvaj fazoj (M17).
   `-32`, `-90` kaj `-110`,
 - registra ABI: `rax` = numero, `rdi`/`rsi`/`rdx`/`r10` = argumentoj, `rax` =
   rezulto; la voko estas `int 0x80`;
-- starta ABI: `horizonto_start(reĝimo: u64, identigilo: u64)` — la kerno
+- starta ABI: `horizonto_komenco(reĝimo: u64, identigilo: u64)` — la kerno
   transdonas la reĝimon en `RDI` (`REĜIMO_SEKRETO = 2`, `REĜIMO_SPIONO = 3`) kaj
   la procezan identigilon en `RSI`.
 
@@ -606,7 +606,7 @@ skribo/lego provizore ŝaltas tiun `CR3` (kun interrompoj malŝaltitaj) kaj post
 restarigas la kernan radikon.
 
 `horizonto` estas liverata de ambaŭ praŝarĝaj vojoj — Multiboot2 tipo 3 el
-`limine.conf`, aŭ la PVH-modlisto el `-initrd` (``just run`` aldonas ĝin
+`limine.conf`, aŭ la PVH-modlisto el `-initrd` (``just ruli`` aldonas ĝin
 aŭtomate).
 
 ### Proceza adresa spaco
@@ -676,9 +676,9 @@ iretq
 
 La stakpinto estas malaltigita je 8 por ke la x86-64-ABI vidu `rsp % 16 == 8`
 ĉe la funkcia eniro; `RDI` kaj `RSI` transdonas la reĝimon kaj la identigilon al
-`extern "C" fn horizonto_start(reĝimo: u64, identigilo: u64)` (`REĜIMO_SEKRETO`
+`extern "C" fn horizonto_komenco(reĝimo: u64, identigilo: u64)` (`REĜIMO_SEKRETO`
 kaj `REĜIMO_SPIONO` el `libmikerno::starto`). La `int 0x80`-pordego havas DPL3,
-do Ring 3 rajtas voki `SKRIBI`, `CEDI` kaj `FINI`; la CPU ŝaltas al `TSS.RSP0`
+do Ring 3 rajtas voki `SKRIBI`, `CEDI` kaj `FINI`; la procesoro ŝaltas al `TSS.RSP0`
 por ĉiu reveno al Ring 0.
 
 ### Izolado de la sekreta paĝo
@@ -693,7 +693,7 @@ propran valoron: `4` legas `id 4`, `5` legas `id 5`.
 La viktimo krome mapas **duan** paĝon ĉe `SEKRETA_DUA_ADRESO`
 (`0x2_0000_1000`); la spiono ne havas tiun mapadon. Kiam la spiono legas
 `0x2_0000_1000`, la paĝtabela promenado malsukcesas en la privata `PDPT` de la
-spiono kaj la CPU liveras `#PF` kun `erarkodo=0x4` (`U=1`, `P=0`). La kerno
+spiono kaj la procesoro liveras `#PF` kun `erarkodo=0x4` (`U=1`, `P=0`). La kerno
 printas `[eraro] procezo 5 …`, mortigas la procezon, `detrui` liberigas ĝian
 tutan spacon, kaj la planisto revenas al la ripoza kunteksto — neniun `halti()`.
 Procezo `4` pluvivas, printas plurajn rondojn kaj finiĝas per `fini(0)`.
@@ -759,9 +759,9 @@ la 2026-11-12 per Rust 1.99.1; la PVH- kaj ISO-BIOS-vojoj ripetiĝis la
 
 | Vojo | Rezulto |
 | --- | --- |
-| PVH (`-kernel` + `-initrd`) | 7 regionoj, 255 MiB uzeblaj, sen framebuffer, `KASLR: kerna bazo 0x…` (malsama ĉiu starto), reuzoprovo `10 cikloj, 64823 kadroj antaŭ, 64823 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `[ipc] purigo de procezo 5/4`, `34`/`35` kadroj liberigitaj, `izolado (bone): 64823 kadroj antaŭ, 64823 post`, 1000 tikoj, 5 fadenoj mortintaj |
-| Limine/Multiboot2 (ISO, BIOS) | framebuffer `1280x800, 32 bpp`, `KASLR: kerna bazo 0x…`, reuzoprovo `10 cikloj, 64821 kadroj antaŭ, 64821 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `[ipc] purigo de procezo 5/4`, `34`/`35` kadroj liberigitaj, `izolado (bone): 64821 kadroj antaŭ, 64821 post`, 1000 tikoj, 5 fadenoj mortintaj |
-| Limine (ISO, UEFI/OVMF) | sama scenaro; `KASLR: kerna bazo 0x…`, liberaj kadroj `63367` antaŭ/post, framebuffer `1280x800, 32 bpp`, 1000 tikoj, 5 fadenoj mortintaj |
+| PVH (`-kernel` + `-initrd`) | 7 regionoj, 255 MiB uzeblaj, sen frambufo, `KASLR: kerna bazo 0x…` (malsama ĉiu starto), reuzoprovo `10 cikloj, 64823 kadroj antaŭ, 64823 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `[ik] purigo de procezo 5/4`, `34`/`35` kadroj liberigitaj, `izolado (bone): 64823 kadroj antaŭ, 64823 post`, 1000 tikoj, 5 fadenoj mortintaj |
+| Limine/Multiboot2 (ISO, BIOS) | frambufo `1280x800, 32 bitoj/pikselo`, `KASLR: kerna bazo 0x…`, reuzoprovo `10 cikloj, 64821 kadroj antaŭ, 64821 post`, procezoj `4` kaj `5` samtempe pretaj, sama sekreta adreso `0x200000000`, id `4`/`5`, spiono `#PF` ĉe `0x200001000` (`erarkodo=0x4`), viktimo pluvivas kaj finas per `SYS_FINI`, `[ik] purigo de procezo 5/4`, `34`/`35` kadroj liberigitaj, `izolado (bone): 64821 kadroj antaŭ, 64821 post`, 1000 tikoj, 5 fadenoj mortintaj |
+| Limine (ISO, UEFI/OVMF) | sama scenaro; `KASLR: kerna bazo 0x…`, liberaj kadroj `63367` antaŭ/post, frambufo `1280x800, 32 bitoj/pikselo`, 1000 tikoj, 5 fadenoj mortintaj |
 
 Por M13 Fazo 2 la sama scenaro ruliĝis kun `-cpu qemu64,+smep,+smap`: la
 kerno raportas `SMEP subtenata: jes` kaj `SMAP subtenata: jes`, la tuta
@@ -778,10 +778,10 @@ bazon: tri sinsekvaj PVH-startoj montris `0x5400000`, `0xd200000` kaj
 restis verdaj, inkluzive de `W^X` kaj de la izolado. Kun `-cpu qemu64` la
 KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 
-`just verify` unue kontrolas la dokumentan version per `tools/versio.sh
+`just kontroli` unue kontrolas la dokumentan version per `tools/versio.sh
 --kontroli` kaj poste vokas
 `cargo kani -p mikerno -Z unstable-options --ignore-global-asm`; la 29 pruvoj
-(6 pri la kadro-alokilo, 20 pri la IPC) pruviĝis verde per Kani 0.68.0.
+(6 pri la kadro-alokilo, 20 pri la IK) pruviĝis verde per Kani 0.68.0.
 
 ### Kion vi devus vidi
 
@@ -801,19 +801,19 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 [memoro] liberigo (bone): 64956 kadroj antaŭ, 64956 post
 [memoro] W^X (bone): .text RX, .rodata R NX, .data/.bss RW NX, modulo R NX
 [memoro] CR3 (bone): PCID=malŝaltita, aktiva=0x196000, kongrua=true, aliniita=true
-[kerno] framebuffer ne havebla; nur COM1    (PVH; ISO montras 1280x800)
+[kerno] frambufo ne havebla; nur COM1    (PVH; ISO montras 1280x800)
 [tss] TR ŝargita; kernostako pinto 0x123ce10
 [temporizilo] kalibrado: ... kalkuloj/s, komenca ...
 [kerno] APIC 0 kaj paĝado pretaj; temporizilo 100 Hz
 [procezo] 6 detruita: 1 privataj PDPT-oj, PML4 0x213000, 27 kadroj liberigitaj
 ... (10 reuzaj cikloj)
 [memoro] reuzo (bone): 10 cikloj, 64823 kadroj antaŭ, 64823 post
-[ipc] tabeloj (bone): kreitaj=13, plena=true, fermitaj=13, duobla_fermo=true, nova_generacio=true, malnova_tenilo=true, kerno=true
-[ipc] rajtoj (bone): sendi per RICEVI-nura → -1, ricevi per SENDI-nura → -1
-[ipc] izolado de kapabloj (bone): procezo 7 uzas tenilon de procezo 6 → -9
-[ipc] dono (bone): rajtoj 0b011 → 0b010, eskalado 0b100 → -1
-[ipc] revoko (bone): sen_revoki=-1, revoko=0, donita=-9, fermo=-9, duobla=-9
-[kerno] IPC: mesaĝo sendita al fadeno 2
+[ik] tabeloj (bone): kreitaj=13, plena=true, fermitaj=13, duobla_fermo=true, nova_generacio=true, malnova_tenilo=true, kerno=true
+[ik] rajtoj (bone): sendi per RICEVI-nura → -1, ricevi per SENDI-nura → -1
+[ik] izolado de kapabloj (bone): procezo 7 uzas tenilon de procezo 6 → -9
+[ik] dono (bone): rajtoj 0b011 → 0b010, eskalado 0b100 → -1
+[ik] revoko (bone): sen_revoki=-1, revoko=0, donita=-9, fermo=-9, duobla=-9
+[kerno] IK: mesaĝo sendita al fadeno 2
 [kerno] planisto ekas: 4 fadenoj, antaŭokupo ĉiu 10 ms
 saluton el Ring 0 tra int 0x80
 [sistemvoko] Ring 0-memtesto: skribo=0, nekonata=-2, nula=-1, troa=-1, cedo=0, krei=-28, doni=-9, fermi=-9, revoki=-9, revok_argumento=-1, tro_longa=-90, sen_eoi=true
@@ -863,29 +863,29 @@ horizonto: procezo vekis en Ring 3.
 [ring3] procezo 5: legas la duan sekretan paĝon ĉe 0x200001000
 
 [eraro] procezo 5: paĝa eraro ĉe rip=0x0000000100001cdb, erarkodo=0x4, CR2=0x0000000200001000; la procezo estas mortigata
-[ipc] purigo de procezo 5: 1 kapabloj liberigitaj, 1 finpunktoj revokitaj
+[ik] purigo de procezo 5: 1 kapabloj liberigitaj, 1 finpunktoj revokitaj
 [planisto] fadeno 5 finiĝis
 [procezo] 5 detruita: 1 privataj PDPT-oj, PML4 0x236000, 34 kadroj liberigitaj
 [ring3] procezo 4: laboras (fojo 2)
 ...
 [ring3] procezo 4: laboras (fojo 6)
 [ring3] procezo 4: pluvivas post la spiono; finas per SYS_FINI
-[ipc] purigo de procezo 4: 1 kapabloj liberigitaj, 1 finpunktoj revokitaj
+[ik] purigo de procezo 4: 1 kapabloj liberigitaj, 1 finpunktoj revokitaj
 [planisto] fadeno 4 finiĝis
 [procezo] 4 detruita: 1 privataj PDPT-oj, PML4 0x213000, 35 kadroj liberigitaj
 [apic] EOI (bone): 1000 konfirmoj, 1000 tikoj
 [memoro] izolado (bone): 64809 kadroj antaŭ, 64809 post
 [kerno] planisto revenis al la ripoza fadeno
-[ipc] statistiko (bone): senditaj=41, ricevitaj=25, premregoj=2, revokoj=7, tempolimoj=3
+[ik] statistiko (bone): senditaj=41, ricevitaj=25, premregoj=2, revokoj=7, tempolimoj=3
 ...
 [kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
-[ekrano] piksela fiksaĵo 1280x800, 32 bpp, tiparo 12x24; haketo 0xecf1f6dbe1421575    (ISO; PVH diras «preterlasita»)
+[ekrano] piksela fiksaĵo 1280x800, 32 bitoj/pikselo, tiparo 12x24; haketo 0xecf1f6dbe1421575    (ISO; PVH diras «preterlasita»)
 [memoro] SMAP-provo: Ring 0 provos legi la uzantan folion ĉe 0x100000000
 [eraro] procezo 0: SMAP-malobservo ĉe 0x0000000100000000 (erarkodo=0x1)
 ```
 
-La piksela fiksaĵo estas la sama sur `arm64`: `just run-arm` kaj
-`just run-iso-arm` presas `[ekrano] piksela fiksaĵo 1280x800, 32 bpp, tiparo
+La piksela fiksaĵo estas la sama sur `arm64`: `just ruli-arm` kaj
+`just ruli-iso-arm` presas `[ekrano] piksela fiksaĵo 1280x800, 32 bitoj/pikselo, tiparo
 12x24; haketo 0xecf1f6dbe1421575`, kaj ankaŭ `[memoro] PAN-provo: EL1 provos
 legi la uzantan folion ĉe 0x100000000` sekvata de `[eraro] PAN-malobservo`.
 Ambaŭ arkoj uzas la saman desegnaĵon (gradiento kaj teksto), la saman tiparon
@@ -909,7 +909,7 @@ kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
    `revoki_defaŭltan`; fadeno 3 vekiĝas kun `-32` (`Revokita`) kaj revokas
    finpunkton 1, kio vekas la blokitan sendanton (fadeno 2) ankaŭ per `-32`.
 5. Ĉiuj tri fadenoj dek fojojn printas sian progreson kaj cedas la procesoron;
-   post la lasta fojo ili finiĝas. La kerno printas `[ipc] statistiko` kaj la
+   post la lasta fojo ili finiĝas. La kerno printas `[ik] statistiko` kaj la
    planisto revenas al la ripoza kunteksto.
 6. Antaŭ la uzantaj procezoj la praŝarĝo rulas la reuzoprovo: ĝi kreas la
    procezan spacon kun la sama bildo kaj stako, detruas ĝin kaj ripetas dek
@@ -929,8 +929,8 @@ kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
    ĝian tutan spacon. La planisto elektas procezon `4`; neniu `halti()` okazas.
 10. Procezo `4` pluvivas la spionon, printas la rondojn `2`–`6` kaj eliras per
     `fini(0)`; `SYS_FINI` detruas ankaŭ ĝian spacon. Antaŭ la detruo
-    `ipc::purigi_procezon` liberigas ĝiajn kapablojn kaj revokas ĝian
-    finpunkton (`[ipc] purigo de procezo 4 …`); la sama okazas por la spiono.
+    `ik::purigi_procezon` liberigas ĝiajn kapablojn kaj revokas ĝian
+    finpunkton (`[ik] purigo de procezo 4 …`); la sama okazas por la spiono.
     La praŝarĝo logas `[memoro] izolado (bone)` kaj la liberaj kadroj egalas
     antaŭ kaj post.
 11. La praŝarĝo observas la ceterajn 1000 tikojn (≈10 s ĉe 100 Hz), printas la
@@ -942,9 +942,9 @@ kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
 
 ```text
 .
-├── Cargo.toml                  # workspace (membroj, versio, lints)
-├── justfile                    # build / run / iso / verify
-├── .cargo/config.toml          # cela triopo, rust-lld, QEMU-runner
+├── Cargo.toml                  # laborloko (membroj, versio, statika analizo)
+├── justfile                    # konstrui / ruli / iso / kontroli
+├── .cargo/config.toml          # cela triopo, rust-lld, QEMU-lanĉilo
 ├── mikerno/
 │   ├── Cargo.toml
 │   ├── build.rs                # liveras boot/linker.ld nur al la kerno
@@ -968,7 +968,7 @@ kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
 │       │       ├── tss.rs      # RSP0, 16 KiB kerna stako
 │       │       ├── apic.rs     # xAPIC MMIO
 │       │       ├── temporizilo.rs # PIT-kalibrita 100 Hz
-│       │       ├── pagxado.rs  # PML4/PDPT/PD/PT, CR3
+│       │       ├── pagado.rs  # PML4/PDPT/PD/PT, CR3
 │       │       ├── planado.rs  # kuntekstŝanĝo (asm)
 │       │       ├── sistemvoko.rs # 0x80-dispetĉilo el la kadro
 │       │       ├── procesoro.rs# hlt, cli/sti, CR2
@@ -986,9 +986,9 @@ kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
 │       │   ├── planisto.rs    # rondiga planisto
 │       │   ├── sistemvoko.rs   # SKRIBI/FINI/CEDI/SENDI/RICEVI/KREI_FINPUNKTON/DONI/REVOKI/FERMI
 │       │   ├── uzantspaco.rs   # ELF64-ŝargo, stako, U-kontrolo
-│       │   └── ipc.rs          # mesaĝoj, kapabloj + Kani-pruvoj
+│       │   └── ik.rs          # mesaĝoj, kapabloj + Kani-pruvoj
 │       └── ekrano/
-│           ├── mod.rs          # framebuffer-konzolo kaj elekto de streko
+│           ├── mod.rs          # frambufa konzolo kaj elekto de streko
 │           ├── fonto.rs        # Tiparo, TIPAROJ, glifo()
 │           └── fonto/*.bin     # kvar rasterigitaj strekoj (DejaVu)
 ├── libmikerno/
@@ -1034,7 +1034,7 @@ kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
 - **Unuprocesora**: neniu SMP, afineco, prioritatoj aŭ dormantaj temporiziloj.
 - **Fiksaj limoj**: 8 fadenoj, 16 mesaĝoj po fadeno, 64 bajtoj po mesaĝo,
   4 GiB fizika memoro.
-- **IPC**: la finpunktaj objektoj havas generaciojn kaj referenckalkulon, kaj
+- **IK**: la finpunktaj objektoj havas generaciojn kaj referenckalkulon, kaj
   `SENDI`/`RICEVI` uzas kapablo-tenilojn kun permesa kaj du-nivela generacia
   kontrolo; `REVOKI` estas tutfinpunkta kaj proceza detruo purigas la
   kapablojn; plena vico premegas la sendanton anstataŭ perdi mesaĝojn; la
@@ -1043,17 +1043,17 @@ kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
 - **Ring 3-esceptoj nur `#PF`/`#GP`**: tiuj du mortigas la procezon; aliaj
   esceptoj — ankaŭ el Ring 3 — restas fatalaj, kaj demando-paĝado ne
   ekzistas.
-- **Framebuffer**: nur 32 bpp, kvar fiksaj strekoj (8×16 … 32×64), 111 glifoj
+- **Frambufo**: nur 32 bitoj/pikselo, kvar fiksaj strekoj (8×16 … 32×64), 111 glifoj
   (95 ASCII + Esperanto + citiloj), malplenigo anstataŭ rulumo.
 - **Pruvoj**: 29 Kani-pruvoj spegulas la bitan logikon sur 64 kadroj kaj
   malgrandaj lokaj kapablotabeloj; la produkta kodo mem ne estas pruvita.
-  `just verify` postulas apartan Kani-instalon.
-- **Neniu CI nek testoharness**: la kontrolo estas `build` + `clippy` + `fmt` +
+  `just kontroli` postulas apartan Kani-instalon.
+- **Neniu DI nek testa pruvaro**: la kontrolo estas `konstrui` + `clippy` + `cargo fmt` +
   QEMU-smoka testo.
 - **Versio**: la sola fonto estas `Cargo.toml`; la saluta linio legas
-  `env!("CARGO_PKG_VERSION")` dum kompilado, do `just run` kaj la ISO montras
+  `env!("CARGO_PKG_VERSION")` dum kompilado, do `just ruli` kaj la ISO montras
   la saman version, kaj `limine.conf` ne portas version. La dokumentojn
-  kontrolas `tools/versio.sh --kontroli` (parto de `just verify`), kaj
+  kontrolas `tools/versio.sh --kontroli` (parto de `just kontroli`), kaj
   `--ĝisdatigi` ilin reskribas.
 - **ISO povas malaktualiĝi** (vidita dum la kontrolo); ĉiam `just iso` post
   kerna ŝanĝo.
@@ -1067,7 +1067,7 @@ La plena, numerita vojkarto kun akceptkriterioj estas en
 
 - La kodo, komentoj, identigiloj kaj dokumentaro estas en **Esperanto**.
 - Uzu `rustfmt` kaj `cargo clippy --workspace --release` antaŭ ol sendi ŝanĝojn.
-- Ne aldonu eksterajn crate-ojn sen klara kialo; la kerno celas resti sen
+- Ne aldonu eksterajn kestojn sen klara kialo; la kerno celas resti sen
   dependaĵoj.
 - Ĉiu `unsafe` bloko dokumentu sian sekurecan kontrakton.
 - Por novaj arĥitekturaj malantaŭoj, respektu la fasadon

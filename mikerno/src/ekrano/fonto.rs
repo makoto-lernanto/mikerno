@@ -1,4 +1,4 @@
-//! Bitmapaj tiparoj por la framebuffer-konzolo.
+//! Bitmapaj tiparoj por la frambufa konzolo.
 //!
 //! La glifoj estas antaŭe rasterigitaj el **DejaVu Sans Mono** en kvar
 //! memstarajn strekojn: 8x16, 12x24, 16x32 kaj 32x64. Ĉiu streko havas sian

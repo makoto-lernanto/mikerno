@@ -16,23 +16,23 @@ window.TRADUKOJ_ANGLA = {
   "nav.kapabloj": "Capabilities",
   "nav.fluou": "FluoU",
   "nav.arkitekturo": "Architecture",
-  "nav.mejlosxtonoj": "Milestones",
+  "nav.mejloŝtonoj": "Milestones",
   "nav.eligo": "Output",
-  "nav.elssxuti": "Download",
+  "nav.elŝuti": "Download",
   "nav.eniro": "Eniro",
   "nav.fonto": "Source",
   "eniro.malfermi": "Open Eniro (Ctrl+E)",
   "eniro.provizora":
     "Stopgap shortcut: Ctrl+E. Later: Mito, the traditional Windows key.",
   "akcento.regiloj": "Accent",
-  "temo.sxalti": "Switch between the dark and light themes",
+  "temo.ŝalti": "Switch between the dark and light themes",
 
   "hero.moto": "“The future is now.”",
   "hero.teksto":
     "A tiny, self-contained uniprocessor kernel written entirely in Rust — no external dependencies, no C in the kernel, and identical behaviour on x86_64 and arm64. Readable, hackable, provable.",
   "hero.principo1": "no dependencies",
   "hero.principo4": "41 proofs",
-  "hero.butono.elssxuti": "Download",
+  "hero.butono.elŝuti": "Download",
   "hero.butono.fonto": "View the source",
   "hero.butono.gvidilo": "Read the guide",
   "hero.noto": "MIT · QEMU ISO · x86_64 and arm64",
@@ -46,10 +46,10 @@ window.TRADUKOJ_ANGLA = {
   "pri.konservado": "Storage",
   "pri.pruvoj": "Proofs",
   "pri.verda": "green",
-  "pri.ci": "CI green: 43/43 jobs",
+  "pri.di": "DI green: 43/43 jobs",
   "fenestro.regiloj": "Window controls",
-  "fenestro.kasxita": "Window hidden",
-  "fenestro.kasxita.teksto": "The window is waiting on the desktop.",
+  "fenestro.kaŝita": "Window hidden",
+  "fenestro.kaŝita.teksto": "The window is waiting on the desktop.",
   "fenestro.remalfermi": "Reopen",
 
   "stat.aria": "Key numbers",
@@ -66,13 +66,13 @@ window.TRADUKOJ_ANGLA = {
     "#![no_std], #![no_main], no external Rust crates and no C in the kernel. Just the language, the hardware and the documentation.",
   "kapabloj.k2.titolo": "One codebase, two architectures",
   "kapabloj.k2.teksto":
-    "The same IPC scenario and the same framebuffer hash on x86_64 and arm64. One backend, two platforms.",
+    "The same IK scenario and the same framebuffer hash on x86_64 and arm64. One backend, two platforms.",
   "kapabloj.k3.titolo": "Ring 3 and capabilities",
   "kapabloj.k3.teksto":
     "Eleven syscalls, ABI 2, Handle and Message. Every access to memory, files and the screen goes through an explicit capability.",
   "kapabloj.k4.titolo": "Formal verification",
   "kapabloj.k4.teksto":
-    "Kani proves the frame allocator and the IPC core in CI: 41 proofs, one job per proof, with a 10-minute limit.",
+    "Kani proves the frame allocator and the IK core in DI: 41 proofs, one job per proof, with a 10-minute limit.",
   "kapabloj.k5.teksto":
     "The mandatory visual language of Horizonto: three materials, six accents, Windows-model windows and no accidental colours.",
   "kapabloj.k6.titolo": "Storage",
@@ -88,7 +88,7 @@ window.TRADUKOJ_ANGLA = {
   "fluou.akrila": "Acrylic blur",
   "fluou.butono.akcenta": "Accent",
   "fluou.butono.norma": "Standard",
-  "fluou.butono.dangxera": "Danger",
+  "fluou.butono.danĝera": "Danger",
   "fluou.butono.eniro": "Open Eniro",
   "fluou.demo.teksto":
     "Every window has a 32 DIP title bar, a centred title and the three controls on the right. The window radius is 8 DIP; the controls themselves are square.",
@@ -114,29 +114,29 @@ window.TRADUKOJ_ANGLA = {
   "ark.t3.teksto":
     "The shared contract between the kernel and user space: ABI 2, Handle and Message.",
   "ark.t4.teksto":
-    "Scheduler, IPC, memory, interrupts, virtio-blk and SNDS on x86_64 and arm64.",
+    "Scheduler, IK, memory, interrupts, virtio-blk and SNDS on x86_64 and arm64.",
   "ark.t5.titolo": "Compositor",
   "ark.t5.teksto":
     "An isolated service that accepts only windows with a valid FENESTRO handle.",
   "ark.t6.titolo": "Screen",
   "ark.t6.teksto":
-    "1280×800, 32 bpp; the same framebuffer hash on both architectures.",
+    "1280×800, 32 bits/pixel; the same framebuffer hash on both architectures.",
   "ark.noto":
     "FluoU 0.1 describes the compositor as an isolated service; the current prototype already has the kernel and Ring 3 layers.",
 
   "mej.titolo": "From the first instruction to storage",
   "mej.teksto":
-    "Every step has evidence: a boot, a hash, a sample or a green CI result.",
+    "Every step has evidence: a boot, a hash, a sample or a green DI result.",
   "stato.plenumita": "Completed",
   "stato.parte": "Partial",
   "stato.nun": "Now",
-  "mej.m0.titolo": "Workspace and pipeline",
+  "mej.m0.titolo": "Workspace and build chain",
   "mej.m0.teksto": "Three crates, one build.",
   "mej.m4.titolo": "GDT, IDT, TSS",
   "mej.m4.teksto": "256 vectors and an int 0x80 gate.",
   "mej.m7.titolo": "Preemptive scheduler",
   "mej.m7.teksto": "Round-robin scheduler with eight threads.",
-  "mej.m8.titolo": "Message IPC",
+  "mej.m8.titolo": "Message IK",
   "mej.m8.teksto": "Endpoints, capabilities, blocking and wakeups.",
   "mej.m11.titolo": "Ring 3",
   "mej.m11.teksto": "int 0x80 from user space.",
@@ -148,7 +148,7 @@ window.TRADUKOJ_ANGLA = {
   "mej.m15.teksto": "EL0, ABI 2, ramfb and PAN.",
   "mej.m17.titolo": "Storage",
   "mej.m17.teksto": "virtio-blk over PCI and MMIO; SNDS with 4 files.",
-  "mej.m18.titolo": "CI and verification",
+  "mej.m18.titolo": "DI and verification",
   "mej.m18.teksto": "43/43 jobs green; tests are still coming.",
   "mej.ligilo": "All milestones in the documentation",
 
@@ -164,23 +164,23 @@ window.TRADUKOJ_ANGLA = {
   "eligo.noto":
     "Selected lines from the real output; the full protocol is in MEJLOSTONOJ.md.",
 
-  "elssxuti.titolo": "Download and boot",
-  "elssxuti.teksto":
+  "elŝuti.titolo": "Download and boot",
+  "elŝuti.teksto":
     "Two ISO images for QEMU. Both were booted headlessly before the release; the console output above comes from them.",
-  "elssxuti.x86.teksto": "PCI · 1280×800 framebuffer · SMEP/SMAP",
-  "elssxuti.arm.teksto": "MMIO · ramfb · PAN/PXN/UXN",
-  "elssxuti.grando": "Size",
-  "elssxuti.x86.grando": "4.44 MiB",
-  "elssxuti.arm.grando": "4.95 MiB",
-  "elssxuti.elssxuti": "Download",
-  "elssxuti.kopii": "Copy SHA-256",
-  "elssxuti.noto":
-    "For the full memory probe, including virtio-blk and SNDS, use the repository: <code>just run-iso</code> or <code>just run-iso-arm</code>. The ISO itself boots; the launcher adds the SNDS image.",
-  "elssxuti.gvidilo": "Quick start in README",
+  "elŝuti.x86.teksto": "PCI · 1280×800 framebuffer · SMEP/SMAP",
+  "elŝuti.arm.teksto": "MMIO · ramfb · PAN/PXN/UXN",
+  "elŝuti.grando": "Size",
+  "elŝuti.x86.grando": "4.44 MiB",
+  "elŝuti.arm.grando": "4.95 MiB",
+  "elŝuti.elŝuti": "Download",
+  "elŝuti.kopii": "Copy SHA-256",
+  "elŝuti.noto":
+    "For the full memory probe, including virtio-blk and SNDS, use the repository: <code>just ruli-iso</code> or <code>just ruli-iso-arm</code>. The ISO itself boots; the launcher adds the SNDS image.",
+  "elŝuti.gvidilo": "Quick start in README",
 
   "piedo.teksto":
     "MIT · This site uses the FluoU visual language; the normative text remains FLUOU.md.",
-  "piedo.mejlosxtonoj": "Milestones",
+  "piedo.mejloŝtonoj": "Milestones",
   "piedo.vortaro": "Glossary",
   "piedo.montro": "Live view",
   "piedo.autoro": "Idea: Makoto Lernanto · code and documentation: Qoder.",
@@ -192,7 +192,7 @@ window.TRADUKOJ_ANGLA = {
 
   "akcento.oro": "Accent: gold",
   "akcento.koralo": "Accent: coral",
-  "akcento.cxielo": "Accent: sky",
+  "akcento.ĉielo": "Accent: sky",
   "akcento.verdo": "Accent: green",
   "akcento.viola": "Accent: violet",
   "akcento.bluo": "Accent: blue",
@@ -229,18 +229,18 @@ window.TRADUKOJ_ANGLA = {
   "eniro.grupo.ligoj": "Links",
 
   "eniro.kapabloj": "Capabilities",
-  "eniro.kapabloj.teksto": "Kernel, memory, IPC and storage",
+  "eniro.kapabloj.teksto": "Kernel, memory, IK and storage",
   "eniro.fluou": "FluoU",
   "eniro.fluou.teksto": "Components, materials and window chrome",
   "eniro.fluou.dokumento.teksto": "The mandatory visual language",
   "eniro.arkitekturo": "Architecture",
   "eniro.arkitekturo.teksto": "Six layers from the application to the screen",
-  "eniro.mejlosxtonoj": "Milestones",
-  "eniro.mejlosxtonoj.teksto": "M0 to M18 with evidence",
+  "eniro.mejloŝtonoj": "Milestones",
+  "eniro.mejloŝtonoj.teksto": "M0 to M18 with evidence",
   "eniro.eligo": "Real output",
   "eniro.eligo.teksto": "Serial log from QEMU",
-  "eniro.elssxuti": "Download",
-  "eniro.elssxuti.teksto": "ISO images for x86_64 and arm64",
+  "eniro.elŝuti": "Download",
+  "eniro.elŝuti.teksto": "ISO images for x86_64 and arm64",
 
   "eniro.temo.malluma": "Theme: dark",
   "eniro.temo.hela": "Theme: light",
@@ -255,8 +255,8 @@ window.TRADUKOJ_ANGLA = {
   "eniro.eldono.prefikso": "Release",
   "eniro.eldono.teksto": "ISO images and release notes",
   "eniro.readme.teksto": "Quick start and build commands",
-  "eniro.dokumento.mejlosxtonoj": "Milestones (document)",
-  "eniro.dokumento.mejlosxtonoj.teksto": "The full history and the CI gate",
+  "eniro.dokumento.mejloŝtonoj": "Milestones (document)",
+  "eniro.dokumento.mejloŝtonoj.teksto": "The full history and the DI gate",
   "eniro.montro": "Live view",
   "eniro.montro.teksto": "The standalone FluoU showcase",
 

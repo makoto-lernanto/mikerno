@@ -123,7 +123,7 @@ fn intersekcias(a: u64, b: u64, c: u64, d: u64) -> bool {
 }
 
 /// Ĉu `[bazo, bazo + bildo)` ne tuŝas la ligebildon, la modulojn, la
-/// praŝarĝan informon aŭ la framebufferon?
+/// praŝarĝan informon aŭ la frambufoon?
 fn libera(bazo: u64, bildo: u64, origino: u64, informo: &EniraInformo) -> bool {
     let bildo_fino = bazo + bildo;
     if bildo_fino > MAKSA_FIZIKA_MEMORO {
@@ -142,7 +142,7 @@ fn libera(bazo: u64, bildo: u64, origino: u64, informo: &EniraInformo) -> bool {
             return false;
         }
     }
-    match informo.framebuffer {
+    match informo.frambufo {
         Some(fb) => {
             let fino = fb.bazo + fb.paŝo as u64 * fb.alto as u64;
             !intersekcias(bazo, bildo_fino, fb.bazo, fino)

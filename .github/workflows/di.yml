@@ -1,4 +1,4 @@
-name: CI
+name: DI
 
 on:
   push:
@@ -11,64 +11,64 @@ permissions:
   contents: read
 
 jobs:
-  # Rapida rimensaĝo: versio, formato, lint (ambaŭ arkoj) kaj konstruo.
-  lint-and-build:
-    name: Lint and build
+  # Rapida rimensaĝo: versio, formato, statika analizo (ambaŭ arkoj) kaj konstruo.
+  kontroli-kaj-konstrui:
+    name: Kontroli kaj konstrui
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Check out repository
+      - name: Elpreni la deponejon
         uses: actions/checkout@v4
 
-      # `just verify` lintas ankaŭ por aarch64-unknown-none; la minimuma
+      # `just kontroli` lintas ankaŭ por aarch64-unknown-none; la minimuma
       # rustup-profila ne enhavas rustfmt/clippy, do ili estas petitaj.
-      # `llvm-tools-preview` liveras `rust-objcopy` por `build-arm`.
-      - name: Install Rust 1.100.0
+      # `llvm-tools-preview` liveras `rust-objcopy` por `konstrui-arm`.
+      - name: Instali Rust 1.100.0
         uses: dtolnay/rust-toolchain@1.100.0
         with:
           components: clippy, rustfmt, llvm-tools-preview
           targets: x86_64-unknown-none,aarch64-unknown-none
 
-      - name: Install just
+      - name: Instali just
         uses: taiki-e/install-action@just
 
-      - name: Run just verify
-        run: just verify
+      - name: Ruli just kontroli
+        run: just kontroli
 
-      # `verify` nur lintas la arm64-kernon; ĉi tiu paŝo ankaŭ ligas ĝin kaj
+      # `kontroli` nur lintas la arm64-kernon; ĉi tiu paŝo ankaŭ ligas ĝin kaj
       # konvertas la ELF-on al la plata `Image`, do rompo en la arm64-bildo
-      # malkovriĝas en CI anstataŭ nur loke.
-      - name: Build arm64 image
-        run: just build-arm
+      # malkovriĝas en DI anstataŭ nur loke.
+      - name: Konstrui la arm64-bildon
+        run: just konstrui-arm
 
   # Kani bezonas la liston de la pruvoj por la matrico. `cargo kani list`
   # skribas `kani-list.json` kun la plenaj (modulaj) nomoj de la pruvoj.
-  kani-prepare:
-    name: Prepare Kani harness list
+  kani-pretigi:
+    name: Pretigi la liston de Kani-pruvoj
     runs-on: ubuntu-latest
-    needs: lint-and-build
+    needs: kontroli-kaj-konstrui
     timeout-minutes: 30
     outputs:
       pruvoj: ${{ steps.listo.outputs.pruvoj }}
     steps:
-      - name: Check out repository
+      - name: Elpreni la deponejon
         uses: actions/checkout@v4
 
-      - name: Install Rust 1.100.0
+      - name: Instali Rust 1.100.0
         uses: dtolnay/rust-toolchain@1.100.0
         with:
           targets: x86_64-unknown-none
 
       # La oficiala ago instalas Kani kun kongrua CBMC. Ĝi interne ŝaltas
       # `stable`, do la sekvaj paŝoj restarigas 1.100.0.
-      - name: Install Kani
+      - name: Instali Kani
         uses: model-checking/kani-github-action@v1
         with:
           kani-version: latest
           command: kani
           args: --version
 
-      - name: List harnesses
+      - name: Listigi la pruvojn
         id: listo
         run: |
           rustup default 1.100.0
@@ -81,25 +81,25 @@ jobs:
 
   # Unu pruvo por tasko: pruvo, kiu blokiĝas, estas nuligita de `timeout`
   # post 10 minutoj kaj ĝia protokolo supreniĝas; la ceteraj finiĝas sendepende.
-  kani-verify:
-    name: Kani formal verification (${{ matrix.pruvo }})
+  kani-kontroli:
+    name: Formala kontrolo per Kani (${{ matrix.pruvo }})
     runs-on: ubuntu-latest
-    needs: kani-prepare
+    needs: kani-pretigi
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.kani-prepare.outputs.pruvoj) }}
+        include: ${{ fromJSON(needs.kani-pretigi.outputs.pruvoj) }}
     steps:
-      - name: Check out repository
+      - name: Elpreni la deponejon
         uses: actions/checkout@v4
 
-      - name: Install Rust 1.100.0
+      - name: Instali Rust 1.100.0
         uses: dtolnay/rust-toolchain@1.100.0
         with:
           targets: x86_64-unknown-none
 
-      - name: Install Kani
+      - name: Instali Kani
         uses: model-checking/kani-github-action@v1
         with:
           kani-version: latest
@@ -108,7 +108,7 @@ jobs:
 
       # `--exact` malhelpas, ke prefiksa nomo (ekz. `fifo_ordo`) ankaŭ
       # elektu `fifo_ordo_inter_fontoj`.
-      - name: Run one harness
+      - name: Ruli unu pruvon
         shell: bash
         env:
           PRUVO: ${{ matrix.pruvo }}
@@ -119,7 +119,7 @@ jobs:
           timeout -k 10 600 cargo kani -p mikerno -Z unstable-options \
             --ignore-global-asm --exact --harness "$PRUVO" 2>&1 | tee kani.log
 
-      - name: Upload log
+      - name: Alŝuti la protokolon
         if: always()
         uses: actions/upload-artifact@v4
         with:

@@ -1,12 +1,12 @@
-//! Framebuffer-teksta konzolo: bitmapaj glifoj desegnitaj rekte en la
-//! framebuffer, kiun la praŝarĝilo liveras (Limine per Multiboot2) aŭ, sur
+//! Frambufo-teksta konzolo: bitmapaj glifoj desegnitaj rekte en la
+//! frambufo, kiun la praŝarĝilo liveras (Limine per Multiboot2) aŭ, sur
 //! `arm64`, kiun la kerno anoncas al `ramfb`.
 //!
-//! La konzolo elektas inter la kvar strekoj de `fonto` laŭ la framebuffer-
+//! La konzolo elektas inter la kvar strekoj de `fonto` laŭ la frambufa
 //! grando: ju pli alta la ekrano, des pli granda la tiparo — ĉiam kun proksimume
 //! 33 tekstovicoj. Tiel la teksto restas akra kaj legebla sen skalado.
 //!
-//! Se framebuffer mankas (Xen-PVH aŭ malnova firmvaro), la konzolo restas
+//! Se frambufo mankas (Xen-PVH aŭ malnova firmvaro), la konzolo restas
 //! malŝaltita kaj la eligo okazas nur sur la seria konzolo.
 
 use core::fmt::{self, Write};
@@ -29,19 +29,19 @@ const TITOLA_RGB: u32 = 0x0000_FF00; // #00FF00
 const TITOLO: &str = "MiKerno: La estonteco nun.\n";
 
 #[derive(Clone, Copy)]
-pub struct FramebufferInformo {
+pub struct FrambufaInformo {
     pub bazo: u64,
     pub larĝo: u32,
     pub alto: u32,
     pub paŝo: u32,
-    pub bpp: u8,
+    pub bitoj_po_pikselo: u8,
     pub ruĝa: u8,
     pub verda: u8,
     pub blua: u8,
 }
 
 struct Ekrano {
-    informo: FramebufferInformo,
+    informo: FrambufaInformo,
     tiparo: &'static fonto::Tiparo,
     kolumnoj: usize,
     vicoj: usize,
@@ -71,11 +71,11 @@ fn elekti_tiparon(larĝo: u32, alto: u32) -> &'static fonto::Tiparo {
     elektita
 }
 
-/// Ŝaltu la framebuffer-konzolon; `false` se la framebuffer ne taŭgas.
-pub fn pravalorizi(informo: FramebufferInformo) -> bool {
+/// Ŝaltu la frambufa konzolon; `false` se la frambufo ne taŭgas.
+pub fn pravalorizi(informo: FrambufaInformo) -> bool {
     if informo.bazo == 0
         || !informo.bazo.is_multiple_of(4)
-        || informo.bpp != 32
+        || informo.bitoj_po_pikselo != 32
         || informo.larĝo < MINIMUMA_LARĜO
         || informo.alto < MINIMUMA_ALTO
         || (informo.paŝo as u64) < informo.larĝo as u64 * 4
@@ -99,7 +99,7 @@ pub fn pravalorizi(informo: FramebufferInformo) -> bool {
     true
 }
 
-/// Skribu al la framebuffer, se ĝi estas ŝaltita. Vokata sub interrompa gardo.
+/// Skribu al la frambufo, se ĝi estas ŝaltita. Vokata sub interrompa gardo.
 pub fn skribi_formaton(argumentoj: fmt::Arguments) {
     if let Some(ekrano) = EKRANO.akiri().as_mut() {
         let _ = ekrano.write_fmt(argumentoj);
@@ -110,15 +110,15 @@ pub fn skribi_formaton(argumentoj: fmt::Arguments) {
 pub struct PikselaRaporto {
     pub larĝo: u32,
     pub alto: u32,
-    pub bpp: u8,
+    pub bitoj_po_pikselo: u8,
     pub tiparo: (usize, usize),
     pub haketo: u64,
 }
 
-/// Desegnu determinan provbildon en la tutan frambufferon, resumu la pikselojn
+/// Desegnu determinan provbildon en la tutan frambufon, resumu la pikselojn
 /// kaj restarigu puran paĝon. `None` se la konzolo ne estas ŝaltita.
 ///
-/// La bildo dependas nur de la framebuffer-grando, de la elektita tiparo kaj de
+/// La bildo dependas nur de la frambufa grando, de la elektita tiparo kaj de
 /// la koloraj deŝovoj, do ĝia haketo estas komparebla inter la platformoj kiam
 /// la geometrio kongruas.
 pub fn testi_pikselojn() -> Option<PikselaRaporto> {
@@ -243,7 +243,7 @@ impl Ekrano {
         PikselaRaporto {
             larĝo: self.informo.larĝo,
             alto: self.informo.alto,
-            bpp: self.informo.bpp,
+            bitoj_po_pikselo: self.informo.bitoj_po_pikselo,
             tiparo: (self.tiparo.larĝo, self.tiparo.alto),
             haketo,
         }

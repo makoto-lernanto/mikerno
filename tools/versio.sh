@@ -50,13 +50,13 @@ kontroli() {
 kontroli_ĉiujn() {
     local eraro=0
     kontroli "$README" \
-        's/^- \*\*Versio:\*\* ([0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?) \(workspace\)$/\1/p' \
+        's/^- \*\*Versio:\*\* ([0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?) \(Cargo-laborloko\)$/\1/p' \
         "README.md (Versio)" || eraro=1
     kontroli "$README" \
         's/^\[MiKerno\] Saluton, mi estas MiKerno v([0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?)!$/\1/p' \
         "README.md (ekzempla saluto)" || eraro=1
     kontroli "$MEJLOSTONOJ" \
-        's/^> Stato: .* · Versio de la workspace: ([0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?)$/\1/p' \
+        's/^> Stato: .* · Versio de la Cargo-laborloko: ([0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?)$/\1/p' \
         "docs/MEJLOSTONOJ.md" || eraro=1
     kontroli "$AGENTS" \
         's/^Nuna versio: `([0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?)`.*$/\1/p' \
@@ -83,7 +83,7 @@ kontroli_ĉiujn() {
 ĝisdatigi() {
     sed -E -i "s/^(- \*\*Versio:\*\* )[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?/\1$VERSIO/" "$README"
     sed -E -i "s/^(\[MiKerno\] Saluton, mi estas MiKerno v)[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?!/\1$VERSIO!/" "$README"
-    sed -E -i "s/^(> Stato: .* · Versio de la workspace: )[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?$/\1$VERSIO/" "$MEJLOSTONOJ"
+    sed -E -i "s/^(> Stato: .* · Versio de la Cargo-laborloko: )[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?$/\1$VERSIO/" "$MEJLOSTONOJ"
     sed -E -i "s/^(Nuna versio: \`)[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?(\`)/\1$VERSIO\3/" "$AGENTS"
     sed -E -i "s/^(<html lang=\"eo\" data-versio=\")[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?(\">)$/\1$VERSIO\3/" "$RETEJO"
     sed -E -i "s#(data-versio-montri>)[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?(</span>)#\1$VERSIO\3#g" "$RETEJO"

@@ -144,7 +144,7 @@ mb2_kapo:
     .long 16
     .long 6
     .long 0
-    /* Petu 32-bitan grafikan framebuffer en la nuna reĝimo. */
+    /* Petu 32-bitan grafikan frambufo en la nuna reĝimo. */
     .short 5
     .short 0
     .long 20

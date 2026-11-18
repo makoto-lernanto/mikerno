@@ -20,7 +20,7 @@ done
 
 for bildo in "$IMAGO" "$UZANTO"; do
     if [[ ! -f "$bildo" ]]; then
-        echo "bildo ne trovita: $bildo (ruligu: just build-arm)" >&2
+        echo "bildo ne trovita: $bildo (ruligu: just konstrui-arm)" >&2
         exit 1
     fi
 done

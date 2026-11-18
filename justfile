@@ -1,7 +1,7 @@
 # MiKerno: konstruado, PVH-rulado kaj ISO-rulado.
 # Postulas bash, python3 (SNDS-bildo), QEMU (`qemu-system-x86`) kaj, por `iso`,
 # la sisteman `xorriso`.
-# Por `run-arm` kaj `run-iso-arm` ankaŭ necesas `qemu-system-aarch64`; por la
+# Por `ruli-arm` kaj `ruli-iso-arm` ankaŭ necesas `qemu-system-aarch64`; por la
 # ISO krome UEFI-firmware.
 
 kerno := "target/x86_64-unknown-none/release/mikerno"
@@ -10,47 +10,47 @@ bildo_arm := "target/aarch64-unknown-none/release/mikerno.img"
 bildo_arm_iso := "mikerno-arm.iso"
 bildo := "mikerno.iso"
 
-default: build
+default: konstrui
 
-# Konstruu la tutan workspace (kerno, libmikerno, horizonto).
-build-all:
+# Konstruu la tutan laborlokon (kerno, libmikerno, horizonto).
+konstrui-ciujn:
     cargo build --workspace --release
 
 # Konstruu nur la kernon.
-build-kerno:
+konstrui-kerno:
     cargo build -p mikerno --release
 
-# Kongruo kun la antaŭa nomo.
-build: build-kerno
+# Kongrua alinomo: `konstrui` konstruas nur la kernon.
+konstrui: konstrui-kerno
 
 # Paku `mikerno/snds/` en determinsman SNDS-bildon.
 snds:
     bash tools/krei_snds_img.sh mikerno/snds target/mikerno.snds
 
 # Rulu la kernon rekte per QEMU (PVH, sen ISO).
-run: build-kerno snds
+ruli: konstrui-kerno snds
     bash tools/run-qemu.sh {{kerno}}
 
 # Konstruu la kernon por arm64 (plata `Image`) kaj la uzantan bildon.
-build-arm:
+konstrui-arm:
     cargo build -p mikerno --release --target aarch64-unknown-none
     cargo build -p horizonto --release --target aarch64-unknown-none
     bash tools/elf-al-image.sh {{kerno_arm}} {{bildo_arm}}
 
 # Rulu la arm64-kernon sub QEMU (`virt`).
-run-arm: build-arm
+ruli-arm: konstrui-arm
     bash tools/run-qemu-arm.sh {{bildo_arm}}
 
 # Kunmetu UEFI-booteblan ISO-on por arm64 (Limine + plata `Image`).
-iso-arm: build-arm
+iso-arm: konstrui-arm
     bash tools/krei-iso-arm.sh
 
 # Rulu la arm64-ISO-on sub QEMU kun UEFI-firmware.
-run-iso-arm: iso-arm
+ruli-iso-arm: iso-arm
     bash tools/run-qemu-arm.sh --iso {{bildo_arm_iso}}
 
 # Kunmetu praŝarĝeblan ISO-on (Limine + Multiboot2).
-iso: build-kerno
+iso: konstrui-kerno
     @command -v xorriso >/dev/null || { echo "xorriso ne trovita; instalu ĝin: sudo apt install xorriso" >&2; exit 1; }
     cargo build -p horizonto --release
     rm -rf iso_root
@@ -66,16 +66,16 @@ iso: build-kerno
     xorriso -as mkisofs -b limine-bios-cd.bin -no-emul-boot -boot-load-size 4 -boot-info-table --efi-boot limine-uefi-cd.bin -efi-boot-part --efi-boot-image --protective-msdos-label iso_root -o {{bildo}}
 
 # Rulu la ISO-on en QEMU; la fenestro montras la Limine-menuon.
-run-iso: iso
+ruli-iso: iso
     bash tools/run-qemu.sh iso
 
 # Kontrolu, ke la dokumenta versio kongruas kun `Cargo.toml`.
 kontroli-version:
     bash tools/versio.sh --kontroli
 
-# Loka kvalita pordego: versio + formato + lint (ambaŭ arkoj) + konstruo.
-# Kani ruliĝas nur en CI, kiel aparta tasko por ĉiu pruvo (vidu ci.yml).
-verify: kontroli-version
+# Loka kvalita pordego: versio + formato + statika analizo (ambaŭ arkoj) + konstruo.
+# Kani ruliĝas nur en DI, kiel aparta tasko por ĉiu pruvo (vidu di.yml).
+kontroli: kontroli-version
     cargo fmt --all -- --check
     cargo clippy --workspace --release -- -D warnings
     cargo clippy -p mikerno --release --target aarch64-unknown-none -- -D warnings

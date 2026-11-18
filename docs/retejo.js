@@ -13,7 +13,7 @@
   const AKCENTOJ = {
     oro: "#FFB454",
     koralo: "#FF5C8A",
-    cxielo: "#4CC9FF",
+    ĉielo: "#4CC9FF",
     verdo: "#57E389",
     viola: "#A78BFA",
     bluo: "#5B7CFA",
@@ -21,7 +21,7 @@
   const AKCENTAJ_NOMOJ = {
     oro: "oro",
     koralo: "koralo",
-    cxielo: "ĉielo",
+    ĉielo: "ĉielo",
     verdo: "verdo",
     viola: "viola",
     bluo: "bluo",
@@ -365,13 +365,13 @@
     }
   }
 
-  function fulmomesagxo(titolo, teksto, semantiko = "sukceso") {
-    const ujo = $("#fulmomesagxoj");
+  function fulmomesaĝo(titolo, teksto, semantiko = "sukceso") {
+    const ujo = $("#fulmomesaĝoj");
     if (!ujo) {
       return;
     }
     const mesaĝo = document.createElement("div");
-    mesaĝo.className = `fulmomesagxo ${semantiko}`;
+    mesaĝo.className = `fulmomesaĝo ${semantiko}`;
 
     const titola = document.createElement("div");
     titola.className = "fulma-titolo";
@@ -400,12 +400,12 @@
           return;
         }
         const sukceso = await kopiiTekston(celo.textContent.trim());
-        fulmomesagxo(
+        fulmomesaĝo(
           sukceso ? t("fulmo.kopiita", "Kopiita") : t("fulmo.eraro", "Kopio malsukcesis"),
           sukceso
             ? t("fulmo.kopiita.teksto", "La teksto estas en la tondujo.")
             : t("fulmo.eraro.teksto", "Vi povas elekti la tekston permane."),
-          sukceso ? "sukceso" : "dangxero"
+          sukceso ? "sukceso" : "danĝero"
         );
       });
     });
@@ -550,7 +550,7 @@
     const difinoj = [
       {
         nomo: t("eniro.kapabloj", "Kapabloj"),
-        priskribo: t("eniro.kapabloj.teksto", "Kerno, memoro, IPC kaj konservado"),
+        priskribo: t("eniro.kapabloj.teksto", "Kerno, memoro, IK kaj konservado"),
         grupo: "sekcioj",
         ikono: "01",
         tipo: "sekcio",
@@ -573,12 +573,12 @@
         plenumu: () => iriAl("#arkitekturo"),
       },
       {
-        nomo: t("eniro.mejlosxtonoj", "Mejloŝtonoj"),
-        priskribo: t("eniro.mejlosxtonoj.teksto", "M0 ĝis M18 kun pruvoj"),
+        nomo: t("eniro.mejloŝtonoj", "Mejloŝtonoj"),
+        priskribo: t("eniro.mejloŝtonoj.teksto", "M0 ĝis M18 kun pruvoj"),
         grupo: "sekcioj",
         ikono: "04",
         tipo: "sekcio",
-        plenumu: () => iriAl("#mejlosxtonoj"),
+        plenumu: () => iriAl("#mejloŝtonoj"),
       },
       {
         nomo: t("eniro.eligo", "Vera eligo"),
@@ -589,12 +589,12 @@
         plenumu: () => iriAl("#eligo"),
       },
       {
-        nomo: t("eniro.elssxuti", "Elŝuti"),
-        priskribo: t("eniro.elssxuti.teksto", "ISO-bildoj por x86_64 kaj arm64"),
+        nomo: t("eniro.elŝuti", "Elŝuti"),
+        priskribo: t("eniro.elŝuti.teksto", "ISO-bildoj por x86_64 kaj arm64"),
         grupo: "sekcioj",
         ikono: "06",
         tipo: "sekcio",
-        plenumu: () => iriAl("#elssxuti"),
+        plenumu: () => iriAl("#elŝuti"),
       },
       {
         nomo: t("eniro.temo.malluma", "Temo: malluma"),
@@ -604,7 +604,7 @@
         tipo: "agordo",
         plenumu: () => {
           agordiTemon("malluma");
-          fulmomesagxo(t("fulmo.temo", "Temo ŝanĝita"), t("fulmo.temo.teksto", "La nova temo estas aktiva."));
+          fulmomesaĝo(t("fulmo.temo", "Temo ŝanĝita"), t("fulmo.temo.teksto", "La nova temo estas aktiva."));
         },
       },
       {
@@ -615,7 +615,7 @@
         tipo: "agordo",
         plenumu: () => {
           agordiTemon("hela");
-          fulmomesagxo(t("fulmo.temo", "Temo ŝanĝita"), t("fulmo.temo.teksto", "La nova temo estas aktiva."));
+          fulmomesaĝo(t("fulmo.temo", "Temo ŝanĝita"), t("fulmo.temo.teksto", "La nova temo estas aktiva."));
         },
       },
       {
@@ -645,7 +645,7 @@
         tipo: "agordo",
         plenumu: () => {
           agordiAkcenton(akcento);
-          fulmomesagxo(
+          fulmomesaĝo(
             t("fulmo.akcento", "Akcento ŝanĝita"),
             t("fulmo.akcento.teksto", "La nova akcento estas aktiva.")
           );
@@ -681,8 +681,8 @@
           malfermiLigon("https://github.com/makoto-lernanto/mikerno/blob/main/README.md"),
       },
       {
-        nomo: t("eniro.dokumento.mejlosxtonoj", "Mejloŝtonoj (dokumento)"),
-        priskribo: t("eniro.dokumento.mejlosxtonoj.teksto", "La plena historio kaj la CI-pordego"),
+        nomo: t("eniro.dokumento.mejloŝtonoj", "Mejloŝtonoj (dokumento)"),
+        priskribo: t("eniro.dokumento.mejloŝtonoj.teksto", "La plena historio kaj la DI-pordego"),
         grupo: "ligoj",
         ikono: "↗",
         tipo: "ligo",
@@ -890,12 +890,12 @@
       return;
     }
     const sukceso = await kopiiTekston(eniraKalkulo);
-    fulmomesagxo(
+    fulmomesaĝo(
       sukceso ? t("fulmo.kopiita", "Kopiita") : t("fulmo.eraro", "Kopio malsukcesis"),
       sukceso
         ? t("fulmo.kopiita.teksto", "La teksto estas en la tondujo.")
         : t("fulmo.eraro.teksto", "Vi povas elekti la tekston permane."),
-      sukceso ? "sukceso" : "dangxero"
+      sukceso ? "sukceso" : "danĝero"
     );
   }
 

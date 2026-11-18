@@ -17,7 +17,7 @@ use crate::kunhavigita::Kunhavigita;
 use crate::memoro::virtuala::{PaĝaTablo, UZANTA_STAKO_GRANDE, UZANTA_STAKO_SUPRO};
 
 use super::procezo::MAKSAJ_PROCEZOJ;
-use super::{ipc, planisto};
+use super::{ik, planisto};
 
 /// `-1`: la argumentoj estas malvalidaj.
 pub const MALĜUSTA_ARG: u64 = (-1i64) as u64;
@@ -38,8 +38,8 @@ const _: () = {
     assert!(FINPUNKTO_REVOKITA == libmikerno::syscall::FINPUNKTO_REVOKITA as u64);
 };
 
-/// La sistemvoka erar-kodo por IPC-mal sukceso.
-fn kodo(eraro: ipc::IpcEraro) -> u64 {
+/// La sistemvoka erar-kodo por IK-malsukceso.
+fn kodo(eraro: ik::IkEraro) -> u64 {
     eraro.kodo() as u64
 }
 
@@ -140,22 +140,22 @@ fn sendi(tenilo: u64, montrilo: u64, el_ring3: bool) -> u64 {
         let _gardo = el_ring3.then(crate::arkitekturo::StacGardo::nova);
         // SAFETY: la montrilo estas ne-nula kaj (por Ring 3) en la anoncita
         // regiono; `Mesago` estas `Copy`, do unufoja legado sufiĉas. La
-        // `STAC`-fenestro kovras nur la legadon, ne la IPC-vokon.
+        // `STAC`-fenestro kovras nur la legadon, ne la IK-vokon.
         unsafe { core::ptr::read_unaligned(montrilo as *const Mesago) }
     };
-    if mesago.longo() > ipc::MAKSA_MESAGA_LONGO {
+    if mesago.longo() > ik::MAKSA_MESAGA_LONGO {
         // C2: `MesagujoPlena` (-4) restas nur por la ne-blokebla kerna vojo;
         // tro longa mesaĝo havas sian propran kodon ekde Fazo 5.
-        return kodo(ipc::IpcEraro::TroLongaMesago);
+        return kodo(ik::IkEraro::TroLongaMesago);
     }
     let Some(tenilo) = el_tenilo(tenilo) else {
         return NEVALIDA_TENILO;
     };
-    match ipc::sendi_kapable(
+    match ik::sendi_kapable(
         planisto::nuna_procezo(),
         tenilo,
         &mesago,
-        ipc::Atendo::Senfina,
+        ik::Atendo::Senfina,
     ) {
         Ok(()) => 0,
         Err(eraro) => kodo(eraro),
@@ -185,7 +185,7 @@ fn doni(fonto: u64, celo: u64, permesoj: u64) -> u64 {
     if celo == 0 || celo as usize >= MAKSAJ_PROCEZOJ {
         return NEVALIDA_CELLOKO;
     }
-    match ipc::doni(planisto::nuna_procezo(), fonto, celo, permesoj) {
+    match ik::doni(planisto::nuna_procezo(), fonto, celo, permesoj) {
         Ok(tenilo) => tenilo.nombro() as u64,
         Err(eraro) => kodo(eraro),
     }
@@ -202,7 +202,7 @@ fn ricevi(tenilo: u64, celo: u64, el_ring3: bool) -> u64 {
     // `ricevi_kapable` rajtas bloki kaj cedi la procesoron, do ĝi restas
     // ekster la `STAC`-fenestro.
     let mesago =
-        match ipc::ricevi_kapable(planisto::nuna_procezo(), tenilo, None, ipc::Atendo::Senfina) {
+        match ik::ricevi_kapable(planisto::nuna_procezo(), tenilo, None, ik::Atendo::Senfina) {
             Ok(mesago) => mesago,
             Err(eraro) => return kodo(eraro),
         };
@@ -228,7 +228,7 @@ fn ricevi_tempa(tenilo: u64, celo: u64, fonto: u64, tempolimo: u64, el_ring3: bo
     let Some(tenilo) = el_tenilo(tenilo) else {
         return NEVALIDA_TENILO;
     };
-    let Some(atendo) = ipc::el_tempolimo(tempolimo) else {
+    let Some(atendo) = ik::el_tempolimo(tempolimo) else {
         return MALĜUSTA_ARG;
     };
     let fonto = if fonto == 0 {
@@ -238,7 +238,7 @@ fn ricevi_tempa(tenilo: u64, celo: u64, fonto: u64, tempolimo: u64, el_ring3: bo
     } else {
         return MALĜUSTA_ARG;
     };
-    let mesago = match ipc::ricevi_kapable(planisto::nuna_procezo(), tenilo, fonto, atendo) {
+    let mesago = match ik::ricevi_kapable(planisto::nuna_procezo(), tenilo, fonto, atendo) {
         Ok(mesago) => mesago,
         Err(eraro) => return kodo(eraro),
     };
@@ -267,16 +267,16 @@ fn sendi_tempa(tenilo: u64, montrilo: u64, tempolimo: u64, el_ring3: bool) -> u6
         // legadon.
         unsafe { core::ptr::read_unaligned(montrilo as *const Mesago) }
     };
-    if mesago.longo() > ipc::MAKSA_MESAGA_LONGO {
-        return kodo(ipc::IpcEraro::TroLongaMesago);
+    if mesago.longo() > ik::MAKSA_MESAGA_LONGO {
+        return kodo(ik::IkEraro::TroLongaMesago);
     }
     let Some(tenilo) = el_tenilo(tenilo) else {
         return NEVALIDA_TENILO;
     };
-    let Some(atendo) = ipc::el_tempolimo(tempolimo) else {
+    let Some(atendo) = ik::el_tempolimo(tempolimo) else {
         return MALĜUSTA_ARG;
     };
-    match ipc::sendi_kapable(planisto::nuna_procezo(), tenilo, &mesago, atendo) {
+    match ik::sendi_kapable(planisto::nuna_procezo(), tenilo, &mesago, atendo) {
         Ok(()) => 0,
         Err(eraro) => kodo(eraro),
     }
@@ -294,7 +294,7 @@ fn krei_finpunkton(permesoj: u64) -> u64 {
     let Some(permesoj) = el_permesoj(permesoj) else {
         return MALĜUSTA_ARG;
     };
-    match ipc::krei_finpunkton(planisto::nuna_procezo(), permesoj) {
+    match ik::krei_finpunkton(planisto::nuna_procezo(), permesoj) {
         Ok(tenilo) => tenilo.nombro() as u64,
         Err(eraro) => kodo(eraro),
     }
@@ -305,7 +305,7 @@ fn fermi(tenilo: u64) -> u64 {
     let Some(tenilo) = el_tenilo(tenilo) else {
         return NEVALIDA_TENILO;
     };
-    match ipc::fermi(planisto::nuna_procezo(), tenilo) {
+    match ik::fermi(planisto::nuna_procezo(), tenilo) {
         Ok(()) => 0,
         Err(eraro) => kodo(eraro),
     }
@@ -319,7 +319,7 @@ fn revoki(tenilo: u64, rezervita: u64) -> u64 {
     let Some(tenilo) = el_tenilo(tenilo) else {
         return NEVALIDA_TENILO;
     };
-    match ipc::revoki(planisto::nuna_procezo(), tenilo) {
+    match ik::revoki(planisto::nuna_procezo(), tenilo) {
         Ok(()) => 0,
         Err(eraro) => kodo(eraro),
     }
@@ -420,8 +420,8 @@ pub fn testi_ring0() {
     let cedo = invoki(SYS_CEDI, [0; 4]);
     // Mesaĝo, kies `longo` mensoge superas la buferon; nur la longa kontrolo
     // antaŭas la tenilan, do `-90` (ne `-1` aŭ `-9`).
-    let mut tro_longa_mesago = ipc::Mesago::malplena();
-    tro_longa_mesago.longo = ipc::MAKSA_MESAGA_LONGO + 1;
+    let mut tro_longa_mesago = ik::Mesago::malplena();
+    tro_longa_mesago.longo = ik::MAKSA_MESAGA_LONGO + 1;
     let tro_longa = invoki(SYS_SENDI, [0, &tro_longa_mesago as *const _ as u64, 0, 0]);
     // `int 0x80` estas programa interrompo: la dispetĉo ne rajtas sendi EOI-on.
     // La mezuro okazas kun interrompoj malŝaltitaj, do tiko ne ŝajnigas EOI-on.

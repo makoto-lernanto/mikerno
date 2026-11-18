@@ -50,7 +50,7 @@ else
         if [[ "$(basename "$KERNEL")" == horizonto* ]]; then
             echo "La bildo estas uzanta (Ring 3) bildo, ne praŝarĝebla per QEMU -kernel." >&2
             echo "Konstruu ĝin per: cargo build -p horizonto" >&2
-            echo "Lanĉu la kernon per: just run aŭ just run-iso" >&2
+            echo "Lanĉu la kernon per: just ruli aŭ just ruli-iso" >&2
             exit 0
         fi
         echo "La bildo ne havas Xen-PVH-noton: $KERNEL" >&2
@@ -85,7 +85,7 @@ DISKA_ARGS=(
     -snapshot
 )
 
-# `mon:stdio` muxas la serian konzolon kaj la QEMU-monitoron sur la sama
+# `mon:stdio` miksas la serian konzolon kaj la QEMU-monitoron sur la sama
 # terminalo. Ctrl+C tiam sendiĝas al la guest kiel bajto 0x03 anstataŭ fini
 # QEMU. Por eliri uzu:
 #   Ctrl+A x   — tuj fini QEMU

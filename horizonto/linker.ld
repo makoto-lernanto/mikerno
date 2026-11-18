@@ -2,7 +2,7 @@
    La bildo estas ligita je la bazo de la uzanta fenestro (4 GiB), kiun la
    kerno mapas per la bito `U`. La stako venas de la kerno, ne de ĉi tiu
    skripto. */
-ENTRY(horizonto_start)
+ENTRY(horizonto_komenco)
 
 SECTIONS
 {

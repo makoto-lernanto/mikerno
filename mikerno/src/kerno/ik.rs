@@ -1,4 +1,4 @@
-//! Minimuma mesaĝa IPC: finpunktaj objektoj, kapabloj, teniloj.
+//! Minimuma mesaĝa IK: finpunktaj objektoj, kapabloj, teniloj.
 //!
 //! Ekde Fazo 2 de M14 la mesaĝvico apartenas al la finpunkto, ne al la fadeno.
 //! Ĉiu fadeno havas defaŭltan finpunkton (kreitan ĉe ĝia registrado), kaj
@@ -16,7 +16,7 @@
 //! ricevanto liberigas lokon (aŭ la finpunkto revokiĝas, kio redonas `-32`).
 //! Nur la ripoza kunteksto (`0`) ne povas bloki kaj ricevas `-4`; la mesaĝoj
 //! restas identecaj — la kerno ĉiam anstataŭigas `sendinto` per la nuna fadeno
-//! kaj `ricevonto` per la finpunkta identigilo — kaj `IpcStatistiko` nombras
+//! kaj `ricevonto` per la finpunkta identigilo — kaj `IkStatistiko` nombras
 //! la liverojn, la premregojn kaj la revokojn.
 //!
 //! Ekde Fazo 6 `RICEVI_TEMPO`/`SENDI_TEMPO` aldonas la atendantan politikon:
@@ -66,7 +66,7 @@ pub type FinaPunktaId = u64;
 const UNUA_FINPUNKTA_ID: FinaPunktaId = 16;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum IpcEraro {
+pub enum IkEraro {
     NevalidaCelloko,
     MesagujoPlena,
     NevalidaTenilo,
@@ -85,7 +85,7 @@ pub enum IpcEraro {
     Tempolimo,
 }
 
-impl IpcEraro {
+impl IkEraro {
     /// La negativa erar-kodo de la sistemvoka ABI.
     pub const fn kodo(self) -> i64 {
         match self {
@@ -103,18 +103,18 @@ impl IpcEraro {
 }
 
 const _: () = {
-    assert!(IpcEraro::NesufiĉajPermesoj.kodo() == -1);
-    assert!(IpcEraro::NevalidaCelloko.kodo() == -3);
-    assert!(IpcEraro::MesagujoPlena.kodo() == -4);
-    assert!(IpcEraro::NevalidaTenilo.kodo() == libmikerno::syscall::NEVALIDA_TENILO as i64);
-    assert!(IpcEraro::ProvuDenove.kodo() == libmikerno::syscall::PROVU_DENOVE as i64);
-    assert!(IpcEraro::TabeloPlena.kodo() == libmikerno::syscall::TABELO_PLENA as i64);
-    assert!(IpcEraro::Revokita.kodo() == libmikerno::syscall::FINPUNKTO_REVOKITA as i64);
-    assert!(IpcEraro::TroLongaMesago.kodo() == libmikerno::syscall::TRO_LONGA_MESAGO as i64);
-    assert!(IpcEraro::Tempolimo.kodo() == libmikerno::syscall::TEMPOLIMO as i64);
+    assert!(IkEraro::NesufiĉajPermesoj.kodo() == -1);
+    assert!(IkEraro::NevalidaCelloko.kodo() == -3);
+    assert!(IkEraro::MesagujoPlena.kodo() == -4);
+    assert!(IkEraro::NevalidaTenilo.kodo() == libmikerno::syscall::NEVALIDA_TENILO as i64);
+    assert!(IkEraro::ProvuDenove.kodo() == libmikerno::syscall::PROVU_DENOVE as i64);
+    assert!(IkEraro::TabeloPlena.kodo() == libmikerno::syscall::TABELO_PLENA as i64);
+    assert!(IkEraro::Revokita.kodo() == libmikerno::syscall::FINPUNKTO_REVOKITA as i64);
+    assert!(IkEraro::TroLongaMesago.kodo() == libmikerno::syscall::TRO_LONGA_MESAGO as i64);
+    assert!(IkEraro::Tempolimo.kodo() == libmikerno::syscall::TEMPOLIMO as i64);
 };
 
-/// La atenda politiko de IPC-voko (`r10` en la sistemvoka ABI, C15).
+/// La atenda politiko de IK-voko (`r10` en la sistemvoka ABI, C15).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Atendo {
     /// `u32::MAX`: bloku sen limdato.
@@ -175,9 +175,9 @@ impl Mesagujo {
         self.nombro >= MAKSAJ_MESAGOJ
     }
 
-    fn pusxi(&mut self, ero: Ero) -> Result<(), IpcEraro> {
+    fn puŝi(&mut self, ero: Ero) -> Result<(), IkEraro> {
         if self.plena() {
-            return Err(IpcEraro::MesagujoPlena);
+            return Err(IkEraro::MesagujoPlena);
         }
         self.eroj[self.nombro] = Some(ero);
         self.nombro += 1;
@@ -221,10 +221,10 @@ const fn senda_decido(enmetitaj: usize, maks: usize, povas_bloki: bool) -> Senda
     }
 }
 
-/// Nombrilo de la IPC-trafiko ekde la starto; `Copy` por ke la raporto ne
+/// Nombrilo de la IK-trafiko ekde la starto; `Copy` por ke la raporto ne
 /// pruntedonu la tutmondan staton.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct IpcStatistiko {
+pub struct IkStatistiko {
     /// Mesaĝoj sukcese enmetitaj en vicon.
     pub senditaj: u64,
     /// Mesaĝoj sukcese prenitaj el vico.
@@ -237,7 +237,7 @@ pub struct IpcStatistiko {
     pub tempolimoj: u64,
 }
 
-static STATISTIKO: Kunhavigita<IpcStatistiko> = Kunhavigita::nova(IpcStatistiko {
+static STATISTIKO: Kunhavigita<IkStatistiko> = Kunhavigita::nova(IkStatistiko {
     senditaj: 0,
     ricevitaj: 0,
     premregoj: 0,
@@ -245,13 +245,13 @@ static STATISTIKO: Kunhavigita<IpcStatistiko> = Kunhavigita::nova(IpcStatistiko 
     tempolimoj: 0,
 });
 
-fn statistiko() -> &'static mut IpcStatistiko {
+fn statistiko() -> &'static mut IkStatistiko {
     STATISTIKO.akiri()
 }
 
 /// Kopio de la nuna statistiko; la vokanto tenas interrompojn malŝaltitajn aŭ
 /// akceptas malstrikte kongruan legadon.
-pub fn nuna_statistiko() -> IpcStatistiko {
+pub fn nuna_statistiko() -> IkStatistiko {
     *STATISTIKO.akiri()
 }
 
@@ -543,14 +543,14 @@ fn serĉi_kapablon(
     tabelo: &Kapablotabelo,
     tenilo: Tenilo,
     bezonataj: Permesoj,
-) -> Result<usize, IpcEraro> {
+) -> Result<usize, IkEraro> {
     let indekso = tenilo.indekso() as usize;
-    let eniro = tabelo.eroj.get(indekso).ok_or(IpcEraro::NevalidaTenilo)?;
+    let eniro = tabelo.eroj.get(indekso).ok_or(IkEraro::NevalidaTenilo)?;
     if !eniro.uzata || eniro.tenilo != tenilo {
-        return Err(IpcEraro::NevalidaTenilo);
+        return Err(IkEraro::NevalidaTenilo);
     }
     if !eniro.permesoj.posedas(bezonataj) {
-        return Err(IpcEraro::NesufiĉajPermesoj);
+        return Err(IkEraro::NesufiĉajPermesoj);
     }
     Ok(indekso)
 }
@@ -561,13 +561,13 @@ fn akiri_kapablon(
     procezo: ProcezaId,
     tenilo: Tenilo,
     bezonataj: Permesoj,
-) -> Result<(u8, KapabloEniro), IpcEraro> {
-    let tabelo = kapabloj(procezo).ok_or(IpcEraro::NevalidaTenilo)?;
+) -> Result<(u8, KapabloEniro), IkEraro> {
+    let tabelo = kapabloj(procezo).ok_or(IkEraro::NevalidaTenilo)?;
     let indekso = serĉi_kapablon(tabelo, tenilo, bezonataj)?;
     let eniro = tabelo.eroj[indekso];
     let objekto = &finpunktoj()[eniro.finpunkto as usize];
     if !akordas(objekto.aktiva(), objekto.generacio, eniro.fp_generacio) {
-        return Err(IpcEraro::NevalidaTenilo);
+        return Err(IkEraro::NevalidaTenilo);
     }
     Ok((eniro.finpunkto, eniro))
 }
@@ -648,11 +648,11 @@ fn rezervi_finpunkton(
     procezo: ProcezaId,
     fadeno: FadenoId,
     id: FinaPunktaId,
-) -> Result<u8, IpcEraro> {
-    let fendo = libera_finpunkta_fendo().ok_or(IpcEraro::TabeloPlena)?;
+) -> Result<u8, IkEraro> {
+    let fendo = libera_finpunkta_fendo().ok_or(IkEraro::TabeloPlena)?;
     let objekto = &mut finpunktoj()[fendo as usize];
     if Tenilo::nova(0, objekto.generacio).is_none() {
-        return Err(IpcEraro::TabeloPlena);
+        return Err(IkEraro::TabeloPlena);
     }
     objekto.stato = FinaPunktaStato::Aktiva;
     objekto.id = id;
@@ -665,16 +665,16 @@ fn rezervi_finpunkton(
 /// Registru la defaŭltan finpunkton de fadeno. Procezaj fadenoj ankaŭ ricevas
 /// kapablan fendon `0` kun `PLENAJ`, do la malnova vojo restas uzebla ĝis la
 /// tenila transiro en Fazo 3. `procezo == 0` por kernaj fadenoj (C8).
-pub fn registri_fadenon(fadeno: FadenoId, procezo: ProcezaId) -> Result<(), IpcEraro> {
+pub fn registri_fadenon(fadeno: FadenoId, procezo: ProcezaId) -> Result<(), IkEraro> {
     let _gardo = InterrompaGardo::nova();
     if fadeno == 0 || fadeno as usize > MAKSAJ_FADENOJ {
-        return Err(IpcEraro::NevalidaCelloko);
+        return Err(IkEraro::NevalidaCelloko);
     }
     if defaŭlta_indekso(fadeno).is_some() {
         return Ok(());
     }
     if procezo != 0 && kapabloj(procezo).is_none() {
-        return Err(IpcEraro::NevalidaTenilo);
+        return Err(IkEraro::NevalidaTenilo);
     }
     let fendo = rezervi_finpunkton(procezo, fadeno, fadeno)?;
     if procezo == 0 {
@@ -683,14 +683,14 @@ pub fn registri_fadenon(fadeno: FadenoId, procezo: ProcezaId) -> Result<(), IpcE
     let fp_generacio = finpunktoj()[fendo as usize].generacio;
     let Some(tabelo) = kapabloj(procezo) else {
         finpunktoj()[fendo as usize].liberigu();
-        return Err(IpcEraro::TabeloPlena);
+        return Err(IkEraro::TabeloPlena);
     };
     if tabelo
         .instalu_en(0, fendo, fp_generacio, Permesoj::PLENAJ)
         .is_none()
     {
         finpunktoj()[fendo as usize].liberigu();
-        return Err(IpcEraro::TabeloPlena);
+        return Err(IkEraro::TabeloPlena);
     }
     finpunktoj()[fendo as usize].referencoj += 1;
     Ok(())
@@ -698,13 +698,13 @@ pub fn registri_fadenon(fadeno: FadenoId, procezo: ProcezaId) -> Result<(), IpcE
 
 /// Puŝu mesaĝon en la vicon de finpunkta fendo, fiksu la identecon kaj veku la
 /// ricevanton. La alvokanto tenas interrompojn malŝaltitaj.
-fn enmeti(fendo: u8, mesago: Mesago) -> Result<(), IpcEraro> {
+fn enmeti(fendo: u8, mesago: Mesago) -> Result<(), IkEraro> {
     let nuna = planisto::nuna_id();
     let objekto = &mut finpunktoj()[fendo as usize];
     let mut mesago = mesago;
     mesago.sendinto = nuna;
     mesago.ricevonto = objekto.id;
-    objekto.vico.pusxi(Ero {
+    objekto.vico.puŝi(Ero {
         fonto: nuna,
         mesago,
     })?;
@@ -734,24 +734,24 @@ fn enmeti(fendo: u8, mesago: Mesago) -> Result<(), IpcEraro> {
 /// se la vico estas plena kaj la vokanto ne povas bloki (la ripoza
 /// kunteksto); `Revokita` se la finpunkto malaperas dum la atendo;
 /// `TabeloPlena` se la defaŭlta finpunkto mankas.
-pub fn sendi_mesagon(destinacio: FadenoId, mesago: &Mesago) -> Result<(), IpcEraro> {
+pub fn sendi_mesagon(destinacio: FadenoId, mesago: &Mesago) -> Result<(), IkEraro> {
     let nuna = planisto::nuna_id();
     loop {
         let _gardo = InterrompaGardo::nova();
         if !planisto::vivas(destinacio) {
-            return Err(IpcEraro::NevalidaCelloko);
+            return Err(IkEraro::NevalidaCelloko);
         }
-        let indekso = defaŭlta_indekso(destinacio).ok_or(IpcEraro::TabeloPlena)?;
+        let indekso = defaŭlta_indekso(destinacio).ok_or(IkEraro::TabeloPlena)?;
         match senda_decido(finpunktoj()[indekso].vico.nombro, MAKSAJ_MESAGOJ, nuna != 0) {
             SendaDecido::Enmetu => return enmeti(indekso as u8, *mesago),
-            SendaDecido::Rifuzi => return Err(IpcEraro::MesagujoPlena),
+            SendaDecido::Rifuzi => return Err(IkEraro::MesagujoPlena),
             SendaDecido::Atendu => {
                 finpunktoj()[indekso].sendantoj |= senda_bito(nuna);
                 let stat = statistiko();
                 stat.premregoj = stat.premregoj.saturating_add(1);
                 planisto::bloki();
                 if preni_revokan_vekon(nuna) {
-                    return Err(IpcEraro::Revokita);
+                    return Err(IkEraro::Revokita);
                 }
             }
         }
@@ -769,7 +769,7 @@ pub fn sendi_kapable(
     tenilo: Tenilo,
     mesago: &Mesago,
     atendo: Atendo,
-) -> Result<(), IpcEraro> {
+) -> Result<(), IkEraro> {
     let nuna = planisto::nuna_id();
     let limdato = absoluta_limdato(atendo);
     let mut tempolimita = false;
@@ -779,7 +779,7 @@ pub fn sendi_kapable(
         {
             let objekto = &finpunktoj()[fendo as usize];
             if objekto.fadeno != 0 && !planisto::vivas(objekto.fadeno) {
-                return Err(IpcEraro::NevalidaCelloko);
+                return Err(IkEraro::NevalidaCelloko);
             }
         }
         match senda_decido(
@@ -788,15 +788,15 @@ pub fn sendi_kapable(
             nuna != 0,
         ) {
             SendaDecido::Enmetu => return enmeti(fendo, *mesago),
-            SendaDecido::Rifuzi => return Err(IpcEraro::MesagujoPlena),
+            SendaDecido::Rifuzi => return Err(IkEraro::MesagujoPlena),
             SendaDecido::Atendu => {
                 if tempolimita {
                     forigu_sendanton(fendo, nuna);
                     nombri_tempolimon();
-                    return Err(IpcEraro::Tempolimo);
+                    return Err(IkEraro::Tempolimo);
                 }
                 if atendo == Atendo::Nebloka {
-                    return Err(IpcEraro::ProvuDenove);
+                    return Err(IkEraro::ProvuDenove);
                 }
                 finpunktoj()[fendo as usize].sendantoj |= senda_bito(nuna);
                 let stat = statistiko();
@@ -809,7 +809,7 @@ pub fn sendi_kapable(
                     tempolimita = true;
                 }
                 if preni_revokan_vekon(nuna) {
-                    return Err(IpcEraro::Revokita);
+                    return Err(IkEraro::Revokita);
                 }
             }
         }
@@ -826,7 +826,7 @@ pub fn ricevi_kapable(
     tenilo: Tenilo,
     fonto: Option<FadenoId>,
     atendo: Atendo,
-) -> Result<Mesago, IpcEraro> {
+) -> Result<Mesago, IkEraro> {
     let limdato = absoluta_limdato(atendo);
     let mut tempolimita = false;
     loop {
@@ -843,14 +843,14 @@ pub fn ricevi_kapable(
         if tempolimita {
             forigu_ricevanton(fendo, nuna);
             nombri_tempolimon();
-            return Err(IpcEraro::Tempolimo);
+            return Err(IkEraro::Tempolimo);
         }
         if atendo == Atendo::Nebloka {
-            return Err(IpcEraro::ProvuDenove);
+            return Err(IkEraro::ProvuDenove);
         }
         if nuna == 0 {
             // La ripoza kunteksto ne havas fadenan vivciklon; ne bloku ĝin.
-            return Err(IpcEraro::NevalidaCelloko);
+            return Err(IkEraro::NevalidaCelloko);
         }
         finpunktoj()[fendo as usize].ricevanto = nuna;
         match limdato {
@@ -862,7 +862,7 @@ pub fn ricevi_kapable(
         }
         if preni_revokan_vekon(nuna) {
             forigu_ricevanton(fendo, nuna);
-            return Err(IpcEraro::Revokita);
+            return Err(IkEraro::Revokita);
         }
     }
 }
@@ -872,14 +872,14 @@ pub fn ricevi_kapable(
 ///
 /// Revoko de la defaŭlta finpunkto vekas la fadenon per `-32`, do la voko
 /// redonas `Err` anstataŭ pendi porĉiame.
-pub fn ricevi_mesagon(fonto: FadenoId) -> Result<Mesago, IpcEraro> {
+pub fn ricevi_mesagon(fonto: FadenoId) -> Result<Mesago, IkEraro> {
     ricevi_mesagon_atenda(Some(fonto), Atendo::Senfina)
 }
 
 /// Kerna vojo kun eksplicita fonta filtro kaj atenda politiko; ĝi ne havas
 /// kapablokontrolon, ĉar la kernaj fadenoj ne posedas kapablotabelon (C8).
 /// La tempolimo uzas la saman planistan vekon kiel `RICEVI_TEMPO`.
-pub fn ricevi_mesagon_atenda(fonto: Option<FadenoId>, atendo: Atendo) -> Result<Mesago, IpcEraro> {
+pub fn ricevi_mesagon_atenda(fonto: Option<FadenoId>, atendo: Atendo) -> Result<Mesago, IkEraro> {
     let limdato = absoluta_limdato(atendo);
     let mut tempolimita = false;
     loop {
@@ -887,13 +887,13 @@ pub fn ricevi_mesagon_atenda(fonto: Option<FadenoId>, atendo: Atendo) -> Result<
         let nuna = planisto::nuna_id();
         if nuna == 0 {
             // La ripoza kunteksto ne havas fadenan vivciklon; ne bloku ĝin.
-            return Err(IpcEraro::NevalidaCelloko);
+            return Err(IkEraro::NevalidaCelloko);
         }
         if preni_revokan_vekon(nuna) {
-            return Err(IpcEraro::Revokita);
+            return Err(IkEraro::Revokita);
         }
         let Some(indekso) = defaŭlta_indekso(nuna) else {
-            return Err(IpcEraro::TabeloPlena);
+            return Err(IkEraro::TabeloPlena);
         };
         if let Some(mesago) = finpunktoj()[indekso].vico.preni_de(fonto) {
             finpunktoj()[indekso].ricevanto = 0;
@@ -905,10 +905,10 @@ pub fn ricevi_mesagon_atenda(fonto: Option<FadenoId>, atendo: Atendo) -> Result<
         if tempolimita {
             forigu_ricevanton(indekso as u8, nuna);
             nombri_tempolimon();
-            return Err(IpcEraro::Tempolimo);
+            return Err(IkEraro::Tempolimo);
         }
         if atendo == Atendo::Nebloka {
-            return Err(IpcEraro::ProvuDenove);
+            return Err(IkEraro::ProvuDenove);
         }
         finpunktoj()[indekso].ricevanto = nuna;
         match limdato {
@@ -926,16 +926,16 @@ pub fn ricevi_mesagon_atenda(fonto: Option<FadenoId>, atendo: Atendo) -> Result<
 /// La alvokanto ricevas la petatajn permesojn. `TabeloPlena` se la kapabla aŭ
 /// la finpunkta tabelo ne plu havas liberan fendon; la kerno mem (`procezo 0`)
 /// ne havas kapablotabelon (C8).
-pub fn krei_finpunkton(procezo: ProcezaId, permesoj: Permesoj) -> Result<Tenilo, IpcEraro> {
+pub fn krei_finpunkton(procezo: ProcezaId, permesoj: Permesoj) -> Result<Tenilo, IkEraro> {
     let _gardo = InterrompaGardo::nova();
-    let tabelo = kapabloj(procezo).ok_or(IpcEraro::TabeloPlena)?;
-    let fendo_kapabla = tabelo.unua_libera().ok_or(IpcEraro::TabeloPlena)?;
+    let tabelo = kapabloj(procezo).ok_or(IkEraro::TabeloPlena)?;
+    let fendo_kapabla = tabelo.unua_libera().ok_or(IkEraro::TabeloPlena)?;
     let fendo_finpunkta = rezervi_finpunkton(procezo, 0, sekva_finpunkta_id())?;
     let fp_generacio = finpunktoj()[fendo_finpunkta as usize].generacio;
     let Some(tenilo) = tabelo.instalu_en(fendo_kapabla, fendo_finpunkta, fp_generacio, permesoj)
     else {
         finpunktoj()[fendo_finpunkta as usize].liberigu();
-        return Err(IpcEraro::TabeloPlena);
+        return Err(IkEraro::TabeloPlena);
     };
     Ok(tenilo)
 }
@@ -950,22 +950,22 @@ pub fn doni(
     tenilo: Tenilo,
     celo: ProcezaId,
     permesoj: Permesoj,
-) -> Result<Tenilo, IpcEraro> {
+) -> Result<Tenilo, IkEraro> {
     let _gardo = InterrompaGardo::nova();
     if permesoj.bitoj() == 0 {
-        return Err(IpcEraro::NesufiĉajPermesoj);
+        return Err(IkEraro::NesufiĉajPermesoj);
     }
     if celo == 0 || celo as usize >= MAKSAJ_PROCEZOJ {
-        return Err(IpcEraro::NevalidaCelloko);
+        return Err(IkEraro::NevalidaCelloko);
     }
     let (fendo, eniro) = akiri_kapablon(procezo, tenilo, Permesoj::NENIU)?;
     if !dono_permesita(eniro.permesoj, permesoj) {
-        return Err(IpcEraro::NesufiĉajPermesoj);
+        return Err(IkEraro::NesufiĉajPermesoj);
     }
-    let tabelo = kapabloj(celo).ok_or(IpcEraro::NevalidaCelloko)?;
-    let fendo_kapabla = tabelo.unua_libera().ok_or(IpcEraro::TabeloPlena)?;
+    let tabelo = kapabloj(celo).ok_or(IkEraro::NevalidaCelloko)?;
+    let fendo_kapabla = tabelo.unua_libera().ok_or(IkEraro::TabeloPlena)?;
     let Some(nova) = tabelo.instalu_en(fendo_kapabla, fendo, eniro.fp_generacio, permesoj) else {
-        return Err(IpcEraro::TabeloPlena);
+        return Err(IkEraro::TabeloPlena);
     };
     let objekto = &mut finpunktoj()[fendo as usize];
     objekto.referencoj = objekto.referencoj.saturating_add(1);
@@ -975,15 +975,15 @@ pub fn doni(
 /// Fermu unu lokan kapablofendon. La finpunkto restas viva se aliaj referencoj
 /// ekzistas; ĝi nur malaperas kiam la lasta tenilo fermiĝas (`FERMI` neniam
 /// revokas, C14).
-pub fn fermi(procezo: ProcezaId, tenilo: Tenilo) -> Result<(), IpcEraro> {
+pub fn fermi(procezo: ProcezaId, tenilo: Tenilo) -> Result<(), IkEraro> {
     let _gardo = InterrompaGardo::nova();
-    let tabelo = kapabloj(procezo).ok_or(IpcEraro::NevalidaTenilo)?;
+    let tabelo = kapabloj(procezo).ok_or(IkEraro::NevalidaTenilo)?;
     let indekso = serĉi_kapablon(tabelo, tenilo, Permesoj::NENIU)?;
     let eniro = tabelo.eroj[indekso];
     tabelo.liberigu_fendon(indekso);
     let objekto = &mut finpunktoj()[eniro.finpunkto as usize];
     if !akordas(objekto.aktiva(), objekto.generacio, eniro.fp_generacio) {
-        return Err(IpcEraro::NevalidaTenilo);
+        return Err(IkEraro::NevalidaTenilo);
     }
     objekto.referencoj = forprenu_referencon(objekto.referencoj);
     if objekto.referencoj == 0 {
@@ -997,26 +997,26 @@ pub fn fermi(procezo: ProcezaId, tenilo: Tenilo) -> Result<(), IpcEraro> {
 /// Revoku la tutan finpunkton de la kapablo `tenilo` (C14): la objekto
 /// malaperas, ĉiuj teniloj en ĉiuj procezaj tabeloj malvalidiĝas kaj blokita
 /// ricevanto vekiĝas per `-32`. Postulas `REVOKI` en la kapablo.
-pub fn revoki(procezo: ProcezaId, tenilo: Tenilo) -> Result<(), IpcEraro> {
+pub fn revoki(procezo: ProcezaId, tenilo: Tenilo) -> Result<(), IkEraro> {
     let _gardo = InterrompaGardo::nova();
     let (fendo, _) = akiri_kapablon(procezo, tenilo, Permesoj::REVOKI)?;
     if forigu_finpunkton(fendo) {
         Ok(())
     } else {
-        Err(IpcEraro::NevalidaTenilo)
+        Err(IkEraro::NevalidaTenilo)
     }
 }
 
 /// Kerna vojo: revoku la defaŭltan finpunkton de fadeno sen kapabla kontrolo.
 /// La kernaj fadenoj ne havas kapablotabelon (C8); la Ring 0-memtesto uzas
 /// ĉi tiun funkcion por pruvi la revokan vekon.
-pub fn revoki_defaŭltan(fadeno: FadenoId) -> Result<(), IpcEraro> {
+pub fn revoki_defaŭltan(fadeno: FadenoId) -> Result<(), IkEraro> {
     let _gardo = InterrompaGardo::nova();
-    let indekso = defaŭlta_indekso(fadeno).ok_or(IpcEraro::NevalidaCelloko)?;
+    let indekso = defaŭlta_indekso(fadeno).ok_or(IkEraro::NevalidaCelloko)?;
     if forigu_finpunkton(indekso as u8) {
         Ok(())
     } else {
-        Err(IpcEraro::NevalidaTenilo)
+        Err(IkEraro::NevalidaTenilo)
     }
 }
 
@@ -1032,7 +1032,7 @@ pub fn inicialigi_procezon(procezo: ProcezaId) {
     }
 }
 
-/// Purigu la IPC-staton de mortanta procezo: liberigu ĉiujn ĝiajn
+/// Purigu la IK-staton de mortanta procezo: liberigu ĉiujn ĝiajn
 /// kapablofendojn, malaltigu la referenckalkulojn de fremdaj finpunktoj kaj
 /// forigu la finpunktojn, kiujn ĝi posedas (inkluzive de la defaŭlta).
 /// Forigo vekas blokitan ricevanton per `-32`.
@@ -1069,7 +1069,7 @@ pub fn purigi_procezon(procezo: ProcezaId) {
     }
     if liberigitaj != 0 || revokitaj != 0 {
         crate::skribu!(
-            "[ipc] purigo de procezo {}: {} kapabloj liberigitaj, {} finpunktoj revokitaj\n",
+            "[ik] purigo de procezo {}: {} kapabloj liberigitaj, {} finpunktoj revokitaj\n",
             procezo,
             liberigitaj,
             revokitaj
@@ -1092,16 +1092,16 @@ pub fn testi_tabelojn() {
                 teniloj[nombro] = tenilo;
                 nombro += 1;
             }
-            Err(IpcEraro::TabeloPlena) => break,
+            Err(IkEraro::TabeloPlena) => break,
             Err(eraro) => {
-                crate::skribu!("[ipc] tabeloj (MALBONE): neatendita eraro {:?}\n", eraro);
+                crate::skribu!("[ik] tabeloj (MALBONE): neatendita eraro {:?}\n", eraro);
                 return;
             }
         }
     }
     let plena = matches!(
         krei_finpunkton(procezo, Permesoj::PLENAJ),
-        Err(IpcEraro::TabeloPlena)
+        Err(IkEraro::TabeloPlena)
     );
     let unua = teniloj[0];
     let mut fermitaj = 0;
@@ -1110,18 +1110,18 @@ pub fn testi_tabelojn() {
             fermitaj += 1;
         }
     }
-    let duobla = matches!(fermi(procezo, unua), Err(IpcEraro::NevalidaTenilo));
+    let duobla = matches!(fermi(procezo, unua), Err(IkEraro::NevalidaTenilo));
     let rekrea = krei_finpunkton(procezo, Permesoj::SENDI);
     let nova_generacio = rekrea
         .as_ref()
         .is_ok_and(|tenilo| tenilo.indekso() == unua.indekso());
-    let malnova = matches!(fermi(procezo, unua), Err(IpcEraro::NevalidaTenilo));
+    let malnova = matches!(fermi(procezo, unua), Err(IkEraro::NevalidaTenilo));
     if let Ok(tenilo) = rekrea {
         let _ = fermi(procezo, tenilo);
     }
     let kerno = matches!(
         krei_finpunkton(0, Permesoj::PLENAJ),
-        Err(IpcEraro::TabeloPlena)
+        Err(IkEraro::TabeloPlena)
     );
     let bone = nombro > 0
         && nombro < MAKSAJ_FINPUNKTOJ
@@ -1132,7 +1132,7 @@ pub fn testi_tabelojn() {
         && malnova
         && kerno;
     crate::skribu!(
-        "[ipc] tabeloj ({}): kreitaj={}, plena={}, fermitaj={}, duobla_fermo={}, nova_generacio={}, malnova_tenilo={}, kerno={}\n",
+        "[ik] tabeloj ({}): kreitaj={}, plena={}, fermitaj={}, duobla_fermo={}, nova_generacio={}, malnova_tenilo={}, kerno={}\n",
         if bone { "bone" } else { "MALBONE" },
         nombro,
         plena,
@@ -1162,10 +1162,10 @@ pub fn testi_kapablojn() {
         (Ok(riceva), Ok(senda)) => {
             let sendi = sendi_kapable(procezo, riceva, &mesago, Atendo::Senfina)
                 .err()
-                .map_or(0, IpcEraro::kodo);
+                .map_or(0, IkEraro::kodo);
             let ricevi = ricevi_kapable(procezo, senda, None, Atendo::Senfina)
                 .err()
-                .map_or(0, IpcEraro::kodo);
+                .map_or(0, IkEraro::kodo);
             let _ = fermi(procezo, riceva);
             let _ = fermi(procezo, senda);
             (sendi, ricevi)
@@ -1174,7 +1174,7 @@ pub fn testi_kapablojn() {
     };
     let rajtoj = sendi_per_riceva == -1 && ricevi_per_senda == -1;
     crate::skribu!(
-        "[ipc] rajtoj ({}): sendi per RICEVI-nura → {}, ricevi per SENDI-nura → {}\n",
+        "[ik] rajtoj ({}): sendi per RICEVI-nura → {}, ricevi per SENDI-nura → {}\n",
         if rajtoj { "bone" } else { "MALBONE" },
         sendi_per_riceva,
         ricevi_per_senda
@@ -1185,14 +1185,14 @@ pub fn testi_kapablojn() {
         Ok(tenilo) => {
             let kodo = sendi_kapable(alia, tenilo, &mesago, Atendo::Senfina)
                 .err()
-                .map_or(0, IpcEraro::kodo);
+                .map_or(0, IkEraro::kodo);
             let _ = fermi(procezo, tenilo);
             kodo
         }
         Err(_) => 0,
     };
     crate::skribu!(
-        "[ipc] izolado de kapabloj ({}): procezo {} uzas tenilon de procezo {} → {}\n",
+        "[ik] izolado de kapabloj ({}): procezo {} uzas tenilon de procezo {} → {}\n",
         if izolado == -9 { "bone" } else { "MALBONE" },
         alia,
         procezo,
@@ -1208,7 +1208,7 @@ pub fn testi_kapablojn() {
             let ricevita = sendita && ricevi_kapable(alia, celo, None, Atendo::Senfina).is_ok();
             let rifuzo = sendi_kapable(alia, celo, &mesago, Atendo::Senfina)
                 .err()
-                .map_or(0, IpcEraro::kodo);
+                .map_or(0, IkEraro::kodo);
             donitaj = if ricevita && rifuzo == -1 {
                 (Permesoj::ĈIUJ.bitoj(), Permesoj::RICEVI.bitoj())
             } else {
@@ -1218,12 +1218,12 @@ pub fn testi_kapablojn() {
         }
         eskalo = doni(procezo, fonto, alia, Permesoj::REVOKI)
             .err()
-            .map_or(0, IpcEraro::kodo);
+            .map_or(0, IkEraro::kodo);
         let _ = fermi(procezo, fonto);
     }
     let dono_bone = donitaj == (Permesoj::ĈIUJ.bitoj(), Permesoj::RICEVI.bitoj()) && eskalo == -1;
     crate::skribu!(
-        "[ipc] dono ({}): rajtoj 0b{:03b} → 0b{:03b}, eskalado 0b{:03b} → {}\n",
+        "[ik] dono ({}): rajtoj 0b{:03b} → 0b{:03b}, eskalado 0b{:03b} → {}\n",
         if dono_bone { "bone" } else { "MALBONE" },
         donitaj.0,
         donitaj.1,
@@ -1243,7 +1243,7 @@ pub fn testi_revokon() {
     // Sen la permeso `REVOKI` la voko estas malakceptata per `-1`.
     let senpermesa = match krei_finpunkton(procezo, Permesoj::ĈIUJ) {
         Ok(tenilo) => {
-            let kodo = revoki(procezo, tenilo).err().map_or(0, IpcEraro::kodo);
+            let kodo = revoki(procezo, tenilo).err().map_or(0, IkEraro::kodo);
             let _ = fermi(procezo, tenilo);
             kodo
         }
@@ -1261,16 +1261,16 @@ pub fn testi_revokon() {
             post = (
                 sendi_kapable(alia, donita, &mesago, Atendo::Senfina)
                     .err()
-                    .map_or(0, IpcEraro::kodo),
-                fermi(alia, donita).err().map_or(0, IpcEraro::kodo),
-                revoki(procezo, fonto).err().map_or(0, IpcEraro::kodo),
+                    .map_or(0, IkEraro::kodo),
+                fermi(alia, donita).err().map_or(0, IkEraro::kodo),
+                revoki(procezo, fonto).err().map_or(0, IkEraro::kodo),
             );
         }
         let _ = fermi(procezo, fonto);
     }
     let bone = senpermesa == -1 && revokita && post == (-9, -9, -9);
     crate::skribu!(
-        "[ipc] revoko ({}): sen_revoki={}, revoko={}, donita={}, fermo={}, duobla={}\n",
+        "[ik] revoko ({}): sen_revoki={}, revoko={}, donita={}, fermo={}, duobla={}\n",
         if bone { "bone" } else { "MALBONE" },
         senpermesa,
         if revokita { 0 } else { 1 },
@@ -1298,7 +1298,7 @@ mod kani_proofs {
 
     use crate::kerno::objekto::FadenoId;
 
-    use super::{Ero, IpcEraro, MAKSA_MESAGA_LONGO, MAKSAJ_MESAGOJ, Mesago, Mesagujo};
+    use super::{Ero, IkEraro, MAKSA_MESAGA_LONGO, MAKSAJ_MESAGOJ, Mesago, Mesagujo};
 
     /// Arbitra mesaĝo kun fiksa `tipo`. La vicaj pruvoj nur dependas de `tipo`
     /// kaj de la fonto, do la datumaro restas malplena kaj la kopi-buklo de
@@ -1344,13 +1344,13 @@ mod kani_proofs {
                 fonto,
                 mesago: Mesago::malplena(),
             };
-            assert!(ujo.pusxi(ero).is_ok());
+            assert!(ujo.puŝi(ero).is_ok());
             indekso += 1;
         }
         assert_eq!(ujo.nombro, MAKSAJ_MESAGOJ);
         assert!(ujo.eroj[0].is_some());
 
-        assert_eq!(ujo.pusxi(iu_ero(1)), Err(IpcEraro::MesagujoPlena));
+        assert_eq!(ujo.puŝi(iu_ero(1)), Err(IkEraro::MesagujoPlena));
         assert_eq!(ujo.nombro, MAKSAJ_MESAGOJ);
         assert!(ujo.eroj[0].is_some());
     }
@@ -1365,13 +1365,13 @@ mod kani_proofs {
         let dua = iu_mesago(2);
 
         assert!(
-            ujo.pusxi(Ero {
+            ujo.puŝi(Ero {
                 fonto,
                 mesago: unua
             })
             .is_ok()
         );
-        assert!(ujo.pusxi(Ero { fonto, mesago: dua }).is_ok());
+        assert!(ujo.puŝi(Ero { fonto, mesago: dua }).is_ok());
 
         let ricevita = ujo.preni_de(Some(fonto)).unwrap();
         assert_eq!(ricevita.tipo, 1);
@@ -1397,21 +1397,21 @@ mod kani_proofs {
         kani::assume(fonto_a != fonto_b);
 
         assert!(
-            ujo.pusxi(Ero {
+            ujo.puŝi(Ero {
                 fonto: fonto_a,
                 mesago: iu_mesago(1),
             })
             .is_ok()
         );
         assert!(
-            ujo.pusxi(Ero {
+            ujo.puŝi(Ero {
                 fonto: fonto_b,
                 mesago: iu_mesago(2),
             })
             .is_ok()
         );
         assert!(
-            ujo.pusxi(Ero {
+            ujo.puŝi(Ero {
                 fonto: fonto_a,
                 mesago: iu_mesago(3),
             })
@@ -1437,21 +1437,21 @@ mod kani_proofs {
         kani::assume(fonto_a != fonto_b);
 
         assert!(
-            ujo.pusxi(Ero {
+            ujo.puŝi(Ero {
                 fonto: fonto_a,
                 mesago: iu_mesago(1),
             })
             .is_ok()
         );
         assert!(
-            ujo.pusxi(Ero {
+            ujo.puŝi(Ero {
                 fonto: fonto_b,
                 mesago: iu_mesago(2),
             })
             .is_ok()
         );
         assert!(
-            ujo.pusxi(Ero {
+            ujo.puŝi(Ero {
                 fonto: fonto_a,
                 mesago: iu_mesago(3),
             })
@@ -1485,7 +1485,7 @@ mod kani_proofs {
     fn preno_konservas_la_invarianton() {
         let mut ujo = Mesagujo::nova();
         let fonto: FadenoId = kani::any();
-        assert!(ujo.pusxi(iu_ero(1)).is_ok());
+        assert!(ujo.puŝi(iu_ero(1)).is_ok());
 
         let _ = ujo.preni_de(Some(fonto));
         assert!(ujo.nombro <= MAKSAJ_MESAGOJ);
@@ -1711,7 +1711,7 @@ mod kani_kapabloj {
 
     use libmikerno::{Permesoj, Tenilo};
 
-    use super::{IpcEraro, Kapablotabelo, dono_permesita, serĉi_kapablon};
+    use super::{IkEraro, Kapablotabelo, dono_permesita, serĉi_kapablon};
 
     fn iuj_permesoj() -> Permesoj {
         let bitoj: u8 = kani::any();
@@ -1728,7 +1728,7 @@ mod kani_kapabloj {
         if permesoj.posedas(Permesoj::SENDI) {
             assert_eq!(rezulto, Ok(0));
         } else {
-            assert_eq!(rezulto, Err(IpcEraro::NesufiĉajPermesoj));
+            assert_eq!(rezulto, Err(IkEraro::NesufiĉajPermesoj));
         }
     }
 
@@ -1742,7 +1742,7 @@ mod kani_kapabloj {
         if permesoj.posedas(Permesoj::RICEVI) {
             assert_eq!(rezulto, Ok(0));
         } else {
-            assert_eq!(rezulto, Err(IpcEraro::NesufiĉajPermesoj));
+            assert_eq!(rezulto, Err(IkEraro::NesufiĉajPermesoj));
         }
     }
 
@@ -1769,13 +1769,13 @@ mod kani_kapabloj {
         assert_eq!(serĉi_kapablon(&unua, tenilo, Permesoj::NENIU), Ok(0));
         assert_eq!(
             serĉi_kapablon(&dua, tenilo, Permesoj::NENIU),
-            Err(IpcEraro::NevalidaTenilo)
+            Err(IkEraro::NevalidaTenilo)
         );
         // La sama fenda indekso kun alia generacio ankaŭ estas rifuzata.
         let malnova = Tenilo::nova(0, 2).unwrap();
         assert_eq!(
             serĉi_kapablon(&unua, malnova, Permesoj::NENIU),
-            Err(IpcEraro::NevalidaTenilo)
+            Err(IkEraro::NevalidaTenilo)
         );
     }
 }

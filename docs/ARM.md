@@ -69,9 +69,9 @@ mikerno/src/
 │       ├── mod.rs              # pravalorizi: seria → MMU → VBAR → GIC → tempilo
 │       ├── eniro.rs            # Image-kapo, EL2→EL1, stako, .bss
 │       ├── fdt.rs              # minimuma FDT/DTB-analizilo
-│       ├── pagxado.rs          # TTBR0_EL1, TCR_EL1, MAIR_EL1, SCTLR_EL1
+│       ├── pagado.rs          # TTBR0_EL1, TCR_EL1, MAIR_EL1, SCTLR_EL1
 │       ├── interrompo.rs       # VBAR_EL1, ESR_EL1/FAR_EL1, escepta klasifiko
-│       ├── gic.rs              # GICv2: distribuilo + CPU-interfaco
+│       ├── gic.rs              # GICv2: distribuilo + procesora interfaco
 │       ├── temporizilo.rs      # ĝenerala temporizilo (CNTP)
 │       ├── procesoro.rs        # DAIF, WFI, CurrentEL, PSCI
 │       ├── planado.rs          # kuntekstŝanĝo, eret-trampolino
@@ -81,10 +81,10 @@ mikerno/src/
 ├── interrompo/mod.rs           # registrejo + InterrompaGardo sen platformaj detaloj
 ├── kerno/                      # sen x86-specifaj tipoj
 ├── memoro/                     # AdresaSpaco restas; nur nomoj ĝeneraliĝas
-└── ekrano/                     # senŝanĝa; framebuffer venas per EniraInformo
+└── ekrano/                     # senŝanĝa; frambufo venas per EniraInformo
 ```
 
-Novaj dosieroj ekster la kerna crate:
+Novaj dosieroj ekster la kerna kesto:
 
 ```text
 mikerno/boot/linker-arm64.ld   # Image ĉe 0x4008_0000, text_offset 0x80000
@@ -131,10 +131,10 @@ la semantiko komuna».
 - Unu `TTBR0_EL1` por procezo, same kiel unu `CR3`: la kernaj identecaj eroj
   estas kunhavataj, la uzanta fenestro estas privata. `TTBR1_EL1` restas
   malŝaltita (`TCR_EL1.EPD1 = 1`).
-- Identeca mapo de `0..4 GiB` per `L1`-blokoj de 1 GiB (RAM ĉe `0x4000_0000`,
+- Identeca mapo de `0..4 GiB` per `L1`-blokoj de 1 GiB (ĉefmemoro ĉe `0x4000_0000`,
   MMIO de `virt` sube); la uzanta fenestro `[0x1_0000_0000, 0x80_0000_0000)`
   per `L2`/`L3`.
-- `MAIR_EL1`: normala WB por RAM, `Device-nGnRnE` por MMIO; `PaĝaPermesoj`
+- `MAIR_EL1`: normala WB por ĉefmemoro, `Device-nGnRnE` por MMIO; `PaĝaPermesoj`
   mapiĝas al `AP[2:1]`, `UXN`, `PXN` kaj al la kaŝebla atributo.
 - `KadraAlokilo` restas valida: ĝi alogas kadrojn sub 4 GiB, kiuj estas
   identece mapitaj.
@@ -149,7 +149,7 @@ la semantiko komuna».
 - QEMU `virt` ŝargas la bildon ĉe `0x4008_0000` kaj transdonas la DTB en `x0`.
 - UEFI-ISO: `mikerno-arm.iso` enhavas la plataĵon `mikerno.img` kaj Limine
   (`BOOTAA64.EFI`) kiel El Torito-bildon; la firmvaro venas el
-  `qemu-efi-aarch64`, kaj `just run-iso-arm` startigas ĝin.
+  `qemu-efi-aarch64`, kaj `just ruli-iso-arm` startigas ĝin.
 - Eniro akceptas EL2 aŭ EL1: se `CurrentEL` estas EL2, agordas
   `HCR_EL2.RW = 1` kaj `eret` al EL1. Poste: stako, `.bss`-nuligo, savo de la
   DTB-montrilo.
@@ -172,7 +172,7 @@ la semantiko komuna».
 - EL1-sync: paniko kun `ESR_EL1`, `FAR_EL1`, `ELR_EL1`.
 - `InterrompaGardo` uzas `DAIF` anstataŭ `RFLAGS.IF`; la fasado jam havas la
   ĝustajn nomojn.
-- GICv2 (`-M virt,gic-version=2`): distribuilo ĉe `0x0800_0000`, CPU-interfaco
+- GICv2 (`-M virt,gic-version=2`): distribuilo ĉe `0x0800_0000`, procesora interfaco
   ĉe `0x0801_0000`; `IAR`/`EOIR`; la tempila PPI estas 30.
 - Ĝenerala temporizilo: `CNTFRQ_EL0`, `CNTP_TVAL_EL0 = frekvenco / 100`,
   `CNTP_CTL_EL0 = 1`; 100 Hz kiel sur `x86_64`, kun la sama antaŭokupa hoko
@@ -191,10 +191,10 @@ la semantiko komuna».
 
 | Fazo | Versio | Enhavo | Akcepto |
 | --- | --- | --- | --- |
-| A0 | `0.4.3` (sen eldono) | Arkitektura refaktoro: `Kunteksto`, kadro, escepta klasifiko, `ELF_MAŜINO`, `instali_sistemvokon`; `x86_64` sen kondutŝanĝo | `fmt`, `clippy`, `just verify`, PVH kaj ISO verdaj |
-| A1 | `0.4.3-arm.1` | `arm64`-skeleto: `Image`-kapo, EL2→EL1, PL011, FDT, identeca MMU, PSCI-haltigo, UEFI-ISO; `rustup target add aarch64-unknown-none` | `just run-arm` presas la version, la memora linio kaj la serian konzolon; paniko haltigas per PSCI; `just run-iso-arm` presas la saman version |
+| A0 | `0.4.3` (sen eldono) | Arkitektura refaktoro: `Kunteksto`, kadro, escepta klasifiko, `ELF_MAŜINO`, `instali_sistemvokon`; `x86_64` sen kondutŝanĝo | `fmt`, `clippy`, `just kontroli`, PVH kaj ISO verdaj |
+| A1 | `0.4.3-arm.1` | `arm64`-skeleto: `Image`-kapo, EL2→EL1, PL011, FDT, identeca MMU, PSCI-haltigo, UEFI-ISO; `rustup target add aarch64-unknown-none` | `just ruli-arm` presas la version, la memora linio kaj la serian konzolon; paniko haltigas per PSCI; `just ruli-iso-arm` presas la saman version |
 | A2 | `0.4.3-arm.2` | `VBAR_EL1`, GICv2, ĝenerala temporizilo, `DAIF`-gardo, kuntekstŝanĝo | 100 Hz-tikoj, 1000 tikoj, tri fadenoj interplektiĝas kaj finiĝas |
-| A3 | `0.4.3-arm.3` | EL0 per `eret`, `svc #0`, `horizonto` por `aarch64`, ELF-maŝino 183, uzantaj esceptoj | la samaj IPC-linioj kiel `x86_64`, inkluzive `-32`, sekreta paĝo kaj spiona data abort |
+| A3 | `0.4.3-arm.3` | EL0 per `eret`, `svc #0`, `horizonto` por `aarch64`, ELF-maŝino 183, uzantaj esceptoj | la samaj IK-linioj kiel `x86_64`, inkluzive `-32`, sekreta paĝo kaj spiona data abort |
 | A4 | `0.4.3-arm.4` | `ramfb` per `fw_cfg`, piksela fiksaĵo, `PXN`/`UXN`/`PAN`, dokumentaro | identa frambufa haketo sur ambaŭ arkoj; `VORTARO.md`, `MEJLOSTONOJ.md` kaj `AGENTS.md` ĝisdatigitaj |
 
 A0 estas antaŭkondiĉo: ĝi ne ŝanĝas la `x86_64`-konduton kaj restas en la
@@ -203,7 +203,7 @@ A0 estas antaŭkondiĉo: ĝi ne ŝanĝas la `x86_64`-konduton kaj restas en la
 
 A1 (2026-11-14, `0.4.3-arm.1`) liveras la skeleto-bildon: `eniro.rs` kun la
 `Image`-kapo kaj EL2→EL1, `seria.rs` (PL011), `fdt.rs` (memoro, initrd, seria
-adreso), `pagxado.rs` (identeca mapo per L0/L1 kaj 1 GiB-blokoj) kaj
+adreso), `pagado.rs` (identeca mapo per L0/L1 kaj 1 GiB-blokoj) kaj
 `procesoro.rs` (PSCI `SYSTEM_OFF`). La akcepto estas verda:
 
 ```text
@@ -247,7 +247,7 @@ A3 (2026-11-15, `0.4.3-arm.3`) ligas la komunan kernon al `EL0` kaj al la
 per-procesa `TTBR0_EL1`. `uzanta.rs` enhavas la `eret`-ŝelon (`SPSR_EL1 =
 EL0t`, `SP_EL0 = stakpinto`, `x0`/`x1` = reĝimo/identigilo);
 `sistemvoko.rs` liveras `svc #0` (`x8` = numero, `x0`–`x3` = argumentoj) kaj
-la vektora ŝelko dispetĉas `SVC64` al `kerno::sistemvoko::voki`. `pagxado.rs`
+la vektora ŝelko dispetĉas `SVC64` al `kerno::sistemvoko::voki`. `pagado.rs`
 konstruas la procezan spacon: la kernaj identecaj eroj (`0..4 GiB`) restas
 kunhavataj, la uzanta fenestro ricevas privatajn `L2`/`L3`-tabelojn; la radiko
 ŝaltiĝas per `TTBR0_EL1` dum la kuntekstŝanĝo. La komuna kerno raportas la
@@ -263,7 +263,7 @@ ELF-maŝino `183`. La bildo liveriĝas kiel `-initrd` aŭ kiel ISO-modulo
 [kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
 ```
 
-La IPC-linioj (inkluzive `revoko`, `-9`, `-28`, `-32` kaj la negativajn
+La IK-linioj (inkluzive `revoko`, `-9`, `-28`, `-32` kaj la negativajn
 Ring 3-kazojn) kongruas kun `x86_64`; sub UEFI la kadraj nombroj estas
 `58465` pro la firmvara memoro, dum la ceteraj linioj restas samaj.
 
@@ -292,7 +292,7 @@ la paritateco:
   QEMU transdonas la DTB-on en `x0` nur por la Linux-`Image`-kapo. La ISO-vojo
   implicite uzas `cortex-a76`: AAVMF 2025.11 blokiĝas sub TCG kun `-cpu max`.
 
-La akcepto estas la sama haketo sur ambaŭ arkoj; jen `just run-arm`
+La akcepto estas la sama haketo sur ambaŭ arkoj; jen `just ruli-arm`
 (la ISO-vojo liveras identajn liniojn kaj ankaŭ la `PAN`-provon):
 
 ```text
@@ -302,9 +302,9 @@ La akcepto estas la sama haketo sur ambaŭ arkoj; jen `just run-arm`
 [kerno] PXN ŝaltita; EL1 ne plenumas uzantajn paĝojn
 [kerno] UXN ŝaltita; EL0 ne plenumas datumajn paĝojn
 [kerno] PAN ŝaltita; EL1 legas uzantajn paĝojn nur en malfermita fenestro
-[kerno] framebuffer 1280x800, 32 bpp
+[kerno] frambufo 1280x800, 32 bitoj/pikselo
 [kerno] fina stato: 5 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj
-[ekrano] piksela fiksaĵo 1280x800, 32 bpp, tiparo 12x24; haketo 0xecf1f6dbe1421575
+[ekrano] piksela fiksaĵo 1280x800, 32 bitoj/pikselo, tiparo 12x24; haketo 0xecf1f6dbe1421575
 [memoro] PAN-provo: EL1 provos legi la uzantan folion ĉe 0x100000000
 
 [eraro] PAN-malobservo: EL1 provis legi uzantan paĝon ĉe 0x0000000100000000 (esr=0x9600000f)
@@ -321,7 +321,7 @@ La `x86_64`-ISO (Limine, 1280×800, tiparo 12×24) presas la saman
 | EL2 kontraŭ EL1 ĉe starto | `CurrentEL`-kontrolo kaj malgranda EL2→EL1-ŝelo |
 | GICv2 kontraŭ GICv3 | GICv2 unue, eksplicita `gic-version=2`; GICv3 poste |
 | `PAN` mankas sur `cortex-a53` | Solvita en A4: la `-kernel`-vojo uzas `-cpu max`; la UEFI-ISO uzas `cortex-a76`, ĉar AAVMF 2025.11 blokiĝas sub TCG kun `max`; la raporto montras la aktivan firmigon |
-| Du malantaŭoj drivas | A0 tenas la komunan nukleon en unu loko; M18 aldonos CI-matricon |
+| Du malantaŭoj drivas | A0 tenas la komunan nukleon en unu loko; M18 aldonos DI-matricon |
 | Kani nur `x86_64` | La pruvoj restas sur la komuna kodo; `arm64`-specifaĵoj ricevas QEMU-testojn |
 | `Limine` ne subtenas `arm64` | Malaktuala: Limine 12.9.6 havas `BOOTAA64.EFI`; la ISO estas UEFI-bootebla per El Torito, kaj BIOS-ISO ne estas celata |
 | `ramfb`/`fw_cfg`-komplekseco | Solvita en A4 per `-device ramfb` kaj `qemu,fw-cfg-mmio`; UEFI `GOP` ne necesis |
@@ -330,13 +330,13 @@ La `x86_64`-ISO (Limine, 1280×800, tiparo 12×24) presas la saman
 
 1. `rustup target add aarch64-unknown-none`; kontroli `qemu-system-aarch64`
    (jam havebla: QEMU 10.2.1).
-2. A0: refaktori la komunajn tipojn kaj restarigi `just verify` kaj la du
+2. A0: refaktori la komunajn tipojn kaj restarigi `just kontroli` kaj la du
    `x86_64`-vojojn. (Farita.)
-3. A1: `linker-arm64.ld`, `eniro.rs`, `seria.rs`, `fdt.rs`, `pagxado.rs`.
+3. A1: `linker-arm64.ld`, `eniro.rs`, `seria.rs`, `fdt.rs`, `pagado.rs`.
    (Farita.)
 4. A1-akcepto: `[MiKerno] Saluton, mi estas MiKerno v0.4.3-arm.1!`,
    `[kerno] memoro: …`, `[kerno] seria konzolo: PL011 @ 0x9000000`. (Verda.)
-5. A1-ISO: `just iso-arm` kaj `just run-iso-arm` per Limine kaj AAVMF.
+5. A1-ISO: `just iso-arm` kaj `just ruli-iso-arm` per Limine kaj AAVMF.
    (Farita.)
 6. A2: `VBAR_EL1`, GICv2, ĝenerala temporizilo, `DAIF`-gardo, kuntekstŝanĝo.
    (Farita; la akcepto estas verda.)

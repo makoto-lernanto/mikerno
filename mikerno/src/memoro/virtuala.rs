@@ -91,7 +91,7 @@ pub const UZANTA_STAKO_SUPRO: u64 = UZANTA_BAZO + 16 * 1024 * 1024;
 pub struct PaĝaPermesoj {
     pub skribebla: bool,
     pub plenumebla: bool,
-    /// `false` por framebuffer-MMIO: la paĝo estas nekaŝebla (PCD).
+    /// `false` por frambufa MMIO: la paĝo estas nekaŝebla (PCD).
     pub kaŝebla: bool,
     /// `true` por Ring 3-atingeblaj paĝoj: la bito `U` ĉe ĉiu nivelo.
     pub uzanta: bool,

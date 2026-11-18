@@ -34,7 +34,7 @@ impl PretaVico {
         }
     }
 
-    fn pusxi(&mut self, id: FadenoId) {
+    fn puŝi(&mut self, id: FadenoId) {
         self.eroj[self.vosto] = id;
         self.vosto = (self.vosto + 1) % self.eroj.len();
     }
@@ -79,7 +79,7 @@ pub struct Planisto {
 pub struct PlanistaStatistiko {
     /// Kuntekstŝaltaj vokoj (`ŝalti_kuntekston`).
     pub ŝaltoj: u64,
-    /// Blokadoj kun limdato (dormo aŭ IPC-tempolimo).
+    /// Blokadoj kun limdato (dormo aŭ IK-tempolimo).
     pub limdataj_blokoj: u64,
     /// Vekoj pro limdato, ne pro operacio.
     pub vekigoj: u64,
@@ -117,7 +117,7 @@ impl Planisto {
         }
         let _ = self.vekoj.forigi(fadeno.id);
         self.tempolimoj[indekso] = false;
-        self.preta_vico.pusxi(fadeno.id);
+        self.preta_vico.puŝi(fadeno.id);
         self.fadenoj[indekso] = Some(fadeno);
         Ok(())
     }
@@ -181,7 +181,7 @@ impl Planisto {
             return None;
         }
         fadeno.stato = FadenoStato::Preta;
-        self.preta_vico.pusxi(nuna);
+        self.preta_vico.puŝi(nuna);
         self.stato_procezan(nuna, ProcezaEstado::Preta);
         Some(self.elekti_proksiman().unwrap_or(nuna))
     }
@@ -192,7 +192,7 @@ impl Planisto {
         if let Some(sekva) = self.elekti_por_tiko(cedo) {
             self.kurigu(sekva);
             if sekva != nuna {
-                unsafe { self.switch(nuna, sekva) };
+                unsafe { self.ŝanĝi(nuna, sekva) };
             }
         }
     }
@@ -242,7 +242,7 @@ impl Planisto {
         self.stato_procezan(id, ProcezaEstado::Preta);
         let sekva = self.elekti_proksiman().unwrap_or(RIPAZA_ID);
         self.kurigu(sekva);
-        unsafe { self.switch(id, sekva) };
+        unsafe { self.ŝanĝi(id, sekva) };
     }
 
     pub fn veki(&mut self, id: FadenoId) {
@@ -258,7 +258,7 @@ impl Planisto {
             return;
         }
         fadeno.stato = FadenoStato::Preta;
-        self.preta_vico.pusxi(id);
+        self.preta_vico.puŝi(id);
     }
 
     /// Konsumu la tempoliman markon de fadeno; `true` nur unufoje por ĉiu
@@ -294,7 +294,7 @@ impl Planisto {
 
         let sekva = self.elekti_proksiman().unwrap_or(RIPAZA_ID);
         self.kurigu(sekva);
-        unsafe { self.switch(id, sekva) };
+        unsafe { self.ŝanĝi(id, sekva) };
 
         loop {
             crate::arkitekturo::atendi_interrompon();
@@ -310,7 +310,7 @@ impl Planisto {
             return;
         };
         self.kurigu(sekva);
-        unsafe { self.switch(RIPAZA_ID, sekva) };
+        unsafe { self.ŝanĝi(RIPAZA_ID, sekva) };
     }
 
     pub fn nuna_id(&self) -> FadenoId {
@@ -350,12 +350,12 @@ impl Planisto {
         self.veturoj
     }
 
-    unsafe fn switch(&mut self, malnova: FadenoId, nova: FadenoId) {
+    unsafe fn ŝanĝi(&mut self, malnova: FadenoId, nova: FadenoId) {
         self.ŝaltoj = self.ŝaltoj.saturating_add(1);
         let proceza = self.procezo_de(nova);
         // La fadenaj kontekstoj vivas en la kerna bildo, kiun ĉiu proceza
         // spaco kunhavas, do la ŝalto povas okazi antaŭ la registra konservo.
-        // SAFETY: `switch` estas vokata nur kun interrompoj malŝaltitaj, kaj
+        // SAFETY: `ŝanĝi` estas vokata nur kun interrompoj malŝaltitaj, kaj
         // la celo estas viva fadeno kun viva proceza aŭ kerna spaco.
         unsafe { super::procezo::aktivigi(proceza) };
 
@@ -438,7 +438,7 @@ pub fn dormi(millisekundoj: u64) -> bool {
         }
         planisto().bloki_kun_limdato(id, limdato);
         // Fremda veko aŭ tempolimo lasas markon; ĝin konsumas ĉiu ripeto, do
-        // la sekva IPC-voko ne konfuzos ĝin kun propra limdato.
+        // la sekva IK-voko ne konfuzos ĝin kun propra limdato.
         let _ = planisto().preni_tempolimon(id);
     }
     true
@@ -456,7 +456,7 @@ pub fn veki(id: FadenoId) {
 }
 
 /// Ĉu la identigilo apartenas al registrita, ankoraŭ viva fadeno? La ripoza
-/// kunteksto (`0`) ne estas mesaĝcelo. Vokata de IPC kun interrompoj malŝaltitaj.
+/// kunteksto (`0`) ne estas mesaĝcelo. Vokata de IK kun interrompoj malŝaltitaj.
 pub fn vivas(id: FadenoId) -> bool {
     if id == RIPAZA_ID || id as usize > MAKSAJ_FADENOJ {
         return false;
@@ -476,14 +476,14 @@ pub fn morti() -> ! {
         crate::skribu!("[planisto] FINI sen fadeno; haltas\n");
         crate::arkitekturo::halti()
     }
-    // La IPC-purigo bezonas la pretan vicon (revokaj vekoj), do ĝi okazas
+    // La IK-purigo bezonas la pretan vicon (revokaj vekoj), do ĝi okazas
     // antaŭ ol `morti` prunteprenas la planiston.
     let proceza = {
         let planisto = planisto();
         planisto.procezo_de(id)
     };
     if proceza != 0 {
-        super::ipc::purigi_procezon(proceza);
+        super::ik::purigi_procezon(proceza);
     }
     planisto().morti(id)
 }

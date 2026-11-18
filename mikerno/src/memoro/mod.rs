@@ -97,9 +97,9 @@ pub struct EniraInformo {
     pub memora_mapo: &'static MemoraMapo,
     /// Regionoj de praŝarĝaj strukturoj, kiuj devas resti rezervitaj.
     pub rezervindaj: &'static [MemoraRegiono],
-    /// Framebuffer liverita de la praŝarĝilo; `arm64` ricevas `None` kaj la
+    /// Frambufo liverita de la praŝarĝilo; `arm64` ricevas `None` kaj la
     /// plata malantaŭo kreas sian propran (`ramfb`).
-    pub framebuffer: Option<crate::ekrano::FramebufferInformo>,
+    pub frambufo: Option<crate::ekrano::FrambufaInformo>,
     /// Moduloj liveritaj de la praŝarĝilo, en la ordo de la protokolo.
     pub moduloj: &'static [Modulo],
 }

@@ -92,7 +92,7 @@ impl VirtioTransporto {
         self.speco
     }
 
-    pub fn status(&self) -> u8 {
+    pub fn stato(&self) -> u8 {
         match self.speco {
             VirtioSpeco::Pcia => self.legi_u8(self.komuna, pci_reg::STATUS),
             // MMIO-registroj estas nur 32-bitaj; bajta aliro ne atingus la aparaton.
@@ -100,7 +100,7 @@ impl VirtioTransporto {
         }
     }
 
-    pub fn agordi_status(&self, valoro: u8) {
+    pub fn agordi_staton(&self, valoro: u8) {
         match self.speco {
             VirtioSpeco::Pcia => self.skribi_u8(self.komuna, pci_reg::STATUS, valoro),
             VirtioSpeco::Mmio => {

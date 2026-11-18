@@ -123,7 +123,7 @@ pub fn analizi(starta_informo: *const u8) -> Result<EniraInformo, EniraEraro> {
     Ok(EniraInformo {
         memora_mapo,
         rezervindaj,
-        framebuffer: None,
+        frambufo: None,
         moduloj: modula_eroj,
     })
 }

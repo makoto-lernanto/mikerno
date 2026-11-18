@@ -5,24 +5,28 @@ kaj protokolaj nomoj sekvu ĝin.
 
 | Esperanto | Angla | Rimarko |
 | --- | --- | --- |
-| `procesoro` | processor / CPU | Neniam uzu `cpu` en identigiloj. |
+| `procesoro` | processor / procesoro | Neniam uzu `cpu` en identigiloj. |
 | `memoro` | memory | Neniam uzu `memory` aŭ `ram`. |
 | `fadeno` | thread | Neniam uzu `thread`. |
 | `procezo` | process | `Procezo`; neniam uzu `process`. |
+| `IK` | IPC (interproceza komunikado) | La modulo `kerno/ik.rs`; antaŭe `ipc`. |
 | `proceza identigilo` | process id | `ProcezaId`; `0` estas la nukleo; en `RSI` ĉe la Ring 3-eniro. |
 | `proceza stato` | process state | `ProcezaEstado`: `Preta`, `Kuranta`, `Mortinta`. |
 | `privata` | private | Proceza fenestro, kiun aliaj procezoj ne vidas. |
 | `kunhavigi` | share | Kernaj mapoj restas komunaj inter procezoj. |
 | `planisto` | scheduler | Neniam uzu `scheduler`. |
+| `stato` | status | `stato()`, `agordi_staton`; antaŭe `status`. |
+| `ŝanĝi` | switch | `Planisto::ŝanĝi`: kuntekstŝanĝo inter du fadenoj. |
+| `ŝovo` | offset | Lokaj variabloj kaj adresaj kalkuloj. |
 | `prioritato` | scheduling priority | `Prioritato::{Malalta, Normala, Alta}`; novaj fadenoj defaŭlte estas `Normala`; nur la kerno fiksas la prioritaton. |
 | `tempopeco` | time slice / quantum | `Prioritato::tempopeco`: 1/2/4 temporizilaj tikoj; pezita cirkla planado, ne absoluta prioritata antaŭeco. |
 | `restaj_tikoj` | remaining quantum ticks | `Planisto.restaj_tikoj`; cedo fordonas la restaĵon, nova elekto rekomencas la tempopecon. |
 | `elekti_por_tiko` | tick selection | Elektas nur ĉe fino de tempopeco aŭ eksplicita cedo; `planumi_kun_cedo` plenumas la eventualan kuntekstŝalton. |
-| `prioritataj provoj` | priority scheduling checks | `testa_planisto`, `prioritata_provo`, `maksimuma_atenda_provo`, `egaleca_provo`, `ceda_provo`, `bloka_provo`; `testi_prioritatojn` raportas la kvin fiksajn scenarojn; la CI-pruvoj estas en `kani_prioritatoj`. |
+| `prioritataj provoj` | priority scheduling checks | `testa_planisto`, `prioritata_provo`, `maksimuma_atenda_provo`, `egaleca_provo`, `ceda_provo`, `bloka_provo`; `testi_prioritatojn` raportas la kvin fiksajn scenarojn; la DI-pruvoj estas en `kani_prioritatoj`. |
 | `maksimuma preta atendo` | maximum ready wait | `MAKSA_PRETA_ATENDO = 28` tikoj por konstante preta fadeno: sep aliaj tempopecoj de maksimume kvar tikoj, sub regulaj planistaj vokoj. |
 | `antaŭokupa provo` | preemption test | `antaŭokupa_provo`, `ANTAŬOKUPAJ_PRETOJ`, `ANTAŬOKUPA_KOMENCO`: kvar testfadenoj trapasas barilon sen cedo kaj observas tikojn dum komuna 32-tika intervalo. |
-| `pagxo`, `paĝo` | page | Identigiloj uzas `pagx` aŭ `paĝ`. |
-| `pagxado` | paging | Modula nomo. |
+| `paĝo` | page | Tekstoj uzas `paĝ`; la modula dosiero estas `pagado.rs`. |
+| `paĝado` | paging | Rust ne permesas ne-ASCII-modulnomojn, do la modulo estas `pagado`. |
 | `kadro` | frame | Neniam uzu `frame`. |
 | `kadra alokilo` | frame allocator | `KadraAlokilo`. |
 | `virtuala adreso` | virtual address | |
@@ -115,13 +119,13 @@ kaj protokolaj nomoj sekvu ĝin.
 | `indekso` | index | `Tenilo::indekso`, `0..=15`; `Tenilo` rifuzas pli grandan valoron. |
 | `finpunkta objekto` | endpoint object | `FinaPunktoObjekto` (Fazo 2); posedas la vicon kaj la atendoliston. |
 | `revoki` | revoke | `REVOKI` (8): ĉiam tutfinpunkta (C14); `rsi` devas esti `0`; finpunkta generacio +1, ĉiuj teniloj malvalidiĝas; blokita ricevanto vekiĝas per `-32`. |
-| `revokita` | revoked | `IpcEraro::Revokita`: la finpunkto revokiĝis aŭ ĝia posedanto finiĝis; `-32`. |
+| `revokita` | revoked | `IkEraro::Revokita`: la finpunkto revokiĝis aŭ ĝia posedanto finiĝis; `-32`. |
 | `revoka veko` | revocation wake | `REVOKAJ_VEKOJ[fadeno]`: unufoja marko por blokita ricevanto; `ricevi_kapable`/`ricevi_mesagon` ĝin konsumas kaj redonas `-32`. |
 | `revoki la defaŭltan finpunkton` | revoke the default endpoint | `revoki_defaŭltan(fadeno)`: kerna vojo sen kapabla kontrolo (C8). |
 | `forigi finpunkton` | remove endpoint | `forigu_finpunkton(fendo)`: liberigas ĉiujn kongruajn kapablofendojn en ĉiuj tabeloj, la finpunktan objekton, kaj vekas la ricevanton. |
 | `purigi procezon` | clean up a process | `purigi_procezon(procezo)`: ĉe `SYS_FINI`, mortiga escepto kaj prepar-eraroj; liberigas la kapablojn kaj revokas la posedatajn finpunktojn. |
 | `detrui uzanton` | destroy a user process | `detrui_uzantan(id)`: `purigi_procezon` + `procezo::detrui`. |
-| `kodo de IPC-eraro` | IPC error code | `IpcEraro::kodo()`: `-1/-3/-4/-9/-28/-32/-90`; la sistemvoko nur konvertas ĝin al `u64`. |
+| `kodo de IK-eraro` | IPC error code | `IkEraro::kodo()`: `-1/-3/-4/-9/-28/-32/-90`; la sistemvoko nur konvertas ĝin al `u64`. |
 | `akordi` | match | `akordas(aktiva, objekta_generacio, kapabla_generacio)`: la dua validiga nivelo; revoko aŭ emeritiĝo malakordigas ĝin. |
 | `doni` | grant | `DONI` (7): la celo ricevas propran `Tenilo`; la petitaj permesoj devas esti subaro de la fontaj kaj la fonta kapablo restas valida. |
 | `fermi` | close | `FERMI`: fermas unu lokan kapablofendon. |
@@ -140,10 +144,10 @@ kaj protokolaj nomoj sekvu ĝin.
 | `ricevanto` | receiver | `FinaPunktoObjekto.ricevanto`: la fadeno blokita en `RICEVI` sur la finpunkto; la sendinto ĝin vekas. |
 | `sendantoj` | blocked senders | `FinaPunktoObjekto.sendantoj: u16`: bitmasko de la fadenoj blokitaj en `SENDI` pro plena vico; bito `id − 1`. |
 | `senda bito` | sender bit | `senda_bito(fadeno) = 1 << (fadeno − 1)`; la vek-buklo traktas la plej malaltan biton kiel fadenon `1`. |
-| `premrego` | back-pressure | La sendanto atendas lokon en plena vico anstataŭ perdi la mesaĝon; nombrata en `IpcStatistiko.premregoj`. |
+| `premrego` | back-pressure | La sendanto atendas lokon en plena vico anstataŭ perdi la mesaĝon; nombrata en `IkStatistiko.premregoj`. |
 | `sendblokado` | send blocking | `SENDI` blokas ĝis `preni_de` liberigas lokon aŭ la finpunkto revokiĝas (`-32`); nur la ripoza kunteksto ricevas `-4`. |
 | `senda decido` | send decision | `senda_decido(enmetitaj, maks, povas_bloki)`: pura funkcio kun `Enmetu`/`Atendu`/`Rifuzi`, pruvita per Kani. |
-| `IPC-statistiko` | IPC statistics | `IpcStatistiko`: `senditaj`, `ricevitaj`, `premregoj`, `revokoj`; `nuna_statistiko()` redonas kopion. |
+| `IK-statistiko` | IPC statistics | `IkStatistiko`: `senditaj`, `ricevitaj`, `premregoj`, `revokoj`; `nuna_statistiko()` redonas kopion. |
 | `registri fadenon` | register thread | `registri_fadenon(fadeno, procezo)`: idempotenta; rezervas la defaŭltan finpunkton kaj instalas la bootstrap-tenilon en fendon `0`. |
 | `krei finpunkton` | create endpoint | `KREI_FINPUNKTON` (6); redonas novan `Tenilo`. |
 | `vivas` | is alive | `planisto::vivas(id)`: la celo ekzistas kaj ne estas `Mortinta`; la shim rifuzas per `-3`. |
@@ -153,7 +157,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `nebloka` | non-blocking | `r10 = 0` → `Atendo::Nebloka`; malplena vico redonas `PROVU_DENOVE = -11` sen cedi. |
 | `tempolima politiko` | timeout policy | `el_tempolimo`: `(r10 as u32).div_ceil(10)` tikoj; 1–9 ms restas unu tiko, neniam nulo. |
 | `absoluta limdato` | absolute deadline | `absoluta_limdato(atendo)` fiksas la limdaton ĉe la voko; `bloki_ĝis_absoluta` ne rekalkulas ĝin en la atenda buklo. |
-| `tempolima veko` | timeout wakeup | `venkigi_tempolimojn()` elprenas el `vekoj` ĉiujn limdatojn `≤ nuna tiko`; `preni_tempolimon()` konsumas la markon; `IpcStatistiko.tempolimoj`. |
+| `tempolima veko` | timeout wakeup | `venkigi_tempolimojn()` elprenas el `vekoj` ĉiujn limdatojn `≤ nuna tiko`; `preni_tempolimon()` konsumas la markon; `IkStatistiko.tempolimoj`. |
 | `vekotemporizilo` | wake timer | `Vekotemporizilo` en `kerno/vekotemporizilo.rs`: min-kupo de `(limdato, FadenoId)` kun pozicia tabelo; enigo, forigo kaj elpreno estas O(log n) sen alokado. |
 | `veka kupo` | wake heap | La kupo mem: unu ero por fadeno, kapacito `MAKSAJ_FADENOJ`; `pinti` montras la plej fruan limdaton. |
 | `dormi` | sleep | `SYS_DORMI` (12), `rdi` = daŭro en ms; `planisto::dormi` atendas `ceil(ms/10)` tikojn; la ripoza kunteksto ricevas `-1`. |
@@ -163,7 +167,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `plenumtempaj provoj` | execution-accounting checks | `testi_plenumtempon`, `plenumtempa_provo`, `ceda_kontada_provo`, `ripoza_kontada_provo`; `kani_plenumtempo` ankaŭ kontrolas arbitran nombrilon, apartigon kaj saturiĝon. |
 | `samaj_plenumtikoj` | element-wise accounting comparison | Komparas du nombrotabelojn elementon post elemento anstataŭ per tuta-tabela egaleco, por ke Kani ne devu malvolvi la kompilan 72-bajtan `memcmp`; la asertoj restas samaj. |
 | `veturoj` | scheduler runs | `Planisto.veturoj[fadeno]`: kiom da fojoj ĉiu fadeno estis elektita; la fina raporto komparas la minimumon por pruvi, ke neniu malsatiĝas. |
-| `limdata bloko` | timed block | `limdataj_blokoj`: blokado kun limdato (dormo aŭ IPC-tempolimo). |
+| `limdata bloko` | timed block | `limdataj_blokoj`: blokado kun limdato (dormo aŭ IK-tempolimo). |
 | `maksimuma vekprokrasto` | maximum wakeup delay | `maks_vekprokrasto`: la plej granda distanco inter la limdato kaj la efektiva veko, en tikoj. |
 | `fonta filtro` | source filter | `RICEVI_TEMPO.rdx`: fadena id aŭ `0` (ajna); `ricevi_mesagon_atenda(fonto, atendo)` preterlasas fremdajn sendintojn. |
 | `ricevi kun tempolimo` / `sendi kun tempolimo` | receive / send with timeout | `ricevi_kun_tempolimo(tenilo, celo, fonto, ms)`, `sendi_kun_tempolimo(tenilo, mesago, ms)`. |
@@ -175,7 +179,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `provu denove` | try again (`EAGAIN`) | `PROVU_DENOVE = -11`. |
 | `tabelo plena` | table full (`ENOSPC`) | `TABELO_PLENA = -28`. |
 | `finpunkto revokita` | endpoint revoked (`EPIPE`) | `FINPUNKTO_REVOKITA = -32`. |
-| `tro longa mesaĝo` | oversize message (`EMSGSIZE`) | `TRO_LONGA_MESAGO = -90`; `IpcEraro::TroLongaMesago`; ekde Fazo 5 `SENDI` ĝin redonas, se `Mesago.longo > MAKSA_MESAGA_LONGO`. |
+| `tro longa mesaĝo` | oversize message (`EMSGSIZE`) | `TRO_LONGA_MESAGO = -90`; `IkEraro::TroLongaMesago`; ekde Fazo 5 `SENDI` ĝin redonas, se `Mesago.longo > MAKSA_MESAGA_LONGO`. |
 | `folia permeso` | leaf permission | `permesoj(adreso)` legas la realajn PTE-bitojn de folio. |
 | `W^X` | write-xor-execute | Skribebla paĝo neniam estas plenumebla samtempe. |
 | `sekcia limo` | section boundary | `__kerna_kodo_komenco`, `__kerna_rodata_fino`, … el `linker.ld`. |
@@ -186,7 +190,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `procesoraj trajtoj` | processor features | `procesoro::trajtoj()`; CPUID folio 7. |
 | `SMEP` | supervisor mode execution prevention | `CR4.SMEP`; Ring 0 ne plenumas `U=1`-foliojn (0.3.0). |
 | `SMAP` | supervisor mode access prevention | `CR4.SMAP`; `STAC` malfermas kaj `CLAC` fermas la fenestron (0.3.1). |
-| `PCID` | process-context identifier | `CR4.PCIDE` (bito 17); la praŝarĝilo povas lasi ĝin ŝaltita, sed `pagxado::pravalorizi` ĝin malŝaltas (unue `CR3` kun nula PCID). |
+| `PCID` | process-context identifier | `CR4.PCIDE` (bito 17); la praŝarĝilo povas lasi ĝin ŝaltita, sed `pagado::pravalorizi` ĝin malŝaltas (unue `CR3` kun nula PCID). |
 | `ne PCID` | PCID disabled | `procesoro::ne_pcide()`; `ŝalti_radikon` haltas, se `PCIDE` restus ŝaltita. |
 | `relokebla` | relocatable | KASLR postulas relokeblan aŭ alta-duonan kernon. |
 | `alta duonmapo` | higher-half mapping | La kerno loĝas super la uzanta fenestro. |
@@ -242,7 +246,8 @@ kaj protokolaj nomoj sekvu ĝin.
 | `stako` | stack | |
 | `pinto` | top | |
 | `kreski malsupren` | grow downward | |
-| `frambufo` / `ekrano` | framebuffer / screen | Ekzistanta kodo uzas `framebuffer` kaj `ekrano`. |
+| `frambufo` / `ekrano` | framebuffer / screen | `FrambufaInformo`; ankaŭ `ekrano` por la fenestra bildo. |
+| `bitoj po pikselo` | bits per pixel | Kampo `bitoj_po_pikselo`; eligata kiel `bitoj/pikselo`. |
 | `seria konzolo` | serial console | COM1 sur `x86_64`; PL011 sur `arm64`. |
 | `tiparo` | font | |
 | `glifo` | glyph | |
@@ -291,11 +296,11 @@ kaj protokolaj nomoj sekvu ĝin.
 | `El Torito` | El Torito | Elŝuta speco de ISO9660; la firmvaro legas la EFI-bildon. |
 | `UEFI-memormapo` | UEFI memory map | `/chosen/linux,uefi-mmap-*`; uzata kiam `/memory` mankas. |
 | `konvena memoro` | conventional memory | UEFI-tipo 7; la «uzebla» kvanto en la raporto. |
-| `AAVMF` | AArch64 UEFI firmware | `QEMU_EFI.fd`; uzata de `just run-iso-arm`. |
+| `AAVMF` | AArch64 UEFI firmware | `QEMU_EFI.fd`; uzata de `just ruli-iso-arm`. |
 | `vektora tabelo` | vector table | `VBAR_EL1`; 16 eniroj po 128 bajtoj; `__vektoroj` en `arm64/interrompo.rs`. |
 | `vektoro` | vector | La enira indekso 0–15 aŭ GIC-identigilo; `InterrompaKadro::vektoro`. |
 | `distribuilo` | distributor | GIC-distribuilo (`GICD_*`) ĉe `0x0800_0000`. |
-| `CPU-interfaco` | CPU interface | GICC (`GICC_*`) ĉe `0x0801_0000`. |
+| `procesora interfaco` | procesoro interface | GICC (`GICC_*`) ĉe `0x0801_0000`. |
 | `aparta aparata interrompo` | private peripheral interrupt (PPI) | PPI 30 estas la ĝenerala temporizilo. |
 | `ĝenerala temporizilo` | generic timer | `CNTFRQ_EL0`, `CNTP_TVAL_EL0`, `CNTP_CTL_EL0`. |
 | `tika frekvenco` | tick rate | `FREKVENCO = 100` (100 Hz, 10 ms). |
@@ -306,7 +311,7 @@ kaj protokolaj nomoj sekvu ĝin.
 | `fw_cfg` | firmware configuration | La MMIO-aparato de QEMU (`qemu,fw-cfg-mmio`); dateno, selektilo kaj DMA. |
 | `selektilo` | selector | La 2-bajta grandendiana registro ĉe `fw_cfg + 0x08`. |
 | `dosierujo de fw_cfg` | fw_cfg file directory | Klavo `0x0019`; eroj po 64 bajtoj kun nomo kaj selektilo. |
-| `ramfb` | RAM framebuffer | La `fw_cfg`-dosiero `etc/ramfb`; `RAMFBCfg` 28 bajtoj. |
+| `ramfb` | ĉefmemoro framebuffer | La `fw_cfg`-dosiero `etc/ramfb`; `RAMFBCfg` 28 bajtoj. |
 | `kvarobla signo` | fourcc | `XR24` (`0x3432_5258`): XRGB8888 kun 32-bitaj pikseloj. |
 | `paŝo` | stride | Bajtoj po vico; `LARĜO * 4 = 5120`. |
 | `DMA-priskribo` | DMA descriptor | `DmaEro`: `kontrolo`, `longo`, `adreso`, ĉiuj grandendianaj. |
@@ -416,7 +421,7 @@ eksteraj protokolaj nomoj:
 `x86_64`, `CR0`, `CR2`, `CR3`, `CR4`, `PCID`, `PCIDE`, `RSP0`, `RIP`, `RFLAGS`, `RAX`, `RDI`,
 `RSI`, `RDX`, `R10`, `MSR`, `EFER`, `NXE`, `PAE`, `PML4`, `PDPT`, `PD`, `PT`,
 `IDT`, `GDT`, `TSS`, `APIC`, `PIT`, `COM1`, `Multiboot2`, `Xen-PVH`, `ELF`,
-`Limine`, `QEMU`, `int 0x80`, `iretq`, `syscall`, `sysret`, `W^X`, `CR0.WP`,
+`Limine`, `QEMU`, `int 0x80`, `iretq`, `syscall`, `sysret`, `fork`, `exec`, `execve`, `ASCII`, `UTF-8`, `W^X`, `CR0.WP`,
 `SMEP`, `SMAP`, `KASLR`, `IOMMU`, `DMA`, `PCI`, `DMAR`, `IVRS`, `STAC`, `CLAC`,
 `KREI_FINPUNKTON`, `DONI`, `REVOKI`, `RICEVI_TEMPO`, `SENDI_TEMPO`, `FERMI`,
 `EBADF`, `EAGAIN`, `ENOSPC`, `EPIPE`, `EMSGSIZE`, `ETIMEDOUT`, `arm64`,

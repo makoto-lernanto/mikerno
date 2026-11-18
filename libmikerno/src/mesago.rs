@@ -1,4 +1,4 @@
-//! IPC-mesaĝo: fiksa `#[repr(C)]` aranĝo, kiun ambaŭ flankoj kopias sen konverto.
+//! IK-mesaĝo: fiksa `#[repr(C)]` aranĝo, kiun ambaŭ flankoj kopias sen konverto.
 
 /// Maksimuma longo de la datumaro en unu mesaĝo.
 pub const MAKSA_MESAGA_LONGO: usize = 64;

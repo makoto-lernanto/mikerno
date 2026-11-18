@@ -56,8 +56,8 @@ fluas tra la sama kadro.
 - **L01.** La fonta interfaco, la dokumentaro, la erarmesaĝoj, la komentoj kaj
   la identigiloj `DEVI` esti en Esperanto (vidu §2.2).
 - **L02.** Restas en la angla nur neŝanĝeblaj propraj aŭ fiksaĵaj nomoj:
-  `Rust`, `x86_64`, `arm64`, registraj nomoj, instrukcioj kaj normaj API- kaj
-  aparataraj nomoj.
+  `Rust`, `x86_64`, `arm64`, registraj nomoj, instrukcioj kaj normaj interfacaj
+  kaj aparataraj nomoj.
 - **L03.** Dum evoluigo oni verkas en Esperanto: kodo, fontaj interfacaj
   tekstoj, dokumentaro, mesaĝoj kaj dosiernomoj. Aldona plurlingva mapada
   tavolo rajtas provizi tradukojn de la montrataj tekstoj al aliaj lingvoj,
@@ -305,11 +305,11 @@ Denseco havas tri nivelojn: `kompakta`, `norma` kaj `komforta`. Ĉiuj komponanto
 
 | Ĵetono | Valoro |
 | --- | --- |
-| `--mov-dauxro` | 1,0 (0,2–2,0) |
+| `--mov-daŭro` | 1,0 (0,2–2,0) |
 | `--mov-kurbo` | `cubic-bezier(.16, 1, .3, 1)` |
-| Mallonga movo | 120 ms × `--mov-dauxro` |
-| Meza movo | 200 ms × `--mov-dauxro` |
-| Longa movo | 320 ms × `--mov-dauxro` |
+| Mallonga movo | 120 ms × `--mov-daŭro` |
+| Meza movo | 200 ms × `--mov-daŭro` |
+| Longa movo | 320 ms × `--mov-daŭro` |
 
 - **J04.** Kiam la sistemo postulas malpli da movado, ĉiuj transformoj kaj
   animacioj `DEVI` malŝaltiĝi aŭ daŭri plej multe 1 ms.
@@ -365,7 +365,7 @@ Estas ekzakte tri materialoj. Iliaj nomoj estas propraj kaj restas neŝanĝitaj.
 
 ## 6. Komponantoj
 
-La komponantoj estas la publika API de FluoU. Aplikaĵo `DEVI` uzi ilin anstataŭ
+La komponantoj estas la publika interfaco de FluoU. Aplikaĵo `DEVI` uzi ilin anstataŭ
 desegni proprajn regilojn.
 
 ### 6.1. Ĝeneralaj reguloj
@@ -406,7 +406,7 @@ desegni proprajn regilojn.
   en la koncerna komponanto.
 - **K09.** La komponantoj `DEVI` esti funkcie identaj en ambaŭ temoj kaj en
   ĉiuj densecoj.
-- **K10.** La API de la komponantoj `DEVI` esti Esperanta: `Buto`, `Ŝaltilo`,
+- **K10.** La interfaco de la komponantoj `DEVI` esti Esperanta: `Buto`, `Ŝaltilo`,
   `Glitilo`, `Tekstkampo`, `Elektilo`, `Langetoj`, `ProgresStrio`,
   `ProgresRingeto`, `InformaStrio`, `Ŝildeto`, `Listo`, `Dialogo`,
   `Fulmomesaĝo`.
@@ -534,7 +534,7 @@ La devigo venas el la kapabla modelo de la kerno, ne el konvencio.
 
 ```text
 Aplikaĵo
-   │  FluoU-API
+   │  FluoU-interfaco
    ▼
 FluoU 0.1
    │  komponantoj · materialoj · movo
@@ -563,7 +563,7 @@ Ekrano
 - **A05.** Ĉiu aplikaĵo `DEVI` kuri izolite. Kolapso de unu procezo `DEVI NE`
   detrui la kompozitoron aŭ aliajn fenestrojn.
 - **A06.** La sama kompona arbo `DEVI` produkti piksele saman rezulton sur
-  `x86_64` kaj `arm64`. La CI `DEVI` kompari fiksaĵojn de la frambufo kaj
+  `x86_64` kaj `arm64`. La DI `DEVI` kompari fiksaĵojn de la frambufo kaj
   malsukcesi ĉe iu ajn diferenco, krom dokumentita platforma escepto.
 - **A07.** La komuna ABI `DEVI` resti kongrua inter `libmikerno`, la kerno kaj
   FluoU: `Tenilo`, `Mesaĝo` kaj la voknumeroj de ABI 2. La registra aranĝo
@@ -594,7 +594,7 @@ dosieroj = ["~/dokumentoj:legi"]
 reto     = false                     # ne petita → ne ekzistas
 ```
 
-### 9.2. Rust-API
+### 9.2. Rust-interfaco
 
 ```rust
 use fluou::{Fenestro, Mika, Buto, Ŝaltilo, Stilo};
@@ -612,9 +612,9 @@ Fenestro::nova("Agordoj")
     .montri()   // → FENESTRO-tenilo → Kompozitoro
 ```
 
-- **A11.** La API `DEVI` esti Esperanta kaj ne elmeti krudajn fenestrajn
+- **A11.** La interfaco `DEVI` esti Esperanta kaj ne elmeti krudajn fenestrajn
   identigilojn; la programisto ricevas `Fenestro`-objekton, ne frambufon.
-- **A12.** La API `DEVI` havi stabilan version kaj dokumentitajn rompajn
+- **A12.** La interfaco `DEVI` havi stabilan version kaj dokumentitajn rompajn
   ŝanĝojn nur ĉe pliigo de la ĉefversio.
 
 ---

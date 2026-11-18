@@ -8,7 +8,7 @@
 
 use core::arch::asm;
 
-use super::pagxado::X86AdresaSpaco;
+use super::pagado::X86AdresaSpaco;
 use super::procesoro;
 use crate::arkitekturo::komuna::{FirmigaRaporto, FirmigaTrajto};
 use crate::memoro::KADRA_GRANDO;

@@ -3,7 +3,7 @@
 use core::ptr;
 use core::slice;
 
-use crate::ekrano::FramebufferInformo;
+use crate::ekrano::FrambufaInformo;
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::{
     EniraEraro, EniraInformo, MAKSAJ_MODULOJ, MAKSAJ_REGIONOJ, MemoraMapo, MemoraRegiono, Modulo,
@@ -25,7 +25,7 @@ static MAPO: Kunhavigita<MemoraMapo> = Kunhavigita::nova(MemoraMapo::nova());
 static REZERVOJ_AREO: Kunhavigita<[MemoraRegiono; REZERVOJ]> =
     Kunhavigita::nova([MemoraRegiono::MALPLENA; REZERVOJ]);
 static REZERVOJ_NOMBRO: Kunhavigita<usize> = Kunhavigita::nova(0);
-static FRAMEBUFO: Kunhavigita<Option<FramebufferInformo>> = Kunhavigita::nova(None);
+static FRAMEBUFO: Kunhavigita<Option<FrambufaInformo>> = Kunhavigita::nova(None);
 static MODULOJ: Kunhavigita<[Modulo; MAKSAJ_MODULOJ]> = Kunhavigita::nova(
     [Modulo {
         komenco: 0,
@@ -65,7 +65,7 @@ pub fn analizi(informo: *const u8) -> Result<EniraInformo, EniraEraro> {
             legi_mapon(etikedo, grando, mapo)?;
             vidis_mapon = true;
         } else if tipo == TIPO_FRAMEBUFO {
-            legi_framebufferon(etikedo, grando, framebufo);
+            legi_frambufoon(etikedo, grando, framebufo);
         } else if tipo == TIPO_MODULO {
             legi_modulon(etikedo, grando)?;
         }
@@ -95,7 +95,7 @@ pub fn analizi(informo: *const u8) -> Result<EniraInformo, EniraEraro> {
     Ok(EniraInformo {
         memora_mapo: &*MAPO.akiri(),
         rezervindaj: unsafe { slice::from_raw_parts(rezervoj.as_ptr(), 1 + modulo_nombro) },
-        framebuffer: *framebufo,
+        frambufo: *framebufo,
         moduloj: unsafe { slice::from_raw_parts(MODULOJ.akiri().as_ptr(), modulo_nombro) },
     })
 }
@@ -122,7 +122,7 @@ fn legi_modulon(etikedo: *const u8, grando: usize) -> Result<(), EniraEraro> {
     Ok(())
 }
 
-fn legi_framebufferon(etikedo: *const u8, grando: usize, celo: &mut Option<FramebufferInformo>) {
+fn legi_frambufoon(etikedo: *const u8, grando: usize, celo: &mut Option<FrambufaInformo>) {
     if grando < 32 {
         return;
     }
@@ -132,12 +132,12 @@ fn legi_framebufferon(etikedo: *const u8, grando: usize, celo: &mut Option<Frame
         verda = unsafe { *etikedo.add(34) };
         blua = unsafe { *etikedo.add(36) };
     }
-    *celo = Some(FramebufferInformo {
+    *celo = Some(FrambufaInformo {
         bazo: unsafe { legi_u64(etikedo.add(8)) },
         paŝo: unsafe { legi_u32(etikedo.add(16)) },
         larĝo: unsafe { legi_u32(etikedo.add(20)) },
         alto: unsafe { legi_u32(etikedo.add(24)) },
-        bpp: unsafe { *etikedo.add(28) },
+        bitoj_po_pikselo: unsafe { *etikedo.add(28) },
         ruĝa,
         verda,
         blua,

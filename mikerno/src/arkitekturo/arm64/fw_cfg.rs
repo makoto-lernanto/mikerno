@@ -13,7 +13,7 @@ use core::arch::asm;
 use core::mem::size_of;
 use core::ptr::{read_volatile, write_volatile};
 
-use crate::ekrano::FramebufferInformo;
+use crate::ekrano::FrambufaInformo;
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::KADRA_GRANDO;
 use crate::memoro::kadro::KadraAlokilo;
@@ -78,11 +78,11 @@ pub fn bazo() -> u64 {
     *BAZO.akiri()
 }
 
-/// Aloku kontiguan RAM-frambufferon kaj anoncu ĝin al `ramfb` per `fw_cfg`.
+/// Aloku kontiguan RAM-frambufon kaj anoncu ĝin al `ramfb` per `fw_cfg`.
 ///
 /// `None` se la `etc/ramfb`-dosiero mankas, se ne ekzistas sufiĉe da
 /// sinsekvaj kadroj aŭ se la DMA-transigo raportas eraron.
-pub fn krei_frambufferon(alokilo: &mut KadraAlokilo) -> Option<FramebufferInformo> {
+pub fn krei_frambufon(alokilo: &mut KadraAlokilo) -> Option<FrambufaInformo> {
     let bazo = bazo();
     let klavo = serĉi_dosieron(bazo, RAMFB_NOMO)?;
     let paĝoj = PAŜO as usize * ALTO as usize / KADRA_GRANDO as usize;
@@ -105,12 +105,12 @@ pub fn krei_frambufferon(alokilo: &mut KadraAlokilo) -> Option<FramebufferInform
         // La kadroj restas rezervitaj: la aparato eble ankoraŭ montras ilin.
         return None;
     }
-    Some(FramebufferInformo {
+    Some(FrambufaInformo {
         bazo: adreso,
         larĝo: LARĜO,
         alto: ALTO,
         paŝo: PAŜO,
-        bpp: 32,
+        bitoj_po_pikselo: 32,
         ruĝa: 16,
         verda: 8,
         blua: 0,

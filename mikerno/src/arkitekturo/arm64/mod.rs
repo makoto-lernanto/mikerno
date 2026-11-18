@@ -9,7 +9,7 @@ pub mod fdt;
 pub mod fw_cfg;
 pub mod gic;
 pub mod interrompo;
-pub mod pagxado;
+pub mod pagado;
 pub mod planado;
 pub mod procesoro;
 pub mod seria;
@@ -111,7 +111,7 @@ impl Drop for StacGardo {
 /// ĝin sen malfermi `StacGardo`. Se `PAN` funkcias, la datena aborto (`EC=0x25`)
 /// kun `FAR` en la uzanta fenestro estas raportata kiel `PAN`-malobservo kaj la
 /// kerno haltas; la legado neniam revenas.
-pub fn testi_pan(spaco: &mut pagxado::ArmAdresaSpaco, alokilo: &mut KadraAlokilo) {
+pub fn testi_pan(spaco: &mut pagado::ArmAdresaSpaco, alokilo: &mut KadraAlokilo) {
     if let Err(eraro) = spaco.mapi_uzantan_regionon(
         VirtuaAdreso::nova(UZANTA_BAZO),
         KADRA_GRANDO as usize,
@@ -209,7 +209,7 @@ fn prepari_eniron(dtb: *const u8, fdt: &fdt::Fdt) -> EniraInformo {
         rezervindaj: unsafe { core::slice::from_raw_parts(rezervoj.as_ptr(), rezervoj_nombro) },
         // La frambufferio venas de `fw_cfg`/`ramfb` post la pretigo de la
         // kadro-alokilo, do la enira informo ne portas unu.
-        framebuffer: None,
+        frambufo: None,
         moduloj: unsafe { core::slice::from_raw_parts(MODULOJ.akiri().as_ptr(), modulo_nombro) },
     }
 }
@@ -235,10 +235,10 @@ pub extern "C" fn kerna_eniro_arm64(dtb: *const u8) -> ! {
         crate::skribu!("[kerno] initrd: 0x{:x}..0x{:x}\n", komenco, fino);
     }
 
-    pagxado::pravalorizi();
+    pagado::pravalorizi();
     interrompo::pravalorizi();
     gic::pravalorizi();
 
-    crate::kerno::ĉefa(informo, pagxado::KERNA_BAZO, pagxado::KERNA_BAZO);
+    crate::kerno::ĉefa(informo, pagado::KERNA_BAZO, pagado::KERNA_BAZO);
     procesoro::halti()
 }

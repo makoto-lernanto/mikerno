@@ -598,7 +598,7 @@ mod kani_proofs {
     use super::{ADRESO_MASKO, radiko_ero};
 
     #[kani::proof]
-    fn cr3_radiko_estas_pagx_aliniita() {
+    fn cr3_radiko_estas_paĝe_aliniita() {
         let cr3: u64 = kani::any();
         let radiko = radiko_ero(cr3);
         assert_eq!(radiko & 0xFFF, 0);

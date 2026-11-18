@@ -6,10 +6,10 @@ dosieron.
 
 ## Lingva regulo
 
-- Ĉio — kodo, identigiloj, komentoj, dokumentaro, commit-mesaĝoj, nomoj de
+- Ĉio — kodo, identigiloj, komentoj, dokumentaro, komitaj mesaĝoj, nomoj de
   protokoloj kaj testoj — estas verkata en Esperanto.
 - Restas en la angla nur anglaj terminoj, kiuj ne estas ŝanĝeblaj: `Rust`,
-  `x86_64`, nomoj de registroj kaj instrukcioj, normaj API- kaj aparataraj
+  `x86_64`, nomoj de registroj kaj instrukcioj, normaj interfacaj kaj aparataraj
   nomoj.
 - La ĉina lingvo ne estas permesita en la fonta tavolo. Aldona plurlingva
   mapada tavolo tamen estas permesata: apartaj tradukaj dosieroj (ekzemple
@@ -33,32 +33,32 @@ La formo `0.x.y` validas ekde M10; M0–M9 apartenas al la historio `0.0.x`.
 Nuna versio: `0.7.1` (M17, Fazo 2: SNDS, simpla nurlega dosiersistemo).
 
 La sola fonto de la versio estas `[workspace.package] version` en `Cargo.toml`.
-La kerno legas ĝin per `env!("CARGO_PKG_VERSION")`, do `just run` kaj la ISO
+La kerno legas ĝin per `env!("CARGO_PKG_VERSION")`, do `just ruli` kaj la ISO
 montras ĝin aŭtomate; `limine.conf` ne portas version.
 
 Lokoj, kie la versio devas resti kongrua (kontrolataj de `tools/versio.sh`):
 
-- `README.md` — `**Versio:** 0.x.y (workspace)`
-- `docs/MEJLOSTONOJ.md` — `Versio de la workspace` en la kapo
+- `README.md` — `**Versio:** 0.x.y (Cargo-laborloko)`
+- `docs/MEJLOSTONOJ.md` — `Versio de la Cargo-laborloko` en la kapo
 - `AGENTS.md` — `Nuna versio`
 - `docs/index.html` — `data-versio="0.x.y"` en la `<html>`-etikedo
 
-Post versio-ŝanĝo rulu `bash tools/versio.sh --ĝisdatigi`; `just verify`
+Post versio-ŝanĝo rulu `bash tools/versio.sh --ĝisdatigi`; `just kontroli`
 rulas `--kontroli`.
 
-## CI kaj formala pordego
+## DI kaj formala pordego
 
-- La sola loko por Kani estas GitHub Actions (`.github/workflows/ci.yml`):
-  `push` al `main` kaj `pull_request` rulas `lint-and-build` (`just verify`,
-  sen Kani, plus `just build-arm` por la plata arm64-`Image`), poste
-  `kani-prepare` kaj la matricon `kani-verify`. La matrico
+- La sola loko por Kani estas GitHub Actions (`.github/workflows/di.yml`):
+  `push` al `main` kaj `pull_request` rulas `kontroli-kaj-konstrui` (`just kontroli`,
+  sen Kani, plus `just konstrui-arm` por la plata arm64-`Image`), poste
+  `kani-pretigi` kaj la matricon `kani-kontroli`. La matrico
   havas unu taskon por ĉiu pruvo; ĉiu tasko rulas
   `timeout -k 10 600 cargo kani … --exact --harness <pruvo>` (10 min) sub
   `timeout-minutes: 30`, kaj suprenigas sian protokolon kiel artefakton eĉ
   ĉe malsukceso. Kani instaliĝas per
   `model-checking/kani-github-action@v1` sur Rust 1.100.0.
 - Loke oni **ne** rulas `cargo kani`; WSL2 elĉerpiĝas je memoro kaj
-  diskonektiĝas. `just verify` nun enhavas nur la sen-Kani-ajn kontrolojn kaj
+  diskonektiĝas. `just kontroli` nun enhavas nur la sen-Kani-ajn kontrolojn kaj
   estas loke rulebla: `bash tools/versio.sh --kontroli`,
   `cargo fmt --all -- --check`,
   `cargo clippy --workspace --release -- -D warnings`,
@@ -66,16 +66,16 @@ rulas `--kontroli`.
   warnings` kaj `cargo build --workspace --release`.
 - Post puŝo kontrolu la runon en la agoj-paĝo de la deponejo (aŭ per
   `gh run watch`); la formala pordego estas verda nur kiam la tuta matrico
-  `kani-verify` sukcesas. Detaloj estas en `docs/MEJLOSTONOJ.md` §4.7–§4.8.
+  `kani-kontroli` sukcesas. Detaloj estas en `docs/MEJLOSTONOJ.md` §4.7–§4.8.
 
 ## Laborfluo por unu Fazo
 
 1. Efektivigu nur la Fazon indikitan de la uzanto; ne komencu la sekvan.
-2. Post la efektivigo rulu loke `just verify` (sen Kani) kaj la kontrolojn
+2. Post la efektivigo rulu loke `just kontroli` (sen Kani) kaj la kontrolojn
    indikitajn de la uzanto, kaj certigu, ke ili pasas. La formalan pordegon
-   (la CI-matricon `kani-verify`) plenumas la CI post la puŝo. Rekonstruu la
+   (la DI-matricon `kani-kontroli`) plenumas la DI post la puŝo. Rekonstruu la
    ISO-ojn (`just iso` kaj `just iso-arm`), kontrolu iliajn praŝarĝojn kaj,
-   post verda CI, alŝutu ilin al la Release de la nuna versio (vidu «Eldono
+   post verda DI, alŝutu ilin al la Eldono de la nuna versio (vidu «Eldono
    de ISO») antaŭ la raporto.
 3. Ĝisdatigu la version (laŭ la supra mapado; `bash tools/versio.sh
    --ĝisdatigi` por la dokumentoj), `docs/MEJLOSTONOJ.md` kaj
@@ -83,37 +83,37 @@ rulas `--kontroli`.
 4. **Haltu tuj**, raportu la rezulton al la uzanto kaj atendu pluajn
    instrukciojn.
 
-## Commit-reguloj
+## Komitaj reguloj
 
-- Antaŭ ĉiu commit mezuru la Ring 0-kodon per `bash tools/kodlinioj.sh
+- Antaŭ ĉiu komito mezuru la Ring 0-kodon per `bash tools/kodlinioj.sh
   --linio` kaj aldonu la ricevitan vicon al la tabelo «Grando de la Ring
   0-kodo» en `docs/MEJLOSTONOJ.md`.
-- Sen klara permeso de la uzanto («vi povas commit»), **neniam** rulu
+- Sen klara permeso de la uzanto («vi povas komiti»), **neniam** rulu
   `git commit` aŭ `git push`.
-- Post la permeso, commitu ĉiujn ŝanĝojn de la nuna Fazo kaj puŝu ilin; la
+- Post la permeso, komitu ĉiujn ŝanĝojn de la nuna Fazo kaj puŝu ilin; la
   mesaĝo estu en Esperanto laŭ la stilo de la deponejo.
-- Post la puŝo atendu la CI-runon kaj raportu ĝian konkludon; ruĝa
-  `kani-verify` blokas pluan laboron ĝis la kaŭzo estas riparita.
-- Ne kunfandu plurajn Fazojn en unu commit, krom se la uzanto klare postulas
+- Post la puŝo atendu la DI-runon kaj raportu ĝian konkludon; ruĝa
+  `kani-kontroli` blokas pluan laboron ĝis la kaŭzo estas riparita.
+- Ne kunfandu plurajn Fazojn en unu komito, krom se la uzanto klare postulas
   tion.
 
 ## Eldono de ISO
 
 - Post ĉiu finita tasko (ne nur Fazo), kiu ŝanĝas la kernon, la lanĉilojn aŭ
-  la enhavon de la SNDS-bildo, kaj post verda CI, konstruu `just iso` kaj
+  la enhavon de la SNDS-bildo, kaj post verda DI, konstruu `just iso` kaj
   `just iso-arm` el la puŝita kodo, kontrolu la praŝarĝojn de ambaŭ
   (`QEMU_DISPLAY=none bash tools/run-qemu.sh iso` kaj
   `QEMU_DISPLAY=none bash tools/run-qemu-arm.sh --iso`) kaj alŝutu ilin al la
-  GitHub Release de la nuna versio. Nur-dokumenta tasko ne ŝanĝas la
-  ISO-enhavon; tiam ne rekonstruu, sed kontrolu, ke la lasta Release ankoraŭ
+  GitHub-Eldono de la nuna versio. Nur-dokumenta tasko ne ŝanĝas la
+  ISO-enhavon; tiam ne rekonstruu, sed kontrolu, ke la lasta Eldono ankoraŭ
   kongruas kun la nuna kodo.
-- Se la Release por la nuna versio ankoraŭ ne ekzistas, uzu `gh release
+- Se la Eldono por la nuna versio ankoraŭ ne ekzistas, uzu `gh release
   create v0.x.y mikerno.iso mikerno-arm.iso --target <plena koda SHA>
-  --title … --notes-file …`. La etikedo montru al la koda commit de la Fazo,
-  ne al posta dokumenta commit; la Release estu `Latest`, ne antaŭeldono,
+  --title … --notes-file …`. La etikedo montru al la koda komito de la Fazo,
+  ne al posta dokumenta komito; la Eldono estu la plej nova, ne antaŭeldono,
   krom se la uzanto diras alie.
 - Se ĝi jam ekzistas (ankaŭ kiam la versio ne ŝanĝiĝis), anstataŭigu la
-  assetojn per `gh release upload v0.x.y mikerno.iso mikerno-arm.iso
+  aktivaĵojn per `gh release upload v0.x.y mikerno.iso mikerno-arm.iso
   --clobber` kaj ĝisdatigu la SHA-256 en la priskribo kaj en
   `docs/MEJLOSTONOJ.md`.
 - La priskribo enhavu la SHA-256 de ambaŭ ISO-oj kaj la ĉefajn akceptajn

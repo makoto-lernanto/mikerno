@@ -15,7 +15,7 @@ use crate::memoro::virtuala::{
 };
 use libmikerno::starto::{REĜIMO_SEKRETO, REĜIMO_SPIONO};
 
-pub mod ipc;
+pub mod ik;
 pub mod objekto;
 pub mod planisto;
 pub mod procezo;
@@ -74,7 +74,7 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
 
     // La alokilo restas prunteprenita nur en ĉi tiu bloko: la planisto
     // aliras ĝin mem dum la proceza detruo, do longa `&mut` malhelpus.
-    let (mut spaco, framebuffer) = {
+    let (mut spaco, frambufo) = {
         let alokilo = kadra_alokilo();
         alokilo.pravalorizi(informo.memora_mapo, informo.rezervindaj, origino);
         testi_liberigon(alokilo);
@@ -108,10 +108,10 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         }
         // Se la praŝarĝilo ne liveras frambufferion, la platformo povas krei
         // sian propran (arm64: RAM-bufro anoncita al `ramfb`).
-        let framebuffer = informo
-            .framebuffer
-            .or_else(|| crate::arkitekturo::krei_frambufferon(alokilo));
-        let framebuffer = match framebuffer {
+        let frambufo = informo
+            .frambufo
+            .or_else(|| crate::arkitekturo::krei_frambufon(alokilo));
+        let frambufo = match frambufo {
             Some(fb) => {
                 let fino = fb.bazo + fb.paŝo as u64 * fb.alto as u64;
                 // MMIO-frambufferio (x86) ankoraŭ mankas en la identeca mapo;
@@ -133,7 +133,7 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
                     ) {
                         Ok(()) => Some(fb),
                         Err(eraro) => {
-                            crate::skribu!("[kerno] framebuffer-mapado malsukcesis: {}\n", eraro);
+                            crate::skribu!("[kerno] frambufa mapado malsukcesis: {}\n", eraro);
                             None
                         }
                     }
@@ -144,20 +144,20 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         testi_w_x(&spaco, informo.moduloj.first());
         spaco.ŝalti();
         procezo::agordi_kernan_spacon(spaco.radika_adreso());
-        (spaco, framebuffer)
+        (spaco, frambufo)
     };
     #[cfg(target_arch = "x86_64")]
     testi_cr3(spaco.radika_adreso().adreso());
 
-    match framebuffer {
+    match frambufo {
         Some(fb) if crate::ekrano::pravalorizi(fb) => crate::skribu!(
-            "[kerno] framebuffer {}x{}, {} bpp\n",
+            "[kerno] frambufo {}x{}, {} bitoj/pikselo\n",
             fb.larĝo,
             fb.alto,
-            fb.bpp
+            fb.bitoj_po_pikselo
         ),
-        Some(_) => crate::skribu!("[kerno] framebuffer ne taŭgas; nur {}\n", SERIA_KONZOLO),
-        None => crate::skribu!("[kerno] framebuffer ne havebla; nur {}\n", SERIA_KONZOLO),
+        Some(_) => crate::skribu!("[kerno] frambufo ne taŭgas; nur {}\n", SERIA_KONZOLO),
+        None => crate::skribu!("[kerno] frambufo ne havebla; nur {}\n", SERIA_KONZOLO),
     }
 
     crate::arkitekturo::inicialigi_kernostakon();
@@ -206,14 +206,14 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         return;
     }
     registri_testajn_finpunktojn();
-    ipc::testi_tabelojn();
-    ipc::testi_kapablojn();
-    ipc::testi_revokon();
+    ik::testi_tabelojn();
+    ik::testi_kapablojn();
+    ik::testi_revokon();
 
-    let mesago = ipc::Mesago::nova(1, 0, 2, "saluton el la praŝarĝo".as_bytes());
-    match ipc::sendi_mesagon(2, &mesago) {
-        Ok(()) => crate::skribu!("[kerno] IPC: mesaĝo sendita al fadeno 2\n"),
-        Err(eraro) => crate::skribu!("[kerno] IPC: sendado malsukcesis: {:?}\n", eraro),
+    let mesago = ik::Mesago::nova(1, 0, 2, "saluton el la praŝarĝo".as_bytes());
+    match ik::sendi_mesagon(2, &mesago) {
+        Ok(()) => crate::skribu!("[kerno] IK: mesaĝo sendita al fadeno 2\n"),
+        Err(eraro) => crate::skribu!("[kerno] IK: sendado malsukcesis: {:?}\n", eraro),
     }
 
     crate::skribu!(
@@ -290,9 +290,9 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         );
     }
 
-    let stat = ipc::nuna_statistiko();
+    let stat = ik::nuna_statistiko();
     crate::skribu!(
-        "[ipc] statistiko ({}): senditaj={}, ricevitaj={}, premregoj={}, revokoj={}, tempolimoj={}\n",
+        "[ik] statistiko ({}): senditaj={}, ricevitaj={}, premregoj={}, revokoj={}, tempolimoj={}\n",
         if stat.premregoj >= 2 && stat.revokoj >= 2 && stat.tempolimoj >= 3 {
             "bone"
         } else {
@@ -364,10 +364,10 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
     // la seria protokolo.
     match crate::ekrano::testi_pikselojn() {
         Some(raporto) => crate::skribu!(
-            "[ekrano] piksela fiksaĵo {}x{}, {} bpp, tiparo {}x{}; haketo 0x{:016x}\n",
+            "[ekrano] piksela fiksaĵo {}x{}, {} bitoj/pikselo, tiparo {}x{}; haketo 0x{:016x}\n",
             raporto.larĝo,
             raporto.alto,
-            raporto.bpp,
+            raporto.bitoj_po_pikselo,
             raporto.tiparo.0,
             raporto.tiparo.1,
             raporto.haketo
@@ -586,9 +586,9 @@ fn krei_testajn_fadenojn() -> Result<(), planisto::PlanistaEraro> {
 /// la internan `sendi_mesagon`/`ricevi_mesagon`-vojon (sen kapablotabelo).
 fn registri_testajn_finpunktojn() {
     for id in 1..=TESTAJ_FADENOJ as u64 {
-        if let Err(eraro) = ipc::registri_fadenon(id, 0) {
+        if let Err(eraro) = ik::registri_fadenon(id, 0) {
             crate::skribu!(
-                "[ipc] fadeno {}: defaŭlta finpunkto malsukcesis: {:?}\n",
+                "[ik] fadeno {}: defaŭlta finpunkto malsukcesis: {:?}\n",
                 id,
                 eraro
             );
@@ -649,10 +649,10 @@ fn testi_procezan_reuzon(kerna: &Spaco, modulo: &Modulo) {
     }
 }
 
-/// Detruu uzantan procezon kaj purigu ĝian IPC-staton; la finpunktoj, kiujn
+/// Detruu uzantan procezon kaj purigu ĝian IK-staton; la finpunktoj, kiujn
 /// ĝi posedas, estas revokitaj antaŭ ol la adresa spaco malaperas.
 fn detrui_uzantan(id: u64) {
-    ipc::purigi_procezon(id);
+    ik::purigi_procezon(id);
     let _ = procezo::detrui(id, kadra_alokilo());
 }
 
@@ -708,7 +708,7 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
     // La defaŭlta finpunkto ekzistas antaŭ ol la fadeno eniras la planiston, do
     // la malnova `SENDI`/`RICEVI`-vojo kaj la kapabla fendo `0` pretas ekde la
     // unua Ring 3-instrukcio.
-    if let Err(eraro) = ipc::registri_fadenon(id, id) {
+    if let Err(eraro) = ik::registri_fadenon(id, id) {
         crate::skribu!(
             "[uzanto] {}: defaŭlta finpunkto malsukcesis: {:?}\n",
             id,
@@ -801,13 +801,13 @@ fn testa_fadeno(id: u64) {
         // La unua tempomesaĝo por fadeno 4 venas antaŭ la premrego, do ĝi estas
         // en la vico antaŭ ol fadeno 4 ekatendas; la dua venas poste kaj devas
         // veki la senfinan atendo.
-        let unua = ipc::Mesago::nova(90, 0, 0, b"tempo-1");
-        if let Err(eraro) = ipc::sendi_mesagon(4, &unua) {
+        let unua = ik::Mesago::nova(90, 0, 0, b"tempo-1");
+        if let Err(eraro) = ik::sendi_mesagon(4, &unua) {
             crate::skribu!("[fadeno 1] unua tempomesaĝo malsukcesis: {:?}\n", eraro);
         }
         premrega_sendo();
     } else if id == 2 {
-        match ipc::ricevi_mesagon(0) {
+        match ik::ricevi_mesagon(0) {
             Ok(mesago) => crate::skribu!(
                 "[fadeno 2] ricevis mesaĝon: tipo {}, ricevonto {} (finpunkta id), \"{}\"\n",
                 mesago.tipo,
@@ -823,19 +823,19 @@ fn testa_fadeno(id: u64) {
         premrega_ricevo();
         // Plenigu la vicon de fadeno 1 kaj bloku sur la 17-a sendo; fadeno 3
         // revokas tiun finpunkton post la revoka veko de fadeno 1.
-        let mesago = ipc::Mesago::nova(78, 0, 0, &[]);
+        let mesago = ik::Mesago::nova(78, 0, 0, &[]);
         let mut enmetitaj = 0;
-        for _ in 0..ipc::MAKSAJ_MESAGOJ {
-            if ipc::sendi_mesagon(1, &mesago).is_ok() {
+        for _ in 0..ik::MAKSAJ_MESAGOJ {
+            if ik::sendi_mesagon(1, &mesago).is_ok() {
                 enmetitaj += 1;
             }
         }
-        let kodo = ipc::sendi_mesagon(1, &mesago)
+        let kodo = ik::sendi_mesagon(1, &mesago)
             .err()
-            .map_or(0, ipc::IpcEraro::kodo);
+            .map_or(0, ik::IkEraro::kodo);
         crate::skribu!(
             "[fadeno 2] sendblokada revoko ({}): enmetitaj={}, kodo={}\n",
-            if enmetitaj == ipc::MAKSAJ_MESAGOJ && kodo == -32 {
+            if enmetitaj == ik::MAKSAJ_MESAGOJ && kodo == -32 {
                 "bone"
             } else {
                 "MALBONE"
@@ -846,7 +846,7 @@ fn testa_fadeno(id: u64) {
     } else if id == 3 {
         // Fadeno 1 revokas ĉi tiun defaŭltan finpunkton dum la blokado; la
         // revoka veko devas liveri `-32`, ne pendigi aŭ redoni `-9`.
-        match ipc::ricevi_mesagon(1) {
+        match ik::ricevi_mesagon(1) {
             Ok(mesago) => crate::skribu!(
                 "[fadeno 3] neatendita mesaĝo: ricevonto {}, \"{}\"\n",
                 mesago.ricevonto,
@@ -855,17 +855,17 @@ fn testa_fadeno(id: u64) {
             Err(eraro) => {
                 crate::skribu!(
                     "[fadeno 3] revoka veko ({}): kodo {}\n",
-                    if eraro == ipc::IpcEraro::Revokita {
+                    if eraro == ik::IkEraro::Revokita {
                         "bone"
                     } else {
                         "MALBONE"
                     },
                     eraro.kodo()
                 );
-                if eraro == ipc::IpcEraro::Revokita {
+                if eraro == ik::IkEraro::Revokita {
                     // Fadeno 2 atendas lokon en la plena vico de finpunkto 1;
                     // revoko redonas al ĝi `-32` anstataŭ eterna atendo.
-                    match ipc::revoki_defaŭltan(1) {
+                    match ik::revoki_defaŭltan(1) {
                         Ok(()) => crate::skribu!(
                             "[fadeno 3] revokis finpunkton 1; vekas la blokitan sendanton\n"
                         ),
@@ -888,13 +888,13 @@ fn testa_fadeno(id: u64) {
             core::hint::black_box(n);
         }
         if id == 1 && fojo == 5 {
-            let dua = ipc::Mesago::nova(91, 0, 0, b"tempo-2");
-            if let Err(eraro) = ipc::sendi_mesagon(4, &dua) {
+            let dua = ik::Mesago::nova(91, 0, 0, b"tempo-2");
+            if let Err(eraro) = ik::sendi_mesagon(4, &dua) {
                 crate::skribu!("[fadeno 1] dua tempomesaĝo malsukcesis: {:?}\n", eraro);
             }
         }
         if id == 1 && fojo == 3 {
-            match ipc::revoki_defaŭltan(3) {
+            match ik::revoki_defaŭltan(3) {
                 Ok(()) => {
                     crate::skribu!("[fadeno 1] revokis la defaŭltan finpunkton de fadeno 3\n")
                 }
@@ -944,16 +944,16 @@ fn antaŭokupa_provo(id: u64) {
 }
 
 fn premrega_sendo() {
-    let mesago = ipc::Mesago::nova(77, 999, 0, "premrego".as_bytes());
+    let mesago = ik::Mesago::nova(77, 999, 0, "premrego".as_bytes());
     let mut senditaj = 0;
-    for _ in 0..=ipc::MAKSAJ_MESAGOJ {
-        if ipc::sendi_mesagon(2, &mesago).is_ok() {
+    for _ in 0..=ik::MAKSAJ_MESAGOJ {
+        if ik::sendi_mesagon(2, &mesago).is_ok() {
             senditaj += 1;
         }
     }
     crate::skribu!(
         "[fadeno 1] premrego ({}): {} mesaĝoj senditaj; la lasta atendis liberan lokon\n",
-        if senditaj == ipc::MAKSAJ_MESAGOJ + 1 {
+        if senditaj == ik::MAKSAJ_MESAGOJ + 1 {
             "bone"
         } else {
             "MALBONE"
@@ -969,7 +969,7 @@ fn premrega_ricevo() {
     loop {
         let premregoj = {
             let _gardo = InterrompaGardo::nova();
-            ipc::nuna_statistiko().premregoj
+            ik::nuna_statistiko().premregoj
         };
         if premregoj != 0 {
             break;
@@ -978,8 +978,8 @@ fn premrega_ricevo() {
     }
     let mut nombro = 0;
     let mut idento = (0u64, 0u64);
-    for _ in 0..=ipc::MAKSAJ_MESAGOJ {
-        match ipc::ricevi_mesagon(1) {
+    for _ in 0..=ik::MAKSAJ_MESAGOJ {
+        match ik::ricevi_mesagon(1) {
             Ok(mesago) => {
                 nombro += 1;
                 idento = (mesago.sendinto, mesago.ricevonto);
@@ -987,7 +987,7 @@ fn premrega_ricevo() {
             Err(_) => break,
         }
     }
-    let bone = nombro == ipc::MAKSAJ_MESAGOJ + 1 && idento == (1, 2);
+    let bone = nombro == ik::MAKSAJ_MESAGOJ + 1 && idento == (1, 2);
     crate::skribu!(
         "[fadeno 2] premrego ({}): {} mesaĝoj, idento sendinto={}, ricevonto={}\n",
         if bone { "bone" } else { "MALBONE" },
@@ -1005,23 +1005,22 @@ fn premrega_ricevo() {
 /// fremda mesaĝo ne kontentigas la vokon.
 fn tempolima_provo(id: u64) {
     let t0 = crate::arkitekturo::temporizilaj_tikoj();
-    let nebloka = ipc::ricevi_mesagon_atenda(Some(3), ipc::Atendo::Nebloka)
+    let nebloka = ik::ricevi_mesagon_atenda(Some(3), ik::Atendo::Nebloka)
         .err()
-        .map_or(0, ipc::IpcEraro::kodo);
+        .map_or(0, ik::IkEraro::kodo);
     let nebloka_daŭro = crate::arkitekturo::temporizilaj_tikoj() - t0;
 
     let t1 = crate::arkitekturo::temporizilaj_tikoj();
-    let tempolimo = ipc::ricevi_mesagon_atenda(Some(3), ipc::Atendo::Tempa(5))
+    let tempolimo = ik::ricevi_mesagon_atenda(Some(3), ik::Atendo::Tempa(5))
         .err()
-        .map_or(0, ipc::IpcEraro::kodo);
+        .map_or(0, ik::IkEraro::kodo);
     let tempolima_daŭro = crate::arkitekturo::temporizilaj_tikoj() - t1;
 
-    let (tempa_kodo, tempa_tipo) = match ipc::ricevi_mesagon_atenda(None, ipc::Atendo::Tempa(200)) {
+    let (tempa_kodo, tempa_tipo) = match ik::ricevi_mesagon_atenda(None, ik::Atendo::Tempa(200)) {
         Ok(mesago) => (0, mesago.tipo),
         Err(eraro) => (eraro.kodo(), 0),
     };
-    let (senfina_kodo, senfina_tipo) = match ipc::ricevi_mesagon_atenda(None, ipc::Atendo::Senfina)
-    {
+    let (senfina_kodo, senfina_tipo) = match ik::ricevi_mesagon_atenda(None, ik::Atendo::Senfina) {
         Ok(mesago) => (0, mesago.tipo),
         Err(eraro) => (eraro.kodo(), 0),
     };
@@ -1049,6 +1048,6 @@ fn tempolima_provo(id: u64) {
     );
 }
 
-fn teksto(mesago: &ipc::Mesago) -> &str {
+fn teksto(mesago: &ik::Mesago) -> &str {
     core::str::from_utf8(mesago.enhavo()).unwrap_or("<nevalida>")
 }

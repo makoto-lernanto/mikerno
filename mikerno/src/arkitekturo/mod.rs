@@ -102,15 +102,15 @@ pub use malantaŭo::firmigo::{
 /// `x86_64` ricevas la frambufferion per Multiboot2, do ĉi tiu funkcio nur
 /// redonas `None`; `arm64` anoncas RAM-bufron al `ramfb` per `fw_cfg`.
 #[cfg(target_arch = "x86_64")]
-pub fn krei_frambufferon(_alokilo: &mut KadraAlokilo) -> Option<crate::ekrano::FramebufferInformo> {
+pub fn krei_frambufon(_alokilo: &mut KadraAlokilo) -> Option<crate::ekrano::FrambufaInformo> {
     None
 }
 
 #[cfg(target_arch = "aarch64")]
-pub fn krei_frambufferon(
+pub fn krei_frambufon(
     alokilo: &mut crate::memoro::kadro::KadraAlokilo,
-) -> Option<crate::ekrano::FramebufferInformo> {
-    arm64::fw_cfg::krei_frambufferon(alokilo)
+) -> Option<crate::ekrano::FrambufaInformo> {
+    arm64::fw_cfg::krei_frambufon(alokilo)
 }
 
 /// La firmigaj trajtoj faritaj de la platformo, por la starta raporto.
@@ -147,9 +147,9 @@ pub fn analizi_eniron(starta_informo: *const u8, magio: u32) -> Result<EniraInfo
 /// Konkreta adresa spaco de la aktiva platformo. La nukleo bezonas nomon por
 /// konservi unu spacon por ĉiu procezo; la cetera kodo uzas la trait-on.
 #[cfg(target_arch = "x86_64")]
-pub type Spaco = malantaŭo::pagxado::X86AdresaSpaco;
+pub type Spaco = malantaŭo::pagado::X86AdresaSpaco;
 #[cfg(target_arch = "aarch64")]
-pub type Spaco = arm64::pagxado::ArmAdresaSpaco;
+pub type Spaco = arm64::pagado::ArmAdresaSpaco;
 
 /// Kreu freŝan, malplenan adresan spacon por la nukleo mem.
 #[cfg(target_arch = "x86_64")]
@@ -241,27 +241,27 @@ pub fn pravalorizi_temporizilon() {
 /// La fizika radiko, kiun `CR3` (aŭ `TTBR0_EL1`) nun montras.
 #[cfg(target_arch = "x86_64")]
 pub fn aktiva_adreso_spaco() -> u64 {
-    malantaŭo::pagxado::aktiva_radiko().adreso()
+    malantaŭo::pagado::aktiva_radiko().adreso()
 }
 
 #[cfg(target_arch = "aarch64")]
 pub fn aktiva_adreso_spaco() -> u64 {
-    arm64::pagxado::aktiva_radiko()
+    arm64::pagado::aktiva_radiko()
 }
 
 /// Ŝaltu `CR3` (aŭ `TTBR0_EL1`) al la donita radika paĝtabelo.
 ///
 /// # Sekureco
-/// Vidu `pagxado::ŝalti_radikon`.
+/// Vidu `pagado::ŝalti_radikon`.
 #[cfg(target_arch = "x86_64")]
 pub unsafe fn ŝalti_adresan_spacon(radiko: u64) {
-    unsafe { malantaŭo::pagxado::ŝalti_radikon(FizikaAdreso::nova(radiko)) }
+    unsafe { malantaŭo::pagado::ŝalti_radikon(FizikaAdreso::nova(radiko)) }
 }
 
 #[cfg(target_arch = "aarch64")]
 pub unsafe fn ŝalti_adresan_spacon(radiko: u64) {
     // SAFETY: la alvokanto garantias vivan radikon kaj interrompojn malŝaltitaj.
-    unsafe { arm64::pagxado::ŝalti_radikon(radiko) }
+    unsafe { arm64::pagado::ŝalti_radikon(radiko) }
 }
 
 /// Pretigu la kernan stakon por transiroj Ring 3 → Ring 0.

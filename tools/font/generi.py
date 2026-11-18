@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rasterigu la tiparojn de la framebuffer-konzolo.
+"""Rasterigu la tiparojn de la frambufa konzolo.
 
 El DejaVu Sans Mono ni produktas kvar memstarajn bitmapajn "strekojn"
 (8x16, 12x24, 16x32, 32x64). Ĉiu streko enhavas 111 glifojn en fiksa ordo:

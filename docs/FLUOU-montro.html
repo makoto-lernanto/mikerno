@@ -16,7 +16,7 @@
       --akcento: #FFB454;
       --akcenta-soft: color-mix(in srgb, var(--akcento) 14%, transparent);
       --sukcesa-soft: color-mix(in srgb, var(--sukceso) 12%, transparent);
-      --dangxera-soft: color-mix(in srgb, var(--dangxero) 12%, transparent);
+      --danĝera-soft: color-mix(in srgb, var(--danĝero) 12%, transparent);
       --averta-soft: color-mix(in srgb, var(--averto) 12%, transparent);
       --informa-soft: color-mix(in srgb, var(--informo) 12%, transparent);
       --tiparo: "Segoe UI", "Noto Sans", "DejaVu Sans", system-ui, sans-serif;
@@ -237,7 +237,7 @@
     }
 
     /* ── Ŝaltilo ─────────────────────────────────────────────────────── */
-    .sxaltilo {
+    .ŝaltilo {
       display: inline-flex;
       align-items: center;
       gap: 9px;
@@ -248,7 +248,7 @@
       user-select: none;
     }
 
-    .sxaltilo input {
+    .ŝaltilo input {
       appearance: none;
       -webkit-appearance: none;
       position: relative;
@@ -263,7 +263,7 @@
       transition: background .2s var(--mov-kurbo), border-color .2s var(--mov-kurbo);
     }
 
-    .sxaltilo input::after {
+    .ŝaltilo input::after {
       content: "";
       position: absolute;
       top: 4px;
@@ -275,27 +275,27 @@
       transition: transform .22s var(--mov-kurbo), width .18s var(--mov-kurbo), background .2s linear;
     }
 
-    .sxaltilo input:hover::after {
+    .ŝaltilo input:hover::after {
       width: 17px;
     }
 
-    .sxaltilo input:checked {
+    .ŝaltilo input:checked {
       background: color-mix(in srgb, var(--akcento) 62%, transparent);
       border-color: color-mix(in srgb, var(--akcento) 70%, transparent);
     }
 
-    .sxaltilo input:checked::after {
+    .ŝaltilo input:checked::after {
       transform: translateX(18px);
       width: 13px;
       background: #0A0D1C;
     }
 
-    .sxaltilo input:checked:hover::after {
+    .ŝaltilo input:checked:hover::after {
       width: 17px;
       transform: translateX(14px);
     }
 
-    .sxaltilo.malgranda {
+    .ŝaltilo.malgranda {
       font-size: 12px;
     }
 
@@ -667,7 +667,7 @@
       flex: none;
     }
 
-    .flanko .sxaltilo {
+    .flanko .ŝaltilo {
       margin: 8px 8px 0;
       font-size: 12px;
     }
@@ -760,13 +760,13 @@
       color: var(--teksto);
     }
 
-    .buto.dangxera {
-      background: var(--dangxera-soft);
+    .buto.danĝera {
+      background: var(--danĝera-soft);
       color: var(--danĝero);
       border-color: color-mix(in srgb, var(--danĝero) 34%, transparent);
     }
 
-    .buto.dangxera:hover {
+    .buto.danĝera:hover {
       background: color-mix(in srgb, var(--danĝero) 20%, transparent);
     }
 
@@ -1251,7 +1251,7 @@
     .enira-eraro {
       padding: 16px;
       font-size: 12.5px;
-      color: var(--dangxero);
+      color: var(--danĝero);
     }
 
     .enira-butono {
@@ -1610,7 +1610,7 @@
     }
 
     /* ── Fulmomesaĝoj ────────────────────────────────────────────────── */
-    .fulmomesagxoj {
+    .fulmomesaĝoj {
       position: fixed;
       right: 20px;
       bottom: 20px;
@@ -1622,7 +1622,7 @@
       pointer-events: none;
     }
 
-    .fulmomesagxo {
+    .fulmomesaĝo {
       padding: 11px 14px;
       border: 1px solid var(--limo);
       border-radius: 10px;
@@ -1634,19 +1634,19 @@
       border-left: 3px solid var(--informo);
     }
 
-    .fulmomesagxo.sukceso {
+    .fulmomesaĝo.sukceso {
       border-left-color: var(--sukceso);
     }
 
-    .fulmomesagxo.averto {
+    .fulmomesaĝo.averto {
       border-left-color: var(--averto);
     }
 
-    .fulmomesagxo.dangxero {
+    .fulmomesaĝo.danĝero {
       border-left-color: var(--danĝero);
     }
 
-    .fulmomesagxo.foriri {
+    .fulmomesaĝo.foriri {
       animation: elflugi .22s var(--mov-kurbo) forwards;
     }
 
@@ -1822,7 +1822,7 @@
 </head>
 
 <body>
-  <a class="salto" href="#cxefa">Salti al la enhavo</a>
+  <a class="salto" href="#ĉefa">Salti al la enhavo</a>
 
   <header class="kapo">
     <div class="marko">
@@ -1834,7 +1834,7 @@
       <span class="versio">0.1</span>
     </div>
     <div class="agordoj">
-      <label class="sxaltilo">
+      <label class="ŝaltilo">
         <span id="temoEtikedo">Malluma</span>
         <input type="checkbox" id="temoSxaltilo" checked aria-label="Malluma temo">
       </label>
@@ -1843,7 +1843,7 @@
           aria-label="Akcento oro" aria-pressed="true"></button>
         <button class="akcento-elektilo" type="button" data-akcento="koralo" style="--koloro:#FF5C8A"
           aria-label="Akcento koralo" aria-pressed="false"></button>
-        <button class="akcento-elektilo" type="button" data-akcento="cxielo" style="--koloro:#4CC9FF"
+        <button class="akcento-elektilo" type="button" data-akcento="ĉielo" style="--koloro:#4CC9FF"
           aria-label="Akcento ĉielo" aria-pressed="false"></button>
         <button class="akcento-elektilo" type="button" data-akcento="verdo" style="--koloro:#57E389"
           aria-label="Akcento verdo" aria-pressed="false"></button>
@@ -1855,7 +1855,7 @@
     </div>
   </header>
 
-  <main id="cxefa">
+  <main id="ĉefa">
     <div class="heroo">
       <p class="supera-etikedo">Norma gvidilo · ABI 2 · 2026-11-15</p>
       <h1>Ĉio <span>fluas.</span></h1>
@@ -1946,7 +1946,7 @@
               </button>
 
               <div class="flanka-etikedo">Agordoj</div>
-              <label class="sxaltilo">
+              <label class="ŝaltilo">
                 <input type="checkbox" checked>
                 Aŭtomata ĝisdatigo
               </label>
@@ -1955,10 +1955,10 @@
             <div class="redaktilo">
               <div class="ilobreto">
                 <button type="button" class="buto akcenta" id="konservi">Konservi</button>
-                <button type="button" class="buto norma" id="antauxrigardo">Antaŭrigardo</button>
-                <button type="button" class="buto dangxera" id="forigi">Forigi</button>
+                <button type="button" class="buto norma" id="antaŭrigardo">Antaŭrigardo</button>
+                <button type="button" class="buto danĝera" id="forigi">Forigi</button>
                 <span class="spaco"></span>
-                <label class="sxaltilo malgranda">
+                <label class="ŝaltilo malgranda">
                   <input type="checkbox" checked>
                   Ĝisdatigi
                 </label>
@@ -2148,7 +2148,7 @@
   </main>
 
   <div class="enira-tavolo" id="eniraTavolo" hidden></div>
-  <div class="fulmomesagxoj" id="fulmomesagxoj" aria-live="polite" aria-label="Fulmomesaĝoj"></div>
+  <div class="fulmomesaĝoj" id="fulmomesaĝoj" aria-live="polite" aria-label="Fulmomesaĝoj"></div>
 
   <script>
     "use strict";
@@ -2169,23 +2169,23 @@
     const AKCENTOJ = {
       oro: "#FFB454",
       koralo: "#FF5C8A",
-      cxielo: "#4CC9FF",
+      ĉielo: "#4CC9FF",
       verdo: "#57E389",
       viola: "#A78BFA",
       bluo: "#5B7CFA"
     };
     const AKCENTAJ_NOMOJ = {
-      oro: "oro", koralo: "koralo", cxielo: "ĉielo",
+      oro: "oro", koralo: "koralo", ĉielo: "ĉielo",
       verdo: "verdo", viola: "viola", bluo: "bluo"
     };
 
     const temoSxaltilo = document.getElementById("temoSxaltilo");
     const temoEtikedo = document.getElementById("temoEtikedo");
 
-    function fulmomesagxo(titolo, teksto, semantiko) {
-      const ujo = document.getElementById("fulmomesagxoj");
+    function fulmomesaĝo(titolo, teksto, semantiko) {
+      const ujo = document.getElementById("fulmomesaĝoj");
       const el = document.createElement("div");
-      el.className = "fulmomesagxo" + (semantiko ? " " + semantiko : "");
+      el.className = "fulmomesaĝo" + (semantiko ? " " + semantiko : "");
       el.innerHTML =
         '<div class="fulma-titolo">' + eskapi(titolo) + '</div>' +
         '<div class="fulma-teksto">' + eskapi(teksto) + '</div>';
@@ -2204,7 +2204,7 @@
       temoEtikedo.textContent = valoro === "malluma" ? "Malluma" : "Hela";
       try { localStorage.setItem("fluou-temo", valoro); } catch (e) { /* sen poŝo */ }
       if (sciigi) {
-        fulmomesagxo("Temo", "La tuta interfaco nun estas " + valoro + ".", "sukceso");
+        fulmomesaĝo("Temo", "La tuta interfaco nun estas " + valoro + ".", "sukceso");
       }
     }
 
@@ -2216,7 +2216,7 @@
       });
       try { localStorage.setItem("fluou-akcento", valoro); } catch (e) { /* sen poŝo */ }
       if (sciigi) {
-        fulmomesagxo("Akcento", "Nova akcento: " + AKCENTAJ_NOMOJ[valoro] + ".", "sukceso");
+        fulmomesaĝo("Akcento", "Nova akcento: " + AKCENTAJ_NOMOJ[valoro] + ".", "sukceso");
       }
     }
 
@@ -2280,7 +2280,7 @@
       });
     });
 
-    function sxangxiMaksimumon() {
+    function ŝanĝiMaksimumon() {
       const pligranda = fenestro.classList.toggle("pligrandigita");
       regiloMaksimumi.setAttribute("aria-label", pligranda ? "Restarigi" : "Pligrandigi");
       regiloMaksimumi.title = pligranda ? "Restarigi" : "Pligrandigi";
@@ -2290,14 +2290,14 @@
       butono.addEventListener("click", () => {
         const ago = butono.dataset.ago;
         if (ago === "pligrandigi") {
-          sxangxiMaksimumon();
+          ŝanĝiMaksimumon();
           return;
         }
         if (ago === "malgrandigi") {
-          if (fenestro.classList.contains("pligrandigita")) sxangxiMaksimumon();
+          if (fenestro.classList.contains("pligrandigita")) ŝanĝiMaksimumon();
           fenestro.classList.add("malgrandigita");
           tasko.hidden = false;
-          fulmomesagxo("Malgrandigita", "Notilo atendas en la tasko.", "informo");
+          fulmomesaĝo("Malgrandigita", "Notilo atendas en la tasko.", "informo");
           return;
         }
         if (ago === "fermi") {
@@ -2306,14 +2306,14 @@
             fenestro.hidden = true;
             restarigo.hidden = false;
           }, 260);
-          fulmomesagxo("Fermi", "La kompozitoro revokis la FENESTRO-tenilon.", "averto");
+          fulmomesaĝo("Fermi", "La kompozitoro revokis la FENESTRO-tenilon.", "averto");
         }
       });
     });
 
     document.getElementById("titolstrio").addEventListener("dblclick", (e) => {
       if (e.target.closest(".regiloj")) return;
-      sxangxiMaksimumon();
+      ŝanĝiMaksimumon();
     });
 
     tasko.addEventListener("click", () => {
@@ -2333,19 +2333,19 @@
       regiloMaksimumi.title = "Pligrandigi";
       fenestraTitolo.textContent = "Notilo — notoj.txt";
       redaktataTeksto.value = DOSIERA_ENHAVO["notoj.txt"];
-      fulmomesagxo("Remalfermita", "Nova FENESTRO-tenilo atribuiĝis al Notilo.", "sukceso");
+      fulmomesaĝo("Remalfermita", "Nova FENESTRO-tenilo atribuiĝis al Notilo.", "sukceso");
     });
 
     document.getElementById("konservi").addEventListener("click", () => {
       document.getElementById("informaTeksto").textContent = "Konservita ĵus";
       document.getElementById("informaStrio").hidden = false;
-      fulmomesagxo("Konservite", "La dosiero konserviĝis tra la FENESTRO-tenilo.", "sukceso");
+      fulmomesaĝo("Konservite", "La dosiero konserviĝis tra la FENESTRO-tenilo.", "sukceso");
     });
-    document.getElementById("antauxrigardo").addEventListener("click", () => {
-      fulmomesagxo("Antaŭrigardo", "Nova FENESTRO malfermiĝis en la kompozitoro.", "informo");
+    document.getElementById("antaŭrigardo").addEventListener("click", () => {
+      fulmomesaĝo("Antaŭrigardo", "Nova FENESTRO malfermiĝis en la kompozitoro.", "informo");
     });
     document.getElementById("forigi").addEventListener("click", () => {
-      fulmomesagxo("Danĝera ago", "Forigo postulas konfirmon (K06).", "dangxero");
+      fulmomesaĝo("Danĝera ago", "Forigo postulas konfirmon (K06).", "danĝero");
     });
     document.getElementById("fermiStrieton").addEventListener("click", () => {
       document.getElementById("informaStrio").hidden = true;
@@ -2398,7 +2398,7 @@
     const ligoMaksimumi = document.getElementById("ligoMaksimumi");
     const ligoRestarigo = document.getElementById("ligoRestarigo");
 
-    function sxangxiLigonMaksimumon() {
+    function ŝanĝiLigonMaksimumon() {
       const pligranda = terminalo.classList.toggle("pligrandigita");
       ligoMaksimumi.setAttribute("aria-label", pligranda ? "Restarigi" : "Pligrandigi");
       ligoMaksimumi.title = pligranda ? "Restarigi" : "Pligrandigi";
@@ -2408,14 +2408,14 @@
       butono.addEventListener("click", () => {
         const ago = butono.dataset.ago;
         if (ago === "pligrandigi") {
-          sxangxiLigonMaksimumon();
+          ŝanĝiLigonMaksimumon();
           return;
         }
         if (ago === "malgrandigi") {
-          if (terminalo.classList.contains("pligrandigita")) sxangxiLigonMaksimumon();
+          if (terminalo.classList.contains("pligrandigita")) ŝanĝiLigonMaksimumon();
           terminalo.classList.add("malgrandigita");
           ligoRestarigo.hidden = false;
-          fulmomesagxo("Malgrandigita", "Ligo atendas sub la sceno.", "informo");
+          fulmomesaĝo("Malgrandigita", "Ligo atendas sub la sceno.", "informo");
           return;
         }
         if (ago === "fermi") {
@@ -2424,7 +2424,7 @@
             terminalo.hidden = true;
             ligoRestarigo.hidden = false;
           }, 260);
-          fulmomesagxo("Fermi", "La kompozitoro revokis la FENESTRO-tenilon de Ligo.", "averto");
+          fulmomesaĝo("Fermi", "La kompozitoro revokis la FENESTRO-tenilon de Ligo.", "averto");
         }
       });
     });
@@ -2450,7 +2450,7 @@
       return d;
     }
     function skrolli() { terminalaKorpo.scrollTop = terminalaKorpo.scrollHeight; }
-    function eraro(mesagxo) { linio("✕ " + eskapi(mesagxo), "eraro"); }
+    function eraro(mesaĝo) { linio("✕ " + eskapi(mesaĝo), "eraro"); }
     function montraValoro(kampo, valoro) {
       if (typeof valoro === "number" && UNUOJ[kampo]) return formatu(valoro) + UNUOJ[kampo];
       return String(valoro);
@@ -2641,7 +2641,7 @@
       }
       agordiTemon(valoro, false);
       linio("Temo ŝanĝita al " + valoro + ".", "sukceso");
-      fulmomesagxo("Temo", "La tuta interfaco nun estas " + valoro + ".", "sukceso");
+      fulmomesaĝo("Temo", "La tuta interfaco nun estas " + valoro + ".", "sukceso");
     }
 
     function akcentoElLigo(argumentoj) {
@@ -2649,8 +2649,8 @@
       const mapo = {
         oro: "oro",
         koralo: "koralo",
-        "ĉielo": "cxielo",
-        cxielo: "cxielo",
+        "ĉielo": "ĉielo",
+        ĉielo: "ĉielo",
         verdo: "verdo",
         viola: "viola",
         bluo: "bluo"
@@ -2662,7 +2662,7 @@
       }
       agordiAkcenton(valoro, false);
       linio("Akcento ŝanĝita al " + AKCENTAJ_NOMOJ[valoro] + ".", "sukceso");
-      fulmomesagxo("Akcento", "Nova akcento: " + AKCENTAJ_NOMOJ[valoro] + ".", "sukceso");
+      fulmomesaĝo("Akcento", "Nova akcento: " + AKCENTAJ_NOMOJ[valoro] + ".", "sukceso");
     }
 
     function plenumiLigon(teksto) {
@@ -2671,9 +2671,9 @@
 
       if (unuaVorto === "eldiri") {
         const spaco = teksto.indexOf(" ");
-        const gxin = spaco === -1 ? "" : teksto.slice(spaco + 1).trim();
-        if (!gxin) { eraro("eldiri: mankas teksto (-2)"); return; }
-        tabelo([{ "mesaĝo": gxin }], ["mesaĝo"]);
+        const ĝin = spaco === -1 ? "" : teksto.slice(spaco + 1).trim();
+        if (!ĝin) { eraro("eldiri: mankas teksto (-2)"); return; }
+        tabelo([{ "mesaĝo": ĝin }], ["mesaĝo"]);
         return;
       }
 
@@ -2809,7 +2809,7 @@
       { nomo: "Temo: hela", priskribo: "Ŝanĝi la tutan FluoU-interfacon al hela temo", tipo: "agordo", grupo: "Agordoj", ikono: "◑", plenumu: () => agordiTemon("hela", true) },
       { nomo: "Akcento: oro", priskribo: "Suna akcento #FFB454", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("oro", true) },
       { nomo: "Akcento: koralo", priskribo: "Krepuska akcento #FF5C8A", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("koralo", true) },
-      { nomo: "Akcento: ĉielo", priskribo: "Ĉiela akcento #4CC9FF", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("cxielo", true) },
+      { nomo: "Akcento: ĉielo", priskribo: "Ĉiela akcento #4CC9FF", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("ĉielo", true) },
       { nomo: "Akcento: verdo", priskribo: "Natura akcento #57E389", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("verdo", true) },
       { nomo: "Akcento: viola", priskribo: "Dua akcento #A78BFA", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("viola", true) },
       { nomo: "Akcento: bluo", priskribo: "Profunda bluo #5B7CFA", tipo: "agordo", grupo: "Agordoj", ikono: "●", plenumu: () => agordiAkcenton("bluo", true) }
@@ -2833,7 +2833,7 @@
         "</button>";
     }
 
-    function sxangxiElekton() {
+    function ŝanĝiElekton() {
       const eroj = enirajRezultoj.querySelectorAll(".enira-ero");
       eroj.forEach((el, i) => {
         const elektita = i === eniraElektita;
@@ -3034,28 +3034,28 @@
         if (navigator.clipboard && navigator.clipboard.writeText) {
           try {
             navigator.clipboard.writeText(valoro).then(
-              () => fulmomesagxo("Kopiite", "La rezulto " + valoro + " kopiiĝis.", "sukceso"),
-              () => fulmomesagxo("Kopiado malsukcesis", "La retumilo ne permesis kopiadon.", "averto")
+              () => fulmomesaĝo("Kopiite", "La rezulto " + valoro + " kopiiĝis.", "sukceso"),
+              () => fulmomesaĝo("Kopiado malsukcesis", "La retumilo ne permesis kopiadon.", "averto")
             );
           } catch (e) {
-            fulmomesagxo("Kopiado malsukcesis", "La retumilo ne permesis kopiadon.", "averto");
+            fulmomesaĝo("Kopiado malsukcesis", "La retumilo ne permesis kopiadon.", "averto");
           }
         } else {
-          fulmomesagxo("Kopiado", "La retumilo ne subtenas kopiadon.", "averto");
+          fulmomesaĝo("Kopiado", "La retumilo ne subtenas kopiadon.", "averto");
         }
         return;
       }
       if (ero.tipo === "delegado") {
         fermiEniron();
         ruliLigon(ero.komando);
-        fulmomesagxo("Ligo", "Rulita en la objekta ŝelo.", "sukceso");
+        fulmomesaĝo("Ligo", "Rulita en la objekta ŝelo.", "sukceso");
         montruLigon();
         return;
       }
       if (ero.tipo === "komando") {
         fermiEniron();
         ruliLigon(ero.nomo);
-        fulmomesagxo("Ligo", "Rulita: " + ero.nomo, "sukceso");
+        fulmomesaĝo("Ligo", "Rulita: " + ero.nomo, "sukceso");
         montruLigon();
         return;
       }
@@ -3080,14 +3080,14 @@
         e.preventDefault();
         if (!enirajEroj.length) return;
         eniraElektita = (eniraElektita + 1) % enirajEroj.length;
-        sxangxiElekton();
+        ŝanĝiElekton();
         return;
       }
       if (e.key === "ArrowUp") {
         e.preventDefault();
         if (!enirajEroj.length) return;
         eniraElektita = (eniraElektita - 1 + enirajEroj.length) % enirajEroj.length;
-        sxangxiElekton();
+        ŝanĝiElekton();
         return;
       }
       if (e.key === "Enter") {
@@ -3120,7 +3120,7 @@
       const butono = e.target.closest(".enira-ero");
       if (!butono) return;
       eniraElektita = Number(butono.dataset.indekso);
-      sxangxiElekton();
+      ŝanĝiElekton();
     });
 
     document.getElementById("malfermiEniron").addEventListener("click", malfermiEniron);

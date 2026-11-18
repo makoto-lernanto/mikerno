@@ -6,7 +6,7 @@ pub mod hazardigo;
 pub mod idt;
 pub mod interrompo;
 pub mod mb2;
-pub mod pagxado;
+pub mod pagado;
 pub mod pci;
 pub mod planado;
 pub mod procesoro;
@@ -22,6 +22,6 @@ pub fn pravalorizi() {
     seria::pravalorizi();
     gdt::instali();
     idt::instali();
-    pagxado::pravalorizi();
+    pagado::pravalorizi();
     firmigo::pravalorizi();
 }

@@ -101,14 +101,14 @@ fn legi_vorton(bus: u8, slot: u8, func: u8, offset: u8) -> u16 {
 
 fn skribi_vorton(bus: u8, slot: u8, func: u8, offset: u8, valoro: u16) {
     let antaŭe = legi_dvardon(bus, slot, func, offset & 0xfc);
-    let sxovo = (offset & 2) * 8;
-    let masko = !(0xffffu32 << sxovo);
+    let ŝovo = (offset & 2) * 8;
+    let masko = !(0xffffu32 << ŝovo);
     skribi_dvardon(
         bus,
         slot,
         func,
         offset & 0xfc,
-        (antaŭe & masko) | ((valoro as u32) << sxovo),
+        (antaŭe & masko) | ((valoro as u32) << ŝovo),
     );
 }
 
@@ -140,8 +140,8 @@ pub fn malfermi(aparato: &Aparato) -> Result<Kapoj, &'static str> {
         komando | (1 << 1) | (1 << 2),
     );
 
-    let status = legi_vorton(aparato.bus, aparato.slot, aparato.func, 6);
-    if status & (1 << 4) == 0 {
+    let stato = legi_vorton(aparato.bus, aparato.slot, aparato.func, 6);
+    if stato & (1 << 4) == 0 {
         return Err("PCI-kapablolisto mankas");
     }
 
