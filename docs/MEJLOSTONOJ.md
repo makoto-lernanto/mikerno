@@ -1570,6 +1570,15 @@ la ceterajn scenarojn.
 | arm64 Image | sama duopo; `[dosiersistemo] listado de notoj: dua.txt, unua.txt` |
 | arm64 UEFI-ISO | sama duopo; la kvar vojoj estas verdaj |
 
+**Nuba CI (2026-11-18).** Runo
+[#44246263834](https://github.com/makoto-lernanto/mikerno/actions/runs/44246263834)
+ĉe `cbfca8b`: ĉiuj 43 taskoj verdaj — `lint-and-build` (23 s, inkluzive
+`just build-arm` por la plata arm64-`Image`), `kani-prepare` (49 s) kaj 41
+pruvoj de la matrico `kani-verify`; la tuta runo daŭris 11 min 9 s. La solaj
+anoncoj estis ĝeneralaj avertoj pri Node.js 20, kiuj ne rilatas la kodon.
+La SNDS-memprovo ne havas propran Kani-pruvon; ĝi ruliĝas en la startoj, dum
+la formala pordego restas la ekzistanta matrico.
+
 **Limigoj.** Nurlega; unu ebeno da dosierujoj sen aparta VFS; dosiero estas
 kontigua ene de sia inodo; neniu kaŝmemoro; la bildo estas fiksita dum
 konstruo (ĝisdatigo postulas novan bildon); maksimuma dosiero 64 KiB (C17.4).
