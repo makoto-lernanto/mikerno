@@ -1,0 +1,3 @@
+Ĉi tiu estas la unua SNDS-bildo de MiKerno.
+La dosieroj venas el mikerno/snds/ kaj estas pakitaj per
+tools/krei_snds_img.sh. La dosiersistemo estas nurlega.

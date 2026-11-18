@@ -25,14 +25,13 @@ if [[ -z "$QEMU" ]]; then
     fi
 fi
 
-# La testdisko servas al la virtio-blk-memprovo (M17). `-snapshot` certigas, ke
-# la memprovo ne modifu la dosieron eĉ se la restarigo malsukcesus.
-TESTDISKO="$ROOT/target/testdisko.img"
-if [[ ! -f "$TESTDISKO" ]]; then
-    "$ROOT/tools/krei-testan-diskon.sh" "$TESTDISKO" >/dev/null
-fi
+# La SNDS-bildo servas al la virtio-blk-pelilo kaj al la dosiersistemo (M17).
+# Ĝi estas regenerata antaŭ ĉiu starto; `-snapshot` certigas, ke la memprovo ne
+# modifu la dosieron eĉ se la restarigo malsukcesus.
+SNDS="$ROOT/target/mikerno.snds"
+"$ROOT/tools/krei_snds_img.sh" "$ROOT/mikerno/snds" "$SNDS" >/dev/null
 DISKA_ARGS=(
-    -drive "file=$TESTDISKO,format=raw,if=none,id=disk0"
+    -drive "file=$SNDS,format=raw,if=none,id=disk0"
     -device "virtio-blk-device,drive=disk0"
     -global "virtio-mmio.force-legacy=false"
     -snapshot

@@ -16,7 +16,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IPC kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.7.0 (workspace)
+- **Versio:** 0.7.1 (workspace)
 - **Arkitekturo:** `x86_64` kaj `arm64` (AArch64), unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -145,6 +145,7 @@ cargo install just          # opcia
 | dosfstools / mtools | Nur por `just iso-arm` (`sudo apt install dosfstools mtools`) |
 | `just` | Opcia, sed rekomendata por la difinitaj taskoj |
 | bash | Lanĉilo de `tools/run-qemu.sh` kaj `tools/run-qemu-arm.sh` |
+| python3 | SNDS-bildo por `tools/krei_snds_img.sh` (kutime jam instalita) |
 | Kani | Nur por `just verify` (`cargo kani`) |
 
 Instalu la celajn triopojn:
@@ -787,7 +788,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.7.0!
+[MiKerno] Saluton, mi estas MiKerno v0.7.1!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes

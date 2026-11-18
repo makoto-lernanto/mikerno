@@ -77,7 +77,7 @@ window.TRADUKOJ_ANGLA = {
     "The mandatory visual language of Horizonto: three materials, six accents, Windows-model windows and no accidental colours.",
   "kapabloj.k6.titolo": "Storage",
   "kapabloj.k6.teksto":
-    "virtio-blk reads and writes 64 sectors over PCI on x86_64 and MMIO on arm64; the memory probe restores the contents.",
+    "virtio-blk reads and writes 64 sectors over PCI on x86_64 and MMIO on arm64; SNDS mounts the image and reads its files.",
 
   "fluou.titolo": "A visual language, not an accidental style",
   "fluou.teksto":
@@ -114,7 +114,7 @@ window.TRADUKOJ_ANGLA = {
   "ark.t3.teksto":
     "The shared contract between the kernel and user space: ABI 2, Handle and Message.",
   "ark.t4.teksto":
-    "Scheduler, IPC, memory, interrupts and virtio-blk on x86_64 and arm64.",
+    "Scheduler, IPC, memory, interrupts, virtio-blk and SNDS on x86_64 and arm64.",
   "ark.t5.titolo": "Compositor",
   "ark.t5.teksto":
     "An isolated service that accepts only windows with a valid FENESTRO handle.",
@@ -147,14 +147,14 @@ window.TRADUKOJ_ANGLA = {
   "mej.m15.titolo": "arm64",
   "mej.m15.teksto": "EL0, ABI 2, ramfb and PAN.",
   "mej.m17.titolo": "Storage",
-  "mej.m17.teksto": "virtio-blk over PCI and MMIO.",
+  "mej.m17.teksto": "virtio-blk over PCI and MMIO; SNDS with 4 files.",
   "mej.m18.titolo": "CI and verification",
   "mej.m18.teksto": "43/43 jobs green; tests are still coming.",
   "mej.ligilo": "All milestones in the documentation",
 
   "eligo.titolo": "Not a mock-up — the console",
   "eligo.teksto":
-    "The serial output of the current ISO under QEMU, including the virtio-blk memory probe. Both architectures produce the same framebuffer hash.",
+    "The serial output of the current ISO under QEMU, including the virtio-blk memory probe and the SNDS mount. Both architectures produce the same framebuffer hash.",
   "eligo.fenestro.titolo": "Ligo — serial output",
   "eligo.stato": "Connected",
   "eligo.kopii": "Copy",
@@ -175,7 +175,7 @@ window.TRADUKOJ_ANGLA = {
   "elssxuti.elssxuti": "Download",
   "elssxuti.kopii": "Copy SHA-256",
   "elssxuti.noto":
-    "For the full memory probe, including virtio-blk, use the repository: <code>just run-iso</code> or <code>just run-iso-arm</code>. The ISO itself boots without the test disk.",
+    "For the full memory probe, including virtio-blk and SNDS, use the repository: <code>just run-iso</code> or <code>just run-iso-arm</code>. The ISO itself boots; the launcher adds the SNDS image.",
   "elssxuti.gvidilo": "Quick start in README",
 
   "piedo.teksto":

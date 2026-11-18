@@ -60,7 +60,15 @@ kaj protokolaj nomoj sekvu ĝin.
 | `uzita ringo` | used ring | `Uzita`, `UzitaEro`. |
 | `sciigi` | notify | `sciigi(vico)`; vica pordo, ne interrompo. |
 | `kapablo` | capability | `Kapo`, `Kapoj`; PCI-kapablo. |
-| `testdisko` | test disk | `tools/krei-testan-diskon.sh`. |
+| `SNDS` | Simple Read-Only File System | Simpla NurLega Dosiersistemo; magio `SNDS`, versio 1, 512-bajtaj sektoroj. |
+| `dosiersistemo` | file system | `SimplaDosiersistemo` en `konservado/snds.rs`. |
+| `superbloko` | superblock | Sektoro 0: magio, versio, grandoj, limoj kaj radika inodo. |
+| `inodo` | inode | 16 bajtoj: tipo, grando, unua sektoro, sektornombro. |
+| `dosieruja ero` | directory entry | 64 bajtoj: inoda indekso + 60-bajta nomo kun fina NUL. |
+| `datumbloko` | data block | Kontiguaj 512-bajtaj sektoroj de dosiero aŭ dosierujo. |
+| `nurlega` | read-only | SNDS ne subtenas skribon aŭ kreadon de dosieroj. |
+| `munti` | mount | `snds::pravalorizi()` validigas la superblokon kaj memprovas la bildon. |
+| `SNDS-bildo` | SNDS image | `target/mikerno.snds`, kreata de `tools/krei_snds_img.sh`. |
 | `selektilo` | selector | |
 | `pordego` | gate | |
 | `interrompa pordego` | interrupt gate | Malŝaltas `RFLAGS.IF`. |
@@ -420,7 +428,7 @@ eksteraj protokolaj nomoj:
 `GICD_IPRIORITYR`, `GICD_ITARGETSR`, `GICC_CTLR`, `GICC_PMR`, `GICC_IAR`,
 `GICC_EOIR`, `PXN`, `UXN`, `PAN`, `PSCI`, `WFI`, `HCR_EL2`, `eret`, `svc`,
 `fw_cfg`, `FW_CFG_FILE_DIR`, `qemu,fw-cfg-mmio`, `etc/ramfb`, `ramfb`,
-`RAMFBCfg`, `XR24`, `FNV-1a`, `virtio-blk`, `virtio-pci`, `virtio-mmio`,
+`RAMFBCfg`, `XR24`, `FNV-1a`, `SNDS`, `virtio-blk`, `virtio-pci`, `virtio-mmio`,
 `virtqueue`, `BAR`, `ID_AA64MMFR1_EL1`, `SCTLR_EL1.SPAN`, `msr pan`,
 `cortex-a76`.
 

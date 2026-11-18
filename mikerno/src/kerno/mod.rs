@@ -186,8 +186,13 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         crate::skribu!("[kerno] GICv2 kaj paĝado pretaj; temporizilo 100 Hz\n");
     }
 
-    if let Err(eraro) = crate::konservado::pravalorizi(&mut spaco, kadra_alokilo()) {
-        crate::skribu!("[konservado] virtio-blk (MALBONE): {eraro}\n");
+    match crate::konservado::pravalorizi(&mut spaco, kadra_alokilo()) {
+        Ok(()) => {
+            if let Err(eraro) = crate::konservado::snds::pravalorizi() {
+                crate::skribu!("[dosiersistemo] SNDS (MALBONE): {eraro}\n");
+            }
+        }
+        Err(eraro) => crate::skribu!("[konservado] virtio-blk (MALBONE): {eraro}\n"),
     }
 
     let modulo = informo.moduloj.first();

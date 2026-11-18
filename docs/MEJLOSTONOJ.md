@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-16 · Versio de la workspace: 0.7.0
+> Stato: 2026-11-18 · Versio de la workspace: 0.7.1
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -29,7 +29,7 @@
 | M14 | IPC-firmigo: objektoj, rajtoj, tempolimoj | Plenumita | Ring 0/Ring 3-scenaroj kaj AC/CR3/EOI-provoj verdaj (ABI 2) |
 | M15 | `arm64`-malantaŭo: EL0, ABI 2, `ramfb`, `PAN` | Plenumita | identa piksela haketo sur ambaŭ arkoj |
 | M16 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Parte | dormo 100 ms = 10 tikoj; minimumo ≥ 17 veturoj; arm64-stabileco |
-| M17 | Konservado, dosiersistemo, ŝelo | Parte | `virtio-blk` legas/skribas 64 sektorojn (PCI kaj MMIO) |
+| M17 | Konservado, dosiersistemo, ŝelo | Parte | `virtio-blk` legas/skribas 64 sektorojn; SNDS montras 4 dosierojn kaj 1 dosierujon (PCI kaj MMIO) |
 | M18 | CI, testoj, plena pruvaro | Parte | GitHub Actions verde (fmt, clippy, konstruo, Kani); testoj kaj plena pruvaro mankas |
 | M19 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 | M20 | Plena pruvaro kaj 1.0 | Venonta | — |
@@ -152,6 +152,7 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-16 | 0.7.0 | 54 | 13568 | 10549 | 1753 | 1266 |
 | 2026-11-17 | 0.7.0 | 54 | 13568 | 10549 | 1753 | 1266 |
 | 2026-11-17 | 0.7.0 | 54 | 13568 | 10549 | 1753 | 1266 |
+| 2026-11-18 | 0.7.1 | 55 | 14043 | 10972 | 1771 | 1300 |
 
 ---
 
@@ -1483,8 +1484,9 @@ kaj antaŭ ĉiu legado de la uzita ringo staras `fence(Ordering::SeqCst)`.
 **Kerna API kaj memprovo.** `legi_blokon`, `skribi_blokon` kaj `kapacito` estas
 la publika surfaco; la pelilo komenciĝas post la temporizilo. La memprovo legas
 la unuajn 64 sektorojn, kalkulas FNV-1a-haketon, skribas determinisman ŝablonon
-en la lastan sektoron, relegas ĝin, kaj restarigas la originalon. La testdisko
-(64 sektoroj po 512 bajtoj) venas el `tools/krei-testan-diskon.sh`; ambaŭ
+en la lastan sektoron, relegas ĝin, kaj restarigas la originalon. En Fazo 1 la
+diskon (64 sektoroj po 512 bajtoj) kreis `tools/krei-testan-diskon.sh`; ekde
+Fazo 2 la sama memprovo ruliĝas sur la SNDS-bildo (128 sektoroj). Ambaŭ
 QEMU-scripts aldonas `-drive`/`-device` kaj `-snapshot`, do la memprovo ne
 ŝanĝas la dosieron.
 
@@ -1523,6 +1525,57 @@ unu sektoro per peto, sen IOMMU (M19) kaj sen interrompoj por la fino de DMA.
 
 **Versio.** 0.7.0 (Fazo 1).
 
+#### 1b. Fazo 2 — efektivigita (0.7.1)
+
+**Bildo.** SNDS uzas 512-bajtajn sektorojn kaj little-endian-kampojn. La
+superbloko en sektoro 0 portas la magion `SNDS`, version 1, la sektoran kaj
+inodan grandojn, la nombron da inodoj, la inodan tabelon, la unuan datuman
+sektoron, la kapaciton kaj la radikan inodon. Inodo (16 bajtoj) enhavas la
+tipon (dosiero aŭ dosierujo), la grandon, la unuan sektoron kaj la nombron da
+sektoroj. Dosieruja ero (64 bajtoj) konsistas el 4-bajta inoda indekso kaj
+60-bajta nomo kun fina NUL; nomoj do havas maksimume 59 bajtojn. Dosiero estas
+kontigua ene de sia inodo, kaj la maksimuma grando estas 64 KiB (C17.4). La
+bildo havas almenaŭ 128 sektorojn.
+
+**Pakilo.** `tools/krei_snds_img.sh` legas dosierujon (defaŭlte
+`mikerno/snds/`) kaj skribas `target/mikerno.snds`; `just snds` faras la samon
+sen QEMU. La skripto estas unu `python3`-programo en la ŝelo: ĝi ordigas la
+erojn laŭ UTF-8-bajtoj, rifuzas nomojn pli longajn ol 59 bajtoj, dosierojn pli
+grandajn ol 64 KiB kaj ne-regulajn dosierojn, kaj plenigas la reston per nuloj.
+Du ruloj produktas identan bildon (SHA-256
+`36a7ebd9cc08d2a729025fb285810ea85ec9ec2feac366f041be824f638d4e52`).
+
+**Kerna API.** `konservado/snds.rs` validigas la superblokon kaj ĉiun inodon
+(limoj, sektornombro, tipo) antaŭ ol uzi ĝin. `SimplaDosiersistemo` tenas la
+superblokon post la muntado; `malfermi(vojo)` solvas relativan vojon ekde la
+radika inodo, `legi(dosiero, bufro)` postulas sufiĉe grandan bufron kaj legas
+la tutan dosieron, kaj `listi_dosierujon(vojo, vizito)` donas la erojn al
+kromprogramo. La legadoj uzas la saman `virtio-blk`-pelilon; ne ekzistas
+sektora kaŝmemoro, ĉiu aliro legas la aparaton. La dosiersistemo estas nurlega
+kaj ne havas apartan VFS-tavolon; `exec` uzos ĝin en Fazo 3.
+
+**Memprovo.** Post la muntado la kerno kalkulas FNV-1a-haketon super la nomoj,
+la grandoj kaj la enhavoj de ĉiuj dosieroj, presas la nombrojn kaj la haketon,
+legas `bonveno.txt` kaj komparas ĝin kun la atendata teksto, kaj listigas
+`notoj`. La muntado okazas tuj post la `virtio-blk`-memprovo; se ĝi
+malsukcesas, la kerno presas `[dosiersistemo] SNDS (MALBONE): …` kaj daŭrigas
+la ceterajn scenarojn.
+
+**Lokaj rezultoj (2026-11-18, versio 0.7.1).**
+
+| Vojo | Linio |
+| --- | --- |
+| x86_64 PVH | `[konservado] virtio-blk: 64 sektoroj legitaj, haketo 0x840ee03e1d84f800`; `[dosiersistemo] SNDS: 4 dosieroj, 1 dosierujo. Haketo: 0x3ba743bb3a5561c3` |
+| x86_64 BIOS-ISO | sama duopo; `[dosiersistemo] legado (bone): bonveno.txt, 18 bajtoj` |
+| arm64 Image | sama duopo; `[dosiersistemo] listado de notoj: dua.txt, unua.txt` |
+| arm64 UEFI-ISO | sama duopo; la kvar vojoj estas verdaj |
+
+**Limigoj.** Nurlega; unu ebeno da dosierujoj sen aparta VFS; dosiero estas
+kontigua ene de sia inodo; neniu kaŝmemoro; la bildo estas fiksita dum
+konstruo (ĝisdatigo postulas novan bildon); maksimuma dosiero 64 KiB (C17.4).
+
+**Versio.** 0.7.1 (Fazo 2).
+
 #### 2. Evitindaj Eraroj (Konsiloj por la Arkitekto)
 
 1.  **Virtio kaj Memoro-Bariloj**: Virtio-vicoj postulas striktan ordigon de skriboj. En Rust, uzu `core::sync::atomic::compiler_fence(Ordering::SeqCst)` antaŭ ol sciigi la aparaton pri novaj priskribiloj. Malsukceso kaŭzos silentan datuman korupton.
@@ -1535,7 +1588,7 @@ unu sektoro per peto, sen IOMMU (M19) kaj sen interrompoj por la fino de DMA.
 | Kriterio | Stato | Pruvo (Elĉerpaĵo de QEMU) |
 | :--- | :--- | :--- |
 | `virtio-blk` legas blokojn | Plenumita (Fazo 1) | `[konservado] virtio-blk: 64 sektoroj legitaj, haketo 0xc139f0538c943325`; skribo kaj restarigo verdaj (PCI kaj MMIO) |
-| SNDS estas muntita kaj legebla | Pruvota | `[dosiersistemo] SNDS: 4 dosieroj, 1 dosierujo. Haketo: 0x...` |
+| SNDS estas muntita kaj legebla | Plenumita (Fazo 2) | `[dosiersistemo] SNDS: 4 dosieroj, 1 dosierujo. Haketo: 0x3ba743bb3a5561c3`; `[dosiersistemo] legado (bone): bonveno.txt, 18 bajtoj` |
 | `SYS_BRK` funkcias en Ring 3 | Pruvota | `[ring3] heap: alokita 4096 bajtoj ĉe 0x...` |
 | Ŝelo startas kaj akceptas enigon | Pruvota | `mikerno> ` (kursoro klinitas) |
 | `listi` kaj `legi` funkcias | Pruvota | `mikerno> listi` -> `bonveno.txt` <br> `mikerno> legi bonveno.txt` -> `Saluton, MiKerno!` |

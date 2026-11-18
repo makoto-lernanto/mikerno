@@ -1,5 +1,6 @@
 # MiKerno: konstruado, PVH-rulado kaj ISO-rulado.
-# Postulas bash, QEMU (`qemu-system-x86`) kaj, por `iso`, la sisteman `xorriso`.
+# Postulas bash, python3 (SNDS-bildo), QEMU (`qemu-system-x86`) kaj, por `iso`,
+# la sisteman `xorriso`.
 # Por `run-arm` kaj `run-iso-arm` ankaŭ necesas `qemu-system-aarch64`; por la
 # ISO krome UEFI-firmware.
 
@@ -22,8 +23,12 @@ build-kerno:
 # Kongruo kun la antaŭa nomo.
 build: build-kerno
 
+# Paku `mikerno/snds/` en determinsman SNDS-bildon.
+snds:
+    bash tools/krei_snds_img.sh mikerno/snds target/mikerno.snds
+
 # Rulu la kernon rekte per QEMU (PVH, sen ISO).
-run: build-kerno
+run: build-kerno snds
     bash tools/run-qemu.sh {{kerno}}
 
 # Konstruu la kernon por arm64 (plata `Image`) kaj la uzantan bildon.
