@@ -1764,7 +1764,9 @@ restarigita al la antaŭa stato, kaj la eligaj linioj estis forigitaj el
 `x86_64/temporizilo.rs` kaj `arm64/temporizilo.rs`; la tika nombrilo kaj la
 planista voko restas senŝanĝaj. Novaj lokalaj provoj (x86_64 PVH kaj arm64
 Image) montris nulan `[horloĝo]`-eligon dum plursekundaj paŭzoj ĉe la
-prompto, kaj la ŝelo plu funkcias.
+prompto, kaj la ŝelo plu funkcias. La du riparoj estas la kommitoj
+`4abd527` (temporizila eligo) kaj `d66e694` (puraj ASCII-nomoj); la nova
+eldono estas kreita el la dua komito.
 
 **Puraj ASCII-komandnomoj.** Laŭ la lingva regulo, ĉiuj Ligo-komandnomoj
 kaj argumentoj estas Esperantaj vortoj, kiuj jam estas puraj ASCII: la
@@ -1788,15 +1790,15 @@ ellasas la Esperantajn erarojn kun la kodo kaj ne haltigas la ŝelon: `ls` ->
 `procezo 1 estas protekta sistema procezo (-1)`.
 
 **Nuba DI (2026-11-19).** Runo
-[#44550066534](https://github.com/makoto-lernanto/mikerno/actions/runs/44550066534)
-ĉe `0cbce2d`: ĉiuj 43 taskoj verdaj — `kontroli-kaj-konstrui`, `kani-pretigi`
-kaj la 41 pruvoj de la matrico `kani-kontroli`; la runo daŭris 10 min 15 s.
+[#44559431844](https://github.com/makoto-lernanto/mikerno/actions/runs/44559431844)
+ĉe `d66e694`: ĉiuj 43 taskoj verdaj — `kontroli-kaj-konstrui`, `kani-pretigi`
+kaj la 41 pruvoj de la matrico `kani-kontroli`; la runo daŭris 11 min 10 s.
 
 **Eldono.** [`v0.7.3`](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.7.3)
-(etikedo ĉe `0cbce2d`) enhavas `mikerno.iso` (SHA-256
-`bee8283bdfc8db7cd56ca6738784288ddede3ed1e3d2085c9f7fcbc2aebe61a3`) kaj
+(etikedo ĉe `d66e694`) enhavas `mikerno.iso` (SHA-256
+`f1bde04e71a260b87edb998f2901e05800d95b37a6cc93b0bd1b8bba1725daa8`) kaj
 `mikerno-arm.iso` (SHA-256
-`c85fd37a64eea08b84b90b446fa8337148ba4d35554668ec1c29e93894a4f567`). La du
+`e3af18f500e2db7684ffe993c4de85d190b0773b7681bd68129ec0358140a53b`). La du
 ISO-oj estis konstruitaj el la puŝita kodo post la verda DI-runo kaj
 praŝarĝitaj antaŭ la alŝuto; la retejo montras la version 0.7.3 kaj la
 elŝutajn ligilojn al ĉi tiu etikedo.
