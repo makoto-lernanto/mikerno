@@ -78,7 +78,7 @@ CPU_ARGS=(-cpu "${QEMU_CPU:-qemu64,+smep,+smap}")
 # Ĝi estas regenerata antaŭ ĉiu starto; `-snapshot` certigas, ke la memprovo ne
 # modifu la dosieron eĉ se la restarigo malsukcesus. La uzantaj bildoj estas
 # aldonitaj kiel `horizonto.elf` (praŝarĝa modulo kaj celo de `exec`) kaj
-# `saluto.elf` (celo de `lanĉi`).
+# `saluto.elf` (celo de `ruli`).
 SNDS="$ROOT/target/mikerno.snds"
 if [[ -n "$ISO" ]]; then
     UZANTA="$ROOT/target/x86_64-unknown-none/release/horizonto"

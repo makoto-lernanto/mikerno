@@ -196,8 +196,8 @@ pub fn mortigi(pid: u64) -> isize {
 }
 
 /// Kreu procezon el la ELF-bildo `vojo`; redonas la novan identigilon.
-pub fn lanĉi(vojo: &str) -> isize {
-    libmikerno::syscall::lanĉi(vojo)
+pub fn ruli(vojo: &str) -> isize {
+    libmikerno::syscall::ruli(vojo)
 }
 
 /// Finu la nunan procezon. Se la kerno rifuzas, la procezo restas blokita.

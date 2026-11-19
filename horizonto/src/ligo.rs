@@ -49,7 +49,7 @@ const BG_KAPO: &str = "\x1b[48;2;26;31;59m";
 const AKCENTOJ: [(&str, &str); 6] = [
     ("oro", FG_ORO),
     ("koralo", "\x1b[38;2;255;92;138m"),
-    ("ĉielo", FG_INFORMO),
+    ("lazuro", FG_INFORMO),
     ("verdo", FG_SUKCESO),
     ("viola", "\x1b[38;2;167;139;250m"),
     ("bluo", "\x1b[38;2;91;124;250m"),
@@ -130,7 +130,7 @@ impl Speco {
         match self {
             Speco::Dosiero => &["nomo", "tipo", "grandeco", "tenilo"],
             Speco::Procezo => &["pid", "nomo", "stato", "memoro", "permesoj"],
-            Speco::Mesago => &["mesaĝo"],
+            Speco::Mesago => &["noto"],
             Speco::Kampo => &["kampo", "valoro"],
         }
     }
@@ -209,7 +209,7 @@ impl Rekordo {
             (Speco::Kampo, "valoro") => {
                 Some(core::str::from_utf8(&self.teksto[..self.teksta_longo]).unwrap_or(""))
             }
-            (Speco::Mesago, "mesaĝo") => {
+            (Speco::Mesago, "noto") => {
                 Some(core::str::from_utf8(&self.teksto[..self.teksta_longo]).unwrap_or(""))
             }
             (Speco::Dosiero, "tipo") => Some(if self.tipo == TIPO_DOSIERUJO {
@@ -316,7 +316,7 @@ fn majuskla(kampo: &str) -> &'static str {
         "stato" => "STATO",
         "memoro" => "MEMORO",
         "permesoj" => "PERMESOJ",
-        "mesaĝo" => "MESAĜO",
+        "noto" => "NOTO",
         "kampo" => "KAMPO",
         "valoro" => "VALORO",
         _ => "KAMPO",
@@ -480,7 +480,7 @@ const KOMANDOJ: [(&str, &str); 19] = [
     ("legi", "Legi dosieron kiel rekordon kun tenilo"),
     ("procezoj", "Montri la procezan tabelon"),
     ("mortigi", "Mortigi procezon (ne protektan)"),
-    ("lanĉi", "Lanĉi bildon el SNDS kiel novan procezon"),
+    ("ruli", "Ruli bildon el SNDS kiel novan procezon"),
     ("eldiri", "Krei mesaĝan rekordon"),
     ("pri", "Montri sistemajn informojn"),
     ("temo", "Ŝanĝi la temon: malluma aŭ hela"),
@@ -668,13 +668,13 @@ fn mortigi(argumento: &str) {
     }
 }
 
-fn lanĉi(argumento: &str) {
+fn ruli(argumento: &str) {
     let vojo = sen_citiloj(argumento);
     if vojo.is_empty() {
-        eraro("lanĉi", "mankas dosiernomo", -2);
+        eraro("ruli", "mankas dosiernomo", -2);
         return;
     }
-    let rezulto = biblioteko::lanĉi(vojo);
+    let rezulto = biblioteko::ruli(vojo);
     if rezulto > 0 {
         let mut mesaĝo = Bufro::nova();
         let _ = write!(mesaĝo, "Procezo {rezulto} lanĉita: {vojo}");
@@ -682,11 +682,11 @@ fn lanĉi(argumento: &str) {
         return;
     }
     if rezulto == libmikerno::syscall::NE_TROVITA {
-        eraro_kun("lanĉi", "dosiero ne ekzistas: ", vojo, -3);
+        eraro_kun("ruli", "dosiero ne ekzistas: ", vojo, -3);
     } else if rezulto == libmikerno::syscall::TABELO_PLENA {
-        eraro("lanĉi", "la proceza tabelo estas plena", -28);
+        eraro("ruli", "la proceza tabelo estas plena", -28);
     } else {
-        eraro_kun("lanĉi", "nevalida bildo: ", vojo, -90);
+        eraro_kun("ruli", "nevalida bildo: ", vojo, -90);
     }
 }
 
@@ -717,7 +717,7 @@ fn akcento(argumento: &str) {
     let Some(indekso) = AKCENTOJ.iter().position(|(nomo, _)| estas(kruda, nomo)) else {
         eraro(
             "akcento",
-            "uzu oro, koralo, ĉielo, verdo, viola aŭ bluo",
+            "uzu oro, koralo, lazuro, verdo, viola aŭ bluo",
             -3,
         );
         return;
@@ -1029,8 +1029,8 @@ fn plenumi(linio: &str) {
     } else if estas(vorto, "mortigi") {
         mortigi(argumento);
         return;
-    } else if estas(vorto, "lanĉi") {
-        lanĉi(argumento);
+    } else if estas(vorto, "ruli") {
+        ruli(argumento);
         return;
     } else if estas(vorto, "eldiri") {
         eldiri(argumento);

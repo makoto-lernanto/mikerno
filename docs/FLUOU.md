@@ -457,8 +457,11 @@ tipo, grandeco, tenilo kaj eraroj distingiĝu ankaŭ sen koloro.
 
 ### 8.1. Komandaro
 
-Ĉiuj komandnomoj estas Esperantaj kaj devigaj. La tabelo listigas nur la
-Esperantajn nomojn; la anglaj formoj ne ekzistas kaj ne estas tajpeblaj.
+Ĉiuj komandnomoj estas Esperantaj kaj devigaj. Komandnomoj kaj argumentoj
+konsistas nur el puraj ASCII-literoj: oni uzu Esperantajn vortojn, kiuj jam
+havas neniun ĉapelan literon (ĉ, ĝ, ĥ, ĵ, ŝ, ŭ), kaj neniam la x-sistemon
+(`cx`, `gx`, …). La tabelo listigas nur la Esperantajn nomojn; la anglaj formoj
+ne ekzistas kaj ne estas tajpeblaj.
 
 | Komando | Signifo | Rezulto |
 | --- | --- | --- |
@@ -467,10 +470,11 @@ Esperantajn nomojn; la anglaj formoj ne ekzistas kaj ne estas tajpeblaj.
 | `legi <dosiero>` | Legi dosieron | Dosiera karto kun `tenilo` |
 | `procezoj` | Montri la procezan tabelon | `pid`, `nomo`, `stato`, `memoro`, `permesoj` |
 | `mortigi <pid>` | Mortigi procezon | Sukceso aŭ eraro |
-| `eldiri <teksto>` | Krei mesaĝan rekordon | `mesaĝo` |
+| `ruli <dosiero>` | Ruli ELF-bildon el SNDS kiel novan procezon | Sukceso aŭ eraro |
+| `eldiri <teksto>` | Krei mesaĝan rekordon | `noto` |
 | `pri` | Montri sistemajn informojn | `kampo`, `valoro` |
 | `temo <malluma\|hela>` | Ŝanĝi la temon | Sukceso |
-| `akcento <oro\|koralo\|ĉielo\|verdo\|viola\|bluo>` | Ŝanĝi la akcenton | Sukceso |
+| `akcento <oro\|koralo\|lazuro\|verdo\|viola\|bluo>` | Ŝanĝi la akcenton | Sukceso |
 | `eniro` | Malfermi Eniron | Sukceso |
 | `filtri <kampo> <operacio> <valoro>` | Filtri rekordojn | Rekordoj |
 | `ordigi <kampo> [malkreske]` | Ordigi rekordojn | Rekordoj |
@@ -480,6 +484,9 @@ Esperantajn nomojn; la anglaj formoj ne ekzistas kaj ne estas tajpeblaj.
 | `montri [kampoj…]` | Projekcii kolumnojn | Rekordoj |
 | `teksto` | Transiri al la eksplicita teksta limo | Linioj |
 | `purigi` | Malplenigi la terminalon | — |
+
+`lazuro` estas la Ligo-nomo de la helblua FluoU-akcento (`#4CC9FF`). Mesaĝa
+rekordo havas unu kampon, `noto`.
 
 La malpermesitaj anglaj nomoj (`ls`, `cat`, `ps`, `kill`, `echo`, `help`,
 `clear`) ne ekzistas, eĉ ne kiel kaŝitaj aliasoj. Provon uzi ilin oni raportu

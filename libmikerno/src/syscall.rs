@@ -335,6 +335,6 @@ pub fn mortigi(pid: u64) -> isize {
 
 /// Kreu novan procezon el la ELF-bildo `vojo` en SNDS. Redonas la novan
 /// procezan identigilon (> 0) aŭ negativan eraron.
-pub fn lanĉi(vojo: &str) -> isize {
+pub fn ruli(vojo: &str) -> isize {
     unsafe { invoki(SYS_LANĜI, [vojo.as_ptr() as usize, vojo.len(), 0, 0]) }
 }

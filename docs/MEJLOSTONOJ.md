@@ -29,7 +29,7 @@
 | M14 | IK-firmigo: objektoj, rajtoj, tempolimoj | Plenumita | Ring 0/Ring 3-scenaroj kaj AC/CR3/EOI-provoj verdaj (ABI 2) |
 | M15 | `arm64`-malantaŭo: EL0, ABI 2, `ramfb`, `PAN` | Plenumita | identa piksela haketo sur ambaŭ arkoj |
 | M16 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Parte | dormo 100 ms = 10 tikoj; minimumo ≥ 17 veturoj; arm64-stabileco |
-| M17 | Konservado, dosiersistemo, ŝelo | Parte | `virtio-blk` legas/skribas 64 sektorojn; SNDS (6 dosieroj, 1 dosierujo; PCI kaj MMIO); `SYS_BRK`, `SYS_EXEC` kaj `SYS_LANĜI` en Ring 3; Ligo kun `listi`, `procezoj`, `mortigi`, `lanĉi` |
+| M17 | Konservado, dosiersistemo, ŝelo | Parte | `virtio-blk` legas/skribas 64 sektorojn; SNDS (6 dosieroj, 1 dosierujo; PCI kaj MMIO); `SYS_BRK`, `SYS_EXEC` kaj `SYS_LANĜI` en Ring 3; Ligo kun `listi`, `procezoj`, `mortigi`, `ruli` |
 | M18 | DI, testoj, plena pruvaro | Parte | GitHub Actions verde (fmt, clippy, konstruo, Kani); testoj kaj plena pruvaro mankas |
 | M19 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 | M20 | Plena pruvaro kaj 1.0 | Venonta | — |
@@ -158,6 +158,8 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-19 | 0.7.2 | 56 | 14345 | 11204 | 1818 | 1323 |
 | 2026-11-19 | 0.7.2 | 56 | 14345 | 11204 | 1818 | 1323 |
 | 2026-11-19 | 0.7.2 | 56 | 14345 | 11204 | 1818 | 1323 |
+| 2026-11-19 | 0.7.3 | 56 | 14977 | 11705 | 1915 | 1357 |
+| 2026-11-19 | 0.7.3 | 56 | 14977 | 11705 | 1915 | 1357 |
 | 2026-11-19 | 0.7.3 | 56 | 14977 | 11705 | 1915 | 1357 |
 
 ---
@@ -1412,7 +1414,7 @@ de M16 Fazo 3 estas verda.
 
 **Celo.** Transformi MiKerno-n el nura demonstracio al uzebla sistemo per aldono de daŭra konservado, dosierujaj operacioj kaj uzant-interaga ŝelo.
 
-**Taskoj.** `virtio-blk`-pelilo, simpla nurlega dosiersistemo (SNDS), uzantspaca kupa alokilo, ELF-ŝargo el dosiero (`exec`), kaj ŝelo kun la devigaj Esperantaj komandnomoj (`eldiri`, `listi`, `legi`, `procezoj`, `mortigi`, `lanĉi`).
+**Taskoj.** `virtio-blk`-pelilo, simpla nurlega dosiersistemo (SNDS), uzantspaca kupa alokilo, ELF-ŝargo el dosiero (`exec`), kaj ŝelo kun la devigaj Esperantaj komandnomoj (`eldiri`, `listi`, `legi`, `procezoj`, `mortigi`, `ruli`).
 
 #### 1. Fazoj de Efektivigo
 
@@ -1456,12 +1458,12 @@ de M16 Fazo 3 estas verda.
         *   `legi <dosiero>`: legas kaj presas dosieran enhavon.
         *   `procezoj`: montras la procezan tabelon (`SYS_PROCEZOJ`).
         *   `mortigi <id>`: mortigas procezon per `SYS_MORTIGI`; `pid ≤ 1` estas protektita.
-        *   `lanĉi <dosiero>`: kreas novan procezon el SNDS (`SYS_LANĜI`).
+        *   `ruli <dosiero>`: kreas novan procezon el SNDS (`SYS_LANĜI`).
 *   **Decidoj**:
     *   C17.7: La maksimuma SNDS-dosiero altiĝas de 64 KiB al 128 KiB. La ŝelo
         kaj ĝia helpteksto ne plu eniras la malnovan limon; la bildo aŭtomate
         kreskas al 256 sektoroj (128 KiB) kaj la memprovo restas valida.
-    *   C17.8: `lanĉi` kreas novan procezon per aparta `SYS_LANĜI` (20), ne
+    *   C17.8: `ruli` kreas novan procezon per aparta `SYS_LANĜI` (20), ne
         anstataŭigas la ŝelon per `SYS_EXEC`; tiel la ŝelo pluvivas la lanĉon
         kaj `mortigi` povas fermi la novan procezon. `SYS_EXEC` restas por la
         bildoj, kiuj mem transprenas la procezon.
@@ -1710,7 +1712,7 @@ bajtoj). La unua stadio produktas rekordojn (`listi`, `legi`, `procezoj`,
 `unua` tranĉas, `sumi` kaj `nombri` produktas skalaron, `montri` projekcias
 kolumnojn, `teksto` estas la eksplicita teksta limo. `Speco` difinas la
 kampojn de ĉiu familio: dosiero (`nomo`, `tipo`, `grandeco`, `tenilo`),
-procezo (`pid`, `nomo`, `stato`, `memoro`, `permesoj`), mesaĝo (`mesaĝo`) kaj
+procezo (`pid`, `nomo`, `stato`, `memoro`, `permesoj`), mesaĝo (`noto`) kaj
 kampo (`kampo`, `valoro`). La ŝelo ne konvertas la fluon al teksto antaŭ la
 fina stadio.
 
@@ -1721,11 +1723,11 @@ statoj en `FG_SUKCESO`/`FG_INFORMO`/`FG_DANĜERO`, kaj la tenila valoro en
 neniam estas la sola portanto de informo. `temo` kaj `akcento` elektas la
 koloraron; `akcento` akceptas la ses akcentojn de FluoU.
 
-**Komandoj.** `helpu`, `listi`, `legi`, `procezoj`, `mortigi`, `lanĉi`,
+**Komandoj.** `helpu`, `listi`, `legi`, `procezoj`, `mortigi`, `ruli`,
 `eldiri`, `pri`, `temo`, `akcento`, `eniro`, `filtri`, `ordigi`, `unua`,
 `sumi`, `nombri`, `montri`, `teksto`, `purigi` kaj `fini`. `mortigi`
 protektas nur `pid ≤ 1`; la kerno mem rifuzas `0` kaj `1` per `NEPERMITITA`
-(-13). `lanĉi` vokas `SYS_LANĜI` (20), kiu kreas novan procezon el SNDS
+(-13). `ruli` vokas `SYS_LANĜI` (20), kiu kreas novan procezon el SNDS
 (la nova krado `saluto` presas `[saluto] saluton el la procezo N; ĝis
 revido`). `fini` (aŭ `Ctrl+D` en malplena linio) finas la ŝelon per
 `SYS_FINI`.
@@ -1742,7 +1744,7 @@ malnovan 64 KiB-limon. `mikerno/src/konservado/snds.rs` kaj
 sektoroj kaj la virtio-blk-memprovo restas valida. Por teni la bildojn
 malgrandaj, `Cargo.toml` donas al `horizonto` kaj `saluto` `opt-level = "z"`,
 `codegen-units = 1` kaj tutan `strip`; la rezulto: `horizonto` 97 048 bajtoj
-(x86_64) kaj 93 904 bajtoj (arm64), `saluto` 16 024 kaj 16 664 bajtoj.
+(x86_64) kaj 93 816 bajtoj (arm64), `saluto` 16 024 kaj 16 664 bajtoj.
 
 **Perdita vekigo en `hlt`/`wfi`.** La atenda buklo de la kerno post la ŝelo
 ŝajne ne rimarkis la malaperon de procezo 1. La kaŭzo estis `options(nomem)`
@@ -1764,12 +1766,19 @@ planista voko restas senŝanĝaj. Novaj lokalaj provoj (x86_64 PVH kaj arm64
 Image) montris nulan `[horloĝo]`-eligon dum plursekundaj paŭzoj ĉe la
 prompto, kaj la ŝelo plu funkcias.
 
+**Puraj ASCII-komandnomoj.** Laŭ la lingva regulo, ĉiuj Ligo-komandnomoj
+kaj argumentoj estas Esperantaj vortoj, kiuj jam estas puraj ASCII: la
+komando `lanĉi` fariĝis `ruli`, la mesaĝa kampo `mesaĝo` fariĝis `noto`, kaj
+la akcento `ĉielo` fariĝis `lazuro` (helblua). La helpo, la eraroj, la
+tabelaj kapoj kaj la normaj dokumentoj sekvas la samajn nomojn; la x-sistemo
+restas malpermesita.
+
 **Lokaj rezultoj (2026-11-19, versio 0.7.3).**
 
 | Vojo | Linio |
 | --- | --- |
-| x86_64 PVH | `[kerno] ŝelo startas kiel procezo 1; por fini: fini`; `listi` -> `bonveno.txt 18 B TENILO 0x0001`, `horizonto.elf 94.7 KiB`, `legu.txt 158 B`, `notoj dosierujo 128 B`, `saluto.elf 15.6 KiB`; `listi \| sumi grandeco` -> `SUMO DE GRANDECO 110.7 KiB`; `procezoj` -> `1 ŝelo Kuranta`, `2 fono Preta`; `mortigi 2` -> `[procezo] 2 detruita: 1 privataj PDPT-oj, PML4 0x261000, 45 kadroj liberigitaj` kaj `Procezo 2 (fono) finiĝis.`; `lanĉi saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000c31)`, `Procezo 3 lanĉita: saluto.elf` kaj `[saluto] saluton el la procezo 3; ĝis revido`; `fini` -> `[kerno] ŝelo finiĝis; la kerno daŭras`; `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 2710 tikoj` |
-| arm64 Image | la sama interagado per PL011; `listi` montras `18 B`, `91.7 KiB` kaj `128 B`, `sumi grandeco` -> `SUMO DE GRANDECO 108.2 KiB`; `mortigi 2` -> `[procezo] 2 detruita: 9 privataj subtabeloj, TTBR0 0x4053c000, 43 kadroj liberigitaj` kaj `Procezo 2 (fono) finiĝis.`; `lanĉi saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000028)`; `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 2840 tikoj` |
+| x86_64 PVH | `[kerno] ŝelo startas kiel procezo 1; por fini: fini`; `listi` -> `bonveno.txt 18 B TENILO 0x0001`, `horizonto.elf 94.7 KiB`, `legu.txt 158 B`, `notoj dosierujo 128 B`, `saluto.elf 15.6 KiB`; `listi \| sumi grandeco` -> `SUMO DE GRANDECO 110.7 KiB`; `procezoj` -> `1 ŝelo Kuranta`, `2 fono Preta`; `mortigi 2` -> `[procezo] 2 detruita: 1 privataj PDPT-oj, PML4 0x261000, 45 kadroj liberigitaj` kaj `Procezo 2 (fono) finiĝis.`; `ruli saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000c31)`, `Procezo 3 lanĉita: saluto.elf` kaj `[saluto] saluton el la procezo 3; ĝis revido`; `fini` -> `[kerno] ŝelo finiĝis; la kerno daŭras`; `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 2710 tikoj` |
+| arm64 Image | la sama interagado per PL011; `listi` montras `18 B`, `91.7 KiB` kaj `128 B`, `sumi grandeco` -> `SUMO DE GRANDECO 108.2 KiB`; `mortigi 2` -> `[procezo] 2 detruita: 9 privataj subtabeloj, TTBR0 0x4053c000, 43 kadroj liberigitaj` kaj `Procezo 2 (fono) finiĝis.`; `ruli saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000028)`; `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 2840 tikoj` |
 
 Ambaŭ vojoj havas nul `MALBONE`-liniojn; la ŝelo kaj la fono malaperas antaŭ
 la fina stato, do la kadra bilanco restas pura. La nesukcesaj komandoj
@@ -1793,7 +1802,7 @@ praŝarĝitaj antaŭ la alŝuto; la retejo montras la version 0.7.3 kaj la
 elŝutajn ligilojn al ĉi tiu etikedo.
 
 **Limigoj.** SNDS restas nurlega; la ŝelo legas COM1 per polusa `SYS_ENIGI`
-(10-tika dormo inter provoj); mankas `fork`, do `lanĉi` kreas novan procezon
+(10-tika dormo inter provoj); mankas `fork`, do `ruli` kreas novan procezon
 kaj `exec` anstataŭigas la nunan; la prompto estas `ligo:~>` kaj la
 komandnomoj estas nur Esperantaj.
 
@@ -1817,7 +1826,7 @@ komandnomoj estas nur Esperantaj.
 | Ŝelo startas kaj akceptas enigon | Plenumita (Fazo 4) | `[kerno] ŝelo startas kiel procezo 1; por fini: fini`; prompto `ligo:~> ` kun linia redaktado (historio, `Tab`, `Ctrl+C`, `Ctrl+L`) |
 | `listi` kaj `legi` funkcias | Plenumita (Fazo 4) | `ligo:~> listi` -> `bonveno.txt 18 B TENILO 0x0001`, `horizonto.elf 94.7 KiB`, `notoj dosierujo 128 B` <br> `ligo:~> legi bonveno.txt` -> `│ Saluton, MiKerno!` kun `TENILO 0x0001` |
 | `procezoj` kaj `mortigi` funkcias | Plenumita (Fazo 4) | `ligo:~> procezoj` -> `1 ŝelo Kuranta`, `2 fono Preta` <br> `ligo:~> mortigi 2` -> `[procezo] 2 detruita: 1 privataj PDPT-oj, PML4 0x261000, 45 kadroj liberigitaj`, `Procezo 2 (fono) finiĝis.`; `mortigi 1` rifuzata per `-1` |
-| `lanĉi` startas novan ELF | Plenumita (Fazo 4) | `ligo:~> lanĉi saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000c31)`; `[saluto] saluton el la procezo 3; ĝis revido` |
+| `ruli` startas novan ELF | Plenumita (Fazo 4) | `ligo:~> ruli saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000c31)`; `[saluto] saluton el la procezo 3; ĝis revido` |
 | `arm64` vojo restas verda | Plenumita (Fazo 4) | `QEMU_DISPLAY=none bash tools/run-qemu-arm.sh release` montras la saman interagadon per PL011; `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 2840 tikoj` |
 
 #### 4. Teknika Ŝuldo Post M17

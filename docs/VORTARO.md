@@ -417,7 +417,7 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `historio` | history | Ringo de ok antaŭaj linioj; `↑`/`↓`. |
 | `kompletigo` | completion | `Tab`: komuna prefikso aŭ listo de la komandaro. |
 | `krado` | crate | Laborloka membro: `mikerno`, `libmikerno`, `horizonto`, `saluto`. |
-| `saluto` | hello program | Krado `saluto`; `lanĉi saluto.elf` pruvas `SYS_LANĜI` per `[saluto] saluton el la procezo N; ĝis revido`. |
+| `saluto` | hello program | Krado `saluto`; `ruli saluto.elf` pruvas `SYS_LANĜI` per `[saluto] saluton el la procezo N; ĝis revido`. |
 | `piksela egaleco` | pixel parity | Inter `x86_64` kaj `arm64`. |
 | `aplikaja manifesto` | application manifest | Enhavas `gu = "fluoU"`. |
 | `izolita aplikaĵo` | sandboxed application | Minimumaj kapabloj. |
@@ -436,7 +436,8 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 ## Komandoj de Ligo
 
 Ĉiuj komandnomoj estas Esperantaj; la anglaj formoj estas malpermesitaj, ankaŭ
-kiel kaŝitaj aliasoj.
+kiel kaŝitaj aliasoj. Komandnomoj kaj argumentoj estas puraj ASCII: oni uzu
+Esperantajn vortojn sen ĉapelaj literoj kaj neniam la x-sistemon.
 
 | Esperanto | Angla (malpermesita) | Signifo |
 | --- | --- | --- |
@@ -445,7 +446,7 @@ kiel kaŝitaj aliasoj.
 | `legi` | `cat` | Legi dosieron |
 | `procezoj` | `ps` | Montri procezojn |
 | `mortigi` | `kill` | Mortigi procezon (`pid ≤ 1` estas protektita) |
-| `lanĉi` | — | Lanĉi novan ELF el SNDS (`SYS_LANĜI`) |
+| `ruli` | — | Ruli novan ELF el SNDS (`SYS_LANĜI`) |
 | `fini` | `exit` | Fini la ŝelon (`SYS_FINI`); `Ctrl+D` en malplena linio same |
 | `eldiri` | `echo` | Krei mesaĝan rekordon |
 | `pri` | — | Sistemaj informoj |
@@ -460,6 +461,10 @@ kiel kaŝitaj aliasoj.
 | `montri` | — | Projekcii kolumnojn |
 | `teksto` | — | Teksta limo |
 | `purigi` | `clear` | Malplenigi la terminalon |
+
+La mesaĝa rekordo portas la kampon `noto`; `akcento` akceptas `oro`, `koralo`,
+`lazuro`, `verdo`, `viola` kaj `bluo` (`lazuro` estas la helblua akcento,
+`#4CC9FF`).
 
 ## Protokolaj kaj aparataraj nomoj
 

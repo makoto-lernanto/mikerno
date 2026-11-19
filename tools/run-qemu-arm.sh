@@ -29,7 +29,7 @@ fi
 # Ĝi estas regenerata antaŭ ĉiu starto; `-snapshot` certigas, ke la memprovo ne
 # modifu la dosieron eĉ se la restarigo malsukcesus. La uzantaj bildoj estas
 # aldonitaj kiel `horizonto.elf` (praŝarĝa modulo kaj celo de `exec`) kaj
-# `saluto.elf` (celo de `lanĉi`).
+# `saluto.elf` (celo de `ruli`).
 SNDS="$ROOT/target/mikerno.snds"
 UZANTA="$ROOT/target/aarch64-unknown-none/release/horizonto"
 SNDS_ALDONOJ=()

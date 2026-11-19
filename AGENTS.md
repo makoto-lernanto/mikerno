@@ -11,6 +11,9 @@ dosieron.
 - Restas en la angla nur anglaj terminoj, kiuj ne estas ŝanĝeblaj: `Rust`,
   `x86_64`, nomoj de registroj kaj instrukcioj, normaj interfacaj kaj aparataraj
   nomoj.
+- Ligo-komandnomoj kaj iliaj argumentoj estas puraj ASCII: oni uzu Esperantajn
+  vortojn, kiuj jam havas neniun ĉapelan literon (ĉ, ĝ, ĥ, ĵ, ŝ, ŭ), kaj
+  neniam la x-sistemon. Ekzemplo: `ruli`, ne `lanĉi` aŭ `lancxi`.
 - La ĉina lingvo ne estas permesita en la fonta tavolo. Aldona plurlingva
   mapada tavolo tamen estas permesata: apartaj tradukaj dosieroj (ekzemple
   `tradukoj/`) rajtas traduki la montratajn tekstojn al aliaj lingvoj,

@@ -14,7 +14,7 @@ pub mod syscall;
 
 /// Versio de la komuna ABI. `2` aldonas la tenilojn, la novajn permesojn, la
 /// erar-kodojn `-9/-11/-28/-32/-90/-110` kaj la sistemvokojn 6–11.
-/// Vokoj 15–20 (`enigi`, `listi`, `legi`, `procezoj`, `mortigi`, `lanĉi`) estas
+/// Vokoj 15–20 (`enigi`, `listi`, `legi`, `procezoj`, `mortigi`, `ruli`) estas
 /// kongrua etendo de ABI `2`; la malnovaj numeroj restas netuŝitaj.
 pub const ABI_VERSIO: u32 = 2;
 
