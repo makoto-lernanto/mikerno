@@ -183,7 +183,8 @@ window.TRADUKOJ_ANGLA = {
   "piedo.mejloŝtonoj": "Milestones",
   "piedo.vortaro": "Glossary",
   "piedo.montro": "Live view",
-  "piedo.autoro": "Idea: Makoto Lernanto · code and documentation: Qoder.",
+  "piedo.autoro":
+    "Idea: Makoto Lernanto · code and documentation: Qoder; also in collaboration with OpenCode (models DeepSeek V4.1 Flash Free and MiMo-V2.6-Flash Free).",
 
   "temo.malluma": "Dark",
   "temo.hela": "Light",

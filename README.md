@@ -5,8 +5,9 @@
 > **Pri la aŭtoreco.** `makoto-lernanto` estas la arkitekto de ĉi tiu projekto:
 > li difinas la celojn, la arĥitekturon kaj la inĝenieran pensmanieron. La tuta
 > efektiva kodo — same kiel la dokumentaro kaj la testoj — estis verkita de
-> **Qoder**, la AI-programada asistanto. La homa kontribuo estas la ideo, ne la
-> klavoj.
+> **Qoder**, la AI-programada asistanto, kaj ankaŭ kunlabore kun **OpenCode**
+> (modeloj **DeepSeek V4.1 Flash Free** kaj **MiMo-V2.6-Flash Free**). La homa
+> kontribuo estas la ideo, ne la klavoj.
 
 MiKerno estas eta, memstara x86_64-kerno verkita tute en Rust (`#![no_std]`,
 `#![no_main]`), sen eksteraj Rust-dependaĵoj kaj sen C-kodo en la kerno mem. La
