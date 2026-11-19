@@ -1766,6 +1766,20 @@ ellasas la Esperantajn erarojn kun la kodo kaj ne haltigas la ŝelon: `ls` ->
 `✕ legi: dosiero ne ekzistas: neniu.txt (-3)`, `mortigi 1` ->
 `procezo 1 estas protekta sistema procezo (-1)`.
 
+**Nuba DI (2026-11-19).** Runo
+[#44550066534](https://github.com/makoto-lernanto/mikerno/actions/runs/44550066534)
+ĉe `0cbce2d`: ĉiuj 43 taskoj verdaj — `kontroli-kaj-konstrui`, `kani-pretigi`
+kaj la 41 pruvoj de la matrico `kani-kontroli`; la runo daŭris 10 min 15 s.
+
+**Eldono.** [`v0.7.3`](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.7.3)
+(etikedo ĉe `0cbce2d`) enhavas `mikerno.iso` (SHA-256
+`bee8283bdfc8db7cd56ca6738784288ddede3ed1e3d2085c9f7fcbc2aebe61a3`) kaj
+`mikerno-arm.iso` (SHA-256
+`c85fd37a64eea08b84b90b446fa8337148ba4d35554668ec1c29e93894a4f567`). La du
+ISO-oj estis konstruitaj el la puŝita kodo post la verda DI-runo kaj
+praŝarĝitaj antaŭ la alŝuto; la retejo montras la version 0.7.3 kaj la
+elŝutajn ligilojn al ĉi tiu etikedo.
+
 **Limigoj.** SNDS restas nurlega; la ŝelo legas COM1 per polusa `SYS_ENIGI`
 (10-tika dormo inter provoj); mankas `fork`, do `lanĉi` kreas novan procezon
 kaj `exec` anstataŭigas la nunan; la prompto estas `ligo:~>` kaj la
