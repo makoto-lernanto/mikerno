@@ -100,6 +100,16 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `nurlega` | read-only | SNDS ne subtenas skribon aŭ kreadon de dosieroj. |
 | `munti` | mount | `snds::pravalorizi()` validigas la superblokon kaj memprovas la bildon. |
 | `SNDS-bildo` | SNDS image | `target/mikerno.snds`, kreata de `tools/krei_snds_img.sh`. |
+| `kupo` | heap | Uzanta datumsegmento inter `UZANTA_KUPO_BAZO` (`0x1_0200_0000`) kaj `UZANTA_KUPO_FINO` (`0x2_0000_0000`). |
+| `kupa limo` | heap limit | `Procezo::kupo_fino`; `kupaj_limoj()` redonas `(bazo, limo)`. |
+| `brk` | brk | `SYS_BRK` (13): etendas la uzantan datumsegmenton kaj redonas la nunan limon; nur pligrandigas (`etendi_kupon`). |
+| `bump-alokilo` | bump allocator | `horizonto/src/biblioteko.rs`: montrilo nur antaŭen, `liberigi` estas malplena. |
+| `exec` | exec | `SYS_EXEC` (14): anstataŭigas la nunan procezon per ELF el SNDS (C17.5). |
+| `anstataŭigi la adresan spacon` | replace the address space | `Procezo::anstataŭigi_spacon`: ŝaltas la kernan radikon, anstataŭigas, restarigas la kupan limon kaj detruas la malnovan spacon. |
+| `munti el bufro` | mount from buffer | `uzantspaco::munti_el_bufro`: la sama `ŝargi_bildon` kiel la praŝarĝo, sed el kontiguaj kadroj. |
+| `kontiguaj kadroj` | contiguous frames | `aloki_kontiguajn`: fizika regiono por legi la ELF-on el SNDS. |
+| `eniri uzanton` | enter user mode | `eniri_uzanton(enirpunkto, stako, reĝimo, id)`: `iretq` aŭ `eret` al Ring 3/EL0. |
+| `REĜIMO_EXEC` | exec startup mode | `libmikerno::starto::REĜIMO_EXEC` (4): la nova bildo raportas `[ring3] exec: nova bildo funkcias` kaj finas. |
 | `selektilo` | selector | |
 | `pordego` | gate | |
 | `interrompa pordego` | interrupt gate | Malŝaltas `RFLAGS.IF`. |
@@ -448,7 +458,7 @@ eksteraj protokolaj nomoj:
 `x86_64`, `CR0`, `CR2`, `CR3`, `CR4`, `PCID`, `PCIDE`, `RSP0`, `RIP`, `RFLAGS`, `RAX`, `RDI`,
 `RSI`, `RDX`, `R10`, `MSR`, `EFER`, `NXE`, `PAE`, `PML4`, `PDPT`, `PD`, `PT`,
 `IDT`, `GDT`, `TSS`, `APIC`, `PIT`, `COM1`, `Multiboot2`, `Xen-PVH`, `ELF`,
-`Limine`, `QEMU`, `int 0x80`, `iretq`, `syscall`, `sysret`, `fork`, `exec`, `execve`, `ASCII`, `UTF-8`, `W^X`, `CR0.WP`,
+`Limine`, `QEMU`, `int 0x80`, `iretq`, `syscall`, `sysret`, `fork`, `exec`, `execve`, `brk`, `SYS_BRK`, `SYS_EXEC`, `ASCII`, `UTF-8`, `W^X`, `CR0.WP`,
 `SMEP`, `SMAP`, `KASLR`, `IOMMU`, `DMA`, `PCI`, `DMAR`, `IVRS`, `STAC`, `CLAC`,
 `KREI_FINPUNKTON`, `DONI`, `REVOKI`, `RICEVI_TEMPO`, `SENDI_TEMPO`, `FERMI`,
 `EBADF`, `EAGAIN`, `ENOSPC`, `EPIPE`, `EMSGSIZE`, `ETIMEDOUT`, `arm64`,

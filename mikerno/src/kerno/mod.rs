@@ -15,6 +15,7 @@ use crate::memoro::virtuala::{
 };
 use libmikerno::starto::{REĜIMO_SEKRETO, REĜIMO_SPIONO};
 
+pub mod exec;
 pub mod ik;
 pub mod objekto;
 pub mod planisto;

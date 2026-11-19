@@ -6,9 +6,60 @@
 #![allow(dead_code)]
 
 use core::fmt::{self, Write};
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 pub use libmikerno::kapablo::{Permesoj, Tenilo};
 pub use libmikerno::mesago::Mesago;
+
+/// Alinio de la kupaj blokoj; sufiĉa por ĉiu skalara tipo kaj por `Mesago`.
+const KUPO_ALINIO: usize = 16;
+
+/// La sekva libera adreso kaj la nuna `brk`-limo. `0` ĉe la fino signifas, ke
+/// la unua aloko ankoraŭ demandos la bazon per `brk(0)`.
+static KUPO_NUNA: AtomicUsize = AtomicUsize::new(0);
+static KUPO_FINO: AtomicUsize = AtomicUsize::new(0);
+
+fn alinii(valoro: usize) -> usize {
+    valoro.div_ceil(KUPO_ALINIO) * KUPO_ALINIO
+}
+
+/// Aloku `grando` bajtojn el la uzanta kupo per puŝa (bump) alokilo.
+///
+/// La unua voko demandas la bazon per `brk(0)`; ĉiu etendo petas novan limon
+/// kaj malsukcesas, se la kerno ne donas sufiĉe. `None` signifas, ke la kupo
+/// estas elĉerpita aŭ ke la kerno rifuzis la vokon.
+pub fn aloki(grando: usize) -> Option<*mut u8> {
+    if grando == 0 {
+        return None;
+    }
+    if KUPO_FINO.load(Ordering::Relaxed) == 0 {
+        let bazo = libmikerno::syscall::brk(0);
+        if bazo < 0 {
+            return None;
+        }
+        KUPO_NUNA.store(bazo as usize, Ordering::Relaxed);
+        KUPO_FINO.store(bazo as usize, Ordering::Relaxed);
+    }
+    let komenco = alinii(KUPO_NUNA.load(Ordering::Relaxed));
+    let fino = komenco.checked_add(grando)?;
+    if fino > KUPO_FINO.load(Ordering::Relaxed) {
+        let nova = alinii(fino);
+        let rezulto = libmikerno::syscall::brk(nova);
+        if rezulto < 0 || (rezulto as usize) < fino {
+            return None;
+        }
+        KUPO_FINO.store(rezulto as usize, Ordering::Relaxed);
+    }
+    KUPO_NUNA.store(fino, Ordering::Relaxed);
+    // SAFETY: la intervalo `[komenco, fino)` kuŝas en la kupo, kiun la kerno
+    // mapis per `brk`; la montrilo restas valida ĝis la procezo finiĝas aŭ
+    // `exec` anstataŭigas la spacon.
+    Some(komenco as *mut u8)
+}
+
+/// Fordonu blokon; la puŝa alokilo ne reuzas memoron, do la voko estas
+/// senefika. Ĝi ekzistas por la estonta liberlista alokilo.
+pub fn liberigi(_montrilo: *mut u8, _grando: usize) {}
 
 /// Skribu tekston al la kerna konzolo.
 pub fn skribi(teksto: &str) -> isize {
@@ -109,6 +160,13 @@ pub fn cedi() -> isize {
 /// Dormu almenaŭ la donitajn milisekundojn.
 pub fn dormi(millisekundoj: u64) -> isize {
     libmikerno::syscall::dormi(millisekundoj)
+}
+
+/// Anstataŭigu la nunan procezon per la ELF-bildo `vojo` el SNDS.
+///
+/// Sukceso neniam revenas; malsukceso redonas negativan eraron.
+pub fn exec(vojo: &str) -> isize {
+    libmikerno::syscall::exec(vojo)
 }
 
 /// Finu la nunan procezon. Se la kerno rifuzas, la procezo restas blokita.

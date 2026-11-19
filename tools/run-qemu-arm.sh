@@ -27,9 +27,15 @@ fi
 
 # La SNDS-bildo servas al la virtio-blk-pelilo kaj al la dosiersistemo (M17).
 # Ĝi estas regenerata antaŭ ĉiu starto; `-snapshot` certigas, ke la memprovo ne
-# modifu la dosieron eĉ se la restarigo malsukcesus.
+# modifu la dosieron eĉ se la restarigo malsukcesus. La uzanta bildo estas
+# aldonita kiel `horizonto.elf`, por ke `SYS_EXEC` povu relanĉi ĝin el SNDS.
 SNDS="$ROOT/target/mikerno.snds"
-"$ROOT/tools/krei_snds_img.sh" "$ROOT/mikerno/snds" "$SNDS" >/dev/null
+UZANTA="$ROOT/target/aarch64-unknown-none/release/horizonto"
+SNDS_ALDONOJ=()
+if [[ -f "$UZANTA" ]]; then
+    SNDS_ALDONOJ=("horizonto.elf=$UZANTA")
+fi
+"$ROOT/tools/krei_snds_img.sh" "$ROOT/mikerno/snds" "$SNDS" "${SNDS_ALDONOJ[@]}" >/dev/null
 DISKA_ARGS=(
     -drive "file=$SNDS,format=raw,if=none,id=disk0"
     -device "virtio-blk-device,drive=disk0"
@@ -94,7 +100,7 @@ if [[ ! -f "$KERNEL" ]]; then
     exit 1
 fi
 
-INITRD="$ROOT/target/aarch64-unknown-none/release/horizonto"
+INITRD="$UZANTA"
 INITRD_ARGS=()
 if [[ -f "$INITRD" ]]; then
     INITRD_ARGS=(-initrd "$INITRD")

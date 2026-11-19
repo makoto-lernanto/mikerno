@@ -84,6 +84,10 @@ pub const UZANTA_FINO: u64 = 0x0000_0080_0000_0000;
 pub const UZANTA_STAKO_GRANDE: usize = 64 * 1024;
 /// La pinto de la uzanta stako: bazo + 16 MiB; la stako kreskas malsupren.
 pub const UZANTA_STAKO_SUPRO: u64 = UZANTA_BAZO + 16 * 1024 * 1024;
+/// La bazo de la uzanta kupo (datumsegmento), 16 MiB super la stakpinto.
+pub const UZANTA_KUPO_BAZO: u64 = UZANTA_STAKO_SUPRO + 16 * 1024 * 1024;
+/// La supra limo de la uzanta kupo: ĝi finiĝas antaŭ la sekreta paĝo.
+pub const UZANTA_KUPO_FINO: u64 = 0x0000_0002_0000_0000;
 
 /// Rajtoj de unu paĝo. Legeblo ĉiam ĉeestas: la x86_64-backendo ne subtenas
 /// tute nelegeblajn paĝojn.

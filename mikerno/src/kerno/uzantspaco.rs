@@ -46,7 +46,7 @@ pub enum ŜargaEraro {
 impl fmt::Display for ŜargaEraro {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::TroMalgranda => f.write_str("la modulo estas pli mallonga ol ELF-kapo"),
+            Self::TroMalgranda => f.write_str("la bildo estas pli mallonga ol ELF-kapo"),
             Self::NevalidaElfo => f.write_str("nevalida ELF64-bildo"),
             Self::EksterFenestro => f.write_str("segmento eliras la uzantan fenestron"),
             Self::NeniuSegmento => f.write_str("la bildo havas neniun PT_LOAD-segmenton"),
@@ -77,7 +77,20 @@ pub fn munti(
     alokilo: &mut KadraAlokilo,
     modulo: &Modulo,
 ) -> Result<UzantaBildo, ŜargaEraro> {
-    let bildo = ŝargi_bildon(modulo, spaco, alokilo)?;
+    let bildo = ŝargi_bildon(modulo.komenco, modulo.longo, spaco, alokilo)?;
+    prepari_stakon(spaco, alokilo)?;
+    Ok(bildo)
+}
+
+/// Ŝarĝu ELF-bildon el arbitra identece mapita bufro (ekz. la SNDS-legado de
+/// `SYS_EXEC`) kaj pretigu la stakon.
+pub fn munti_el_bufro(
+    spaco: &mut impl AdresaSpaco,
+    alokilo: &mut KadraAlokilo,
+    komenco: u64,
+    longo: u64,
+) -> Result<UzantaBildo, ŜargaEraro> {
+    let bildo = ŝargi_bildon(komenco, longo, spaco, alokilo)?;
     prepari_stakon(spaco, alokilo)?;
     Ok(bildo)
 }
@@ -171,14 +184,15 @@ fn prepari_stakon(
 /// Legu la ELF64-kapon, mapu ĉiun `PT_LOAD`-segmenton kaj redonu la bildan
 /// intervalon kun la enirpunkto el la ELF-kapo.
 fn ŝargi_bildon(
-    modulo: &Modulo,
+    komenco: u64,
+    longo: u64,
     spaco: &mut impl AdresaSpaco,
     alokilo: &mut KadraAlokilo,
 ) -> Result<UzantaBildo, ŜargaEraro> {
-    if modulo.longo < ELF_KAPA_GRANDO as u64 {
+    if longo < ELF_KAPA_GRANDO as u64 {
         return Err(ŜargaEraro::TroMalgranda);
     }
-    let bazo = modulo.komenco;
+    let bazo = komenco;
     // SAFETY: la modulo estas identece mapita kaj almenaŭ `ELF_KAPA_GRANDO`
     // bajtojn longa, do la tuta ELF-kapo estas legiva.
     let kapo = unsafe { slice::from_raw_parts(bazo as *const u8, ELF_KAPA_GRANDO) };
@@ -196,7 +210,7 @@ fn ŝargi_bildon(
     let programa_komenco = legi_u64(kapo, 32);
     let programa_nombro = legi_u16(kapo, 56) as u64;
     let programa_fino = programa_komenco + programa_nombro * ELF_PROGRAMA_GRANDO as u64;
-    if programa_fino > modulo.longo {
+    if programa_fino > longo {
         return Err(ŜargaEraro::NevalidaElfo);
     }
 
@@ -223,7 +237,7 @@ fn ŝargi_bildon(
         let Some(dosiera_fino) = dosiera.checked_add(dosiera_longo) else {
             return Err(ŜargaEraro::NevalidaElfo);
         };
-        if dosiera_longo > memora_longo || dosiera_fino > modulo.longo {
+        if dosiera_longo > memora_longo || dosiera_fino > longo {
             return Err(ŜargaEraro::NevalidaElfo);
         }
         let Some(virtuala_fino) = virtuala.checked_add(memora_longo) else {

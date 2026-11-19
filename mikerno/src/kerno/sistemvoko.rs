@@ -8,8 +8,8 @@
 use core::mem::size_of;
 
 use libmikerno::syscall::{
-    SYS_CEDI, SYS_DONI, SYS_DORMI, SYS_FERMI, SYS_FINI, SYS_KREI_FINPUNKTON, SYS_REVOKI,
-    SYS_RICEVI, SYS_RICEVI_TEMPO, SYS_SENDI, SYS_SENDI_TEMPO, SYS_SKRIBI,
+    SYS_BRK, SYS_CEDI, SYS_DONI, SYS_DORMI, SYS_EXEC, SYS_FERMI, SYS_FINI, SYS_KREI_FINPUNKTON,
+    SYS_REVOKI, SYS_RICEVI, SYS_RICEVI_TEMPO, SYS_SENDI, SYS_SENDI_TEMPO, SYS_SKRIBI,
 };
 use libmikerno::{Mesago, Permesoj, Tenilo};
 
@@ -45,6 +45,8 @@ fn kodo(eraro: ik::IkEraro) -> u64 {
 
 /// Maksimuma longo de unu `SYS_SKRIBI`-bufro.
 const MAKS_SKRIBO: usize = 4096;
+/// Maksimuma longo de `SYS_EXEC`-vojo.
+const MAKS_VOJO: usize = 256;
 
 /// Kerna kopiujo por `SYS_SKRIBI`: la uzanta bufro estas legata nur dum la
 /// mallonga `STAC`-fenestro, kaj la formatado poste legas ĉi tiun bufron. La
@@ -70,8 +72,68 @@ pub fn voki(numero: usize, a0: u64, a1: u64, a2: u64, a3: u64, el_ring3: bool) -
         SYS_REVOKI => revoki(a0, a1),
         SYS_FERMI => fermi(a0),
         SYS_DORMI => dormi(a0),
+        SYS_BRK => brk(a0, el_ring3),
+        SYS_EXEC => exec(a0, a1, el_ring3),
         _ => NEKONATA_VOKO,
     }
+}
+
+/// `rdi` = nova kupo-limo (`0` nur demandas).
+fn brk(nova: u64, el_ring3: bool) -> u64 {
+    if !el_ring3 {
+        return MALĜUSTA_ARG;
+    }
+    let id = planisto::nuna_procezo();
+    if id == 0 {
+        return MALĜUSTA_ARG;
+    }
+    let _gardo = crate::interrompo::InterrompaGardo::nova();
+    let Some(procezo) = super::procezo::akiri(id) else {
+        return MALĜUSTA_ARG;
+    };
+    if nova == 0 {
+        return procezo.kupaj_limoj().1;
+    }
+    match procezo.etendi_kupon(nova, super::kadra_alokilo()) {
+        Ok(limo) => limo,
+        Err(_) => MALĜUSTA_ARG,
+    }
+}
+
+/// `rdi` = montrilo al la vojo, `rsi` = longo. Sukceso neniam revenas.
+fn exec(montrilo: u64, longo: u64, el_ring3: bool) -> u64 {
+    let Ok(longo) = usize::try_from(longo) else {
+        return MALĜUSTA_ARG;
+    };
+    if longo == 0 || longo > MAKS_VOJO || !kontroli_regionon(montrilo, longo, false, el_ring3) {
+        return MALĜUSTA_ARG;
+    }
+    let id = planisto::nuna_procezo();
+    if id == 0 {
+        return MALĜUSTA_ARG;
+    }
+
+    let mut bufro = [0u8; MAKS_VOJO];
+    {
+        let _gardo = el_ring3.then(crate::arkitekturo::StacGardo::nova);
+        // SAFETY: la regiona kontrolo certigas, ke la Ring 3-montrilo estas
+        // mapita kaj legebla; `longo` ne superas la kernan bukron. Ring
+        // 0-montriloj estas fidindaj.
+        unsafe {
+            core::ptr::copy_nonoverlapping(montrilo as *const u8, bufro.as_mut_ptr(), longo);
+        }
+    }
+    let Ok(vojo) = core::str::from_utf8(&bufro[..longo]) else {
+        return MALĜUSTA_ARG;
+    };
+    if vojo.contains('\0') {
+        return MALĜUSTA_ARG;
+    }
+
+    // `anstataŭigi` redonas nur malsukceson; sukceso transiras al Ring 3.
+    let eraro = super::exec::anstataŭigi(id, vojo);
+    crate::skribu!("[kerno] exec: procezo {} malsukcesis: {}\n", id, eraro);
+    MALĜUSTA_ARG
 }
 
 /// `rdi` = daŭro en milisekundoj.
@@ -340,8 +402,8 @@ fn kontroli_mesagon(montrilo: u64, skriba: bool, el_ring3: bool) -> bool {
     kontroli_regionon(montrilo, size_of::<Mesago>(), skriba, el_ring3)
 }
 
-/// Kontrolu Ring 3-montrilon: sen ciferpremo, ene de la anoncita bildo aŭ
-/// stako, kaj kun la postulata folia permeso — `skriba` por skribo, alie por
+/// Kontrolu Ring 3-montrilon: sen ciferpremo, ene de la anoncita bildo, stako
+/// aŭ kupo, kaj kun la postulata folia permeso — `skriba` por skribo, alie por
 /// legado. Ring 0-montriloj estas fidindaj kaj trapasas sen kontrolo.
 fn kontroli_regionon(montrilo: u64, longo: usize, skriba: bool, el_ring3: bool) -> bool {
     let Some(fino) = montrilo.checked_add(longo as u64) else {
@@ -358,7 +420,9 @@ fn kontroli_regionon(montrilo: u64, longo: usize, skriba: bool, el_ring3: bool) 
     let en_bildo = bilda_fino > bilda_komenco && montrilo >= bilda_komenco && fino <= bilda_fino;
     let staka_komenco = UZANTA_STAKO_SUPRO - UZANTA_STAKO_GRANDE as u64;
     let en_stako = montrilo >= staka_komenco && fino <= UZANTA_STAKO_SUPRO;
-    if !en_bildo && !en_stako {
+    let (kupa_komenco, kupa_fino) = procezo.kupaj_limoj();
+    let en_kupo = kupa_fino > kupa_komenco && montrilo >= kupa_komenco && fino <= kupa_fino;
+    if !en_bildo && !en_stako && !en_kupo {
         crate::skribu!(
             "[eraro] procezo {}: montrilo 0x{:x} (longo {}) estas ekster la anoncita regiono\n",
             id,

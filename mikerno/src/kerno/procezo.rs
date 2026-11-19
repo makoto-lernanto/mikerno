@@ -15,8 +15,12 @@ use libmikerno::starto::SEKRETA_ADRESO;
 use crate::arkitekturo;
 use crate::arkitekturo::Spaco;
 use crate::kunhavigita::Kunhavigita;
+use crate::memoro::KADRA_GRANDO;
 use crate::memoro::kadro::KadraAlokilo;
-use crate::memoro::virtuala::{AdresaSpaco, FizikaAdreso, PaĝaEraro};
+use crate::memoro::virtuala::{
+    AdresaSpaco, FizikaAdreso, PaĝaEraro, PaĝaPermesoj, UZANTA_KUPO_BAZO, UZANTA_KUPO_FINO,
+    VirtuaAdreso,
+};
 
 pub use super::objekto::ProcezaId;
 
@@ -86,6 +90,7 @@ pub struct Procezo {
     bilda_fino: u64,
     enirpunkto: u64,
     sekreta_adreso: u64,
+    kupo_fino: u64,
 }
 
 impl Procezo {
@@ -104,6 +109,7 @@ impl Procezo {
             bilda_fino: 0,
             enirpunkto: 0,
             sekreta_adreso: SEKRETA_ADRESO,
+            kupo_fino: UZANTA_KUPO_BAZO,
         })
     }
 
@@ -145,6 +151,62 @@ impl Procezo {
 
     pub fn radika_adreso(&self) -> FizikaAdreso {
         self.adresa_spaco.radika_adreso()
+    }
+
+    /// La fiksa bazo de la kupo kaj la nuna `brk`-limo.
+    pub fn kupaj_limoj(&self) -> (u64, u64) {
+        (UZANTA_KUPO_BAZO, self.kupo_fino)
+    }
+
+    /// Etendu la uzantan datumsegmenton ĝis `nova` (la semantiko de `brk`).
+    ///
+    /// Nur pligrandigo mapas novajn, nuligitajn paĝojn; peto malpli alta ol la
+    /// nuna limo ne malmapas ion. Redonas la nunan limon, kiu neniam superas
+    /// `UZANTA_KUPO_FINO`.
+    pub fn etendi_kupon(
+        &mut self,
+        nova: u64,
+        alokilo: &mut KadraAlokilo,
+    ) -> Result<u64, PaĝaEraro> {
+        if !(UZANTA_KUPO_BAZO..=UZANTA_KUPO_FINO).contains(&nova) {
+            return Ok(self.kupo_fino);
+        }
+        let antaŭa = self.kupo_fino.div_ceil(KADRA_GRANDO) * KADRA_GRANDO;
+        let fina = nova.div_ceil(KADRA_GRANDO) * KADRA_GRANDO;
+        if fina > antaŭa {
+            self.adresa_spaco.mapi_uzantan_regionon(
+                VirtuaAdreso::nova(antaŭa),
+                (fina - antaŭa) as usize,
+                PaĝaPermesoj::UZANTA_DATUMOJ,
+                alokilo,
+            )?;
+        }
+        self.kupo_fino = self.kupo_fino.max(nova);
+        Ok(self.kupo_fino)
+    }
+
+    /// Anstataŭigu la adresan spacon per `nova`, detruu la malnovan kaj
+    /// restarigu la kupan limon. La identigilo, la kerna stako kaj la kapabloj
+    /// restas; la nova bildo devas jam enhavi bildon, stakon kaj (se bezonate)
+    /// sekretajn paĝojn.
+    pub fn anstataŭigi_spacon(
+        &mut self,
+        nova: Spaco,
+        alokilo: &mut KadraAlokilo,
+    ) -> Result<(), ProcezaEraro> {
+        if arkitekturo::aktiva_adreso_spaco() == self.adresa_spaco.radika_adreso().adreso() {
+            let Some(kerna) = kerna_radiko() else {
+                let _ = nova.detruu(alokilo);
+                return Err(ProcezaEraro::NeniuKernaSpaco);
+            };
+            // SAFETY: la nuna kodo kaj la kernaj stakoj estas en la kunhavataj
+            // kernaj mapoj; la alvokanto tenas interrompojn malŝaltitaj.
+            unsafe { arkitekturo::ŝalti_adresan_spacon(kerna.adreso()) };
+        }
+        let malnova = core::mem::replace(&mut self.adresa_spaco, nova);
+        self.kupo_fino = UZANTA_KUPO_BAZO;
+        malnova.detruu(alokilo)?;
+        Ok(())
     }
 
     pub fn stato(&self) -> ProcezaEstado {

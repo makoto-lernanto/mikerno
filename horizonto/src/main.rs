@@ -14,7 +14,7 @@ mod biblioteko;
 use core::panic::PanicInfo;
 
 use libmikerno::starto::{
-    MAGIA_NUMERO, REĜIMO_SEKRETO, REĜIMO_SPIONO, SEKRETA_ADRESO, SEKRETA_DUA_ADRESO,
+    MAGIA_NUMERO, REĜIMO_EXEC, REĜIMO_SEKRETO, REĜIMO_SPIONO, SEKRETA_ADRESO, SEKRETA_DUA_ADRESO,
     SEKRETA_ID_DEŜOVO,
 };
 use libmikerno::syscall::{
@@ -41,12 +41,20 @@ const SALUTO: &str = "horizonto: procezo vekis en Ring 3.\n";
 #[unsafe(no_mangle)]
 pub extern "C" fn horizonto_komenco(reĝimo: u64, identigilo: u64) -> ! {
     biblioteko::skribi(SALUTO);
+    if reĝimo == REĜIMO_EXEC {
+        biblioteko::skribi_formaton(format_args!(
+            "[ring3] exec: nova bildo funkcias (procezo {})\n",
+            identigilo
+        ));
+        biblioteko::fini(0)
+    }
     testi_identon(identigilo);
     testi_finpunktojn(identigilo);
     testi_rajtojn(identigilo);
     testi_revokon(identigilo);
     testi_tempolimojn(identigilo);
     testi_dormon(identigilo);
+    testi_kupon(identigilo);
     testi_negativajn();
     match reĝimo {
         REĜIMO_SEKRETO => sekreta_provo(identigilo),
@@ -83,7 +91,7 @@ fn kontroli_sekretan(identigilo: u64) -> bool {
 }
 
 /// La viktimo: kontrolu sian paĝon, cedu plurfoje (por ke la spiono ruliĝu
-/// intere) kaj finu per `SYS_FINI`.
+/// intere) kaj poste anstataŭigu sin per `SYS_EXEC`.
 fn sekreta_provo(identigilo: u64) -> ! {
     if !kontroli_sekretan(identigilo) {
         biblioteko::fini(1)
@@ -100,10 +108,17 @@ fn sekreta_provo(identigilo: u64) -> ! {
         biblioteko::cedi();
     }
     biblioteko::skribi_formaton(format_args!(
-        "[ring3] procezo {}: pluvivas post la spiono; finas per SYS_FINI\n",
+        "[ring3] procezo {}: pluvivas post la spiono; ruligos SYS_EXEC\n",
         identigilo
     ));
-    biblioteko::fini(0)
+    // Fazo 3: anstataŭigu la procezon per la sama bildo el SNDS. Sukceso
+    // neniam revenas; malsukceso raportiĝas kaj finas la procezon.
+    let kodo = biblioteko::exec("horizonto.elf");
+    biblioteko::skribi_formaton(format_args!(
+        "[ring3] procezo {}: exec malsukcesis (kodo {})\n",
+        identigilo, kodo
+    ));
+    biblioteko::fini(1)
 }
 
 /// La spiono: kontrolu sian paĝon, poste legu la duan paĝon de la viktimo.
@@ -365,6 +380,39 @@ fn testi_dormon(identigilo: u64) {
         if kodo == 0 { "bone" } else { "MALBONE" },
         kodo
     ));
+}
+
+/// Fazo 3: aloku paĝon el la uzanta kupo per `SYS_BRK`, skribu kaj relegu ĝin.
+/// La alokita adreso aperas en la akcepta linio.
+fn testi_kupon(identigilo: u64) {
+    let Some(montrilo) = biblioteko::aloki(4096) else {
+        biblioteko::skribi_formaton(format_args!(
+            "[ring3] procezo {}: kupo (MALBONE): aloko malsukcesis\n",
+            identigilo
+        ));
+        return;
+    };
+    let mut bone = true;
+    // SAFETY: `aloki` redonis blokon ene de la kupo, kiun `SYS_BRK` mapis en la
+    // proceza spaco; la skribo kaj relegado restas en tiu 4096-bajta intervalo.
+    unsafe {
+        for indekso in 0..4096 {
+            core::ptr::write_volatile(montrilo.add(indekso), (indekso % 251) as u8);
+        }
+        for indekso in 0..4096 {
+            bone &= core::ptr::read_volatile(montrilo.add(indekso)) == (indekso % 251) as u8;
+        }
+    }
+    biblioteko::skribi_formaton(format_args!(
+        "[ring3] kupo: alokita 4096 bajtoj ĉe 0x{:x}\n",
+        montrilo as usize
+    ));
+    if !bone {
+        biblioteko::skribi_formaton(format_args!(
+            "[ring3] procezo {}: kupo (MALBONE): skribo kaj relegado malkongruas\n",
+            identigilo
+        ));
+    }
 }
 
 /// Kontrolu, ke la kerno rifuzas malvalidajn Ring 3-argumentojn anstataŭ

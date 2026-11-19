@@ -76,9 +76,19 @@ CPU_ARGS=(-cpu "${QEMU_CPU:-qemu64,+smep,+smap}")
 
 # La SNDS-bildo servas al la virtio-blk-pelilo kaj al la dosiersistemo (M17).
 # Ĝi estas regenerata antaŭ ĉiu starto; `-snapshot` certigas, ke la memprovo ne
-# modifu la dosieron eĉ se la restarigo malsukcesus.
+# modifu la dosieron eĉ se la restarigo malsukcesus. La uzanta bildo estas
+# aldonita kiel `horizonto.elf`, por ke `SYS_EXEC` povu relanĉi ĝin el SNDS.
 SNDS="$ROOT/target/mikerno.snds"
-"$ROOT/tools/krei_snds_img.sh" "$ROOT/mikerno/snds" "$SNDS" >/dev/null
+if [[ -n "$ISO" ]]; then
+    UZANTA="$ROOT/target/x86_64-unknown-none/release/horizonto"
+else
+    UZANTA="$(dirname "$KERNEL")/horizonto"
+fi
+SNDS_ALDONOJ=()
+if [[ -f "$UZANTA" ]]; then
+    SNDS_ALDONOJ=("horizonto.elf=$UZANTA")
+fi
+"$ROOT/tools/krei_snds_img.sh" "$ROOT/mikerno/snds" "$SNDS" "${SNDS_ALDONOJ[@]}" >/dev/null
 DISKA_ARGS=(
     -drive "file=$SNDS,format=raw,if=none,id=disk0"
     -device "virtio-blk-pci,drive=disk0,disable-legacy=on"
@@ -106,7 +116,6 @@ if [[ -n "$ISO" ]]; then
 fi
 
 # La uzanta bildo apud la kerna estas liverita kiel PVH-modulo (`-initrd`).
-UZANTA="$(dirname "$KERNEL")/horizonto"
 INITRD=()
 if [[ -f "$UZANTA" ]]; then
     INITRD=(-initrd "$UZANTA")

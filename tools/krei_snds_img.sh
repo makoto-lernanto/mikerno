@@ -2,12 +2,13 @@
 # Paku dosierujon en SNDS-bildon (Simpla NurLega Dosiersistemo).
 #
 # Uzado:
-#   tools/krei_snds_img.sh [eniga_dosierujo] [eliga_dosiero]
+#   tools/krei_snds_img.sh [eniga_dosierujo] [eliga_dosiero] [nomo=vojo]...
 #
-# La defaŭltoj estas `mikerno/snds` kaj `target/mikerno.snds`. La bildo estas
-# determinisma: la enhavo estas pakata laŭ ordigo de la UTF-8-bajtoj, sen
-# horindikoj. La skripto uzas nur python3, do GitHub Actions kaj WSL2 produktas
-# identajn bildojn.
+# La defaŭltoj estas `mikerno/snds` kaj `target/mikerno.snds`. Pliaj argumentoj
+# aldonas dosierojn al la radiko de la bildo (ekz. `horizonto.elf=…`), sen
+# ŝanĝi la enigan dosierujon. La bildo estas determinisma: la enhavo estas
+# pakata laŭ ordigo de la UTF-8-bajtoj, sen horindikoj. La skripto uzas nur
+# python3, do GitHub Actions kaj WSL2 produktas identajn bildojn.
 #
 # Formato (ĉio little-endian, 512-bajtaj sektoroj):
 #   sektoro 0        superbloko (32 bajtoj)
@@ -32,6 +33,26 @@ CELO="${2:-$ROOT/target/mikerno.snds}"
 if [[ ! -d "$FONTO" ]]; then
     echo "SNDS: la eniga dosierujo ne ekzistas: $FONTO" >&2
     exit 1
+fi
+
+# Pliaj dosieroj: kopiu la enigan arbon al provizora dosierujo kaj aldonu ilin
+# tie, por ke la python-pakaĵo restu senŝanĝa.
+ARGUMENTOJ=("$@")
+if [[ ${#ARGUMENTOJ[@]} -gt 2 ]]; then
+    PROVIZORA="$(mktemp -d)"
+    trap 'rm -rf "$PROVIZORA"' EXIT
+    cp -a "$FONTO"/. "$PROVIZORA"/
+    for ((indekso = 2; indekso < ${#ARGUMENTOJ[@]}; indekso++)); do
+        spec="${ARGUMENTOJ[$indekso]}"
+        nomo="${spec%%=*}"
+        vojo="${spec#*=}"
+        if [[ "$spec" == "$nomo" || -z "$nomo" || "$nomo" == */* || ! -f "$vojo" ]]; then
+            echo "SNDS: nevalida aldonaĵo (atendata nomo=vojo): $spec" >&2
+            exit 1
+        fi
+        cp "$vojo" "$PROVIZORA/$nomo"
+    done
+    FONTO="$PROVIZORA"
 fi
 
 mkdir -p "$(dirname "$CELO")"

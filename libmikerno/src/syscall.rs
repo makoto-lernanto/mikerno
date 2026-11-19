@@ -29,6 +29,12 @@ pub const SYS_FERMI: usize = 11;
 /// `rdi` = daŭro en milisekundoj; blokas la fadenon ĝis almenaŭ tiu tempo
 /// pasis. Aldonita en M16 Fazo 1; la ceteraj numeroj restas kongruaj.
 pub const SYS_DORMI: usize = 12;
+/// `rdi` = nova limo de la uzanta kupo (`0` nur demandas la nunan limon).
+/// Redonas la nunan limon, kiu neniam superas la fiksan supran limon.
+pub const SYS_BRK: usize = 13;
+/// `rdi` = montrilo al la vojo, `rsi` = longo. Legas ELF-bildon el SNDS kaj
+/// anstataŭigas la nunan procezon (C17.5); sukceso neniam revenas.
+pub const SYS_EXEC: usize = 14;
 
 /// Senfina tempolimo (`r10`): la voko blokas ĝis la operacio eblas aŭ la
 /// finpunkto revokiĝas.
@@ -203,6 +209,21 @@ pub fn cedi() -> isize {
 /// malakcepto `-1` (la ripoza kunteksto ne povas dormi).
 pub fn dormi(millisekundoj: u64) -> isize {
     unsafe { invoki(SYS_DORMI, [millisekundoj as usize, 0, 0, 0]) }
+}
+
+/// Etendu la uzantan kupon ĝis `nova`; `0` nur demandas la nunan limon.
+///
+/// La rezulto estas la nuna `brk`-valoro: se ĝi estas malpli granda ol la
+/// petita `nova`, la etendo malsukcesis.
+pub fn brk(nova: usize) -> isize {
+    unsafe { invoki(SYS_BRK, [nova, 0, 0, 0]) }
+}
+
+/// Anstataŭigu la nunan procezon per la ELF-bildo `vojo` el SNDS.
+///
+/// Sukceso neniam revenas; malsukceso redonas negativan eraron.
+pub fn exec(vojo: &str) -> isize {
+    unsafe { invoki(SYS_EXEC, [vojo.as_ptr() as usize, vojo.len(), 0, 0]) }
 }
 
 /// Kreu finpunkton kun la donitaj permesoj; sukceso redonas la krudan

@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-18 · Versio de la Cargo-laborloko: 0.7.1
+> Stato: 2026-11-19 · Versio de la Cargo-laborloko: 0.7.2
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -29,7 +29,7 @@
 | M14 | IK-firmigo: objektoj, rajtoj, tempolimoj | Plenumita | Ring 0/Ring 3-scenaroj kaj AC/CR3/EOI-provoj verdaj (ABI 2) |
 | M15 | `arm64`-malantaŭo: EL0, ABI 2, `ramfb`, `PAN` | Plenumita | identa piksela haketo sur ambaŭ arkoj |
 | M16 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Parte | dormo 100 ms = 10 tikoj; minimumo ≥ 17 veturoj; arm64-stabileco |
-| M17 | Konservado, dosiersistemo, ŝelo | Parte | `virtio-blk` legas/skribas 64 sektorojn; SNDS montras 4 dosierojn kaj 1 dosierujon (PCI kaj MMIO) |
+| M17 | Konservado, dosiersistemo, ŝelo | Parte | `virtio-blk` legas/skribas 64 sektorojn; SNDS montras 5 dosierojn kaj 1 dosierujon (PCI kaj MMIO); `SYS_BRK` kaj `SYS_EXEC` funkcias en Ring 3 |
 | M18 | DI, testoj, plena pruvaro | Parte | GitHub Actions verde (fmt, clippy, konstruo, Kani); testoj kaj plena pruvaro mankas |
 | M19 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 | M20 | Plena pruvaro kaj 1.0 | Venonta | — |
@@ -155,6 +155,7 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-18 | 0.7.1 | 55 | 14043 | 10972 | 1771 | 1300 |
 | 2026-11-18 | 0.7.1 | 55 | 14042 | 10971 | 1771 | 1300 |
 | 2026-11-18 | 0.7.1 | 55 | 14042 | 10971 | 1771 | 1300 |
+| 2026-11-19 | 0.7.2 | 56 | 14345 | 11204 | 1818 | 1323 |
 
 ---
 
@@ -1596,6 +1597,73 @@ konstruo (ĝisdatigo postulas novan bildon); maksimuma dosiero 64 KiB (C17.4).
 
 **Versio.** 0.7.1 (Fazo 2).
 
+#### 1c. Fazo 3 — efektivigita (0.7.2)
+
+**Adresaro.** La uzanta bildo restas ĉe `0x1_0000_0000`, la stako okupas la
+tutan `0x1000_0000`–`0x1010_0000` (16 MiB), kaj la kupo komenciĝas tuj poste:
+`UZANTA_KUPO_BAZO = 0x1_0200_0000`, kun limo `UZANTA_KUPO_FINO =
+0x2_0000_0000`. La sekretaj paĝoj ĉe `0x2_0000_0000` do restas ekster la kupo.
+
+**`SYS_BRK` (13).** `Procezo` ricevas la kampon `kupo_fino` (komenca valoro
+`UZANTA_KUPO_BAZO`) kaj la metodojn `kupaj_limoj()` kaj `etendi_kupon(nova,
+alokilo)`. La semantiko sekvas `brk`: `nova == 0` redonas la nunan limon; peto
+en `[UZANTA_KUPO_BAZO, UZANTA_KUPO_FINO]` mapas la mankantajn paĝojn kiel
+nuligitajn `UZANTA_DATUMOJ`-foliojn kaj redonas la novan limon; peto ekster la
+intervalo aŭ mapada eraro redonas la malnovan limon. La limo neniam
+malpliiĝas: `nova` malpli alta ol la nuna valoro nur redonas la nunan limon,
+do `brk` estas monotona kaj nenia malmapo okazas. La voko validas nur el Ring 3
+kaj ruliĝas sub `InterrompaGardo`.
+
+**Kupa alokilo.** `horizonto/src/biblioteko.rs` uzas simplan `bump`-alokilon:
+`KUPO_NUNA` kaj `KUPO_FINO` estas atomaj `usize`-oj; la unua `aloki` vokas
+`brk(0)` por lerni la bazon, poste `brk`-as la aliniitan finon (`KUPO_ALINIO =
+16`) antaŭ ol redoni la montrilon. `liberigi` estas malplena — la kupo kreskas
+nur. La buklo en `horizonto` alokas 4096 bajtojn, skribas kaj relegas ŝablonon
+(mod 251) kaj presas la akceptan linion.
+
+**`SYS_EXEC` (14).** `kerno/exec.rs` legas la vojon (1–255 bajtoj) el la uzanta
+spaco sub `StacGardo`, postulas validan UTF-8-on sen NUL, malfermas la dosieron
+per SNDS, postulas almenaŭ 64-bajtan ELF-kapon, alokas kontiguajn kadrojn per
+`aloki_kontiguajn`, legas la dosieron rekte en ilin kaj muntas ĝin per
+`munti_el_bufro` (la sama `ŝargi_bildon` kiel la praŝarĝa vojo) en novan
+`Spaco`-n kun freŝa stako. `Procezo::anstataŭigi_spacon` ŝaltas la kernan
+radikon se la malnova spaco estas aktiva, anstataŭigas la spacon, restarigas
+`kupo_fino` kaj detruas la malnovan spacon; poste `procezo::aktivigi(id)` kaj
+`eniri_uzanton(..., REĜIMO_EXEC, id)`. La eniro neniam revenas; malsukceso
+presas `[kerno] exec: procezo N malsukcesis: …` kaj la voko redonas
+`MALĜUSTA_ARG`. `libmikerno::starto::REĜIMO_EXEC` (4) igas la novan bildon
+raporti `[ring3] exec: nova bildo funkcias (procezo N)` anstataŭe ripeti la
+testojn (C17.5: `exec` anstataŭigas la nunan procezon; `fork` restas ŝuldo).
+
+**arm64-aliniiĝo.** La arm64-ELF estis 90 520 bajtoj pro la defaŭlta 64 KiB
+`max-page-size` de `rust-lld`; `horizonto/build.rs` nun pasigas `-z
+max-page-size=4096`, do la segmentoj ne plu havas 64 KiB-truojn kaj la bildo
+(31 056 bajtoj) taŭgas por la 64 KiB-limigo de SNDS (C17.4).
+
+**SNDS-aldonaĵoj.** `tools/krei_snds_img.sh` akceptas pliajn argumentojn
+`nomo=vojo`, kiujn ĝi metas en la radikon de bildo kopiita al provizora
+dosierujo. `tools/run-qemu.sh` kaj `tools/run-qemu-arm.sh` aldonas
+`horizonto.elf=<konstruita horizonto>`; tiel la sama bildo servas kiel celo de
+`SYS_EXEC` en ambaŭ arkitekturoj.
+
+**Lokaj rezultoj (2026-11-19, versio 0.7.2).**
+
+| Vojo | Linio |
+| --- | --- |
+| x86_64 PVH | `[ring3] kupo: alokita 4096 bajtoj ĉe 0x102000000`; `[kerno] exec: procezo 5 anstataŭigita per horizonto.elf (39648 bajtoj, enirpunkto 0x100002140)`; `[ring3] exec: nova bildo funkcias (procezo 5)`; `[memoro] izolado (bone): 64771 kadroj antaŭ, 64771 post` |
+| arm64 Image | `[ring3] kupo: alokita 4096 bajtoj ĉe 0x102000000`; `[kerno] exec: procezo 5 anstataŭigita per horizonto.elf (31056 bajtoj, enirpunkto 0x100000728)`; `[ring3] exec: nova bildo funkcias (procezo 5)`; `[memoro] izolado (bone): 63979 kadroj antaŭ, 63979 post` |
+
+Ambaŭ vojoj finiĝas per `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0
+blokitaj` kaj nul `MALBONE`-linioj; la pluraj `[eraro] procezo …`-linioj estas
+la intencaj negativaj provoj (montrilo, sekreta paĝo, kapablo, `SMAP`).
+
+**Limigoj.** `brk` nur pligrandigas kaj neniam malmapas; la alokilo ne
+liberigas; `exec` anstataŭigas la procezon (neniu `fork`); la celata dosiero
+devas esti en la radiko de SNDS kaj havi maksimume 64 KiB; la bildo de
+`horizonto` devas esti pakita en la SNDS-bildon dum la konstruo.
+
+**Versio.** 0.7.2 (Fazo 3).
+
 #### 2. Evitindaj Eraroj (Konsiloj por la Arkitekto)
 
 1.  **Virtio kaj Memoro-Bariloj**: Virtio-vicoj postulas striktan ordigon de skriboj. En Rust, uzu `core::sync::atomic::compiler_fence(Ordering::SeqCst)` antaŭ ol sciigi la aparaton pri novaj priskribiloj. Malsukceso kaŭzos silentan datuman korupton.
@@ -1609,7 +1677,8 @@ konstruo (ĝisdatigo postulas novan bildon); maksimuma dosiero 64 KiB (C17.4).
 | :--- | :--- | :--- |
 | `virtio-blk` legas blokojn | Plenumita (Fazo 1) | `[konservado] virtio-blk: 64 sektoroj legitaj, haketo 0xc139f0538c943325`; skribo kaj restarigo verdaj (PCI kaj MMIO) |
 | SNDS estas muntita kaj legebla | Plenumita (Fazo 2) | `[dosiersistemo] SNDS: 4 dosieroj, 1 dosierujo. Haketo: 0x3ba743bb3a5561c3`; `[dosiersistemo] legado (bone): bonveno.txt, 18 bajtoj` |
-| `SYS_BRK` funkcias en Ring 3 | Pruvota | `[ring3] kupo: alokita 4096 bajtoj ĉe 0x...` |
+| `SYS_BRK` funkcias en Ring 3 | Plenumita (Fazo 3) | `[ring3] kupo: alokita 4096 bajtoj ĉe 0x102000000` (x86_64 kaj arm64) |
+| `SYS_EXEC` anstataŭigas la procezon | Plenumita (Fazo 3) | `[kerno] exec: procezo 5 anstataŭigita per horizonto.elf (39648 bajtoj, enirpunkto 0x100002140)`; `[ring3] exec: nova bildo funkcias (procezo 5)` |
 | Ŝelo startas kaj akceptas enigon | Pruvota | `mikerno> ` (kursoro klinitas) |
 | `listi` kaj `legi` funkcias | Pruvota | `mikerno> listi` -> `bonveno.txt` <br> `mikerno> legi bonveno.txt` -> `Saluton, MiKerno!` |
 | `procezoj` kaj `mortigi` funkcias | Pruvota | `mikerno> procezoj` -> `1: ŝelo, 2: fono` <br> `mikerno> mortigi 2` -> `[procezo] 2 detruita` |
