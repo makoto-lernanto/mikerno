@@ -158,7 +158,7 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-19 | 0.7.2 | 56 | 14345 | 11204 | 1818 | 1323 |
 | 2026-11-19 | 0.7.2 | 56 | 14345 | 11204 | 1818 | 1323 |
 | 2026-11-19 | 0.7.2 | 56 | 14345 | 11204 | 1818 | 1323 |
-| 2026-11-19 | 0.7.3 | 56 | 14983 | 11711 | 1915 | 1357 |
+| 2026-11-19 | 0.7.3 | 56 | 14977 | 11705 | 1915 | 1357 |
 
 ---
 
@@ -1751,6 +1751,18 @@ legas memoraĵon, do la kompililo rajtis eltiri la legadon de la proceza
 tabelo el la buklo. Sen `nomem` la legado restas en la buklo kaj la
 interrompa traktilo videblas al la kompililo. Ĉi tiu latenta cimo koncernis
 ankaŭ la antaŭajn atendojn de tikoj.
+
+**Riparo post la unua eldono.** La unue alŝutita 0.7.3-bildo ankoraŭ
+enhavis malnovan diagnozan eligon en la temporizila traktilo: ambaŭ arkoj
+skribis `[horloĝo] tiko N` dum la unuaj kvin tikoj kaj poste ĉiun 100-an
+tikon (≈1 s) al la seria konzolo dum la tuta funkciado. Ĝi intermiksiĝis kun
+la `ligo:~>`-prompto kaj eĉ kun la vicoj de `listi`. La eldono estis
+retirita: la du ISO-oj kaj la etikedo `v0.7.3` estis forigitaj, `main` estis
+restarigita al la antaŭa stato, kaj la eligaj linioj estis forigitaj el
+`x86_64/temporizilo.rs` kaj `arm64/temporizilo.rs`; la tika nombrilo kaj la
+planista voko restas senŝanĝaj. Novaj lokalaj provoj (x86_64 PVH kaj arm64
+Image) montris nulan `[horloĝo]`-eligon dum plursekundaj paŭzoj ĉe la
+prompto, kaj la ŝelo plu funkcias.
 
 **Lokaj rezultoj (2026-11-19, versio 0.7.3).**
 

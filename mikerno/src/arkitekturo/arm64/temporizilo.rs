@@ -18,11 +18,8 @@ struct TemporizilaTraktilo;
 
 impl InterrompaTraktilo for TemporizilaTraktilo {
     fn trakta(&self, _kadro: &mut InterrompaKadro) {
-        let tiko = TIKOJ.fetch_add(1, Ordering::Relaxed) + 1;
+        TIKOJ.fetch_add(1, Ordering::Relaxed);
         programi();
-        if tiko <= 5 || tiko.is_multiple_of(FREKVENCO) {
-            crate::skribu!("[horloĝo] tiko {}\n", tiko);
-        }
         crate::kerno::planisto::planumi();
     }
 }
