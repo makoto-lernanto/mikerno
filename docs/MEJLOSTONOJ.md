@@ -1657,6 +1657,20 @@ Ambaŭ vojoj finiĝas per `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0
 blokitaj` kaj nul `MALBONE`-linioj; la pluraj `[eraro] procezo …`-linioj estas
 la intencaj negativaj provoj (montrilo, sekreta paĝo, kapablo, `SMAP`).
 
+**Nuba DI (2026-11-19).** Runo
+[#44469170723](https://github.com/makoto-lernanto/mikerno/actions/runs/44469170723)
+ĉe `b6b7549`: ĉiuj 43 taskoj verdaj — `kontroli-kaj-konstrui`, `kani-pretigi`
+kaj la 41 pruvoj de la matrico `kani-kontroli`; la runo daŭris 11 min 15 s.
+
+**Eldono.** [`v0.7.2`](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.7.2)
+(etikedo ĉe `b6b7549`) enhavas `mikerno.iso` (SHA-256
+`4dd10e84b3b160d2e01344a3fabfab2047da7d1aea3ab263298c64b83edf8ac4`) kaj
+`mikerno-arm.iso` (SHA-256
+`b739892d259d9d035b22af19609b02b0b7ed299d9ee94e467e098eabdf435ea2`). La du
+ISO-oj estis rekonstruitaj el la puŝita kodo post la verda DI-runo kaj
+praŝarĝitaj antaŭ la alŝuto; la retejo montras la version 0.7.2 kaj la
+elŝutajn ligilojn al ĉi tiu etikedo.
+
 **Limigoj.** `brk` nur pligrandigas kaj neniam malmapas; la alokilo ne
 liberigas; `exec` anstataŭigas la procezon (neniu `fork`); la celata dosiero
 devas esti en la radiko de SNDS kaj havi maksimume 64 KiB; la bildo de
