@@ -19,6 +19,7 @@ const IMSC: usize = 0x38;
 const ICR: usize = 0x44;
 
 const FR_TXFF: u32 = 1 << 5;
+const FR_RXFE: u32 = 1 << 4;
 
 static mut BAZO: usize = DEFAŬLTA;
 
@@ -46,6 +47,15 @@ pub fn skribi_bajton(bajto: u8) {
     let bazo = unsafe { BAZO };
     while unsafe { read_volatile((bazo + FR) as *const u32) } & FR_TXFF != 0 {}
     unsafe { write_volatile(bazo as *mut u32, bajto as u32) };
+}
+
+/// Legu unubajton el la enigbufro, se ĝi jam enhavas unu.
+pub fn legi_bajton() -> Option<u8> {
+    let bazo = unsafe { BAZO };
+    if unsafe { read_volatile((bazo + FR) as *const u32) } & FR_RXFE != 0 {
+        return None;
+    }
+    Some(unsafe { read_volatile(bazo as *const u32) } as u8)
 }
 
 pub struct Konzolo;

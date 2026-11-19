@@ -10,7 +10,7 @@
 
 use core::fmt;
 
-use libmikerno::starto::SEKRETA_ADRESO;
+use libmikerno::starto::{REĜIMO_EXEC, SEKRETA_ADRESO};
 
 use crate::arkitekturo;
 use crate::arkitekturo::Spaco;
@@ -91,6 +91,10 @@ pub struct Procezo {
     enirpunkto: u64,
     sekreta_adreso: u64,
     kupo_fino: u64,
+    /// Proceza nomo; UTF-8 kun fina NUL (uzata de `procezoj`).
+    nomo: [u8; libmikerno::registro::NOMA_LONGO],
+    /// La starta reĝimo, kiun la bildo vidas en `rdi`/`x0`.
+    reĝimo: u64,
 }
 
 impl Procezo {
@@ -110,7 +114,35 @@ impl Procezo {
             enirpunkto: 0,
             sekreta_adreso: SEKRETA_ADRESO,
             kupo_fino: UZANTA_KUPO_BAZO,
+            nomo: [0; libmikerno::registro::NOMA_LONGO],
+            reĝimo: REĜIMO_EXEC,
         })
+    }
+
+    /// Proceza ero ĉirkaŭ jam konstruita adresa spaco (uzata de `SYS_LANĜI`,
+    /// kiu muntas la bildon antaŭ ol registri la procezon).
+    fn el_spaco(id: ProcezaId, adresa_spaco: Spaco) -> Self {
+        Self {
+            adresa_spaco,
+            kerna_stako_pinto: kerna_stako_pinto(id),
+            estado: ProcezaEstado::Preta,
+            bilda_komenco: 0,
+            bilda_fino: 0,
+            enirpunkto: 0,
+            sekreta_adreso: SEKRETA_ADRESO,
+            kupo_fino: UZANTA_KUPO_BAZO,
+            nomo: [0; libmikerno::registro::NOMA_LONGO],
+            reĝimo: REĜIMO_EXEC,
+        }
+    }
+
+    /// Registru la reĝimon, kiun la bildo ricevas ĉe la Ring 3-eniro.
+    pub fn agordi_reĝimon(&mut self, reĝimo: u64) {
+        self.reĝimo = reĝimo;
+    }
+
+    pub fn reĝimo(&self) -> u64 {
+        self.reĝimo
     }
 
     pub fn spaco(&mut self) -> &mut Spaco {
@@ -212,6 +244,14 @@ impl Procezo {
     pub fn stato(&self) -> ProcezaEstado {
         self.estado
     }
+
+    /// Registru la nomon, kiun `procezoj` montros por ĉi tiu procezo.
+    pub fn agordi_nomon(&mut self, nomo: &str) {
+        self.nomo = [0; libmikerno::registro::NOMA_LONGO];
+        let nomaj = nomo.as_bytes();
+        let longo = nomaj.len().min(self.nomo.len() - 1);
+        self.nomo[..longo].copy_from_slice(&nomaj[..longo]);
+    }
 }
 
 static KERNA_RADIKO: Kunhavigita<u64> = Kunhavigita::nova(0);
@@ -303,6 +343,20 @@ pub fn krei(
     Ok(id)
 }
 
+/// Registru procezon kun jam konstruita adresa spaco. La spaco devas kunhavi
+/// la kernajn mapojn; la alvokanto jam muntis la bildon kaj la stakon.
+pub fn registri(id: ProcezaId, spaco: Spaco) -> Result<ProcezaId, (ProcezaEraro, Spaco)> {
+    if id == 0 || id as usize >= MAKSAJ_PROCEZOJ {
+        return Err((ProcezaEraro::NevalidaIdentigilo, spaco));
+    }
+    if tabelo()[id as usize].is_some() {
+        return Err((ProcezaEraro::JamRegistrita, spaco));
+    }
+    tabelo()[id as usize] = Some(Procezo::el_spaco(id, spaco));
+    super::ik::inicialigi_procezon(id);
+    Ok(id)
+}
+
 pub fn akiri(id: ProcezaId) -> Option<&'static mut Procezo> {
     let indekso = id as usize;
     if indekso >= MAKSAJ_PROCEZOJ {
@@ -377,4 +431,33 @@ pub fn marki(id: ProcezaId, stato: ProcezaEstado) {
     if let Some(procezo) = akiri(id) {
         procezo.estado = stato;
     }
+}
+
+/// Plenigu `celo` per rekordoj de la registritaj procezoj; redonas la
+/// nombron da plenigitaj eroj (la kerna procezo `0` ne havas eron kaj ne
+/// aperas).
+pub fn listi(celo: &mut [libmikerno::registro::ProcezoRekordo]) -> usize {
+    let mut plenigitaj = 0;
+    for (indekso, ero) in tabelo().iter().enumerate() {
+        let Some(procezo) = ero.as_ref() else {
+            continue;
+        };
+        if plenigitaj == celo.len() {
+            break;
+        }
+        let mut rekordo = libmikerno::registro::ProcezoRekordo::nova();
+        rekordo.pid = indekso as u64;
+        rekordo.stato = match procezo.estado {
+            ProcezaEstado::Preta => libmikerno::registro::STATO_PRETA,
+            ProcezaEstado::Kuranta => libmikerno::registro::STATO_KURANTA,
+            ProcezaEstado::Mortinta => libmikerno::registro::STATO_MORTINTA,
+        };
+        rekordo.memoro = procezo.kupo_fino.saturating_sub(UZANTA_KUPO_BAZO);
+        let permesoj = b"uzanta";
+        rekordo.permesoj[..permesoj.len()].copy_from_slice(permesoj);
+        rekordo.nomo = procezo.nomo;
+        celo[plenigitaj] = rekordo;
+        plenigitaj += 1;
+    }
+    plenigitaj
 }

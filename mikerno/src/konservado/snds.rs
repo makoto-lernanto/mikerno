@@ -20,7 +20,7 @@ const VERSIO: u16 = 1;
 const INODA_GRANDO: usize = 16;
 const ERO_GRANDO: usize = 64;
 const NOMA_MAKSIMO: usize = 59;
-const DOSIERA_MAKSIMO: u32 = 64 * 1024;
+const DOSIERA_MAKSIMO: u32 = 128 * 1024;
 const TIPO_DOSIERO: u8 = 1;
 const TIPO_DOSIERUJO: u8 = 2;
 const PROFUNDA_LIMO: u8 = 16;
@@ -191,7 +191,7 @@ impl SimplaDosiersistemo {
             return Err(Eraro::NeValida("nekonata inoda tipo"));
         }
         if inodo.grando > DOSIERA_MAKSIMO {
-            return Err(Eraro::NeValida("la dosiero transiras 64 KiB"));
+            return Err(Eraro::NeValida("la dosiero transiras 128 KiB"));
         }
         if inodo.sektoroj != inodo.grando.div_ceil(SEKTORA_GRANDO as u32) {
             return Err(Eraro::NeValida(
@@ -377,10 +377,15 @@ pub fn legi(dosiero: &Dosiero, bufro: &mut [u8]) -> Result<usize, Eraro> {
     Ok(grando)
 }
 
-/// Listigu la erojn de dosierujo kaj voku `vizito` por ĉiu el ili.
+/// Listigu la erojn de dosierujo kaj plenigu `celo` per `Dosierero`-j.
 ///
-/// La vokanto ne rajtas voki SNDS-funkciojn el la `vizito`-kromprogramo.
-pub fn listi_dosierujon(vojo: &str, mut vizito: impl FnMut(&str, Tipo)) -> Result<(), Eraro> {
+/// Redonas la nombron da plenigitaj registroj (maksimume `celo.len()`).
+/// `inodo` estas la SNDS-inoda indekso; la ABI uzas ĝin kiel tenilo-valoro
+/// ĝis la dosiersistemo ekhavos verajn kapabilajn dosier-tenilojn.
+pub fn listi_registrojn(
+    vojo: &str,
+    celo: &mut [libmikerno::registro::Dosierero],
+) -> Result<usize, Eraro> {
     let _gardo = InterrompaGardo::nova();
     let Some(sistemo) = DOSIERSISTEMO.akiri().as_ref() else {
         return Err(Eraro::NeKomencigita);
@@ -391,14 +396,48 @@ pub fn listi_dosierujon(vojo: &str, mut vizito: impl FnMut(&str, Tipo)) -> Resul
     }
     let mut bufro = [0u8; SEKTORA_GRANDO];
     let nombro = inodo.grando / ERO_GRANDO as u32;
+    let mut plenigitaj = 0;
     for indekso in 0..nombro {
+        if plenigitaj == celo.len() {
+            break;
+        }
         let ero = sistemo.legi_eron(&inodo, indekso, &mut bufro)?;
         let (nomo, infa) = ero_nomo(&ero)?;
         let infa_inodo = sistemo.legi_inodon(infa, &mut bufro)?;
-        let tipo = if infa_inodo.tipo == TIPO_DOSIERO {
-            Tipo::Dosiero
+        let registro = &mut celo[plenigitaj];
+        *registro = libmikerno::registro::Dosierero::nova();
+        let nomaj = nomo.as_bytes();
+        registro.nomo[..nomaj.len()].copy_from_slice(nomaj);
+        registro.tipo = if infa_inodo.tipo == TIPO_DOSIERO {
+            libmikerno::registro::TIPO_DOSIERO
         } else {
+            libmikerno::registro::TIPO_DOSIERUJO
+        };
+        registro.grandeco = infa_inodo.grando;
+        registro.inodo = infa;
+        plenigitaj += 1;
+    }
+    Ok(plenigitaj)
+}
+
+/// Listigu la erojn de dosierujo kaj voku `vizito` por ĉiu el ili.
+///
+/// La vokanto ne rajtas voki SNDS-funkciojn el la `vizito`-kromprogramo.
+pub fn listi_dosierujon(vojo: &str, mut vizito: impl FnMut(&str, Tipo)) -> Result<(), Eraro> {
+    let mut registroj = [libmikerno::registro::Dosierero::nova(); 32];
+    let nombro = listi_registrojn(vojo, &mut registroj)?;
+    for registro in &registroj[..nombro] {
+        let fino = registro
+            .nomo
+            .iter()
+            .position(|&bajto| bajto == 0)
+            .unwrap_or(0);
+        let nomo = core::str::from_utf8(&registro.nomo[..fino])
+            .map_err(|_| Eraro::NeValida("la nomo ne estas UTF-8"))?;
+        let tipo = if registro.tipo == libmikerno::registro::TIPO_DOSIERUJO {
             Tipo::Dosierujo
+        } else {
+            Tipo::Dosiero
         };
         vizito(nomo, tipo);
     }

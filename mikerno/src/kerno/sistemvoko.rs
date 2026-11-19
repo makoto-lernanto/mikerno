@@ -7,12 +7,15 @@
 
 use core::mem::size_of;
 
+use libmikerno::registro::{Dosierero, MAKS_REGISTROJ, ProcezoRekordo};
 use libmikerno::syscall::{
-    SYS_BRK, SYS_CEDI, SYS_DONI, SYS_DORMI, SYS_EXEC, SYS_FERMI, SYS_FINI, SYS_KREI_FINPUNKTON,
-    SYS_REVOKI, SYS_RICEVI, SYS_RICEVI_TEMPO, SYS_SENDI, SYS_SENDI_TEMPO, SYS_SKRIBI,
+    SYS_BRK, SYS_CEDI, SYS_DONI, SYS_DORMI, SYS_ENIGI, SYS_EXEC, SYS_FERMI, SYS_FINI,
+    SYS_KREI_FINPUNKTON, SYS_LANĜI, SYS_LEGI, SYS_LISTI, SYS_MORTIGI, SYS_PROCEZOJ, SYS_REVOKI,
+    SYS_RICEVI, SYS_RICEVI_TEMPO, SYS_SENDI, SYS_SENDI_TEMPO, SYS_SKRIBI,
 };
 use libmikerno::{Mesago, Permesoj, Tenilo};
 
+use crate::konservado::snds;
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::virtuala::{PaĝaTablo, UZANTA_STAKO_GRANDE, UZANTA_STAKO_SUPRO};
 
@@ -31,11 +34,17 @@ pub const NEVALIDA_TENILO: u64 = (-9i64) as u64;
 pub const TABELO_PLENA: u64 = (-28i64) as u64;
 /// `-32`: la finpunkto estis revokita aŭ ĝia posedanto finiĝis.
 pub const FINPUNKTO_REVOKITA: u64 = (-32i64) as u64;
+/// `-13`: la operacio estas malpermesata; la nukleo kaj la ŝelo ne mortigeblas.
+pub const NEPERMITITA: u64 = (-13i64) as u64;
+/// `-17`: la dosiero aŭ procezo ne troviĝas.
+pub const NE_TROVITA: u64 = (-17i64) as u64;
 
 const _: () = {
     assert!(NEVALIDA_TENILO == libmikerno::syscall::NEVALIDA_TENILO as u64);
     assert!(TABELO_PLENA == libmikerno::syscall::TABELO_PLENA as u64);
     assert!(FINPUNKTO_REVOKITA == libmikerno::syscall::FINPUNKTO_REVOKITA as u64);
+    assert!(NEPERMITITA == libmikerno::syscall::NEPERMITITA as u64);
+    assert!(NE_TROVITA == libmikerno::syscall::NE_TROVITA as u64);
 };
 
 /// La sistemvoka erar-kodo por IK-malsukceso.
@@ -52,6 +61,17 @@ const MAKS_VOJO: usize = 256;
 /// mallonga `STAC`-fenestro, kaj la formatado poste legas ĉi tiun bufron. La
 /// aliro estas unuprocesora kaj okazas kun interrompoj malŝaltitaj.
 static SKRIBA_BUFRO: Kunhavigita<[u8; MAKS_SKRIBO]> = Kunhavigita::nova([0; MAKS_SKRIBO]);
+
+/// Kerna preparbufro por `SYS_LISTI`: la eroj estas plenigitaj ĉi tie kaj
+/// poste kopiitaj al Ring 3 dum mallonga `STAC`-fenestro.
+static LISTI_BUFRO: Kunhavigita<[Dosierero; MAKS_REGISTROJ]> =
+    Kunhavigita::nova([Dosierero::nova(); MAKS_REGISTROJ]);
+/// Kerna preparbufro por `SYS_PROCEZOJ`.
+static PROCEZOJ_BUFRO: Kunhavigita<[ProcezoRekordo; MAKS_REGISTROJ]> =
+    Kunhavigita::nova([ProcezoRekordo::nova(); MAKS_REGISTROJ]);
+/// La plej granda dosiero, kiun `SYS_LEGI` transdonas en unu voko.
+const MAKS_LEGO: usize = 4096;
+static LEGA_BUFRO: Kunhavigita<[u8; MAKS_LEGO]> = Kunhavigita::nova([0; MAKS_LEGO]);
 
 /// Efektivigu unu sistemvokon.
 ///
@@ -74,6 +94,12 @@ pub fn voki(numero: usize, a0: u64, a1: u64, a2: u64, a3: u64, el_ring3: bool) -
         SYS_DORMI => dormi(a0),
         SYS_BRK => brk(a0, el_ring3),
         SYS_EXEC => exec(a0, a1, el_ring3),
+        SYS_ENIGI => enigi(el_ring3),
+        SYS_LISTI => listi(a0, a1, a2, a3, el_ring3),
+        SYS_LEGI => legi(a0, a1, a2, a3, el_ring3),
+        SYS_PROCEZOJ => procezoj(a0, a1, el_ring3),
+        SYS_MORTIGI => mortigi(a0, el_ring3),
+        SYS_LANĜI => lanĉi(a0, a1, el_ring3),
         _ => NEKONATA_VOKO,
     }
 }
@@ -102,17 +128,30 @@ fn brk(nova: u64, el_ring3: bool) -> u64 {
 
 /// `rdi` = montrilo al la vojo, `rsi` = longo. Sukceso neniam revenas.
 fn exec(montrilo: u64, longo: u64, el_ring3: bool) -> u64 {
-    let Ok(longo) = usize::try_from(longo) else {
+    let Some((bufro, longo)) = kopii_vojon(montrilo, longo, el_ring3) else {
         return MALĜUSTA_ARG;
     };
-    if longo == 0 || longo > MAKS_VOJO || !kontroli_regionon(montrilo, longo, false, el_ring3) {
-        return MALĜUSTA_ARG;
-    }
     let id = planisto::nuna_procezo();
     if id == 0 {
         return MALĜUSTA_ARG;
     }
+    let Ok(vojo) = core::str::from_utf8(&bufro[..longo]) else {
+        return MALĜUSTA_ARG;
+    };
 
+    // `anstataŭigi` redonas nur malsukceson; sukceso transiras al Ring 3.
+    let eraro = super::exec::anstataŭigi(id, vojo);
+    crate::skribu!("[kerno] exec: procezo {} malsukcesis: {}\n", id, eraro);
+    MALĜUSTA_ARG
+}
+
+/// Kopiu kaj validigu Ring 3-vojon: ne-nula, limigita, ene de la anoncita
+/// regiono, sen interna NUL.
+fn kopii_vojon(montrilo: u64, longo: u64, el_ring3: bool) -> Option<([u8; MAKS_VOJO], usize)> {
+    let longo = usize::try_from(longo).ok()?;
+    if longo == 0 || longo > MAKS_VOJO || !kontroli_regionon(montrilo, longo, false, el_ring3) {
+        return None;
+    }
     let mut bufro = [0u8; MAKS_VOJO];
     {
         let _gardo = el_ring3.then(crate::arkitekturo::StacGardo::nova);
@@ -123,17 +162,163 @@ fn exec(montrilo: u64, longo: u64, el_ring3: bool) -> u64 {
             core::ptr::copy_nonoverlapping(montrilo as *const u8, bufro.as_mut_ptr(), longo);
         }
     }
+    if bufro[..longo].contains(&0) {
+        return None;
+    }
+    Some((bufro, longo))
+}
+
+/// `SYS_ENIGI`: legu unubajton el la seria konzolo; bloku ĝis unu alvenas.
+fn enigi(el_ring3: bool) -> u64 {
+    if !el_ring3 || planisto::nuna_procezo() == 0 {
+        return MALĜUSTA_ARG;
+    }
+    loop {
+        if let Some(bajto) = crate::arkitekturo::legi_konzolan() {
+            return bajto as u64;
+        }
+        planisto::dormi(10);
+    }
+}
+
+/// `SYS_LISTI`: `rdi` = vojo, `rsi` = longo, `rdx` = celo, `r10` = grando.
+fn listi(montrilo: u64, longo: u64, celo: u64, celgrando: u64, el_ring3: bool) -> u64 {
+    let Some((bufro, longo)) = kopii_vojon(montrilo, longo, el_ring3) else {
+        return MALĜUSTA_ARG;
+    };
     let Ok(vojo) = core::str::from_utf8(&bufro[..longo]) else {
         return MALĜUSTA_ARG;
     };
-    if vojo.contains('\0') {
+    let Ok(celgrando) = usize::try_from(celgrando) else {
+        return MALĜUSTA_ARG;
+    };
+    let eroj = (celgrando / size_of::<Dosierero>()).min(MAKS_REGISTROJ);
+    if eroj == 0 || !kontroli_regionon(celo, eroj * size_of::<Dosierero>(), true, el_ring3) {
         return MALĜUSTA_ARG;
     }
+    let bufro = LISTI_BUFRO.akiri();
+    match snds::listi_registrojn(vojo, &mut bufro[..eroj]) {
+        Ok(nombro) => {
+            kopii_al_uzanto(
+                celo,
+                bufro.as_ptr().cast(),
+                nombro * size_of::<Dosierero>(),
+                el_ring3,
+            );
+            nombro as u64
+        }
+        Err(eraro) => kodo_de_snds(eraro),
+    }
+}
 
-    // `anstataŭigi` redonas nur malsukceson; sukceso transiras al Ring 3.
-    let eraro = super::exec::anstataŭigi(id, vojo);
-    crate::skribu!("[kerno] exec: procezo {} malsukcesis: {}\n", id, eraro);
-    MALĜUSTA_ARG
+/// `SYS_LEGI`: `rdi` = vojo, `rsi` = longo, `rdx` = celo, `r10` = grando.
+fn legi(montrilo: u64, longo: u64, celo: u64, celgrando: u64, el_ring3: bool) -> u64 {
+    let Some((bufro, longo)) = kopii_vojon(montrilo, longo, el_ring3) else {
+        return MALĜUSTA_ARG;
+    };
+    let Ok(vojo) = core::str::from_utf8(&bufro[..longo]) else {
+        return MALĜUSTA_ARG;
+    };
+    let Ok(celgrando) = usize::try_from(celgrando) else {
+        return MALĜUSTA_ARG;
+    };
+    if celgrando == 0 || !kontroli_regionon(celo, celgrando, true, el_ring3) {
+        return MALĜUSTA_ARG;
+    }
+    let dosiero = match snds::malfermi(vojo) {
+        Ok(dosiero) => dosiero,
+        Err(eraro) => return kodo_de_snds(eraro),
+    };
+    if dosiero.grando() as usize > celgrando || dosiero.grando() as usize > MAKS_LEGO {
+        return TABELO_PLENA;
+    }
+    let bufro = LEGA_BUFRO.akiri();
+    match snds::legi(&dosiero, &mut bufro[..celgrando.min(MAKS_LEGO)]) {
+        Ok(nombro) => {
+            kopii_al_uzanto(celo, bufro.as_ptr(), nombro, el_ring3);
+            nombro as u64
+        }
+        Err(eraro) => kodo_de_snds(eraro),
+    }
+}
+
+/// `SYS_PROCEZOJ`: `rdi` = celo, `rsi` = grando.
+fn procezoj(celo: u64, celgrando: u64, el_ring3: bool) -> u64 {
+    let Ok(celgrando) = usize::try_from(celgrando) else {
+        return MALĜUSTA_ARG;
+    };
+    let eroj = (celgrando / size_of::<ProcezoRekordo>()).min(MAKS_REGISTROJ);
+    if eroj == 0 || !kontroli_regionon(celo, eroj * size_of::<ProcezoRekordo>(), true, el_ring3) {
+        return MALĜUSTA_ARG;
+    }
+    let bufro = PROCEZOJ_BUFRO.akiri();
+    let nombro = super::procezo::listi(&mut bufro[..eroj]);
+    kopii_al_uzanto(
+        celo,
+        bufro.as_ptr().cast(),
+        nombro * size_of::<ProcezoRekordo>(),
+        el_ring3,
+    );
+    nombro as u64
+}
+
+/// `SYS_MORTIGI`: `rdi` = proceza identigilo. La nukleo (`0`) kaj la ŝelo
+/// (`1`) estas nemortigeblaj.
+fn mortigi(pid: u64, el_ring3: bool) -> u64 {
+    if !el_ring3 || planisto::nuna_procezo() == 0 {
+        return MALĜUSTA_ARG;
+    }
+    if pid == 0 || pid == super::ŜELA_PROCEZA_ID {
+        return NEPERMITITA;
+    }
+    if planisto::mortigi_procezon(pid) {
+        0
+    } else {
+        NE_TROVITA
+    }
+}
+
+/// `SYS_LANĜI`: `rdi` = vojo, `rsi` = longo. Kreu novan procezon el SNDS.
+fn lanĉi(montrilo: u64, longo: u64, el_ring3: bool) -> u64 {
+    if !el_ring3 {
+        return MALĜUSTA_ARG;
+    }
+    let Some((bufro, longo)) = kopii_vojon(montrilo, longo, el_ring3) else {
+        return MALĜUSTA_ARG;
+    };
+    let Ok(vojo) = core::str::from_utf8(&bufro[..longo]) else {
+        return MALĜUSTA_ARG;
+    };
+    match super::exec::lanĉi(vojo) {
+        Ok(id) => id,
+        Err(eraro) => {
+            crate::skribu!("[kerno] lanĉi: {eraro}\n");
+            match eraro {
+                super::exec::ExecEraro::Dosiersistemo(snds::Eraro::NeTrovo) => NE_TROVITA,
+                super::exec::ExecEraro::Elĉerpita => TABELO_PLENA,
+                _ => MALĜUSTA_ARG,
+            }
+        }
+    }
+}
+
+/// Kopiu kernan bufron al Ring 3 dum `STAC`-fenestro.
+fn kopii_al_uzanto(celo: u64, fonto: *const u8, longo: usize, el_ring3: bool) {
+    let _gardo = el_ring3.then(crate::arkitekturo::StacGardo::nova);
+    // SAFETY: la celo trapasis `kontroli_regionon` por skribo; la fonto estas
+    // privata kerna bufro; la intervaloj ne interkovriĝas.
+    unsafe {
+        core::ptr::copy_nonoverlapping(fonto, celo as *mut u8, longo);
+    }
+}
+
+/// La sistemvoka kodo por SNDS-malsukceso.
+fn kodo_de_snds(eraro: snds::Eraro) -> u64 {
+    match eraro {
+        snds::Eraro::NeTrovo | snds::Eraro::NeDosiero => NE_TROVITA,
+        snds::Eraro::BufroTroMalgranda => TABELO_PLENA,
+        _ => MALĜUSTA_ARG,
+    }
 }
 
 /// `rdi` = daŭro en milisekundoj.

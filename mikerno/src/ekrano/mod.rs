@@ -195,7 +195,25 @@ impl Ekrano {
     }
 
     fn skribi(&mut self, teksto: &str, rgb: u32) {
+        // La uzanto rajtas skribi ANSI-sekvencojn al la seria konzolo (koloroj
+        // de Ligo); la frambufo havas unu tekstokoloron, do ĝi konsumas ilin
+        // anstataŭ desegni ilin kiel signojn.
+        let mut en_eskapo = false;
+        let mut en_komando = false;
         for signo in teksto.chars() {
+            if en_eskapo {
+                en_eskapo = false;
+                en_komando = signo == '[';
+                continue;
+            }
+            if en_komando {
+                en_komando = !('@'..='~').contains(&signo);
+                continue;
+            }
+            if signo == '\u{1b}' {
+                en_eskapo = true;
+                continue;
+            }
             self.skribi_signon(signo, rgb);
         }
     }

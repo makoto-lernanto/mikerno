@@ -1,6 +1,6 @@
 # FluoU — deviga gvidilo pri la grafika uzinterfaco de Horizonto
 
-> Stato: 2026-11-15 · FluoU 0.1 · ABI 2 · MIT
+> Stato: 2026-11-19 · FluoU 0.1 · ABI 2 · MIT
 >
 > Ĉi tiu dokumento estas la norma gvidilo por ĉiu grafika programo sur
 > Horizonto. Ĝi anstataŭas la interagan prototipon «FluoU.html»: la prototipo
@@ -92,7 +92,7 @@ fluas tra la sama kadro.
 | `theme` | `temo` |
 | `accent` | `akcento` |
 
-- **L07.** La prompto de Ligo estas `horizonto❯`; la helpa tabelo, la
+- **L07.** La prompto de Ligo estas `ligo:~>`; la helpa tabelo, la
   kompletigo kaj la historio uzas nur la Esperantajn nomojn.
 - **L08.** La sistema tiparo `DEVI` kovri la Esperantajn literojn
   `ĉ ĝ ĥ ĵ ŝ ŭ` kaj la citilojn `« »` en ĉiu streko, kiun FluoU uzas.
@@ -449,6 +449,12 @@ Eniro estas la tutsistema komanda paletro. Ĝi estas FluoU-aplikaĵo kun
 Ligo estas la objekta ŝelo de Horizonto: ĝi transdonas **tipizitajn
 rekordojn**, ne tekston. La terminalo estas FluoU-aplikaĵo.
 
+La filozofio similas PowerShell 7-on: la dukto portas objektojn, ne tekston;
+ĉiu stadio ricevas kaj redonas rekordojn. En la interaga reĝimo la rezultoj
+(ekzemple `listi`) estas redonitaj kiel **koloraj tabeloj** laŭ la ĵetonoj kaj
+la semantikaj roloj de la kampoj; la koloroj nur akompanas la signifon —
+tipo, grandeco, tenilo kaj eraroj distingiĝu ankaŭ sen koloro.
+
 ### 8.1. Komandaro
 
 Ĉiuj komandnomoj estas Esperantaj kaj devigaj. La tabelo listigas nur la
@@ -457,7 +463,7 @@ Esperantajn nomojn; la anglaj formoj ne ekzistas kaj ne estas tajpeblaj.
 | Komando | Signifo | Rezulto |
 | --- | --- | --- |
 | `helpu` | Montri la komandtabelon kaj la helpon | Tabelo |
-| `listi` | Listigi dosierojn | `nomo`, `tipo`, `grandeco`, `tenilo` |
+| `listi` | Listigi dosierojn | `nomo`, `tipo`, `grandeco`, `tenilo`; en interago kolora tabelo |
 | `legi <dosiero>` | Legi dosieron | Dosiera karto kun `tenilo` |
 | `procezoj` | Montri la procezan tabelon | `pid`, `nomo`, `stato`, `memoro`, `permesoj` |
 | `mortigi <pid>` | Mortigi procezon | Sukceso aŭ eraro |
@@ -511,6 +517,10 @@ stadio  := filtri | ordigi | unua | sumi | nombri | montri | teksto
   kaj la arkitekturojn.
 - **O12.** Skalaraj stadioj (`sumi`, `nombri`) `DEVI` montri unu klaran valoron
   kun etikedo; ili ne ŝajnigu tabelon.
+- **O13.** En la interaga reĝimo `listi` `DEVI` montri koloran tabelon laŭ la
+  ĵetonoj kaj semantikaj roloj (ekzemple `nomo` en la ĉefa teksta rolo,
+  `tipo`/`grandeco` en la kaska rolo, `tenilo` kiel ŝildeto); koloroj nur
+  akompanas la signifon kaj neniam estas la sola portanto de informo.
 
 ### 8.3. Ekzemploj
 
@@ -681,6 +691,9 @@ La jenaj aferoj estas malpermesitaj sendepende de tio, ĉu ili aspektas bone:
 
 ## Aldono B. Historio de la dokumento
 
+- **2026-11-19.** Ligo estas eksplicite PowerShell 7-simila objekta dukto: la
+  objektoj fluas anstataŭ teksto; `listi` en interago devige montras koloran
+  tabelon laŭ la ĵetonoj, kaj la prompto de Ligo renomiĝis al `ligo:~>`.
 - **2026-11-14.** Unua norma versio. Derivita el la interaga prototipo
   «FluoU.html»; la fenestraj regiloj transiris al la Windows-modelo, kaj la
   tuta komandaro de Ligo estas Esperanta sen anglaj aliasoj.

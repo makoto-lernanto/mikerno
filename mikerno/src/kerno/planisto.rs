@@ -17,6 +17,13 @@ pub const MAKSAJ_FADENOJ: usize = 8;
 pub const MAKSA_PRETA_ATENDO: u64 =
     (MAKSAJ_FADENOJ as u64 - 1) * Prioritato::Alta.tempopeco() as u64;
 const RIPAZA_ID: FadenoId = 0;
+/// La unua fadena identigilo por dinamikaj uzantaj procezoj.
+///
+/// La identigiloj `1..=4` apartenas al la kernaj provfadenoj; la statistiko
+/// legas iliajn `veturoj`- kaj `plenumtikoj`-erojn poste, do ili ne reuziĝas.
+/// La izolaj procezoj jam finiĝis, kiam la ŝelo kreiĝas, kaj iliaj fenestroj
+/// `5`/`6` estas liberaj.
+const UNUA_DINAMIKA: FadenoId = 5;
 
 /// Cirkla vico kun unu plia loko, do `kapo == vosto` ĉiam signifas malplena.
 struct PretaVico {
@@ -112,7 +119,12 @@ impl Planisto {
         if fadeno.id == RIPAZA_ID || indekso >= self.fadenoj.len() {
             return Err(PlanistaEraro::NevalidaIdentigilo);
         }
-        if self.fadenoj[indekso].is_some() {
+        // Mortinta fadeno lasas sian eron en la tabelo por la statistiko; la
+        // identigilo reuzeblas, kiam la malnova fadeno jam ne kuras.
+        if self.fadenoj[indekso]
+            .as_ref()
+            .is_some_and(|ekzistanta| ekzistanta.stato != FadenoStato::Mortinta)
+        {
             return Err(PlanistaEraro::JamRegistrita);
         }
         let _ = self.vekoj.forigi(fadeno.id);
@@ -261,6 +273,34 @@ impl Planisto {
         self.preta_vico.puŝi(id);
     }
 
+    /// Trovu la vivantan fadenon de la procezo `proceza` (se estas), sen
+    /// ŝanĝi ion ajn.
+    fn fadeno_de_procezo(&self, proceza: ProcezaId) -> Option<FadenoId> {
+        self.fadenoj.iter().flatten().find_map(|fadeno| {
+            (fadeno.procezo == proceza
+                && fadeno.id != RIPAZA_ID
+                && fadeno.stato != FadenoStato::Mortinta)
+                .then_some(fadeno.id)
+        })
+    }
+
+    /// Finu la fadenon `id` kaj detruu ĝian procezon; la IK jam estis purigita
+    /// de la vokanto. La voko ne revenas al `id`: la ero restas en la tabelo
+    /// kun la stato `Mortinta`, do la preta vico preterlasas ĝin.
+    fn marki_mortinta_kaj_detruu(&mut self, proceza: ProcezaId, id: FadenoId) {
+        let _ = self.vekoj.forigi(id);
+        if let Some(marko) = self.tempolimoj.get_mut(id as usize) {
+            *marko = false;
+        }
+        if let Some(fadeno) = self.fadenoj[id as usize].as_mut() {
+            fadeno.stato = FadenoStato::Mortinta;
+        }
+        self.stato_procezan(id, ProcezaEstado::Mortinta);
+        if let Err(eraro) = super::procezo::detrui(proceza, super::kadra_alokilo()) {
+            crate::skribu!("[procezo] {} ne povis esti detruita: {}\n", proceza, eraro);
+        }
+    }
+
     /// Konsumu la tempoliman markon de fadeno; `true` nur unufoje por ĉiu
     /// limdato.
     pub fn preni_tempolimon(&mut self, id: FadenoId) -> bool {
@@ -372,6 +412,21 @@ fn planisto() -> &'static mut Planisto {
     PLANISTO.akiri()
 }
 
+/// La unua libera fadena identigilo por dinamika uzanta procezo.
+pub fn libera_fadena_id() -> Option<FadenoId> {
+    (UNUA_DINAMIKA..=MAKSAJ_FADENOJ as FadenoId).find(|id| {
+        planisto().fadenoj[*id as usize]
+            .as_ref()
+            .is_none_or(|fadeno| fadeno.stato == FadenoStato::Mortinta)
+    })
+}
+
+/// La procezo, al kiu apartenas la fadeno `id`; `0` por la ripoza fadeno kaj
+/// la kernaj fadenoj.
+pub fn procezo_de_fadeno(id: FadenoId) -> ProcezaId {
+    planisto().procezo_de(id)
+}
+
 pub fn pretigi_fadenon(
     id: FadenoId,
     proceza_id: ProcezaId,
@@ -453,6 +508,30 @@ pub fn preni_tempolimon() -> bool {
 
 pub fn veki(id: FadenoId) {
     planisto().veki(id);
+}
+
+/// Finu la fadenon de la procezo `proceza` kaj detruu la procezon. Redonas
+/// `true` se tia vivanta fadeno troviĝis kaj la voko sukcesis; `false`, se la
+/// procezo ne havas vivantan fadenon aŭ ĝi estas la nuna fadeno.
+///
+/// La IK-purigo okazas antaŭ la planista ŝanĝo, ĉar la revokaj vekoj bezonas
+/// la pretan vicon. `super::procezo::detrui` mem presas la akceptan linion
+/// `[procezo] N detruita: …`.
+pub fn mortigi_procezon(proceza: ProcezaId) -> bool {
+    let _gardo = InterrompaGardo::nova();
+    if proceza == 0 || proceza as usize >= super::procezo::MAKSAJ_PROCEZOJ {
+        return false;
+    }
+    let id = planisto().fadeno_de_procezo(proceza);
+    let Some(id) = id else {
+        return false;
+    };
+    if id == nuna_id() {
+        return false;
+    }
+    super::ik::purigi_procezon(proceza);
+    planisto().marki_mortinta_kaj_detruu(proceza, id);
+    true
 }
 
 /// Ĉu la identigilo apartenas al registrita, ankoraŭ viva fadeno? La ripoza

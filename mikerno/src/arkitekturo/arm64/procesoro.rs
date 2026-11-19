@@ -48,8 +48,10 @@ pub fn ebligi_interrompojn() {
 }
 
 pub fn atendi_interrompon() {
-    // SAFETY: `wfi` dormigas la procesoron ĝis interrompo.
-    unsafe { asm!("wfi", options(nomem, nostack)) };
+    // SAFETY: `wfi` dormigas la procesoron ĝis interrompo. Sen `nomem`: la
+    // interrompa traktilo modifikas memoraĵon, do la kompililo ne rajtas
+    // kaŝmemorigi ĉirkaŭantajn legadojn.
+    unsafe { asm!("wfi", options(nostack)) };
 }
 
 /// La frekvenco de la ĝenerala temporizilo (`CNTFRQ_EL0`).

@@ -10,6 +10,7 @@
 
 use crate::kapablo::{Permesoj, Tenilo};
 use crate::mesago::Mesago;
+use crate::registro::{Dosierero, ProcezoRekordo};
 
 pub const SYS_SENDI: usize = 1;
 pub const SYS_RICEVI: usize = 2;
@@ -35,6 +36,30 @@ pub const SYS_BRK: usize = 13;
 /// `rdi` = montrilo al la vojo, `rsi` = longo. Legas ELF-bildon el SNDS kaj
 /// anstataŭigas la nunan procezon (C17.5); sukceso neniam revenas.
 pub const SYS_EXEC: usize = 14;
+/// Sen argumentoj. Legas unubajton el la konzolo (COM1 aŭ PL011) kaj redonas
+/// ĝin (0–255); blokas ĝis bajto alvenas.
+pub const SYS_ENIGI: usize = 15;
+/// `rdi` = montrilo al la vojo, `rsi` = longo, `rdx` = montrilo al la cela
+/// bufro, `r10` = ĝia grando en bajtoj. Kopias ĝis
+/// `libmikerno::registro::MAKS_REGISTROJ` `Dosierero`-n el SNDS; redonas la
+/// nombron da registroj (>= 0) aŭ negativan eraron.
+pub const SYS_LISTI: usize = 16;
+/// `rdi` = montrilo al la vojo, `rsi` = longo, `rdx` = montrilo al la celan
+/// bufron, `r10` = ĝia grando en bajtoj. Legas la tutan dosieron; redonas la
+/// nombron da bajtoj (>= 0) aŭ negativan eraron.
+pub const SYS_LEGI: usize = 17;
+/// `rdi` = montrilo al la cela bufro, `rsi` = ĝia grando en bajtoj. Kopias
+/// ĝis `MAKS_REGISTROJ` `ProcezoRekordo`-n; redonas la nombron da registroj
+/// (>= 0) aŭ negativan eraron.
+pub const SYS_PROCEZOJ: usize = 18;
+/// `rdi` = proceza identigilo. Finigas la celitan procezon kaj detruas ĝian
+/// adresan spacon; `0` = sukceso. `1` (la ŝelo) kaj `0` (la nukleo) estas
+/// nemortigeblaj (`NEPERMITITA`).
+pub const SYS_MORTIGI: usize = 19;
+/// `rdi` = montrilo al la vojo, `rsi` = longo. Kreas novan procezon el la
+/// ELF-bildo en SNDS kaj enirigas ĝin; redonas la novan procezan identigilon
+/// (> 0) aŭ negativan eraron. La vokanta procezo daŭras netuŝita.
+pub const SYS_LANĜI: usize = 20;
 
 /// Senfina tempolimo (`r10`): la voko blokas ĝis la operacio eblas aŭ la
 /// finpunkto revokiĝas.
@@ -54,6 +79,11 @@ pub const FINPUNKTO_REVOKITA: isize = -32;
 pub const TRO_LONGA_MESAGO: isize = -90;
 /// `-110`: la tempolimo pasis antaŭ ol mesaĝo alvenis (`ETIMEDOUT`).
 pub const TEMPOLIMO: isize = -110;
+/// `-13`: la operacio ne estas permesata al la celita objekto (`EPERM`). Ĉe
+/// `SYS_MORTIGI`: la celo estas la nukleo (`0`) aŭ la ŝelo (`1`).
+pub const NEPERMITITA: isize = -13;
+/// `-17`: la petita dosiero aŭ procezo ne ekzistas (`ENXIO`).
+pub const NE_TROVITA: isize = -17;
 
 /// Voku la kernon; la signifo de la argumentoj dependas de `numero`.
 ///
@@ -242,4 +272,69 @@ pub fn fermi(tenilo: Tenilo) -> isize {
 /// argumento estas rezervita kaj devas esti `0`.
 pub fn revoki(tenilo: Tenilo) -> isize {
     unsafe { invoki(SYS_REVOKI, [tenilo.nombro() as usize, 0, 0, 0]) }
+}
+
+/// Legu unubajton el la konzolo. Blokas ĝis bajto alvenas; redonas la bajton
+/// (0–255) aŭ negativan eraron.
+pub fn enigi() -> isize {
+    unsafe { invoki(SYS_ENIGI, [0; 4]) }
+}
+
+/// Listigu la erojn de `vojo` (malplena = radiko) en `celo`. Redonas la
+/// nombron da `Dosierero`-j aŭ negativan eraron.
+pub fn listi(vojo: &str, celo: &mut [Dosierero]) -> isize {
+    unsafe {
+        invoki(
+            SYS_LISTI,
+            [
+                vojo.as_ptr() as usize,
+                vojo.len(),
+                celo.as_mut_ptr() as usize,
+                core::mem::size_of_val(celo),
+            ],
+        )
+    }
+}
+
+/// Legu la tutan dosieron `vojo` en `celo`. Redonas la nombron da bajtoj aŭ
+/// negativan eraron.
+pub fn legi(vojo: &str, celo: &mut [u8]) -> isize {
+    unsafe {
+        invoki(
+            SYS_LEGI,
+            [
+                vojo.as_ptr() as usize,
+                vojo.len(),
+                celo.as_mut_ptr() as usize,
+                celo.len(),
+            ],
+        )
+    }
+}
+
+/// Plenigu `celo` per `ProcezoRekordo`-j de la vivaj procezoj. Redonas la
+/// nombron da registroj aŭ negativan eraron.
+pub fn procezoj(celo: &mut [ProcezoRekordo]) -> isize {
+    unsafe {
+        invoki(
+            SYS_PROCEZOJ,
+            [
+                celo.as_mut_ptr() as usize,
+                core::mem::size_of_val(celo),
+                0,
+                0,
+            ],
+        )
+    }
+}
+
+/// Finigu la procezon `pid`. `0` = sukceso; `NEPERMITITA` se `pid` ≤ 1.
+pub fn mortigi(pid: u64) -> isize {
+    unsafe { invoki(SYS_MORTIGI, [pid as usize, 0, 0, 0]) }
+}
+
+/// Kreu novan procezon el la ELF-bildo `vojo` en SNDS. Redonas la novan
+/// procezan identigilon (> 0) aŭ negativan eraron.
+pub fn lanĉi(vojo: &str) -> isize {
+    unsafe { invoki(SYS_LANĜI, [vojo.as_ptr() as usize, vojo.len(), 0, 0]) }
 }

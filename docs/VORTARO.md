@@ -99,7 +99,7 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `datumbloko` | data block | Kontiguaj 512-bajtaj sektoroj de dosiero aŭ dosierujo. |
 | `nurlega` | read-only | SNDS ne subtenas skribon aŭ kreadon de dosieroj. |
 | `munti` | mount | `snds::pravalorizi()` validigas la superblokon kaj memprovas la bildon. |
-| `SNDS-bildo` | SNDS image | `target/mikerno.snds`, kreata de `tools/krei_snds_img.sh`. |
+| `SNDS-bildo` | SNDS image | `target/mikerno.snds`, kreata de `tools/krei_snds_img.sh`; dosiero maksimume 128 KiB (C17.7). |
 | `kupo` | heap | Uzanta datumsegmento inter `UZANTA_KUPO_BAZO` (`0x1_0200_0000`) kaj `UZANTA_KUPO_FINO` (`0x2_0000_0000`). |
 | `kupa limo` | heap limit | `Procezo::kupo_fino`; `kupaj_limoj()` redonas `(bazo, limo)`. |
 | `brk` | brk | `SYS_BRK` (13): etendas la uzantan datumsegmenton kaj redonas la nunan limon; nur pligrandigas (`etendi_kupon`). |
@@ -110,6 +110,8 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `kontiguaj kadroj` | contiguous frames | `aloki_kontiguajn`: fizika regiono por legi la ELF-on el SNDS. |
 | `eniri uzanton` | enter user mode | `eniri_uzanton(enirpunkto, stako, reĝimo, id)`: `iretq` aŭ `eret` al Ring 3/EL0. |
 | `REĜIMO_EXEC` | exec startup mode | `libmikerno::starto::REĜIMO_EXEC` (4): la nova bildo raportas `[ring3] exec: nova bildo funkcias` kaj finas. |
+| `REĜIMO_ŜELO` | shell startup mode | `libmikerno::starto::REĜIMO_ŜELO` (6): procezo 1 eniras `ligo::starti()`; la kerno atendas ĝian finon. |
+| `REĜIMO_FONO` | background startup mode | `libmikerno::starto::REĜIMO_FONO` (5): procezo 2 dormas en `dormi(1000)`-buklo; `mortigi 2` montras la vojon. |
 | `selektilo` | selector | |
 | `pordego` | gate | |
 | `interrompa pordego` | interrupt gate | Malŝaltas `RFLAGS.IF`. |
@@ -408,7 +410,14 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `glitilo` | slider | |
 | `ŝildeto` | badge | |
 | `tenila ŝildeto` | handle badge | Montras `TENILO`. |
-| `protekta procezo` | protected process | `pid ≤ 3`; `mortigi` rifuzas. |
+| `protekta procezo` | protected process | `pid ≤ 1`; `mortigi` rifuzas kaj la kerno redonas `-13`. |
+| `ŝelo` | shell | Procezo 1 (`REĜIMO_ŜELO`); la krado `horizonto` eniras `ligo::starti()`. |
+| `fono` | background process | Procezo 2 (`REĜIMO_FONO`); dormas ĝis `mortigi 2`. |
+| `prompto` | prompt | `ligo:~> `; reskribata per `\r\x1b[K` post ĉiu klavo. |
+| `historio` | history | Ringo de ok antaŭaj linioj; `↑`/`↓`. |
+| `kompletigo` | completion | `Tab`: komuna prefikso aŭ listo de la komandaro. |
+| `krado` | crate | Laborloka membro: `mikerno`, `libmikerno`, `horizonto`, `saluto`. |
+| `saluto` | hello program | Krado `saluto`; `lanĉi saluto.elf` pruvas `SYS_LANĜI` per `[saluto] saluton el la procezo N; ĝis revido`. |
 | `piksela egaleco` | pixel parity | Inter `x86_64` kaj `arm64`. |
 | `aplikaja manifesto` | application manifest | Enhavas `gu = "fluoU"`. |
 | `izolita aplikaĵo` | sandboxed application | Minimumaj kapabloj. |
@@ -435,7 +444,9 @@ kiel kaŝitaj aliasoj.
 | `listi` | `ls` | Listigi dosierojn |
 | `legi` | `cat` | Legi dosieron |
 | `procezoj` | `ps` | Montri procezojn |
-| `mortigi` | `kill` | Mortigi procezon |
+| `mortigi` | `kill` | Mortigi procezon (`pid ≤ 1` estas protektita) |
+| `lanĉi` | — | Lanĉi novan ELF el SNDS (`SYS_LANĜI`) |
+| `fini` | `exit` | Fini la ŝelon (`SYS_FINI`); `Ctrl+D` en malplena linio same |
 | `eldiri` | `echo` | Krei mesaĝan rekordon |
 | `pri` | — | Sistemaj informoj |
 | `temo` | `theme` | Ŝanĝi la temon |
@@ -458,7 +469,8 @@ eksteraj protokolaj nomoj:
 `x86_64`, `CR0`, `CR2`, `CR3`, `CR4`, `PCID`, `PCIDE`, `RSP0`, `RIP`, `RFLAGS`, `RAX`, `RDI`,
 `RSI`, `RDX`, `R10`, `MSR`, `EFER`, `NXE`, `PAE`, `PML4`, `PDPT`, `PD`, `PT`,
 `IDT`, `GDT`, `TSS`, `APIC`, `PIT`, `COM1`, `Multiboot2`, `Xen-PVH`, `ELF`,
-`Limine`, `QEMU`, `int 0x80`, `iretq`, `syscall`, `sysret`, `fork`, `exec`, `execve`, `brk`, `SYS_BRK`, `SYS_EXEC`, `ASCII`, `UTF-8`, `W^X`, `CR0.WP`,
+`Limine`, `QEMU`, `int 0x80`, `iretq`, `syscall`, `sysret`, `fork`, `exec`, `execve`, `brk`, `SYS_BRK`, `SYS_EXEC`, `SYS_ENIGI`, `SYS_LISTI`, `SYS_LEGI`, `SYS_PROCEZOJ`,
+`SYS_MORTIGI`, `SYS_LANĜI`, `SYS_FINI`, `ANSI`, `ASCII`, `UTF-8`, `W^X`, `CR0.WP`,
 `SMEP`, `SMAP`, `KASLR`, `IOMMU`, `DMA`, `PCI`, `DMAR`, `IVRS`, `STAC`, `CLAC`,
 `KREI_FINPUNKTON`, `DONI`, `REVOKI`, `RICEVI_TEMPO`, `SENDI_TEMPO`, `FERMI`,
 `EBADF`, `EAGAIN`, `ENOSPC`, `EPIPE`, `EMSGSIZE`, `ETIMEDOUT`, `arm64`,

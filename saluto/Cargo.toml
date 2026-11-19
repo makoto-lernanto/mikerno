@@ -1,0 +1,13 @@
+[package]
+name = "saluto"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Eta uzanta bildo por la komando `lanĉi` de Ligo."
+
+[dependencies]
+libmikerno = { path = "../libmikerno" }
+
+[lints]
+workspace = true

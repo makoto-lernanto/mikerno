@@ -49,6 +49,15 @@ pub fn skribi_bajton(bajto: u8) {
     unsafe { eligi(COM1, bajto) };
 }
 
+/// Legu unubajton el la seria enigbufro, se ĝi jam enhavas unu.
+pub fn legi_bajton() -> Option<u8> {
+    // LSR (COM1 + 5), bito 0: la enigbufro havas datumon.
+    if unsafe { enigi(COM1 + 5) } & 0x01 == 0 {
+        return None;
+    }
+    Some(unsafe { enigi(COM1) })
+}
+
 pub struct Konzolo;
 
 impl Write for Konzolo {

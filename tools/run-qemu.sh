@@ -76,8 +76,9 @@ CPU_ARGS=(-cpu "${QEMU_CPU:-qemu64,+smep,+smap}")
 
 # La SNDS-bildo servas al la virtio-blk-pelilo kaj al la dosiersistemo (M17).
 # Ĝi estas regenerata antaŭ ĉiu starto; `-snapshot` certigas, ke la memprovo ne
-# modifu la dosieron eĉ se la restarigo malsukcesus. La uzanta bildo estas
-# aldonita kiel `horizonto.elf`, por ke `SYS_EXEC` povu relanĉi ĝin el SNDS.
+# modifu la dosieron eĉ se la restarigo malsukcesus. La uzantaj bildoj estas
+# aldonitaj kiel `horizonto.elf` (praŝarĝa modulo kaj celo de `exec`) kaj
+# `saluto.elf` (celo de `lanĉi`).
 SNDS="$ROOT/target/mikerno.snds"
 if [[ -n "$ISO" ]]; then
     UZANTA="$ROOT/target/x86_64-unknown-none/release/horizonto"
@@ -87,6 +88,10 @@ fi
 SNDS_ALDONOJ=()
 if [[ -f "$UZANTA" ]]; then
     SNDS_ALDONOJ=("horizonto.elf=$UZANTA")
+fi
+SALUTO="$(dirname "$UZANTA")/saluto"
+if [[ -f "$SALUTO" ]]; then
+    SNDS_ALDONOJ+=("saluto.elf=$SALUTO")
 fi
 "$ROOT/tools/krei_snds_img.sh" "$ROOT/mikerno/snds" "$SNDS" "${SNDS_ALDONOJ[@]}" >/dev/null
 DISKA_ARGS=(

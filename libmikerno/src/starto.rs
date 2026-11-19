@@ -13,6 +13,12 @@ pub const REĜIMO_SPIONO: u64 = 3;
 /// La unua eniro post `SYS_EXEC`: la kerno anstataŭigis la bildon kaj la nova
 /// procezo raportas la sukceson anstataŭe ripeti la testojn.
 pub const REĜIMO_EXEC: u64 = 4;
+/// La procezo plenumas kiel fonda (fono) sen eninterago: ĝi biciklas tra
+/// `SYS_DORMI` sen eligi ion ajn ĝis la planisto mortigas ĝin.
+pub const REĜIMO_FONO: u64 = 5;
+/// La procezo plenumas la objekta ŝelo `Ligo`: ĝi legas komandojn el la seria
+/// konzolo kaj vivas ĝis `fini`.
+pub const REĜIMO_ŜELO: u64 = 6;
 
 /// La komuna virtuala adreso de la sekreta paĝo. Ĉiu procezo vidas ĝin je la
 /// sama adreso, sed ĝi tradukiĝas al propra fizika kadro.

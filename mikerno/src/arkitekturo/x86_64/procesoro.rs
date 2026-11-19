@@ -108,8 +108,11 @@ pub fn halti() -> ! {
 }
 
 /// Atendu unu interrompon; la CPU vekiĝas ĉe la sekva `hlt`-okazo.
+///
+/// Sen `nomem`: la interrompa traktilo modifikas memoraĵon (proceza tabelo,
+/// tikoj), do la kompililo ne rajtas kaŝmemorigi ĉirkaŭantajn legadojn.
 pub fn atendi_interrompon() {
-    unsafe { asm!("hlt", options(nomem, nostack, preserves_flags)) };
+    unsafe { asm!("hlt", options(nostack, preserves_flags)) };
 }
 
 pub fn ebligi_interrompojn() {

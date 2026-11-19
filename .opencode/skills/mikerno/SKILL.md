@@ -280,11 +280,16 @@ Eniro kaj Ligo:
 - `Ctrl+E` malfermas Eniron (provizore; estonte `Mito`, la tradicia `Win`-klavo).
 - Tri reĝimoj: serĉo, kalkulo post `=`, delegado post `>`.
 - La kalkulilo estas sekura analizilo sen `eval`, sen dosieroj kaj sen reto.
-- `Ligo` transdonas tipizitajn rekordojn, ne tekstajn liniojn; `|` konektas
-  stadiojn (`filtri`, `ordigi`, `unua`, `sumi`, `nombri`, `montri`, `teksto`).
+- `Ligo` estas PowerShell 7-simila objekta ŝelo: `|` konektas tipizitajn
+  stadiojn kaj transdonas rekordojn, ne tekstajn liniojn
+  (`filtri`, `ordigi`, `unua`, `sumi`, `nombri`, `montri`, `teksto`).
+- `listi` eligas `Dosiero`-rekordojn (`nomo`, `tipo`, `grandeco`, `tenilo`) kaj
+  en interago montras koloran tabelon laŭ la ĵetonoj kaj semantikaj roloj;
+  koloroj nur akompanas la signifon — tipo, grandeco, tenilo kaj eraroj ne
+  dependas nur de koloro.
 - Ĉiuj komandnomoj estas Esperantaj kaj sen diakritaj signoj; anglaj aliasoj
   (`ls`, `cat`, `ps`, `kill`, `echo`, `help`, `clear`) estas malpermesitaj, ankaŭ
-  kaŝe. Promptoj: `horizonto❯`.
+  kaŝe. Prompto: `ligo:~>`.
 - Erarmesaĝo: `komando: kaŭzo (kodo)`, ekzemple
   `legi: dosiero ne ekzistas (-3)`.
 - `teksto` estas la sola eksplicita limo inter objektoj kaj teksto.

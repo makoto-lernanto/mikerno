@@ -10,6 +10,7 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 
 pub use libmikerno::kapablo::{Permesoj, Tenilo};
 pub use libmikerno::mesago::Mesago;
+pub use libmikerno::registro::{Dosierero, ProcezoRekordo};
 
 /// Alinio de la kupaj blokoj; sufiĉa por ĉiu skalara tipo kaj por `Mesago`.
 const KUPO_ALINIO: usize = 16;
@@ -167,6 +168,36 @@ pub fn dormi(millisekundoj: u64) -> isize {
 /// Sukceso neniam revenas; malsukceso redonas negativan eraron.
 pub fn exec(vojo: &str) -> isize {
     libmikerno::syscall::exec(vojo)
+}
+
+/// Legu unubajton el la seria konzolo; blokas ĝis bajto alvenas.
+pub fn enigi() -> isize {
+    libmikerno::syscall::enigi()
+}
+
+/// Listigu la erojn de `vojo` en `celo`; redonas la nombron da eroj.
+pub fn listi(vojo: &str, celo: &mut [Dosierero]) -> isize {
+    libmikerno::syscall::listi(vojo, celo)
+}
+
+/// Legu la tutan dosieron `vojo` en `celo`; redonas la nombron da bajtoj.
+pub fn legi(vojo: &str, celo: &mut [u8]) -> isize {
+    libmikerno::syscall::legi(vojo, celo)
+}
+
+/// Plenigu `celo` per la vivaj procezoj; redonas la nombron da eroj.
+pub fn procezoj(celo: &mut [ProcezoRekordo]) -> isize {
+    libmikerno::syscall::procezoj(celo)
+}
+
+/// Finigu la procezon `pid`; `0` aŭ negativa eraro.
+pub fn mortigi(pid: u64) -> isize {
+    libmikerno::syscall::mortigi(pid)
+}
+
+/// Kreu procezon el la ELF-bildo `vojo`; redonas la novan identigilon.
+pub fn lanĉi(vojo: &str) -> isize {
+    libmikerno::syscall::lanĉi(vojo)
 }
 
 /// Finu la nunan procezon. Se la kerno rifuzas, la procezo restas blokita.

@@ -22,7 +22,7 @@
 # Inodo: tipo (1 dosiero, 2 dosierujo), grando en bajtoj, unua sektoro,
 # nombro da sektoroj. Dosieruja ero: inoda indekso kaj 60-bajta nomo kun
 # fina NUL; la maksimuma nomo estas 59 bajtoj. La maksimuma dosiero estas
-# 64 KiB.
+# 128 KiB (C17.7).
 
 set -euo pipefail
 
@@ -67,7 +67,7 @@ SEKTORO = 512
 INODO = 16
 ERO = 64
 NOMO_MAKSIMO = 60  # 59 bajtoj + fina NUL
-DOSIERO_MAKSIMO = 64 * 1024
+DOSIERO_MAKSIMO = 128 * 1024
 TIPO_DOSIERO = 1
 TIPO_DOSIERUJO = 2
 
@@ -109,7 +109,7 @@ def legi_dosierujon(vojo):
             with open(plena, "rb") as dosiero:
                 datumoj = dosiero.read()
             if len(datumoj) > DOSIERO_MAKSIMO:
-                eraro(f"dosiero tro granda (maksimume 64 KiB): {plena}")
+                eraro(f"dosiero tro granda (maksimume 128 KiB): {plena}")
             eroj.append(Nodo(nomo, TIPO_DOSIERO, datumoj))
         else:
             eraro(f"ne subtenata dosierotipo: {plena}")

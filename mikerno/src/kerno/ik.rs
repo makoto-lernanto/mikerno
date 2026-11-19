@@ -670,8 +670,14 @@ pub fn registri_fadenon(fadeno: FadenoId, procezo: ProcezaId) -> Result<(), IkEr
     if fadeno == 0 || fadeno as usize > MAKSAJ_FADENOJ {
         return Err(IkEraro::NevalidaCelloko);
     }
-    if defaŭlta_indekso(fadeno).is_some() {
-        return Ok(());
+    if let Some(indekso) = defaŭlta_indekso(fadeno) {
+        if finpunktoj()[indekso].posedanto == procezo {
+            return Ok(());
+        }
+        // La fadenidentigilo estas reuzata (ekz. la ŝelo okupas la fenestron de
+        // fininta kerna fadeno): la malnova defaŭlta finpunkto ne rajtas resti,
+        // alie la nova procezo heredus fremdan mesaĝan vojon.
+        forigu_finpunkton(indekso as u8);
     }
     if procezo != 0 && kapabloj(procezo).is_none() {
         return Err(IkEraro::NevalidaTenilo);

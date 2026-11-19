@@ -13,7 +13,7 @@ use crate::memoro::kadro::KadraAlokilo;
 use crate::memoro::virtuala::{
     AdresaSpaco, PaĝaPermesoj, PaĝaTablo, UZANTA_BAZO, UZANTA_STAKO_SUPRO, VirtuaAdreso,
 };
-use libmikerno::starto::{REĜIMO_SEKRETO, REĜIMO_SPIONO};
+use libmikerno::starto::{REĜIMO_FONO, REĜIMO_SEKRETO, REĜIMO_SPIONO, REĜIMO_ŜELO};
 
 pub mod exec;
 pub mod ik;
@@ -236,8 +236,10 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
             let alokilo = kadra_alokilo();
             alokilo.liberaj()
         };
-        let viktimo = prepari_uzantan_procezon(&spaco, modulo, UZANTA_FADENO_ID);
-        let spiono = prepari_uzantan_procezon(&spaco, modulo, SPIONA_FADENO_ID);
+        let viktimo =
+            prepari_uzantan_procezon(&spaco, modulo, UZANTA_FADENO_ID, "viktimo", REĜIMO_SEKRETO);
+        let spiono =
+            prepari_uzantan_procezon(&spaco, modulo, SPIONA_FADENO_ID, "spiono", REĜIMO_SPIONO);
         if viktimo && spiono {
             crate::skribu!("[kerno] du procezoj pretaj; unu planista voko\n");
             izolado_antaŭ = Some(antaŭ);
@@ -259,6 +261,47 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         crate::arkitekturo::atendi_interrompon();
     }
     crate::interrompo::malebligi_interrompojn();
+
+    // Post la izolada scenaro la ŝelo ekregas: ĝi okupas la fenestron `1` de la
+    // fininta kerna fadeno, la fono la fenestron `2`. La procezoj kreiĝas nur
+    // nun, do la kadra bilanco de `izolado` restas valida. La ŝelo vivas ĝis
+    // `fini`; la kerno atendas ĝian malaperon antaŭ la memprovo.
+    if let Some(modulo) = modulo {
+        let ŝelo = prepari_uzantan_procezon(&spaco, modulo, ŜELA_PROCEZA_ID, "ŝelo", REĜIMO_ŜELO);
+        let fono = prepari_uzantan_procezon(&spaco, modulo, FONA_PROCEZA_ID, "fono", REĜIMO_FONO);
+        if ŝelo && fono {
+            crate::skribu!(
+                "[kerno] ŝelo startas kiel procezo {}; por fini: fini\n",
+                ŜELA_PROCEZA_ID
+            );
+            planisto::lanĉi();
+            crate::interrompo::ebligi_interrompojn();
+            loop {
+                crate::arkitekturo::atendi_interrompon();
+                if procezo::akiri(ŜELA_PROCEZA_ID).is_none() {
+                    break;
+                }
+            }
+            crate::interrompo::malebligi_interrompojn();
+            // La ŝelo finiĝis; forigu la fonan kaj eventualajn lanĉitajn
+            // procezojn, por ke la postaj kontroloj vidu puran bilancon.
+            for id in 1..procezo::MAKSAJ_PROCEZOJ as u64 {
+                if procezo::akiri(id).is_some() {
+                    let _ = planisto::mortigi_procezon(id);
+                }
+            }
+            crate::skribu!("[kerno] ŝelo finiĝis; la kerno daŭras\n");
+        } else {
+            if !ŝelo {
+                detrui_uzantan(ŜELA_PROCEZA_ID);
+            }
+            if !fono {
+                detrui_uzantan(FONA_PROCEZA_ID);
+            }
+            crate::skribu!("[kerno] ŝelo ne pretiĝis; la memprovo sekvas sen ĝi\n");
+        }
+    }
+
     let tikoj = crate::arkitekturo::temporizilaj_tikoj();
 
     // Ĉiu temporizila interrompo devas ricevi EOI; mankanta EOI lasus la
@@ -423,19 +466,14 @@ const UZANTA_FADENO_ID: u64 = TESTAJ_FADENOJ as u64 + 1;
 /// La spionprocezo: ĝi legas la duan sekretan paĝon, kiu ekzistas nur en la
 /// viktima spaco.
 const SPIONA_FADENO_ID: u64 = UZANTA_FADENO_ID + 1;
+/// La procezo de la objekta ŝelo `Ligo`; ĝi okupas la fenestron de la fininta
+/// kerna fadeno `1` nur post la testfazo.
+pub(crate) const ŜELA_PROCEZA_ID: u64 = 1;
+/// La fonda procezo: ĝi dormas seninterrompe ĝis `mortigi 2`.
+const FONA_PROCEZA_ID: u64 = 2;
 /// Ripeta ciklo de la reuzoprovo; libera identigilo, ne fadeno.
 const PROVA_PROCEZA_ID: u64 = 7;
 const REUZOJ: usize = 10;
-
-/// La scenaro, kiun `horizonto` plenumas: kontrolo de la propra sekreta paĝo
-/// aŭ spionado de la viktima dua paĝo.
-fn komenca_reĝimo(fadeno: u64) -> u64 {
-    if fadeno == SPIONA_FADENO_ID {
-        REĜIMO_SPIONO
-    } else {
-        REĜIMO_SEKRETO
-    }
-}
 
 /// Pruvu la `CR3`-disciplinon post la unua ŝalto: `CR4.PCIDE` devas esti
 /// malŝaltita, la aktiva radiko devas esti la ĵus konstruita kerna `PML4`, kaj
@@ -660,7 +698,13 @@ fn detrui_uzantan(id: u64) {
 /// Kreu la procezon, ŝarĝu la bildon, mapu la sekretajn paĝojn kaj registru
 /// ĝian fadenon. La procezo restas `Preta`; la alvokanto lanĉas ĉiujn uzantajn
 /// procezojn per unu `planisto::lanĉi()`, por ke la planisto interplektu ilin.
-fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> bool {
+fn prepari_uzantan_procezon(
+    kerna: &Spaco,
+    modulo: &Modulo,
+    proceza_id: u64,
+    nomo: &str,
+    reĝimo: u64,
+) -> bool {
     let id = match procezo::krei(proceza_id, kerna, kadra_alokilo()) {
         Ok(id) => id,
         Err(eraro) => {
@@ -693,6 +737,8 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
             return false;
         };
         procezo.agordi_bildon(bildo.komenco, bildo.fino, bildo.enirpunkto);
+        procezo.agordi_nomon(nomo);
+        procezo.agordi_reĝimon(reĝimo);
         let dua = proceza_id == UZANTA_FADENO_ID;
         let sekreta = uzantspaco::mapi_sekreton(procezo.spaco(), alokilo, id, dua);
         if let Ok(adreso) = sekreta {
@@ -708,8 +754,14 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
 
     // La defaŭlta finpunkto ekzistas antaŭ ol la fadeno eniras la planiston, do
     // la malnova `SENDI`/`RICEVI`-vojo kaj la kapabla fendo `0` pretas ekde la
-    // unua Ring 3-instrukcio.
-    if let Err(eraro) = ik::registri_fadenon(id, id) {
+    // unua Ring 3-instrukcio. La fadena identigilo estas aparta de la proceza:
+    // la fenestroj `1..=4` restas por la kernaj provfadenoj.
+    let Some(fadeno_id) = planisto::libera_fadena_id() else {
+        crate::skribu!("[uzanto] {}: neniu libera fadena fenestro\n", id);
+        detrui_uzantan(id);
+        return false;
+    };
+    if let Err(eraro) = ik::registri_fadenon(fadeno_id, id) {
         crate::skribu!(
             "[uzanto] {}: defaŭlta finpunkto malsukcesis: {:?}\n",
             id,
@@ -756,7 +808,12 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
         sekreta
     );
 
-    let fadeno = planisto::pretigi_fadenon(id, id, VirtuaAdreso::nova(kerna_pinto), uzanta_fadeno);
+    let fadeno = planisto::pretigi_fadenon(
+        fadeno_id,
+        id,
+        VirtuaAdreso::nova(kerna_pinto),
+        uzanta_fadeno,
+    );
     if let Err(eraro) = planisto::aldoni_fadenon(fadeno) {
         crate::skribu!("[procezo] {} fadena kreado malsukcesis: {:?}\n", id, eraro);
         detrui_uzantan(id);
@@ -778,17 +835,18 @@ fn prepari_uzantan_procezon(kerna: &Spaco, modulo: &Modulo, proceza_id: u64) -> 
     true
 }
 
-fn uzanta_fadeno(id: u64) {
-    let enirpunkto = {
+pub(crate) fn uzanta_fadeno(fadeno: u64) {
+    // La trampolino ricevas la fadenan identigilon; la bildo bezonas la procezan.
+    let id = planisto::procezo_de_fadeno(fadeno);
+    let (enirpunkto, reĝimo) = {
         let Some(procezo) = procezo::akiri(id) else {
             planisto::morti();
         };
-        procezo.enirpunkto()
+        (procezo.enirpunkto(), procezo.reĝimo())
     };
     let Some(enirpunkto) = enirpunkto else {
         planisto::morti();
     };
-    let reĝimo = komenca_reĝimo(id);
     // SAFETY: `pravalorizi` muntis la bildon kun bito `U` kaj registris ĝian
     // enirpunkton en la proceza ero; la stako estas la mapita 64 KiB-a regiono,
     // kaj `id` estas la proceza identigilo skribita en la sekretan paĝon.

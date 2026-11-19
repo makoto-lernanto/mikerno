@@ -197,6 +197,16 @@ pub fn atendi_interrompon() {
     arm64::procesoro::atendi_interrompon();
 }
 
+/// Legu unubajton el la seria konzolo, se ĝi jam alvenis.
+#[cfg(target_arch = "x86_64")]
+pub fn legi_konzolan() -> Option<u8> {
+    malantaŭo::seria::legi_bajton()
+}
+#[cfg(target_arch = "aarch64")]
+pub fn legi_konzolan() -> Option<u8> {
+    arm64::seria::legi_bajton()
+}
+
 /// La adreso, kiu kaŭzis la lastan paĝan eraron (`CR2`).
 #[cfg(target_arch = "x86_64")]
 pub fn fuŝa_adreso() -> u64 {

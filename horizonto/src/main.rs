@@ -10,12 +10,13 @@
 #![no_main]
 
 mod biblioteko;
+mod ligo;
 
 use core::panic::PanicInfo;
 
 use libmikerno::starto::{
-    MAGIA_NUMERO, REĜIMO_EXEC, REĜIMO_SEKRETO, REĜIMO_SPIONO, SEKRETA_ADRESO, SEKRETA_DUA_ADRESO,
-    SEKRETA_ID_DEŜOVO,
+    MAGIA_NUMERO, REĜIMO_EXEC, REĜIMO_FONO, REĜIMO_SEKRETO, REĜIMO_SPIONO, REĜIMO_ŜELO,
+    SEKRETA_ADRESO, SEKRETA_DUA_ADRESO, SEKRETA_ID_DEŜOVO,
 };
 use libmikerno::syscall::{
     SENFINA_TEMPOLIMO, SYS_KREI_FINPUNKTON, SYS_REVOKI, SYS_RICEVI, SYS_RICEVI_TEMPO, SYS_SENDI,
@@ -41,6 +42,12 @@ const SALUTO: &str = "horizonto: procezo vekis en Ring 3.\n";
 #[unsafe(no_mangle)]
 pub extern "C" fn horizonto_komenco(reĝimo: u64, identigilo: u64) -> ! {
     biblioteko::skribi(SALUTO);
+    if reĝimo == REĜIMO_ŜELO {
+        ligo::starti()
+    }
+    if reĝimo == REĜIMO_FONO {
+        fona_procezo(identigilo)
+    }
     if reĝimo == REĜIMO_EXEC {
         biblioteko::skribi_formaton(format_args!(
             "[ring3] exec: nova bildo funkcias (procezo {})\n",
@@ -60,6 +67,18 @@ pub extern "C" fn horizonto_komenco(reĝimo: u64, identigilo: u64) -> ! {
         REĜIMO_SEKRETO => sekreta_provo(identigilo),
         REĜIMO_SPIONO => spioni(identigilo),
         _ => biblioteko::fini(0),
+    }
+}
+
+/// La fona procezo: restas viva (dormante), por ke `procezoj` kaj `mortigi`
+/// havu duan celon.
+fn fona_procezo(identigilo: u64) -> ! {
+    biblioteko::skribi_formaton(format_args!(
+        "[ring3] procezo {}: fono viglas\n",
+        identigilo
+    ));
+    loop {
+        biblioteko::dormi(1000);
     }
 }
 

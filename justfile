@@ -12,7 +12,7 @@ bildo := "mikerno.iso"
 
 default: konstrui
 
-# Konstruu la tutan laborlokon (kerno, libmikerno, horizonto).
+# Konstruu la tutan laborlokon (kerno, libmikerno, horizonto, saluto).
 konstrui-ciujn:
     cargo build --workspace --release
 
@@ -28,13 +28,14 @@ snds:
     bash tools/krei_snds_img.sh mikerno/snds target/mikerno.snds
 
 # Rulu la kernon rekte per QEMU (PVH, sen ISO).
-ruli: konstrui-kerno snds
+ruli: konstrui-ciujn snds
     bash tools/run-qemu.sh {{kerno}}
 
-# Konstruu la kernon por arm64 (plata `Image`) kaj la uzantan bildon.
+# Konstruu la kernon por arm64 (plata `Image`) kaj la uzantajn bildojn.
 konstrui-arm:
     cargo build -p mikerno --release --target aarch64-unknown-none
     cargo build -p horizonto --release --target aarch64-unknown-none
+    cargo build -p saluto --release --target aarch64-unknown-none
     bash tools/elf-al-image.sh {{kerno_arm}} {{bildo_arm}}
 
 # Rulu la arm64-kernon sub QEMU (`virt`).
@@ -53,6 +54,7 @@ ruli-iso-arm: iso-arm
 iso: konstrui-kerno
     @command -v xorriso >/dev/null || { echo "xorriso ne trovita; instalu ĝin: sudo apt install xorriso" >&2; exit 1; }
     cargo build -p horizonto --release
+    cargo build -p saluto --release
     rm -rf iso_root
     mkdir -p iso_root
     cp {{kerno}} iso_root/mikerno.elf

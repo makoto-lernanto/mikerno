@@ -1477,6 +1477,16 @@
       color: #EEF0FF;
     }
 
+    .terminala-tabelo td.tipo {
+      color: var(--informo);
+      font-family: var(--mono);
+      font-size: .92em;
+    }
+
+    .terminala-tabelo td.tipo-teksto { color: var(--sukceso); }
+    .terminala-tabelo td.tipo-agordo { color: var(--averto); }
+    .terminala-tabelo td.tipo-bildo { color: var(--akcento); }
+
     .terminala-korpo .sildeto.tenila {
       color: #FFB454;
       border-color: rgba(255, 180, 84, .30);
@@ -2116,7 +2126,7 @@
         <div class="terminala-korpo" id="terminalaKorpo" role="log" aria-live="polite" aria-label="Eligo de Ligo"></div>
 
         <form class="terminala-injeto" id="terminalaFormo" autocomplete="off">
-          <label class="prompto" for="ligoEniro">horizonto❯</label>
+          <label class="prompto" for="ligoEniro">ligo:~></label>
           <input id="ligoEniro" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
             placeholder="tajpu helpu" aria-label="Komando de Ligo">
         </form>
@@ -2477,6 +2487,8 @@
           const v = r[k];
           if (k === "tenilo" && v != null) {
             html += '<td><span class="sildeto tenila">TENILO ' + eskapi(v) + "</span></td>";
+          } else if (k === "tipo" && typeof v === "string") {
+            html += '<td class="tipo tipo-' + eskapi(v) + '">' + eskapi(v) + "</td>";
           } else if (typeof v === "number") {
             html += '<td class="nombra">' + eskapi(montraValoro(k, v)) + "</td>";
           } else {
@@ -2731,7 +2743,7 @@
       if (!pura) return;
       const eho = document.createElement("div");
       eho.className = "linio komanda";
-      eho.innerHTML = '<span class="prompto">horizonto❯</span> <span>' + eskapi(pura) + "</span>";
+      eho.innerHTML = '<span class="prompto">ligo:~></span> <span>' + eskapi(pura) + "</span>";
       terminalaKorpo.appendChild(eho);
       if (ligoHistorio[ligoHistorio.length - 1] !== pura) ligoHistorio.push(pura);
       ligoHistoriaIndekso = ligoHistorio.length;
