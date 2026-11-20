@@ -2148,9 +2148,9 @@ post la dua propraĵa redukto, do la pruvo disiĝis en tri pli malgrandajn:
 
 **Eldono.** [`v0.8.0`](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.8.0)
 (etikedo ĉe `7a07b25`) enhavas `mikerno.iso` (SHA-256
-`9dfc411d0e90f618e2ca8ee85851ed9c4d9d80c2961bdd51e0f7cfbe90e605ae`) kaj
+`3f9b28f79a48bf0a7f5e1cfb80dcd69c14384a79bf09ab5db4986dde0a3dd7a9`) kaj
 `mikerno-arm.iso` (SHA-256
-`bb5dac5cbc40c30cdff025346519732ccf852b10ec52392fb1ce70028e8a8f5e`). La du
+`cb1477076aa10b96726bda0175b1cd2dfc36ff90c82be7e77721d1a522d3cb14`). La du
 ISO-oj estis konstruitaj el la puŝita kodo kaj praŝarĝitaj antaŭ la alŝuto;
 la retejo montras la version 0.8.0 kaj la elŝutajn ligilojn al ĉi tiu
 etikedo.
@@ -2205,6 +2205,16 @@ la konkretan efektivigon), `x86_64/uzanta.rs`, `x86_64/pagado.rs`,
 aligas la taskojn `miri-kontroli` (unu tasko) kaj `kani-kontroli` (po unu
 pruvo). Tiel la pordego havas tri tavolojn: statika analizo kaj konstruo,
 interpretita kontrolo de nedifinita konduto, kaj formala pruvo.
+
+**Nuba DI kaj reŝuto (2026-11-20).** Runo
+[#44736290645](https://github.com/makoto-lernanto/mikerno/actions/runs/44736290645)
+ĉe `74cbdfc`: ĉiuj 46 taskoj verdaj (`kontroli-kaj-konstrui`,
+`miri-kontroli`, `kani-pretigi` kaj la 43 pruvoj de `kani-kontroli`).
+Post la verda DI la du ISO-oj estis rekonstruitaj el la puŝita kodo,
+senkape praŝarĝitaj per `QEMU_DISPLAY=none` (`virtio-blk`, SNDS-haketo
+`0x73e961eae12ef556` respektive `0x65a91a437d299007`, `Ligo 0.1`) kaj
+alŝutitaj al la Eldono `v0.8.0` per `--clobber`. La priskribo de la Eldono
+kaj ĉi tiu sekcio montras la novajn SHA-256-valorojn.
 
 ---
 
