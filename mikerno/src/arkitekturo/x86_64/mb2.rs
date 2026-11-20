@@ -43,11 +43,11 @@ pub fn analizi(informo: *const u8) -> Result<EniraInformo, EniraEraro> {
         return Err(EniraEraro::NevalidaMagio);
     }
 
-    let mapo = MAPO.akiri();
+    let mapo = unsafe { &mut *MAPO.akiri() };
     *mapo = MemoraMapo::nova();
-    let framebufo = FRAMEBUFO.akiri();
+    let framebufo = unsafe { &mut *FRAMEBUFO.akiri() };
     *framebufo = None;
-    *MODULA_NOMBRO.akiri() = 0;
+    unsafe { *MODULA_NOMBRO.akiri() = 0 };
 
     let fino = informo as usize + tuta;
     let mut etikedo = unsafe { informo.add(KAPA_GRANDO) };
@@ -75,9 +75,10 @@ pub fn analizi(informo: *const u8) -> Result<EniraInformo, EniraEraro> {
         return Err(EniraEraro::NeniuMemoraMapo);
     }
 
-    let rezervoj = REZERVOJ_AREO.akiri();
-    let modulo_nombro = *MODULA_NOMBRO.akiri();
-    let modulo_eroj = &MODULOJ.akiri()[..modulo_nombro];
+    let rezervoj = unsafe { &mut *REZERVOJ_AREO.akiri() };
+    let modulo_nombro = unsafe { *MODULA_NOMBRO.akiri() };
+    let moduloj = unsafe { &*MODULOJ.akiri() };
+    let modulo_eroj = &moduloj[..modulo_nombro];
     rezervoj[0] = MemoraRegiono {
         komenco: informo as u64,
         longo: tuta as u64,
@@ -90,13 +91,13 @@ pub fn analizi(informo: *const u8) -> Result<EniraInformo, EniraEraro> {
             tipo: RegionaTipo::Rezervita,
         };
     }
-    *REZERVOJ_NOMBRO.akiri() = 1 + modulo_nombro;
+    unsafe { *REZERVOJ_NOMBRO.akiri() = 1 + modulo_nombro };
 
     Ok(EniraInformo {
-        memora_mapo: &*MAPO.akiri(),
+        memora_mapo: unsafe { &*MAPO.akiri() },
         rezervindaj: unsafe { slice::from_raw_parts(rezervoj.as_ptr(), 1 + modulo_nombro) },
         frambufo: *framebufo,
-        moduloj: unsafe { slice::from_raw_parts(MODULOJ.akiri().as_ptr(), modulo_nombro) },
+        moduloj: modulo_eroj,
     })
 }
 
@@ -110,14 +111,16 @@ fn legi_modulon(etikedo: *const u8, grando: usize) -> Result<(), EniraEraro> {
     if fino <= komenco {
         return Err(EniraEraro::NevalidaModulo);
     }
-    let nombro = MODULA_NOMBRO.akiri();
+    let nombro = unsafe { &mut *MODULA_NOMBRO.akiri() };
     if *nombro == MAKSAJ_MODULOJ {
         return Err(EniraEraro::TroMultajModuloj);
     }
-    MODULOJ.akiri()[*nombro] = Modulo {
-        komenco,
-        longo: fino - komenco,
-    };
+    unsafe {
+        (*MODULOJ.akiri())[*nombro] = Modulo {
+            komenco,
+            longo: fino - komenco,
+        };
+    }
     *nombro += 1;
     Ok(())
 }

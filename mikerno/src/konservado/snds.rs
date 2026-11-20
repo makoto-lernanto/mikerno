@@ -353,7 +353,7 @@ static DOSIERSISTEMO: Kunhavigita<Option<SimplaDosiersistemo>> = Kunhavigita::no
 /// Malfermu dosieron per vojo relative al la radiko.
 pub fn malfermi(vojo: &str) -> Result<Dosiero, Eraro> {
     let _gardo = InterrompaGardo::nova();
-    let Some(sistemo) = DOSIERSISTEMO.akiri().as_ref() else {
+    let Some(sistemo) = (unsafe { (*DOSIERSISTEMO.akiri()).as_ref() }) else {
         return Err(Eraro::NeKomencigita);
     };
     let inodo = sistemo.solvi(vojo)?;
@@ -370,7 +370,7 @@ pub fn legi(dosiero: &Dosiero, bufro: &mut [u8]) -> Result<usize, Eraro> {
         return Err(Eraro::BufroTroMalgranda);
     }
     let _gardo = InterrompaGardo::nova();
-    let Some(sistemo) = DOSIERSISTEMO.akiri().as_ref() else {
+    let Some(sistemo) = (unsafe { (*DOSIERSISTEMO.akiri()).as_ref() }) else {
         return Err(Eraro::NeKomencigita);
     };
     sistemo.legi_datumojn(&dosiero.inodo, &mut bufro[..grando])?;
@@ -387,7 +387,7 @@ pub fn listi_registrojn(
     celo: &mut [libmikerno::registro::Dosierero],
 ) -> Result<usize, Eraro> {
     let _gardo = InterrompaGardo::nova();
-    let Some(sistemo) = DOSIERSISTEMO.akiri().as_ref() else {
+    let Some(sistemo) = (unsafe { (*DOSIERSISTEMO.akiri()).as_ref() }) else {
         return Err(Eraro::NeKomencigita);
     };
     let inodo = sistemo.solvi(vojo)?;
@@ -495,7 +495,7 @@ pub fn pravalorizi() -> Result<(), Eraro> {
     let haketo = sistemo.haketo;
     {
         let _gardo = InterrompaGardo::nova();
-        *DOSIERSISTEMO.akiri() = Some(sistemo);
+        unsafe { *DOSIERSISTEMO.akiri() = Some(sistemo) };
     }
     crate::skribu!(
         "[dosiersistemo] SNDS: {} dosieroj, {} dosierujo{}. Haketo: 0x{:016x}\n",

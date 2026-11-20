@@ -259,11 +259,11 @@ static KERNA_RADIKO: Kunhavigita<u64> = Kunhavigita::nova(0);
 /// Registru la radikan `PML4`-on de la nukleo (procezo `0`) post la unua
 /// `CR3`-ŝalto. Antaŭ tio la nukleo uzas la praŝarĝilan tabularon.
 pub fn agordi_kernan_spacon(radiko: FizikaAdreso) {
-    *KERNA_RADIKO.akiri() = radiko.adreso();
+    unsafe { *KERNA_RADIKO.akiri() = radiko.adreso() };
 }
 
 fn kerna_radiko() -> Option<FizikaAdreso> {
-    let radiko = *KERNA_RADIKO.akiri();
+    let radiko = unsafe { *KERNA_RADIKO.akiri() };
     (radiko != 0).then_some(FizikaAdreso::nova(radiko))
 }
 
@@ -319,7 +319,7 @@ static PROCEZOJ: Kunhavigita<[Option<Procezo>; MAKSAJ_PROCEZOJ]> =
     Kunhavigita::nova([const { None }; MAKSAJ_PROCEZOJ]);
 
 fn tabelo() -> &'static mut [Option<Procezo>; MAKSAJ_PROCEZOJ] {
-    PROCEZOJ.akiri()
+    unsafe { &mut *PROCEZOJ.akiri() }
 }
 
 /// Registru novan procezon en la tabelo. `id == 0` estas la nukleo mem, do

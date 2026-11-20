@@ -6,7 +6,7 @@
 
 (() => {
   const radiko = document.documentElement;
-  const VERSIO = radiko.dataset.versio || "0.7.3";
+  const VERSIO = radiko.dataset.versio || "0.7.4";
   const ANGLA = window.TRADUKOJ_ANGLA || {};
   const reduktitaMovo = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 

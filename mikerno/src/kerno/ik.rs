@@ -246,13 +246,13 @@ static STATISTIKO: Kunhavigita<IkStatistiko> = Kunhavigita::nova(IkStatistiko {
 });
 
 fn statistiko() -> &'static mut IkStatistiko {
-    STATISTIKO.akiri()
+    unsafe { &mut *STATISTIKO.akiri() }
 }
 
 /// Kopio de la nuna statistiko; la vokanto tenas interrompojn malŝaltitajn aŭ
 /// akceptas malstrikte kongruan legadon.
 pub fn nuna_statistiko() -> IkStatistiko {
-    *STATISTIKO.akiri()
+    unsafe { *STATISTIKO.akiri() }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -366,11 +366,11 @@ static FINAJ_PUNKTOJ: Kunhavigita<[FinaPunktoObjekto; MAKSAJ_FINPUNKTOJ]> =
 static SEKVA_FINPUNKTA_ID: Kunhavigita<FinaPunktaId> = Kunhavigita::nova(UNUA_FINPUNKTA_ID);
 
 fn finpunktoj() -> &'static mut [FinaPunktoObjekto; MAKSAJ_FINPUNKTOJ] {
-    FINAJ_PUNKTOJ.akiri()
+    unsafe { &mut *FINAJ_PUNKTOJ.akiri() }
 }
 
 fn sekva_finpunkta_id() -> FinaPunktaId {
-    let krado = SEKVA_FINPUNKTA_ID.akiri();
+    let krado = unsafe { &mut *SEKVA_FINPUNKTA_ID.akiri() };
     let id = *krado;
     *krado += 1;
     id
@@ -386,17 +386,14 @@ fn marki_revokan_vekon(fadeno: FadenoId) {
     if fadeno == 0 {
         return;
     }
-    if let Some(marko) = REVOKAJ_VEKOJ.akiri().get_mut(fadeno as usize) {
+    if let Some(marko) = unsafe { (*REVOKAJ_VEKOJ.akiri()).get_mut(fadeno as usize) } {
         *marko = true;
     }
 }
 
 /// Konsumu la revokan markon de fadeno; `true` nur unufoje por ĉiu revoko.
 fn preni_revokan_vekon(fadeno: FadenoId) -> bool {
-    REVOKAJ_VEKOJ
-        .akiri()
-        .get_mut(fadeno as usize)
-        .is_some_and(core::mem::take)
+    unsafe { (*REVOKAJ_VEKOJ.akiri()).get_mut(fadeno as usize) }.is_some_and(core::mem::take)
 }
 
 /// La bito de fadeno en `FinaPunktoObjekto::sendantoj`: la identigiloj estas
@@ -581,7 +578,7 @@ fn kapabloj(procezo: ProcezaId) -> Option<&'static mut Kapablotabelo> {
     if procezo == 0 || procezo as usize >= MAKSAJ_PROCEZOJ {
         return None;
     }
-    KAPABLOJ.akiri().get_mut(procezo as usize)
+    unsafe { (*KAPABLOJ.akiri()).get_mut(procezo as usize) }
 }
 
 fn libera_finpunkta_fendo() -> Option<u8> {

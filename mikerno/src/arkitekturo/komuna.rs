@@ -12,7 +12,7 @@
 pub enum VirtioSpeco {
     Pcia,
     /// Nur `arm64` konstruas ĉi tiun specon.
-    #[cfg_attr(target_arch = "x86_64", allow(dead_code))]
+    #[cfg(target_arch = "aarch64")]
     Mmio,
 }
 
@@ -44,6 +44,7 @@ mod pci_reg {
     pub const QUEUE_DEVICE: u64 = 0x30;
 }
 
+#[cfg(target_arch = "aarch64")]
 mod mmio_reg {
     pub const DEVICE_FEATURE: u64 = 0x10;
     pub const DEVICE_FEATURE_SELECT: u64 = 0x14;
@@ -77,7 +78,7 @@ impl VirtioTransporto {
         }
     }
 
-    #[cfg_attr(target_arch = "x86_64", allow(dead_code))]
+    #[cfg(target_arch = "aarch64")]
     pub const fn nova_mmio(bazo: *mut u8) -> Self {
         Self {
             speco: VirtioSpeco::Mmio,
@@ -96,6 +97,7 @@ impl VirtioTransporto {
         match self.speco {
             VirtioSpeco::Pcia => self.legi_u8(self.komuna, pci_reg::STATUS),
             // MMIO-registroj estas nur 32-bitaj; bajta aliro ne atingus la aparaton.
+            #[cfg(target_arch = "aarch64")]
             VirtioSpeco::Mmio => self.legi_u32(self.komuna, mmio_reg::STATUS) as u8,
         }
     }
@@ -103,6 +105,7 @@ impl VirtioTransporto {
     pub fn agordi_staton(&self, valoro: u8) {
         match self.speco {
             VirtioSpeco::Pcia => self.skribi_u8(self.komuna, pci_reg::STATUS, valoro),
+            #[cfg(target_arch = "aarch64")]
             VirtioSpeco::Mmio => {
                 self.skribi_u32(self.komuna, mmio_reg::STATUS, valoro as u32);
             }
@@ -115,6 +118,7 @@ impl VirtioTransporto {
                 self.skribi_u32(self.komuna, pci_reg::DEVICE_FEATURE_SELECT, paĝo);
                 self.legi_u32(self.komuna, pci_reg::DEVICE_FEATURE)
             }
+            #[cfg(target_arch = "aarch64")]
             VirtioSpeco::Mmio => {
                 self.skribi_u32(self.komuna, mmio_reg::DEVICE_FEATURE_SELECT, paĝo);
                 self.legi_u32(self.komuna, mmio_reg::DEVICE_FEATURE)
@@ -128,6 +132,7 @@ impl VirtioTransporto {
                 self.skribi_u32(self.komuna, pci_reg::DRIVER_FEATURE_SELECT, paĝo);
                 self.skribi_u32(self.komuna, pci_reg::DRIVER_FEATURE, valoro);
             }
+            #[cfg(target_arch = "aarch64")]
             VirtioSpeco::Mmio => {
                 self.skribi_u32(self.komuna, mmio_reg::DRIVER_FEATURE_SELECT, paĝo);
                 self.skribi_u32(self.komuna, mmio_reg::DRIVER_FEATURE, valoro);
@@ -140,6 +145,7 @@ impl VirtioTransporto {
             VirtioSpeco::Pcia => {
                 self.skribi_u16(self.komuna, pci_reg::QUEUE_SELECT, vico);
             }
+            #[cfg(target_arch = "aarch64")]
             VirtioSpeco::Mmio => {
                 self.skribi_u32(self.komuna, mmio_reg::QUEUE_SELECT, vico as u32);
             }
@@ -149,6 +155,7 @@ impl VirtioTransporto {
     pub fn vica_grando(&self) -> u16 {
         match self.speco {
             VirtioSpeco::Pcia => self.legi_u16(self.komuna, pci_reg::QUEUE_SIZE),
+            #[cfg(target_arch = "aarch64")]
             VirtioSpeco::Mmio => self.legi_u32(self.komuna, mmio_reg::QUEUE_SIZE_MAX) as u16,
         }
     }
@@ -158,6 +165,7 @@ impl VirtioTransporto {
             VirtioSpeco::Pcia => {
                 self.skribi_u16(self.komuna, pci_reg::QUEUE_SIZE, grandeco);
             }
+            #[cfg(target_arch = "aarch64")]
             VirtioSpeco::Mmio => {
                 self.skribi_u32(self.komuna, mmio_reg::QUEUE_SIZE, grandeco as u32);
             }
@@ -168,6 +176,7 @@ impl VirtioTransporto {
         match self.speco {
             VirtioSpeco::Pcia => self.legi_u16(self.komuna, pci_reg::QUEUE_NOTIFY_OFF),
             // MMIO sciigas per la vica numero mem.
+            #[cfg(target_arch = "aarch64")]
             VirtioSpeco::Mmio => 0,
         }
     }
@@ -179,6 +188,7 @@ impl VirtioTransporto {
                 self.skribi_u64(self.komuna, pci_reg::QUEUE_DRIVER, disponebla);
                 self.skribi_u64(self.komuna, pci_reg::QUEUE_DEVICE, uzita);
             }
+            #[cfg(target_arch = "aarch64")]
             VirtioSpeco::Mmio => {
                 self.skribi_u32(self.komuna, mmio_reg::QUEUE_DESC, desc as u32);
                 self.skribi_u32(self.komuna, mmio_reg::QUEUE_DESC + 4, (desc >> 32) as u32);
@@ -203,6 +213,7 @@ impl VirtioTransporto {
             VirtioSpeco::Pcia => {
                 self.skribi_u16(self.komuna, pci_reg::QUEUE_ENABLE, 1);
             }
+            #[cfg(target_arch = "aarch64")]
             VirtioSpeco::Mmio => {
                 self.skribi_u32(self.komuna, mmio_reg::QUEUE_ENABLE, 1);
             }
@@ -215,6 +226,7 @@ impl VirtioTransporto {
                 let offset = self.vica_sciiga_offsets() as u64 * self.sciiga_multobligo as u64;
                 self.skribi_u16(self.sciiga, offset, vico);
             }
+            #[cfg(target_arch = "aarch64")]
             VirtioSpeco::Mmio => {
                 self.skribi_u32(self.komuna, mmio_reg::NOTIFY, vico as u32);
             }
@@ -225,6 +237,7 @@ impl VirtioTransporto {
     pub fn kapacito(&self) -> u64 {
         let bazo = match self.speco {
             VirtioSpeco::Pcia => 0,
+            #[cfg(target_arch = "aarch64")]
             VirtioSpeco::Mmio => mmio_reg::DEVICE_CONFIG,
         };
         let malalta = self.legi_u32(self.aparata, bazo) as u64;

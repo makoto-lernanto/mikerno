@@ -29,7 +29,7 @@ static ALOKILO: Kunhavigita<KadraAlokilo> = Kunhavigita::nova(KadraAlokilo::nova
 /// La tutmonda kadro-alokilo, uzata ankaŭ de la proceza detruo en la
 /// planisto. Vokenda kun interrompoj malŝaltitaj.
 pub fn kadra_alokilo() -> &'static mut KadraAlokilo {
-    ALOKILO.akiri()
+    unsafe { &mut *ALOKILO.akiri() }
 }
 
 pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {

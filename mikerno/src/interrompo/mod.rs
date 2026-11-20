@@ -29,7 +29,7 @@ static TRAKTILOJ: Kunhavigita<[Option<&'static dyn InterrompaTraktilo>; VEKTOROJ
 
 /// Registru traktilon por unu vektoro. La traktilo devas vivi por ĉiam.
 pub fn registri(vektoro: u8, traktilo: &'static dyn InterrompaTraktilo) {
-    TRAKTILOJ.akiri()[vektoro as usize] = Some(traktilo);
+    unsafe { (*TRAKTILOJ.akiri())[vektoro as usize] = Some(traktilo) };
 }
 
 /// Malŝaltu interrompojn provizore; `Drop` restarigas la antaŭan staton.
@@ -57,7 +57,7 @@ impl Drop for InterrompaGardo {
 /// La platforma dispetĉo alvokas ĝin post la aparata konfirmo.
 #[cfg(target_arch = "aarch64")]
 pub fn trakti_vektoron(vektoro: usize, kadro: &mut InterrompaKadro) -> bool {
-    if let Some(traktilo) = TRAKTILOJ.akiri()[vektoro] {
+    if let Some(traktilo) = unsafe { (*TRAKTILOJ.akiri())[vektoro] } {
         traktilo.trakta(kadro);
         true
     } else {
@@ -84,7 +84,7 @@ pub extern "C" fn interrompa_dispetcho(kadro: *mut InterrompaKadro) {
     let kadro = unsafe { &mut *kadro };
     let vektoro = kadro.vektoro as usize;
 
-    if let Some(traktilo) = TRAKTILOJ.akiri()[vektoro] {
+    if let Some(traktilo) = unsafe { (*TRAKTILOJ.akiri())[vektoro] } {
         // EOI antaŭ la traktilo: ĝi rajtas ŝanĝi la kuntekston, kaj la venonta
         // tiko devas povi alveni ankaŭ dum la nova fadeno plenumas.
         if estas_apic_vektoro(vektoro) {

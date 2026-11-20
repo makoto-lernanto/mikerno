@@ -409,7 +409,7 @@ impl Planisto {
 static PLANISTO: Kunhavigita<Planisto> = Kunhavigita::nova(Planisto::nova());
 
 fn planisto() -> &'static mut Planisto {
-    PLANISTO.akiri()
+    unsafe { &mut *PLANISTO.akiri() }
 }
 
 /// La unua libera fadena identigilo por dinamika uzanta procezo.

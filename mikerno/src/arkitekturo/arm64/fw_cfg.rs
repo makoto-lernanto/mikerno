@@ -70,12 +70,12 @@ const _: () = assert!(size_of::<Agordo>() == 28);
 
 /// Agordu la `fw_cfg`-bazon el la FDT.
 pub fn agordi_bazon(bazo: u64) {
-    *BAZO.akiri() = bazo;
+    unsafe { *BAZO.akiri() = bazo };
 }
 
 /// La uzata `fw_cfg`-bazo.
 pub fn bazo() -> u64 {
-    *BAZO.akiri()
+    unsafe { *BAZO.akiri() }
 }
 
 /// Aloku kontiguan RAM-frambufon kaj anoncu ĝin al `ramfb` per `fw_cfg`.

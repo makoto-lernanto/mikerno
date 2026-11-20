@@ -196,7 +196,7 @@ fn listi(montrilo: u64, longo: u64, celo: u64, celgrando: u64, el_ring3: bool) -
     if eroj == 0 || !kontroli_regionon(celo, eroj * size_of::<Dosierero>(), true, el_ring3) {
         return MALĜUSTA_ARG;
     }
-    let bufro = LISTI_BUFRO.akiri();
+    let bufro = unsafe { &mut *LISTI_BUFRO.akiri() };
     match snds::listi_registrojn(vojo, &mut bufro[..eroj]) {
         Ok(nombro) => {
             kopii_al_uzanto(
@@ -232,7 +232,7 @@ fn legi(montrilo: u64, longo: u64, celo: u64, celgrando: u64, el_ring3: bool) ->
     if dosiero.grando() as usize > celgrando || dosiero.grando() as usize > MAKS_LEGO {
         return TABELO_PLENA;
     }
-    let bufro = LEGA_BUFRO.akiri();
+    let bufro = unsafe { &mut *LEGA_BUFRO.akiri() };
     match snds::legi(&dosiero, &mut bufro[..celgrando.min(MAKS_LEGO)]) {
         Ok(nombro) => {
             kopii_al_uzanto(celo, bufro.as_ptr(), nombro, el_ring3);
@@ -251,7 +251,7 @@ fn procezoj(celo: u64, celgrando: u64, el_ring3: bool) -> u64 {
     if eroj == 0 || !kontroli_regionon(celo, eroj * size_of::<ProcezoRekordo>(), true, el_ring3) {
         return MALĜUSTA_ARG;
     }
-    let bufro = PROCEZOJ_BUFRO.akiri();
+    let bufro = unsafe { &mut *PROCEZOJ_BUFRO.akiri() };
     let nombro = super::procezo::listi(&mut bufro[..eroj]);
     kopii_al_uzanto(
         celo,
@@ -341,7 +341,7 @@ fn skribi(montrilo: u64, longo: u64, el_ring3: bool) -> u64 {
     // la formatado poste legas nur la kernan kopion. Ring 0-montriloj estas
     // fidindaj kaj ne bezonas fenestron.
     let bufro: &[u8] = if el_ring3 {
-        let celo = SKRIBA_BUFRO.akiri();
+        let celo = unsafe { &mut *SKRIBA_BUFRO.akiri() };
         {
             let _gardo = crate::arkitekturo::StacGardo::nova();
             // SAFETY: Ring 3-montriloj trapasis la regionan kontrolon, do la

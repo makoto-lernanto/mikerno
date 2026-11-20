@@ -33,7 +33,7 @@ La versio havas la formon `0.x.y` kaj rilatas al la mejloŝtonoj:
 Ekzemple: la Fazoj 1/2/3 de M13 respondas al `0.3.0` / `0.3.1` / `0.3.2`.
 La formo `0.x.y` validas ekde M10; M0–M9 apartenas al la historio `0.0.x`.
 
-Nuna versio: `0.7.3` (M17, Fazo 4: ŝelo Ligo kaj bazaj komandoj).
+Nuna versio: `0.7.4` (M17, Fazo 5: arkitektura adaptado kaj purigo).
 
 La sola fonto de la versio estas `[workspace.package] version` en `Cargo.toml`.
 La kerno legas ĝin per `env!("CARGO_PKG_VERSION")`, do `just ruli` kaj la ISO
@@ -66,7 +66,9 @@ rulas `--kontroli`.
   `cargo fmt --all -- --check`,
   `cargo clippy --workspace --release -- -D warnings`,
   `cargo clippy -p mikerno --release --target aarch64-unknown-none -- -D
-  warnings` kaj `cargo build --workspace --release`.
+  warnings`, `cargo clippy -p horizonto -p saluto --release --target
+  aarch64-unknown-none -- -D warnings` kaj `cargo build --workspace
+  --release`.
 - Post puŝo kontrolu la runon en la agoj-paĝo de la deponejo (aŭ per
   `gh run watch`); la formala pordego estas verda nur kiam la tuta matrico
   `kani-kontroli` sukcesas. Detaloj estas en `docs/MEJLOSTONOJ.md` §4.7–§4.8.

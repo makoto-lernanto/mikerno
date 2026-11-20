@@ -125,6 +125,8 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `sistemvoka numero` | system call number | `rax` (`x86_64`) aŭ `x8` (`arm64`) ĉe la voko. |
 | `sistemvoka dispetĉo` | system call dispatch | `sistemvoka_dispetĉo`. |
 | `uzanta montrilo` | user pointer | Kontrolata antaŭ ĉiu aliro, folio post folio. |
+| `kruda montrilo` | raw pointer | `*mut T`/`*const T`; la derivo de referenco estas eksplicita `unsafe`. |
+| `Kunhavigita` | shared cell | Unuprocesora ĉelo sur `UnsafeCell`; `akiri` redonas krudan montrilon, do la aliro restas eksplicita `unsafe` sub malŝaltitaj interrompoj. |
 | `anoncita regiono` | declared region | La bildo kaj la uzanta stako. |
 | `uzanta fenestro` | user window | `UZANTA_BAZO..UZANTA_FINO`. |
 | `U-bito` | U bit | Ring 3-alireblo; tra ĉiuj niveloj. |

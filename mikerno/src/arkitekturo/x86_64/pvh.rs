@@ -75,11 +75,11 @@ pub fn analizi(starta_informo: *const u8) -> Result<EniraInformo, EniraEraro> {
         return Err(EniraEraro::TroMultajRegionoj);
     }
 
-    let mapo = MAPO.akiri();
-    let rezervoj = REZERVOJ_AREO.akiri();
-    let nombro = REZERVOJ_NOMBRO.akiri();
-    let moduloj = MODULOJ.akiri();
-    let modula_nombro = MODULA_NOMBRO.akiri();
+    let mapo = unsafe { &mut *MAPO.akiri() };
+    let rezervoj = unsafe { &mut *REZERVOJ_AREO.akiri() };
+    let nombro = unsafe { &mut *REZERVOJ_NOMBRO.akiri() };
+    let moduloj = unsafe { &mut *MODULOJ.akiri() };
+    let modula_nombro = unsafe { &mut *MODULA_NOMBRO.akiri() };
     *mapo = MemoraMapo::nova();
     *nombro = 0;
     *modula_nombro = 0;
@@ -115,10 +115,9 @@ pub fn analizi(starta_informo: *const u8) -> Result<EniraInformo, EniraEraro> {
         aldoni_rezervon(rezervoj, nombro, modulo.komenco, modulo.longo)?;
     }
 
-    let memora_mapo = &*MAPO.akiri();
-    let rezervindaj = unsafe { slice::from_raw_parts(REZERVOJ_AREO.akiri().as_ptr(), *nombro) };
-    let modula_eroj =
-        unsafe { slice::from_raw_parts(MODULOJ.akiri().as_ptr(), *MODULA_NOMBRO.akiri()) };
+    let memora_mapo = unsafe { &*MAPO.akiri() };
+    let rezervindaj = unsafe { slice::from_raw_parts(rezervoj.as_ptr(), *nombro) };
+    let modula_eroj = unsafe { slice::from_raw_parts(moduloj.as_ptr(), *modula_nombro) };
 
     Ok(EniraInformo {
         memora_mapo,

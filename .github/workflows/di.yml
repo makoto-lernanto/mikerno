@@ -20,8 +20,9 @@ jobs:
       - name: Elpreni la deponejon
         uses: actions/checkout@v4
 
-      # `just kontroli` lintas ankaŭ por aarch64-unknown-none; la minimuma
-      # rustup-profila ne enhavas rustfmt/clippy, do ili estas petitaj.
+      # `just kontroli` lintas ankaŭ por aarch64-unknown-none, inkluzive la
+      # uzantajn bildojn kun la Ligo-komandoj; la minimuma rustup-profila ne
+      # enhavas rustfmt/clippy, do ili estas petitaj.
       # `llvm-tools-preview` liveras `rust-objcopy` por `konstrui-arm`.
       - name: Instali Rust 1.100.0
         uses: dtolnay/rust-toolchain@1.100.0
@@ -35,9 +36,10 @@ jobs:
       - name: Ruli just kontroli
         run: just kontroli
 
-      # `kontroli` nur lintas la arm64-kernon; ĉi tiu paŝo ankaŭ ligas ĝin kaj
-      # konvertas la ELF-on al la plata `Image`, do rompo en la arm64-bildo
-      # malkovriĝas en DI anstataŭ nur loke.
+      # `kontroli` lintas la arm64-kernon kaj la uzantajn bildojn, sed ne
+      # ligas la kernon; ĉi tiu paŝo ankaŭ ligas ĝin kaj konvertas la ELF-on al
+      # la plata `Image`, do rompo en la arm64-bildo malkovriĝas en DI anstataŭ
+      # nur loke.
       - name: Konstrui la arm64-bildon
         run: just konstrui-arm
 

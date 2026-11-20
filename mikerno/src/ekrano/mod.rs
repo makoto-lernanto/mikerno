@@ -95,13 +95,13 @@ pub fn pravalorizi(informo: FrambufaInformo) -> bool {
         y: 0,
     };
     ekrano.malplenigi();
-    *EKRANO.akiri() = Some(ekrano);
+    unsafe { *EKRANO.akiri() = Some(ekrano) };
     true
 }
 
 /// Skribu al la frambufo, se ĝi estas ŝaltita. Vokata sub interrompa gardo.
 pub fn skribi_formaton(argumentoj: fmt::Arguments) {
-    if let Some(ekrano) = EKRANO.akiri().as_mut() {
+    if let Some(ekrano) = unsafe { (*EKRANO.akiri()).as_mut() } {
         let _ = ekrano.write_fmt(argumentoj);
     }
 }
@@ -122,7 +122,7 @@ pub struct PikselaRaporto {
 /// la koloraj deŝovoj, do ĝia haketo estas komparebla inter la platformoj kiam
 /// la geometrio kongruas.
 pub fn testi_pikselojn() -> Option<PikselaRaporto> {
-    let ekrano = EKRANO.akiri().as_mut()?;
+    let ekrano = unsafe { (*EKRANO.akiri()).as_mut() }?;
     Some(ekrano.testi_pikselojn())
 }
 

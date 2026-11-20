@@ -84,7 +84,7 @@ impl StacGardo {
         if !pan_subtenata() {
             return Self { agordis: false };
         }
-        let profundo = FENESTRO.akiri();
+        let profundo = unsafe { &mut *FENESTRO.akiri() };
         if *profundo == 0 {
             procesoro::malfermi_pan();
         }
@@ -96,7 +96,7 @@ impl StacGardo {
 impl Drop for StacGardo {
     fn drop(&mut self) {
         if self.agordis {
-            let profundo = FENESTRO.akiri();
+            let profundo = unsafe { &mut *FENESTRO.akiri() };
             *profundo -= 1;
             if *profundo == 0 {
                 procesoro::fermi_pan();
@@ -166,7 +166,7 @@ static MODULA_NOMBRO: Kunhavigita<usize> = Kunhavigita::nova(0);
 /// estas samtempe modula bildo kaj rezervita regiono: la nukleo legos la ELF-on
 /// el ĝi ĝis la fino de la scenaro.
 fn prepari_eniron(dtb: *const u8, fdt: &fdt::Fdt) -> EniraInformo {
-    let mapo = MAPO.akiri();
+    let mapo = unsafe { &mut *MAPO.akiri() };
     *mapo = MemoraMapo::nova();
     for regiono in fdt.memoro() {
         mapo.aldoni(MemoraRegiono {
@@ -178,7 +178,7 @@ fn prepari_eniron(dtb: *const u8, fdt: &fdt::Fdt) -> EniraInformo {
 
     // SAFETY: `Fdt::nova` jam validigis la kapon, do `totalsize` estas legebla.
     let dtb_longo = u32::from_be(unsafe { (dtb.add(4) as *const u32).read_unaligned() }) as u64;
-    let rezervoj = REZERVOJ.akiri();
+    let rezervoj = unsafe { &mut *REZERVOJ.akiri() };
     rezervoj[0] = MemoraRegiono {
         komenco: dtb as u64,
         longo: dtb_longo,
@@ -186,7 +186,7 @@ fn prepari_eniron(dtb: *const u8, fdt: &fdt::Fdt) -> EniraInformo {
     };
     let mut rezervoj_nombro = 1;
 
-    *MODULA_NOMBRO.akiri() = 0;
+    unsafe { *MODULA_NOMBRO.akiri() = 0 };
     if let Some((komenco, fino)) = fdt.initrd() {
         rezervoj[rezervoj_nombro] = MemoraRegiono {
             komenco,
@@ -194,23 +194,24 @@ fn prepari_eniron(dtb: *const u8, fdt: &fdt::Fdt) -> EniraInformo {
             tipo: RegionaTipo::Rezervita,
         };
         rezervoj_nombro += 1;
-        MODULOJ.akiri()[0] = Modulo {
-            komenco,
-            longo: fino - komenco,
-        };
-        *MODULA_NOMBRO.akiri() = 1;
+        unsafe {
+            (*MODULOJ.akiri())[0] = Modulo {
+                komenco,
+                longo: fino - komenco,
+            };
+        }
+        unsafe { *MODULA_NOMBRO.akiri() = 1 };
     }
-    *REZERVOJ_NOMBRO.akiri() = rezervoj_nombro;
+    unsafe { *REZERVOJ_NOMBRO.akiri() = rezervoj_nombro };
 
-    let rezervoj = REZERVOJ.akiri();
-    let modulo_nombro = *MODULA_NOMBRO.akiri();
+    let modulo_nombro = unsafe { *MODULA_NOMBRO.akiri() };
     EniraInformo {
-        memora_mapo: &*MAPO.akiri(),
+        memora_mapo: unsafe { &*MAPO.akiri() },
         rezervindaj: unsafe { core::slice::from_raw_parts(rezervoj.as_ptr(), rezervoj_nombro) },
         // La frambufferio venas de `fw_cfg`/`ramfb` post la pretigo de la
         // kadro-alokilo, do la enira informo ne portas unu.
         frambufo: None,
-        moduloj: unsafe { core::slice::from_raw_parts(MODULOJ.akiri().as_ptr(), modulo_nombro) },
+        moduloj: unsafe { core::slice::from_raw_parts((*MODULOJ.akiri()).as_ptr(), modulo_nombro) },
     }
 }
 

@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-19 · Versio de la Cargo-laborloko: 0.7.3
+> Stato: 2026-11-19 · Versio de la Cargo-laborloko: 0.7.4
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -29,7 +29,7 @@
 | M14 | IK-firmigo: objektoj, rajtoj, tempolimoj | Plenumita | Ring 0/Ring 3-scenaroj kaj AC/CR3/EOI-provoj verdaj (ABI 2) |
 | M15 | `arm64`-malantaŭo: EL0, ABI 2, `ramfb`, `PAN` | Plenumita | identa piksela haketo sur ambaŭ arkoj |
 | M16 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Parte | dormo 100 ms = 10 tikoj; minimumo ≥ 17 veturoj; arm64-stabileco |
-| M17 | Konservado, dosiersistemo, ŝelo | Parte | `virtio-blk` legas/skribas 64 sektorojn; SNDS (6 dosieroj, 1 dosierujo; PCI kaj MMIO); `SYS_BRK`, `SYS_EXEC` kaj `SYS_LANĜI` en Ring 3; Ligo kun `listi`, `procezoj`, `mortigi`, `ruli` |
+| M17 | Konservado, dosiersistemo, ŝelo | Plenumita | `virtio-blk` legas/skribas 64 sektorojn; SNDS (6 dosieroj, 1 dosierujo; PCI kaj MMIO); `SYS_BRK`, `SYS_EXEC` kaj `SYS_LANĜI` en Ring 3; Ligo kun `listi`, `procezoj`, `mortigi`, `ruli`; `virtio-blk` MMIO-vojo funkcias sur `arm64`; `#[allow]`-purgado por M17 plenigita |
 | M18 | DI, testoj, plena pruvaro | Parte | GitHub Actions verde (fmt, clippy, konstruo, Kani); testoj kaj plena pruvaro mankas |
 | M19 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 | M20 | Plena pruvaro kaj 1.0 | Venonta | — |
@@ -161,6 +161,7 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-19 | 0.7.3 | 56 | 14977 | 11705 | 1915 | 1357 |
 | 2026-11-19 | 0.7.3 | 56 | 14977 | 11705 | 1915 | 1357 |
 | 2026-11-19 | 0.7.3 | 56 | 14977 | 11705 | 1915 | 1357 |
+| 2026-11-20 | 0.7.4 | 56 | 14988 | 11727 | 1904 | 1357 |
 
 ---
 
@@ -1810,6 +1811,55 @@ komandnomoj estas nur Esperantaj.
 
 **Versio.** 0.7.3 (Fazo 4).
 
+#### 1e. Fazo 5 — efektivigita (0.7.4)
+
+**Purigado de `#[allow]`-oj.** M17 Fazo 1 aldonis du provizorajn
+`#[cfg_attr(target_arch = "x86_64", allow(dead_code))]`-ojn en
+`arkitekturo/komuna.rs`: `VirtioSpeco::Mmio` kaj `VirtioTransporto::nova_mmio`
+ekzistas nur por `arm64`. Anstataŭ la permesiloj la MMIO-eroj nun estas baritaj
+per `#[cfg(target_arch = "aarch64")]` — la varianto, la konstruilo, la
+`mmio_reg`-modulo kaj la koncernaj `match`-branĉoj en `komuna.rs` kaj
+`virtio_blk.rs`. Ankaŭ la `#[allow(clippy::mut_from_ref)]` de
+`Kunhavigita::akiri` forfalis: `akiri` nun redonas krudan montrilon `*mut T`
+(kiel `UnsafeCell::get`), kaj ĉiu alirejo derivas la referencon per eksplicita
+`unsafe { &mut *… }`. Restas nur la antaŭkonstitucia modul-nivela
+`cfg_attr(target_arch = "aarch64", allow(dead_code))` de `komuna.rs` (M15),
+registrita en §9.3.
+
+**Arm64 MMIO-vojo.** `QEMU_DISPLAY=none bash tools/run-qemu-arm.sh release`
+elektas la MMIO-transporton de `virt`:
+
+```
+[konservado] virtio-blk (MMIO): 256 sektoroj, 512 bajtoj po sektoro
+[konservado] virtio-blk: 64 sektoroj legitaj, haketo 0x0958f2eeba293047
+[konservado] virtio-blk: skribo kaj restarigo (bone)
+[dosiersistemo] SNDS: 6 dosieroj, 1 dosierujo. Haketo: 0x5aa97779fbdd1bcb
+```
+
+**Pordego kaj DI.** `just kontroli` nun lintas ankaŭ `horizonto` (la
+Ligo-komandojn) kaj `saluto` por `aarch64-unknown-none`; DI plenumas la saman
+`just kontroli` kaj poste `just konstrui-arm` por la liniigita `arm64-Image`.
+La loka pordego finiĝis sen eraro per:
+
+- `bash tools/versio.sh --kontroli` → `versio: ĉiuj dokumentaj lokoj kongruas kun 0.7.4`;
+- `cargo fmt --all -- --check`;
+- `cargo clippy --workspace --release -- -D warnings`;
+- `cargo clippy -p mikerno --release --target aarch64-unknown-none -- -D warnings`;
+- `cargo clippy -p horizonto -p saluto --release --target aarch64-unknown-none -- -D warnings`;
+- `cargo build --workspace --release`.
+
+**Lokaj rezultoj (2026-11-20, versio 0.7.4).**
+
+| Vojo | Linio |
+| --- | --- |
+| x86_64 PVH | `[konservado] virtio-blk (PCI): 256 sektoroj, 512 bajtoj po sektoro`; `[dosiersistemo] SNDS: 6 dosieroj, 1 dosierujo. Haketo: 0xcd95864fee35a274`; `listi` -> `bonveno.txt 18 B TENILO 0x0001`, `horizonto.elf 94.7 KiB`, `saluto.elf 15.6 KiB`; `procezoj` -> `1 ŝelo Kuranta`, `2 fono Preta`; `ruli saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000c31)`, `Procezo 3 lanĉita: saluto.elf`, `[saluto] saluton el la procezo 3; ĝis revido`; `fini` -> `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 1447 tikoj` |
+| arm64 Image | `[konservado] virtio-blk (MMIO): 256 sektoroj, 512 bajtoj po sektoro`; `[dosiersistemo] SNDS: 6 dosieroj, 1 dosierujo. Haketo: 0x5aa97779fbdd1bcb`; `listi` -> `horizonto.elf 91.6 KiB`, `saluto.elf 16.2 KiB`; `procezoj` -> `1 ŝelo Kuranta`, `2 fono Preta`; `ruli saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000028)`; `fini` -> `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 2128 tikoj` |
+
+Ambaŭ vojoj havas nul `[horloĝo]`-liniojn dum la interagado, kaj la ŝelo kaj
+la lanĉitaj procezoj malaperas antaŭ la fina kadra bilanco.
+
+**Versio.** 0.7.4 (Fazo 5).
+
 #### 2. Evitindaj Eraroj (Konsiloj por la Arkitekto)
 
 1.  **Virtio kaj Memoro-Bariloj**: Virtio-vicoj postulas striktan ordigon de skriboj. En Rust, uzu `core::sync::atomic::compiler_fence(Ordering::SeqCst)` antaŭ ol sciigi la aparaton pri novaj priskribiloj. Malsukceso kaŭzos silentan datuman korupton.
@@ -1830,6 +1880,8 @@ komandnomoj estas nur Esperantaj.
 | `procezoj` kaj `mortigi` funkcias | Plenumita (Fazo 4) | `ligo:~> procezoj` -> `1 ŝelo Kuranta`, `2 fono Preta` <br> `ligo:~> mortigi 2` -> `[procezo] 2 detruita: 1 privataj PDPT-oj, PML4 0x261000, 45 kadroj liberigitaj`, `Procezo 2 (fono) finiĝis.`; `mortigi 1` rifuzata per `-1` |
 | `ruli` startas novan ELF | Plenumita (Fazo 4) | `ligo:~> ruli saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000c31)`; `[saluto] saluton el la procezo 3; ĝis revido` |
 | `arm64` vojo restas verda | Plenumita (Fazo 4) | `QEMU_DISPLAY=none bash tools/run-qemu-arm.sh release` montras la saman interagadon per PL011; `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 2840 tikoj` |
+| `virtio-blk` MMIO funkcias sur `arm64` | Plenumita (Fazo 5) | `[konservado] virtio-blk (MMIO): 256 sektoroj, 512 bajtoj po sektoro`; `[konservado] virtio-blk: skribo kaj restarigo (bone)`; `[dosiersistemo] SNDS: 6 dosieroj, 1 dosierujo` |
+| M17-aj `#[allow]`-oj forigitaj | Plenumita (Fazo 5) | `cargo clippy` sen `-A`/`#[allow]` por `mut_from_ref` nek por la MMIO-eroj de `komuna.rs` sur ambaŭ arkoj |
 
 #### 4. Teknika Ŝuldo Post M17
 
@@ -1902,7 +1954,7 @@ mejloŝtono venas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo el M17.
 | Meza | Sekreta paĝo estas unu fiksa mapado por procezo | Neniu ĝenerala `mmap`/`brk` por uzantaj datumoj | M17 |
 | Meza | Neniu IOMMU | Aparata DMA ne estas izolita | M19 |
 | Meza | Frambufo sen rulumo | Malbona uzsperto | M6-poste |
-| Malalta | `Kunhavigita::akiri` prenas `&self` | Facila misuzo | reviziita kaj dokumentita (Fazo 7) |
+| Malalta | `Kunhavigita::akiri` liveras krudan montrilon el `&self` | La derivo de referenco devas esti eksplicita `unsafe` | reviziita (M17 F5); la disciplino restas dokumentita |
 | Malalta | Kani-modelo ≠ produkta kodo | Pruvoj ne rekte aplikeblas | M9 |
 | Malalta | Antaŭkonstituciaj `#[allow]`-oj sen `PERMESO-JUSTIFIKO` | Povas kaŝi neuzatan aŭ neŝatatan kodon | revizii dum M18 (§9.3) |
 
@@ -1964,6 +2016,7 @@ La originala `just di` ne ekzistas en MiKerno; la ekvivalento estas
 - `cargo fmt --all -- --check`;
 - `cargo clippy --workspace --release -- -D warnings`;
 - `cargo clippy -p mikerno --release --target aarch64-unknown-none -- -D warnings`;
+- `cargo clippy -p horizonto -p saluto --release --target aarch64-unknown-none -- -D warnings`;
 - `cargo build --workspace --release`.
 
 Kani ne estas parto de `just kontroli`: ĝi ruliĝas nur en DI, po unu tasko por
@@ -1980,10 +2033,14 @@ ruliĝas nur en GitHub Actions, po unu pruvo (§4.7–§4.8).
 ### 9.3. Jam ekzistantaj `#[allow]`-oj
 
 La esceptoj starigitaj antaŭ ĉi tiu konstitucio — la `cfg_attr`-aj
-`allow(dead_code)`/`allow(unused_imports)` por `aarch64`, la `allow(dead_code)`
-ĉe strukturaj bufroj kaj la `allow(clippy::mut_from_ref)` de `Kunhavigita` —
-restas registritaj kiel teknika ŝuldo (§7). Oni ne aldonu novajn sen la aprobo
-de la uzanto laŭ §9.1; kiam Fazo tuŝas ekzistantan escepton, ĝi ricevu
+`allow(dead_code)`/`allow(unused_imports)` por `aarch64` (M15) kaj la
+`allow(dead_code)` ĉe strukturaj bufroj — restas registritaj kiel teknika
+ŝuldo (§7). La esceptoj de M17 — la du
+`cfg_attr(target_arch = "x86_64", allow(dead_code))` de `komuna.rs` kaj la
+`allow(clippy::mut_from_ref)` de `Kunhavigita` — estis forigitaj en Fazo 5
+(0.7.4): la MMIO-eroj nun estas baritaj per `#[cfg(target_arch = "aarch64")]`,
+kaj `akiri` redonas krudan montrilon. Oni ne aldonu novajn sen la aprobo de la
+uzanto laŭ §9.1; kiam Fazo tuŝas ekzistantan escepton, ĝi ricevu
 `PERMESO-JUSTIFIKO`-komenton.
 
 ---

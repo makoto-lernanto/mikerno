@@ -12,15 +12,15 @@ impl<T> Kunhavigita<T> {
         Self(UnsafeCell::new(valoro))
     }
 
-    /// Aliru la valoron per mutable reference.
+    /// Kruda montrilo al la valoro.
     ///
     /// # Sekureco
     /// La alvokanto devas garantii, ke neniu alia aliro al la sama valoro
     /// okazas samtempe — en la nukleo tio signifas malŝaltitajn interrompojn
     /// dum la tuta uzo de la referenco. La `&self`-subskribo ne esprimas tiun
-    /// disciplinon, do ĝi restas respondeco de la alvokanto.
-    #[allow(clippy::mut_from_ref)]
-    pub fn akiri(&self) -> &mut T {
-        unsafe { &mut *self.0.get() }
+    /// disciplinon, do la derivo de referenco el la montrilo restas eksplicita
+    /// `unsafe`-ago de la alvokanto.
+    pub fn akiri(&self) -> *mut T {
+        self.0.get()
     }
 }

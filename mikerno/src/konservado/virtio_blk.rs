@@ -325,7 +325,7 @@ impl Konservado {
 /// Legu unu 512-bajtan sektoron en `bufro`.
 pub fn legi_blokon(sektoro: u64, bufro: &mut [u8; BLOKA_GRANDO]) -> Result<(), Eraro> {
     let _gardo = InterrompaGardo::nova();
-    let Some(konservado) = KONSERVADO.akiri().as_mut() else {
+    let Some(konservado) = (unsafe { (*KONSERVADO.akiri()).as_mut() }) else {
         return Err(Eraro::NeKomencigita);
     };
     konservado.legi(sektoro, bufro)
@@ -334,7 +334,7 @@ pub fn legi_blokon(sektoro: u64, bufro: &mut [u8; BLOKA_GRANDO]) -> Result<(), E
 /// Skribu unu 512-bajtan sektoron el `bufro`.
 pub fn skribi_blokon(sektoro: u64, bufro: &[u8; BLOKA_GRANDO]) -> Result<(), Eraro> {
     let _gardo = InterrompaGardo::nova();
-    let Some(konservado) = KONSERVADO.akiri().as_mut() else {
+    let Some(konservado) = (unsafe { (*KONSERVADO.akiri()).as_mut() }) else {
         return Err(Eraro::NeKomencigita);
     };
     konservado.skribi(sektoro, bufro)
@@ -343,10 +343,7 @@ pub fn skribi_blokon(sektoro: u64, bufro: &[u8; BLOKA_GRANDO]) -> Result<(), Era
 /// La kapacito de la aparato en sektoroj (0 se la pelilo mankas).
 pub fn kapacito() -> u64 {
     let _gardo = InterrompaGardo::nova();
-    KONSERVADO
-        .akiri()
-        .as_ref()
-        .map_or(0, |konservado| konservado.kapacito)
+    unsafe { (*KONSERVADO.akiri()).as_ref() }.map_or(0, |konservado| konservado.kapacito)
 }
 
 fn haketi(bufro: &[u8; BLOKA_GRANDO], haketo: &mut u64) {
@@ -398,6 +395,7 @@ pub fn pravalorizi(spaco: &mut dyn AdresaSpaco, alokilo: &mut KadraAlokilo) -> R
         crate::arkitekturo::virtio_blk_transporto(spaco, alokilo).map_err(Eraro::Transporto)?;
     let speco = match trafiko.speco() {
         VirtioSpeco::Pcia => "PCI",
+        #[cfg(target_arch = "aarch64")]
         VirtioSpeco::Mmio => "MMIO",
     };
     let konservado = Konservado::nova(trafiko, alokilo)?;
@@ -408,7 +406,7 @@ pub fn pravalorizi(spaco: &mut dyn AdresaSpaco, alokilo: &mut KadraAlokilo) -> R
     );
     {
         let _gardo = InterrompaGardo::nova();
-        *KONSERVADO.akiri() = Some(konservado);
+        unsafe { *KONSERVADO.akiri() = Some(konservado) };
     }
     memprovo()
 }

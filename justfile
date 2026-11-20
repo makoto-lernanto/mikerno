@@ -76,9 +76,11 @@ kontroli-version:
     bash tools/versio.sh --kontroli
 
 # Loka kvalita pordego: versio + formato + statika analizo (ambaŭ arkoj) + konstruo.
+# La arm64-analizo kovras ankaŭ `horizonto` (la Ligo-komandojn) kaj `saluto`.
 # Kani ruliĝas nur en DI, kiel aparta tasko por ĉiu pruvo (vidu di.yml).
 kontroli: kontroli-version
     cargo fmt --all -- --check
     cargo clippy --workspace --release -- -D warnings
     cargo clippy -p mikerno --release --target aarch64-unknown-none -- -D warnings
+    cargo clippy -p horizonto -p saluto --release --target aarch64-unknown-none -- -D warnings
     cargo build --workspace --release
