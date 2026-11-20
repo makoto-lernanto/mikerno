@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-20 · Versio de la Cargo-laborloko: 0.8.0
+> Stato: 2026-11-20 · Versio de la Cargo-laborloko: 0.8.1
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -169,6 +169,8 @@ eniras la kernan bildon.
 | 2026-11-20 | 0.8.0 | 63 | 15153 | 11810 | 1956 | 1387 |
 | 2026-11-20 | 0.8.0 | 63 | 15164 | 11818 | 1958 | 1388 |
 | 2026-11-20 | 0.8.0 | 63 | 15194 | 11818 | 1988 | 1388 |
+| 2026-11-20 | 0.8.1 | 63 | 15194 | 11818 | 1988 | 1388 |
+| 2026-11-20 | 0.8.1 | 63 | 15196 | 11819 | 1989 | 1388 |
 
 ---
 
@@ -1987,9 +1989,9 @@ funkcias en diversaj medioj.
 
 | Kriterio | Stato | Pruvo |
 | --- | --- | --- |
-| ISO-oj ne estas en Git | Pruvota | `git ls-files | grep .iso` redonas nenion. |
-| DI generas kaj alŝutas ISO-ojn | Pruvota | La DI-runo havas artefaktojn `mikerno.iso` kaj `mikerno-arm.iso`. |
-| QEMU-matrico estas verda | Pruvota | Ĉiuj 5 kombinaĵoj atingas `[kerno] fina stato: ... mortintaj` sen `MALBONE`. |
+| ISO-oj ne estas en Git | Jes | `git ls-files | grep .iso` redonas nenion; `.gitignore` jam enlistigas `mikerno.iso` kaj `mikerno-arm.iso`. |
+| DI generas kaj alŝutas ISO-ojn | Parte | La tasko `paki-iso` konstruas ambaŭ ISO-ojn kaj alŝutas la artefakton `iso-bildoj`; la artefaktoj konfirmiĝos en la unua DI-runo post la puŝo. |
+| QEMU-matrico estas verda | Parte (loka) | Ĉiuj kvin kombinaĵoj atingis `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj` sen `MALBONE` loke; la nuba matrico ruliĝos post la puŝo. |
 
 ##### Fazo 3: `cargo-deny` kaj permesila kontrolo (Versio 0.8.2)
 
@@ -2221,6 +2223,82 @@ senkape praŝarĝitaj per `QEMU_DISPLAY=none` (`virtio-blk`, SNDS-haketo
 `0x73e961eae12ef556` respektive `0x65a91a437d299007`, `Ligo 0.1`) kaj
 alŝutitaj al la Eldono `v0.8.0` per `--clobber`. La priskribo de la Eldono
 kaj ĉi tiu sekcio montras la novajn SHA-256-valorojn.
+
+---
+
+#### 1b. Fazo 2 — efektivigita (0.8.1)
+
+**ISO-oj kiel DI-artefaktoj.** La deponejo jam ne enhavas la ISO-ojn:
+`.gitignore` enlistigas `mikerno.iso` kaj `mikerno-arm.iso`, kaj
+`git ls-files | grep .iso` redonas nenion. La nova DI-tasko `paki-iso`
+konstruas ilin el la sama komitero, kiun kontrolas `kontroli-kaj-konstrui`:
+ĝi instalas Rust 1.100.0 kun ambaŭ celaĵoj, `xorriso`, `dosfstools` kaj
+`mtools`, rulas `just iso` kaj `just iso-arm`, kaj alŝutas la artefaktojn
+`iso-bildoj` (ambaŭ ISO-oj) kaj `arm64-bildoj` (`mikerno.img`, `horizonto`,
+`saluto`). Artefaktoj restas 90 tagojn; la retejo daŭre ligas al la
+GitHub-Eldono, ne al la artefaktoj.
+
+**QEMU-matrico.** La tasko `qemu-kontroli` elŝutas `iso-bildoj` kaj
+`arm64-bildoj`, instalas `qemu-system-x86`, `qemu-system-arm`, `ovmf` kaj
+`qemu-efi-aarch64`, kaj rulas kvin kombinaĵojn: `x86_64` BIOS (i440fx) kun
+256M, `x86_64` UEFI (OVMF, q35) kun 256M, `x86_64` BIOS kun 128M, `arm64`
+Image (`virt`) kun 256M kaj `arm64` UEFI (AAVMF) kun 256M. La matrico havas
+`fail-fast: false`, do unu rompita medio ne kaŝas la ceterajn.
+
+**Aŭtomata `fini`.** La kerno raportas la finan staton nur post kiam la ŝelo
+finas, do simpla `timeout` nur atingus la prompton. La nova
+`tools/kontroli-qemu.sh` atendas la Ligo-prompton `ligo:~>`, skribas `fini`
+tra FIFO kaj poste validigas la protokolon: sukceso postulas
+`[kerno] fina stato: … mortintaj`, malpermesas `MALBONE`, kaj akceptas la
+finiĝajn kodojn 0 (PSCI-haltigo), 124 aŭ 137 (`timeout`). La limo estas
+`timeout -k 10 60` por ĉiu QEMU-voko.
+
+**Laŭstartaj variaĵoj.** `tools/run-qemu.sh` nun akceptas `QEMU_MASINO`
+(ekz. `q35`), `QEMU_MEMORO` (ekz. `128M`) kaj `QEMU_UEFI=1`. Ĉe UEFI ĝi
+serĉas OVMF en `/usr/share/OVMF` aŭ `/usr/share/edk2/ovmf`, kopias la
+skribeblan `VARS`-stokon al `target/ovmf-vars.fd` kaj ligas ambaŭ per
+`pflash`; se nur la kombinita `OVMF.fd` ekzistas, ĝi uziĝas per `-bios`.
+`tools/run-qemu-arm.sh` akceptas `QEMU_MASINO` kaj `QEMU_MEMORO` por ambaŭ
+la rekta `Image`-vojo kaj la UEFI-ISO.
+
+**Lokaj rezultoj (2026-11-20).** Ĉiuj kvin kombinaĵoj praŝarĝiĝis senkape per
+la nova kontrolilo kaj atingis la finan staton sen `MALBONE`:
+
+| Kombinaĵo | Fina stato |
+| --- | --- |
+| `x86_64` BIOS 256M | `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj; 1008 tikoj` |
+| `x86_64` BIOS 128M | `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj; 1012 tikoj` |
+| `x86_64` UEFI 256M (q35) | `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj; 1004 tikoj` |
+| `arm64` Image 256M | `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj; 1005 tikoj` |
+| `arm64` UEFI 256M | `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj; 1006 tikoj` |
+
+La loka pordego `just kontroli` finiĝis sen eraro (61 unu-testoj, `fmt`,
+ambaŭ `clippy`-vokoj kaj la laborloka konstruo). La ISO-oj estis rekonstruitaj
+el la 0.8.1-kodo kaj praŝarĝitaj senkape: `x86_64` montras
+`MiKerno v0.8.1` kaj `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj;
+1003 tikoj`, `arm64` same kun 1015 tikoj. La Eldono kaj la nuba DI-pruvo
+venos post la puŝo.
+
+**Tipara riparo.** La kvar frapoj de la ekrana tiparo (8×16, 12×24, 16×32,
+32×64) enhavis la bazajn ASCII-glifojn, la Esperantajn literojn kaj
+`« » ‹ ›`, sed ne la simbolojn, kiujn uzas Ligo: la kadra `│`, la tabela
+linio `─`, la malplena valoro `—`, la mezpunkto `·` kaj la erara `✕`
+montriĝis kiel `?`. `tools/font/generi.py` kaj `mikerno/src/ekrano/fonto.rs`
+nun havas 117 glifojn; la bazaj glifoj restis bajte identaj, do nur la ses
+novaj aldoniĝis. La rastrumilo fortranĉis ankaŭ la lastan vicon aŭ kolumnon
+de `─` kaj `│`, ĉar ties kovrado restis sub la sojlo; apudaj ĉeloj tiam ne
+tuŝis unu la alian kaj la kadro aŭ la tabela linio aspektis punktita. La nova
+`konekti_liniojn` elektas la vicojn (respektive kolumnojn), kiuj jam estas
+almenaŭ duone plenaj, kaj plenigas ilin ĝis la randoj de la ĉelo en ĉiuj
+kvar frapoj. Post la riparo `legi bonveno.txt`, `pri` kaj erara `legi`
+montras la kvin simbolojn ĉe ambaŭ arkoj (x86_64 kaj arm64, 12×24-frapo ĉe
+1280×800, la defaŭlta elekto), kaj la vertikala kadro de la karto estas
+seninterrompa. La rekonstruitaj ISO-oj praŝarĝiĝis senkape per
+`tools/kontroli-qemu.sh` kaj atingis
+`[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj` kun 1012 (`x86_64`)
+kaj 1021 (`arm64`) tikoj.
+
+**Versio.** 0.8.1 (Fazo 2).
 
 ---
 

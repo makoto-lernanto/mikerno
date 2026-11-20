@@ -7,13 +7,15 @@
 //! La bildigilo estas `tools/font/generi.py`; la fontdosiero mem ne estas
 //! konservata en la deponejo. Vidu `third_party/dejavu/LICENSE.txt`.
 //!
-//! Ĉiu streko enhavas 111 glifojn en la sama ordo: unue ASCII 0x20..=0x7E,
-//! poste la Esperantaj literoj `ĉ Ĉ ĝ Ĝ ĥ Ĥ ĵ Ĵ ŝ Ŝ ŭ Ŭ` kaj la citiloj
-//! `« » ‹ ›`. Vicoj estas sinsekvaj, plej supra bito = plej maldekstra pikselo.
+//! Ĉiu streko enhavas 117 glifojn en la sama ordo: unue ASCII 0x20..=0x7E,
+//! poste la Esperantaj literoj `ĉ Ĉ ĝ Ĝ ĥ Ĥ ĵ Ĵ ŝ Ŝ ŭ Ŭ`, la citiloj
+//! `« » ‹ ›` kaj la simboloj `· — → ─ │ ✕`. Vicoj estas sinsekvaj, plej supra
+//! bito = plej maldekstra pikselo.
 
-const GLIFOJ: usize = 111;
-const ALDONAJ: [char; 16] = [
-    'ĉ', 'Ĉ', 'ĝ', 'Ĝ', 'ĥ', 'Ĥ', 'ĵ', 'Ĵ', 'ŝ', 'Ŝ', 'ŭ', 'Ŭ', '«', '»', '‹', '›',
+const GLIFOJ: usize = 117;
+const ALDONAJ: [char; 22] = [
+    'ĉ', 'Ĉ', 'ĝ', 'Ĝ', 'ĥ', 'Ĥ', 'ĵ', 'Ĵ', 'ŝ', 'Ŝ', 'ŭ', 'Ŭ', '«', '»', '‹', '›', '·', '—', '→',
+    '─', '│', '✕',
 ];
 
 static TIPARO_8X16: &[u8] = include_bytes!("fonto/tiparo-8x16.bin");

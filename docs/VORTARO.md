@@ -11,6 +11,9 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `procezo` | process | `Procezo`; neniam uzu `process`. |
 | `IK` | IPC (interproceza komunikado) | La modulo `kerno/ik.rs`; antaŭe `ipc`. |
 | `DI` | Continuous Integration (CI) | Daŭra Integrado: la laborfluo `di.yml` kaj la matrico `kani-kontroli`. |
+| `QEMU-matrico` | QEMU matrix | DI-tasko `qemu-kontroli`: kvin praŝarĝoj kun malsamaj maŝino, firmvaro kaj memoro. |
+| `paki-iso` | ISO packaging | DI-tasko, kiu konstruas ambaŭ ISO-ojn kaj alŝutas ilin kiel artefaktojn. |
+| `kontrolilo de QEMU` | QEMU harness | `tools/kontroli-qemu.sh`: atendas `ligo:~>`, sendas `fini` kaj validigas `[kerno] fina stato` sen `MALBONE`. |
 | `KI` | command-line interface (CLI) | Komandliniaj Iloj; en Versio la dosierujo `versio-ki`. |
 | `EAS` | content-addressable storage (CAS) | Enhavadresita Stokado; en Versio `libversio::stokado`. |
 | `dosiera objekto` | blob | La kruda enhavo de unu dosiero; la tipo estas `Dosiero`. Neniam uzu `blob` en tekstoj aŭ identigiloj. |
@@ -40,6 +43,7 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `nokta ilĉeno` | nightly toolchain | Rust-nokta; Miri postulas ĝin, do `just miri` estas aparta de `just kontroli`. |
 | `statika analizo` | lint | `cargo clippy`; neniam uzu `lint` en tekstoj. |
 | `Eldono` | GitHub Release | Publikigita versio kun la ISO-aktivaĵoj. |
+| `artefakto` | CI artifact | Dosiero, kiun DI-tasko suprenigas (ekz. `iso-bildoj`, `arm64-bildoj`); ĝi ne estas Eldono kaj foriĝas post 90 tagoj. |
 | `aktivaĵo` | release asset | Dosiero alŝutita al Eldono. |
 | `interfaco` | interface / API | `API` restas nur en eksteraj protokolaj nomoj. |
 | `etendiana` | little-endian | La malalta bajto unue; 512-bajtaj sektoroj de SNDS. |
@@ -346,6 +350,10 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `UEFI-memormapo` | UEFI memory map | `/chosen/linux,uefi-mmap-*`; uzata kiam `/memory` mankas. |
 | `konvena memoro` | conventional memory | UEFI-tipo 7; la «uzebla» kvanto en la raporto. |
 | `AAVMF` | AArch64 UEFI firmware | `QEMU_EFI.fd`; uzata de `just ruli-iso-arm`. |
+| `OVMF` | Open Virtual Machine Firmware | x86_64 UEFI-firmvaro; `OVMF_CODE_4M.fd` plus skribebla kopio de `OVMF_VARS_4M.fd` per `pflash`. |
+| `QEMU_MASINO` | QEMU machine | `-M`; implicite la defaŭlta `i440fx`, la matrico uzas `q35` aŭ `virt`. |
+| `QEMU_MEMORO` | QEMU memory | `-m`; implicite `256M`, la matrico ankaŭ kontrolas `128M`. |
+| `QEMU_UEFI` | QEMU UEFI | Valoro `1` ŝaltas OVMF anstataŭ la BIOS. |
 | `vektora tabelo` | vector table | `VBAR_EL1`; 16 eniroj po 128 bajtoj; `__vektoroj` en `arm64/interrompo.rs`. |
 | `vektoro` | vector | La enira indekso 0–15 aŭ GIC-identigilo; `InterrompaKadro::vektoro`. |
 | `distribuilo` | distributor | GIC-distribuilo (`GICD_*`) ĉe `0x0800_0000`. |
@@ -485,7 +493,7 @@ eksteraj protokolaj nomoj:
 `x86_64`, `CR0`, `CR2`, `CR3`, `CR4`, `PCID`, `PCIDE`, `RSP0`, `RIP`, `RFLAGS`, `RAX`, `RDI`,
 `RSI`, `RDX`, `R10`, `MSR`, `EFER`, `NXE`, `PAE`, `PML4`, `PDPT`, `PD`, `PT`,
 `IDT`, `GDT`, `TSS`, `APIC`, `PIT`, `COM1`, `Multiboot2`, `Xen-PVH`, `ELF`,
-`Limine`, `QEMU`, `int 0x80`, `iretq`, `syscall`, `sysret`, `fork`, `exec`, `execve`, `brk`, `SYS_BRK`, `SYS_EXEC`, `SYS_ENIGI`, `SYS_LISTI`, `SYS_LEGI`, `SYS_PROCEZOJ`,
+`Limine`, `QEMU`, `OVMF`, `AAVMF`, `int 0x80`, `iretq`, `syscall`, `sysret`, `fork`, `exec`, `execve`, `brk`, `SYS_BRK`, `SYS_EXEC`, `SYS_ENIGI`, `SYS_LISTI`, `SYS_LEGI`, `SYS_PROCEZOJ`,
 `SYS_MORTIGI`, `SYS_LANĜI`, `SYS_FINI`, `ANSI`, `ASCII`, `UTF-8`, `W^X`, `CR0.WP`,
 `SMEP`, `SMAP`, `KASLR`, `IOMMU`, `DMA`, `PCI`, `DMAR`, `IVRS`, `STAC`, `CLAC`,
 `KREI_FINPUNKTON`, `DONI`, `REVOKI`, `RICEVI_TEMPO`, `SENDI_TEMPO`, `FERMI`,

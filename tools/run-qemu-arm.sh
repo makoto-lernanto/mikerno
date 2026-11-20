@@ -9,6 +9,7 @@
 # Ĉe la ISO la fenestro montras la UEFI/Limine-ekranon kaj poste la kerman
 # frambufferion per `ramfb`; la kerna eligo ankoraŭ aperas sur la seria
 # konzolo. Por eliri: Ctrl+A x. `QEMU_DISPLAY=none` donas senkapan ruladon.
+# `QEMU_MEMORO` ŝanĝas la memoron (implicite 256M); la DI-matrico uzas ĝin.
 
 set -euo pipefail
 
@@ -76,9 +77,9 @@ if [[ "$ARG" == "--iso" ]]; then
     # AAVMF (2025.11) blokiĝas sub TCG kun `-cpu max` antaŭ ol atingi la
     # praŝarĝilon; `cortex-a76` havas `PAN` kaj praŝarĝas la ISO-on.
     exec "$QEMU" \
-        -M virt \
+        -M "${QEMU_MASINO:-virt}" \
         -cpu "${QEMU_ARM_CPU:-cortex-a76}" \
-        -m 256M \
+        -m "${QEMU_MEMORO:-256M}" \
         -bios "$FIRMWARE" \
         -cdrom "$ISO" \
         -device ramfb \
@@ -117,9 +118,9 @@ fi
 # PSCI `SYSTEM_OFF` (la halto de la kerno) finas QEMU-on; `-no-shutdown` ne
 # estas uzata, por ke tiu fino estu videbla al la testilo.
 exec "$QEMU" \
-    -M virt \
+    -M "${QEMU_MASINO:-virt}" \
     -cpu "${QEMU_ARM_CPU:-max}" \
-    -m 256M \
+    -m "${QEMU_MEMORO:-256M}" \
     -kernel "$KERNEL" \
     "${INITRD_ARGS[@]}" \
     -device ramfb \

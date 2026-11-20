@@ -8,7 +8,8 @@
 #   tools/run-qemu.sh <vojo-al-iso>
 #
 # Por ISO la fenestro de QEMU montras la Limine-menuon; QEMU_DISPLAY=none
-# ebligas senkapan ruladon (necesa en WSL2 sen WSLg).
+# ebligas senkapan ruladon (necesa en WSL2 sen WSLg). La DI-matrico aldonas
+# QEMU_MASINO (ekz. q35), QEMU_MEMORO (ekz. 128M) kaj QEMU_UEFI=1 (OVMF).
 
 set -euo pipefail
 
@@ -109,11 +110,53 @@ if [[ -n "$ISO" ]]; then
     # SDL-fenestro funkcias en WSLg kaj sur ordinara Linux-labortablo; sen
     # grafika medio uzu QEMU_DISPLAY=none.
     DISPLAY_ARGS=(-display "${QEMU_DISPLAY:-sdl}")
+
+    # La DI-matrico kontrolas ankaŭ aliajn memorgrandojn kaj maŝinojn.
+    MASINO_ARGS=()
+    if [[ -n "${QEMU_MASINO:-}" ]]; then
+        MASINO_ARGS=(-M "$QEMU_MASINO")
+    fi
+    MEMORO="${QEMU_MEMORO:-256M}"
+
+    # `QEMU_UEFI=1` praŝarĝas per OVMF anstataŭ la BIOS. OVMF bezonas
+    # skribeblan VARS-stokon, do ĝi kopiiĝas en `target/` (ne en la deponejon).
+    FIRMWARE_ARGS=()
+    if [[ "${QEMU_UEFI:-0}" == "1" ]]; then
+        KODO=""
+        VARS=""
+        for paro in \
+            /usr/share/OVMF/OVMF_CODE_4M.fd:/usr/share/OVMF/OVMF_VARS_4M.fd \
+            /usr/share/OVMF/OVMF_CODE.fd:/usr/share/OVMF/OVMF_VARS.fd \
+            /usr/share/edk2/ovmf/OVMF_CODE.fd:/usr/share/edk2/ovmf/OVMF_VARS.fd; do
+            if [[ -f "${paro%%:*}" && -f "${paro#*:}" ]]; then
+                KODO="${paro%%:*}"
+                VARS="${paro#*:}"
+                break
+            fi
+        done
+        if [[ -n "$KODO" ]]; then
+            VARS_KOPIO="$ROOT/target/ovmf-vars.fd"
+            mkdir -p "$ROOT/target"
+            cp "$VARS" "$VARS_KOPIO"
+            FIRMWARE_ARGS=(
+                -drive "if=pflash,format=raw,readonly=on,file=$KODO"
+                -drive "if=pflash,format=raw,file=$VARS_KOPIO"
+            )
+        elif [[ -f /usr/share/ovmf/OVMF.fd ]]; then
+            FIRMWARE_ARGS=(-bios /usr/share/ovmf/OVMF.fd)
+        else
+            echo "OVMF ne trovita; instalu ovmf aŭ uzu QEMU_UEFI=0" >&2
+            exit 1
+        fi
+    fi
+
     exec "$QEMU" \
         -cdrom "$ISO" \
-        -m 256M \
+        "${MASINO_ARGS[@]}" \
+        -m "$MEMORO" \
         "${CPU_ARGS[@]}" \
         "${DISKA_ARGS[@]}" \
+        "${FIRMWARE_ARGS[@]}" \
         -serial mon:stdio \
         "${DISPLAY_ARGS[@]}" \
         -no-reboot \

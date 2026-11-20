@@ -17,7 +17,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IK kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.8.0 (Cargo-laborloko)
+- **Versio:** 0.8.1 (Cargo-laborloko)
 - **Arkitekturo:** `x86_64` kaj `arm64` (AArch64), unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -210,6 +210,19 @@ monitoron (tie `quit`). La `-serial mon:stdio` muntado estas necesa ĉar `Ctrl+C
 alie sendiĝas al la guest kiel bajto `0x03`. En WSL2 sen WSLg uzu
 `QEMU_DISPLAY=none` por la ISO-vojo.
 
+La DI-matrico praŝarĝas la saman lanĉilon kun `QEMU_MASINO` (`q35` aŭ `virt`),
+`QEMU_MEMORO` (`128M` aŭ `256M`) kaj, por x86_64, `QEMU_UEFI=1` (OVMF). Loke
+la saman kontrolon ebligas:
+
+```sh
+QEMU_DISPLAY=none tools/kontroli-qemu.sh 60 bash tools/run-qemu.sh iso
+QEMU_DISPLAY=none QEMU_UEFI=1 QEMU_MASINO=q35 \
+    tools/kontroli-qemu.sh 60 bash tools/run-qemu.sh iso
+```
+
+La kontrolilo atendas la Ligo-prompton `ligo:~>`, sendas `fini` kaj postulas
+`[kerno] fina stato` sen `MALBONE`.
+
 `just ruli-arm` kaj `just ruli-iso-arm` startigas bildojn el la `arm64`-branĉo:
 la unua lanĉas la antaŭe konstruitan kernon (`mikerno.img`), la dua la ISO-on en
 QEMU kun UEFI. Ĉe la ISO la fenestro montras la UEFI/Limine-ekranon; la kerna
@@ -218,10 +231,11 @@ havas frambufon. Sen WSLg uzu `QEMU_DISPLAY=none just ruli-iso-arm`. La bildoj
 estas kreataj per `just konstrui-arm` kaj `just iso-arm` en la `arm64`-branĉo;
 `main` nur startigas ilin.
 
-> **Atentu:** `mikerno.iso` kaj `iso_root/` estas ignorataj de git. Post ĉiu
-> kerna ŝanĝo rerulu `just iso`; alie la ISO enhavos malnovan bildon. Tio
-> efektive okazis dum la kontrolo de 2026-11-12 (la ISO montris version
-> `v0.1.1`, dum la fonto estis `v0.1.0`).
+> **Atentu:** `mikerno.iso` kaj `iso_root/` estas ignorataj de git; DI
+> konstruas la ISO-ojn kiel artefaktojn `iso-bildoj`. Post kerna ŝanĝo rerulu
+> `just iso` por loka ISO; alie ĝi enhavos malnovan bildon. Tio efektive
+> okazis dum la kontrolo de 2026-11-12 (la ISO montris version `v0.1.1`, dum
+> la fonto estis `v0.1.0`).
 
 ---
 
@@ -794,7 +808,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.8.0!
+[MiKerno] Saluton, mi estas MiKerno v0.8.1!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
