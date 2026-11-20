@@ -162,6 +162,7 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-19 | 0.7.3 | 56 | 14977 | 11705 | 1915 | 1357 |
 | 2026-11-19 | 0.7.3 | 56 | 14977 | 11705 | 1915 | 1357 |
 | 2026-11-20 | 0.7.4 | 56 | 14988 | 11727 | 1904 | 1357 |
+| 2026-11-20 | 0.7.4 | 56 | 14988 | 11727 | 1904 | 1357 |
 
 ---
 
@@ -1857,6 +1858,20 @@ La loka pordego finiĝis sen eraro per:
 
 Ambaŭ vojoj havas nul `[horloĝo]`-liniojn dum la interagado, kaj la ŝelo kaj
 la lanĉitaj procezoj malaperas antaŭ la fina kadra bilanco.
+
+**Nuba DI (2026-11-20).** Runo
+[#44707880735](https://github.com/makoto-lernanto/mikerno/actions/runs/44707880735)
+ĉe `aeccbb4`: ĉiuj 43 taskoj verdaj — `kontroli-kaj-konstrui`, `kani-pretigi`
+kaj la 41 pruvoj de la matrico `kani-kontroli`; la runo daŭris 9 min 42 s.
+
+**Eldono.** [`v0.7.4`](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.7.4)
+(etikedo ĉe `aeccbb4`) enhavas `mikerno.iso` (SHA-256
+`57928f8cff1e9541adf39162a67b45bafbe02333f44b7238324558dccf1b0058`) kaj
+`mikerno-arm.iso` (SHA-256
+`1b5bade0a86584f2c15a912e0c6122e5b3fd9a8e5bbcf27f48a2b23828c06674`). La du
+ISO-oj estis konstruitaj el la puŝita kodo post la verda DI-runo kaj
+praŝarĝitaj antaŭ la alŝuto; la retejo montras la version 0.7.4 kaj la
+elŝutajn ligilojn al ĉi tiu etikedo.
 
 **Versio.** 0.7.4 (Fazo 5).
 
