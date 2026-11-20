@@ -171,6 +171,7 @@ eniras la kernan bildon.
 | 2026-11-20 | 0.8.0 | 63 | 15194 | 11818 | 1988 | 1388 |
 | 2026-11-20 | 0.8.1 | 63 | 15194 | 11818 | 1988 | 1388 |
 | 2026-11-20 | 0.8.1 | 63 | 15196 | 11819 | 1989 | 1388 |
+| 2026-11-20 | 0.8.1 | 63 | 15196 | 11819 | 1989 | 1388 |
 
 ---
 
@@ -1990,8 +1991,8 @@ funkcias en diversaj medioj.
 | Kriterio | Stato | Pruvo |
 | --- | --- | --- |
 | ISO-oj ne estas en Git | Jes | `git ls-files | grep .iso` redonas nenion; `.gitignore` jam enlistigas `mikerno.iso` kaj `mikerno-arm.iso`. |
-| DI generas kaj alŝutas ISO-ojn | Parte | La tasko `paki-iso` konstruas ambaŭ ISO-ojn kaj alŝutas la artefakton `iso-bildoj`; la artefaktoj konfirmiĝos en la unua DI-runo post la puŝo. |
-| QEMU-matrico estas verda | Parte (loka) | Ĉiuj kvin kombinaĵoj atingis `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj` sen `MALBONE` loke; la nuba matrico ruliĝos post la puŝo. |
+| DI generas kaj alŝutas ISO-ojn | Jes | La tasko `paki-iso` konstruis ambaŭ ISO-ojn kaj alŝutis la artefaktojn `iso-bildoj` kaj `arm64-bildoj` en la runo [#44746565075](https://github.com/makoto-lernanto/mikerno/actions/runs/44746565075). |
+| QEMU-matrico estas verda | Jes | La kvin taskoj de `qemu-kontroli` sukcesis en la sama runo; ĉiu kombinaĵo atingis `[kerno] fina stato: ... mortintaj` sen `MALBONE`. |
 
 ##### Fazo 3: `cargo-deny` kaj permesila kontrolo (Versio 0.8.2)
 
@@ -2276,8 +2277,7 @@ La loka pordego `just kontroli` finiĝis sen eraro (61 unu-testoj, `fmt`,
 ambaŭ `clippy`-vokoj kaj la laborloka konstruo). La ISO-oj estis rekonstruitaj
 el la 0.8.1-kodo kaj praŝarĝitaj senkape: `x86_64` montras
 `MiKerno v0.8.1` kaj `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj;
-1003 tikoj`, `arm64` same kun 1015 tikoj. La Eldono kaj la nuba DI-pruvo
-venos post la puŝo.
+1003 tikoj`, `arm64` same kun 1015 tikoj.
 
 **Tipara riparo.** La kvar frapoj de la ekrana tiparo (8×16, 12×24, 16×32,
 32×64) enhavis la bazajn ASCII-glifojn, la Esperantajn literojn kaj
@@ -2297,6 +2297,25 @@ seninterrompa. La rekonstruitaj ISO-oj praŝarĝiĝis senkape per
 `tools/kontroli-qemu.sh` kaj atingis
 `[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj` kun 1012 (`x86_64`)
 kaj 1021 (`arm64`) tikoj.
+
+**Nuba DI (2026-11-20).** Runo
+[#44746565075](https://github.com/makoto-lernanto/mikerno/actions/runs/44746565075)
+ĉe `9e0c087`: ĉiuj 52 taskoj verdaj — `kontroli-kaj-konstrui`,
+`miri-kontroli`, `kani-pretigi`, la 43 pruvoj de la matrico `kani-kontroli`,
+`paki-iso` kaj la kvin taskoj de `qemu-kontroli`. La solaj anoncoj estis la
+ĝeneralaj avertoj pri Node.js 20, kiuj ne rilatas la kodon.
+
+**Eldono.**
+[`v0.8.1`](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.8.1)
+(etikedo ĉe `9e0c087`) enhavas `mikerno.iso` (SHA-256
+`294b9555cdd162639ac0e6637432ec836fb41d5394382617f266a554a819504b`) kaj
+`mikerno-arm.iso` (SHA-256
+`e8adbefb2f9f72cd08b307fa118edaa27c5a1b6b0b03f7b3d763738f1d2540a6`). La du
+ISO-oj estis rekonstruitaj per `just iso` kaj `just iso-arm` el la puŝita
+komitero kaj praŝarĝitaj per `tools/kontroli-qemu.sh`: `x86_64` atingis
+`[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj; 1010 tikoj` kaj
+`arm64` saman linion kun `1003 tikoj`, ambaŭ kun
+`Ligo 0.1 — objekta ŝelo de Horizonto · ABI 2` sur la frambufo.
 
 **Versio.** 0.8.1 (Fazo 2).
 
