@@ -181,10 +181,20 @@ fn mapi_tipon(tipo: u32) -> RegionaTipo {
     }
 }
 
+/// Legu nealiniiĝintan `u32` el la multiboot-strukturo.
+///
+/// # Sekureco
+/// `adreso` devas resti valida por legado de kvar bajtoj dum la tuta voko; ĝi
+/// venas el la strukturo liverita de la praŝarĝilo en la frua pravalorizo.
 unsafe fn legi_u32(adreso: *const u8) -> u32 {
     unsafe { ptr::read_unaligned(adreso as *const u32) }
 }
 
+/// Legu nealiniiĝintan `u64` el la multiboot-strukturo.
+///
+/// # Sekureco
+/// `adreso` devas resti valida por legado de ok bajtoj dum la tuta voko; ĝi
+/// venas el la strukturo liverita de la praŝarĝilo en la frua pravalorizo.
 unsafe fn legi_u64(adreso: *const u8) -> u64 {
     unsafe { ptr::read_unaligned(adreso as *const u64) }
 }

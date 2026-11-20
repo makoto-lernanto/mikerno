@@ -34,6 +34,10 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `gastiganto` | host | La maŝino, sur kiu la unu-testoj ruliĝas, kontraste al la barela celo. |
 | `simulaĵo` | mock | Anstataŭaĵo por aparatara aŭ stata tavolo; la plano nomas ĝin «mock». |
 | `pruvo` | Kani harness / proof | Unu funkcio markita per `#[kani::proof]`; la matrico `kani-kontroli`. |
+| `Miri` | Miri | La interpretilo de MIR; kaptas nedifinitan konduton en la gastigantaj unu-testoj (`just miri`). |
+| `nedifinita konduto` | undefined behaviour (UB) | Konduto, kiun Rust ne difinas; Miri kaj la sekurec-kontraktoj celas ĝin preventi. |
+| `sekurec-kontrakto` | safety contract | La `/// # Sekureco`-sekso de `unsafe fn` aŭ la `// SAFETY:`-komento de `unsafe impl`; ĝi listigas la antaŭkondiĉojn de la alvokanto. En publikaj bibliotekoj la titolo restas `# Safety`, ĉar Clippy postulas ĝin. |
+| `nokta ilĉeno` | nightly toolchain | Rust-nokta; Miri postulas ĝin, do `just miri` estas aparta de `just kontroli`. |
 | `statika analizo` | lint | `cargo clippy`; neniam uzu `lint` en tekstoj. |
 | `Eldono` | GitHub Release | Publikigita versio kun la ISO-aktivaĵoj. |
 | `aktivaĵo` | release asset | Dosiero alŝutita al Eldono. |

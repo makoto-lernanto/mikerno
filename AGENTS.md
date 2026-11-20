@@ -60,6 +60,13 @@ rulas `--kontroli`.
   `timeout-minutes: 30`, kaj suprenigas sian protokolon kiel artefakton eĉ
   ĉe malsukceso. Kani instaliĝas per
   `model-checking/kani-github-action@v1` sur Rust 1.100.0.
+- La DI ankaŭ rulas `miri-kontroli`: nokta Rust kun Miri super la unu-testoj
+  de `kernologiko` (`just miri`). Miri kaptas nedifinitan konduton, kiun la
+  ordinara testa rultempo ne montras. Loke `just miri` estas la sama kontrolo.
+- Ĉiu `unsafe fn` portu sekurec-kontrakton (la antaŭkondiĉojn, kiujn la
+  alvokanto devas garantii) kaj ĉiu `unsafe impl` portu `// SAFETY:`
+  komenton; ambaŭ tekstoj estas en Esperanto. En la publika API de
+  `libmikerno` la titolo restas `# Safety`, ĉar Clippy postulas ĝin.
 - Loke oni **ne** rulas `cargo kani`; WSL2 elĉerpiĝas je memoro kaj
   diskonektiĝas. `just kontroli` nun enhavas nur la sen-Kani-ajn kontrolojn kaj
   estas loke rulebla: `bash tools/versio.sh --kontroli`, `just testoj`
@@ -75,8 +82,9 @@ rulas `--kontroli`.
   reguloj apartenu al `kernologiko` kaj ricevu `#[cfg(test)]`-kazojn; la kerno
   ilin re-eksportu prefere ol duobligi la kodon.
 - Post puŝo kontrolu la runon en la agoj-paĝo de la deponejo (aŭ per
-  `gh run watch`); la formala pordego estas verda nur kiam la tuta matrico
-  `kani-kontroli` sukcesas. Detaloj estas en `docs/MEJLOSTONOJ.md` §4.7–§4.8.
+  `gh run watch`); la pordego estas verda nur kiam la tuta matrico
+  `kani-kontroli` kaj la tasko `miri-kontroli` sukcesas. Detaloj estas en
+  `docs/MEJLOSTONOJ.md` §4.7–§4.8.
 
 ## Laborfluo por unu Fazo
 

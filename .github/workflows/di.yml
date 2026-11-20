@@ -44,6 +44,28 @@ jobs:
       - name: Konstrui la arm64-bildon
         run: just konstrui-arm
 
+  # Miri interpretas la MIR-on de la gastigantaj unu-testoj de `kernologiko`
+  # kaj kaptas nedifinitan konduton (precipe en la `unsafe`-uzado), kiun la
+  # ordinara testa rultempo ne montras. Ĝi bezonas noktan ilĉenon.
+  miri-kontroli:
+    name: Miri-kontrolo de kernologiko
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Elpreni la deponejon
+        uses: actions/checkout@v4
+
+      - name: Instali Rust nightly kun Miri
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri, rust-src
+
+      - name: Instali just
+        uses: taiki-e/install-action@just
+
+      - name: Ruli just miri
+        run: just miri
+
   # Kani bezonas la liston de la pruvoj por la matrico. `cargo kani list`
   # skribas `kani-list.json` kun la plenaj (modulaj) nomoj de la pruvoj.
   kani-pretigi:

@@ -82,10 +82,19 @@ kontroli-version:
 testoj:
     cargo test -p kernologiko --target {{host}}
 
+# Postulas noktan ilĉenon:
+#   rustup toolchain install nightly --profile minimal --component miri --component rust-src
+
+# Rulu la unu-testojn de `kernologiko` sub Miri (detekto de nedifinita konduto).
+miri:
+    cargo +nightly miri test -p kernologiko --target {{host}}
+
+# Kani kaj Miri ruliĝas nur en DI: Kani kiel aparta tasko por ĉiu pruvo kaj
+# Miri kiel aparta tasko (vidu di.yml).
+
 # Loka kvalita pordego: versio + unu-testoj + formato + statika analizo
 # (ambaŭ arkoj) + konstruo.
 # La arm64-analizo kovras ankaŭ `horizonto` (la Ligo-komandojn) kaj `saluto`.
-# Kani ruliĝas nur en DI, kiel aparta tasko por ĉiu pruvo (vidu di.yml).
 kontroli: kontroli-version testoj
     cargo fmt --all -- --check
     cargo clippy --workspace --release -- -D warnings

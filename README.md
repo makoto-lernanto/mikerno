@@ -148,6 +148,7 @@ cargo install just          # opcia
 | bash | Lanĉilo de `tools/run-qemu.sh` kaj `tools/run-qemu-arm.sh` |
 | python3 | SNDS-bildo por `tools/krei_snds_img.sh` (kutime jam instalita) |
 | Kani | Nur en DI (`cargo kani`) |
+| Miri | Nur en DI aŭ per `just miri`: nokta Rust kun `miri` kaj `rust-src` |
 
 Instalu la celajn triopojn:
 
@@ -170,6 +171,7 @@ just iso-arm       # UEFI-bootebla `mikerno-arm.iso` (Limine + plata `Image`)
 just ruli-iso-arm   # konstruas kaj rulas `mikerno-arm.iso` per AAVMF
 just kontroli        # unu-testoj, formato, statika analizo (ambaŭ arkoj) kaj konstruo
 just testoj         # unu-testoj de `kernologiko` sur la gastiganto (sen QEMU)
+just miri           # la samaj unu-testoj sub Miri (postulas noktan Rust)
 ```
 
 `just ruli-arm` bezonas la celan triopon `aarch64-unknown-none`

@@ -361,6 +361,13 @@ impl Planisto {
         self.veturoj
     }
 
+    /// Ŝaltu de la fadeno `malnova` al la fadeno `nova`.
+    ///
+    /// # Sekureco
+    /// Vokenda nur kun interrompoj malŝaltitaj, en la planista kunteksto.
+    /// Ambaŭ identigiloj devas aparteni al registritaj fadenoj kun vivaj
+    /// `Kunteksto`-valoroj, kaj `nova` devas esti elektita de la planisto, do
+    /// ĝia proceza spaco estas viva.
     unsafe fn ŝanĝi(&mut self, malnova: FadenoId, nova: FadenoId) {
         self.ŝaltoj = self.ŝaltoj.saturating_add(1);
         let proceza = self.procezo_de(nova);

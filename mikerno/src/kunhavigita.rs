@@ -5,6 +5,8 @@ use core::cell::UnsafeCell;
 
 pub struct Kunhavigita<T>(UnsafeCell<T>);
 
+// SAFETY: la nukleo estas unuprocesora; la alvokantoj de `akiri` garantias, ke
+// ili aliras la valoron kun interrompoj malŝaltitaj kaj do neniam samtempe.
 unsafe impl<T> Sync for Kunhavigita<T> {}
 
 impl<T> Kunhavigita<T> {

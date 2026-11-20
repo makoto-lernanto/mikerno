@@ -30,7 +30,7 @@
 | M15 | `arm64`-malantaŭo: EL0, ABI 2, `ramfb`, `PAN` | Plenumita | identa piksela haketo sur ambaŭ arkoj |
 | M16 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Parte | dormo 100 ms = 10 tikoj; minimumo ≥ 17 veturoj; arm64-stabileco |
 | M17 | Konservado, dosiersistemo, ŝelo | Plenumita | `virtio-blk` legas/skribas 64 sektorojn; SNDS (6 dosieroj, 1 dosierujo; PCI kaj MMIO); `SYS_BRK`, `SYS_EXEC` kaj `SYS_LANĜI` en Ring 3; Ligo kun `listi`, `procezoj`, `mortigi`, `ruli`; `virtio-blk` MMIO-vojo funkcias sur `arm64`; `#[allow]`-purgado por M17 plenigita |
-| M18 | DI, testoj, plena pruvaro | Parte | GitHub Actions verde (fmt, clippy, testoj, konstruo, Kani); Fazo 1 (host-testoj) plenumita |
+| M18 | DI, testoj, plena pruvaro | Parte | GitHub Actions verde (fmt, clippy, testoj, konstruo, Miri, Kani); Fazo 1 (host-testoj) plenumita |
 | M19 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 | M20 | Plena pruvaro kaj 1.0 | Venonta | — |
 
@@ -168,6 +168,7 @@ eniras la kernan bildon.
 | 2026-11-20 | 0.8.0 | 63 | 15143 | 11803 | 1954 | 1386 |
 | 2026-11-20 | 0.8.0 | 63 | 15153 | 11810 | 1956 | 1387 |
 | 2026-11-20 | 0.8.0 | 63 | 15164 | 11818 | 1958 | 1388 |
+| 2026-11-20 | 0.8.0 | 63 | 15194 | 11818 | 1988 | 1388 |
 
 ---
 
@@ -2158,6 +2159,55 @@ etikedo.
 
 ---
 
+#### 1a.1. Miri-kontrolo kaj sekurec-kontraktoj (0.8.0)
+
+**Miri.** La resepto `just miri` rulas
+`cargo +nightly miri test -p kernologiko --target <gastiganto>`, do la samaj 61
+unu-testoj interpretiĝas per Miri anstataŭ per la ordinara rultempo. Miri
+kaptas nedifinitan konduton, kiun ordinara testa rulo ne montras — legadojn
+ekster limoj, malvalidajn montrilojn, malĝustan aliasing-on kaj
+neinicializitajn valorojn. Hodiaŭ `kernologiko` mem ne enhavas `unsafe`-kodon;
+la kontrolo gardas la testan kaj la venontan kodon. En DI ĝi estas aparta
+tasko `miri-kontroli` (nokta Rust kun la komponantoj `miri` kaj `rust-src`),
+sendependa de `kontroli-kaj-konstrui` kaj de la Kani-matrico. Loke ĝi postulas
+la saman noktan ilĉenon:
+
+```
+$ rustup toolchain install nightly --profile minimal \
+    --component miri --component rust-src
+$ just miri
+test result: ok. 61 passed; 0 failed
+```
+
+Loka rulado (2026-11-20) uzis `1.102.0-nightly` kaj `miri 0.1.0`; la 61
+testoj pasis en 6,27 s post la unua Miri-konstruo.
+
+**Sekurec-kontraktoj.** Ĉiu `unsafe fn` en la deponejo nun portas
+sekurec-kontrakton kun la antaŭkondiĉoj, kiujn la alvokanto garantias
+(`/// # Sekureco`, aŭ `/// # Safety` en la publika API de `libmikerno`), kaj
+ĉiu `unsafe impl` portas `// SAFETY:`-komenton. Novaj kontraktoj:
+
+| Loko | Funkcio | Kontrakto |
+| --- | --- | --- |
+| `x86_64/seria.rs` | `eligi`, `enigi` | Ring 0; validaj I/O-portoj de la pravalorizita UART. |
+| `x86_64/mb2.rs` | `legi_u32`, `legi_u64` | Valida, alirebla multiboot-strukturo dum la tuta voko. |
+| `kerno/planisto.rs` | `ŝanĝi` | Interrompoj malŝaltitaj; vivaj fadenaj identigiloj kaj registritaj `Kunteksto`-valoroj. |
+| `libmikerno/src/syscall.rs` | `invoki` | La argumentoj restas validaj dum la voko; la rezerva varianto dokumentiĝis same. La titolo restas `# Safety`, ĉar Clippy postulas ĝin; la teksto estas en Esperanto. |
+| `mikerno/src/kunhavigita.rs` | `unsafe impl Sync` | Unuprocesora nukleo; aliro nur kun interrompoj malŝaltitaj. |
+
+La ceteraj `unsafe fn` jam havis kontrakton: `arkitekturo/mod.rs` (referencas
+la konkretan efektivigon), `x86_64/uzanta.rs`, `x86_64/pagado.rs`,
+`x86_64/planado.rs`, `arm64/uzanta.rs`, `arm64/pagado.rs`,
+`arm64/planado.rs` kaj `kerno/procezo.rs`; `horizonto/src/ligo.rs` jam havis
+`// SAFETY:`-komenton.
+
+**Pordego.** `just kontroli` restas sen Kani kaj Miri kaj loke rulebla; DI
+aligas la taskojn `miri-kontroli` (unu tasko) kaj `kani-kontroli` (po unu
+pruvo). Tiel la pordego havas tri tavolojn: statika analizo kaj konstruo,
+interpretita kontrolo de nedifinita konduto, kaj formala pruvo.
+
+---
+
 ### M19 — Aparata izolado (post 1.0)
 
 **Celo.** Malhelpi, ke aparato atingu arbitran fizikan memoron per DMA.
@@ -2271,7 +2321,9 @@ La originala `just di` ne ekzistas en MiKerno; la ekvivalento estas
 - `cargo build --workspace --release`.
 
 Kani ne estas parto de `just kontroli`: ĝi ruliĝas nur en DI, po unu tasko por
-ĉiu pruvo (§4.7–§4.8).
+ĉiu pruvo (§4.7–§4.8). Sammaniere Miri ne estas parto de `just kontroli`; la
+tasko `miri-kontroli` en DI rulas `just miri` (nokta Rust + Miri) super la
+unu-testoj de `kernologiko`.
 
 Aldone, la liveraĵo de Fazo inkluzivu la akceptajn startojn difinitajn en
 [ARM.md](ARM.md) §11 aŭ en la koncerna mejloŝtono: `just ruli-arm`,

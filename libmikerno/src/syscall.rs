@@ -132,6 +132,10 @@ pub unsafe fn invoki(numero: usize, argumentoj: [usize; 4]) -> isize {
 }
 
 /// Sur aliaj arkitekturoj la sistemo ankoraŭ ne ekzistas.
+///
+/// # Safety
+/// La rezerva varianto ne legas la argumentojn kaj ĉiam redonas `-1`; la
+/// `unsafe`-subskribo nur kongruas kun la realaj arkitekturoj.
 #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
 pub unsafe fn invoki(_numero: usize, _argumentoj: [usize; 4]) -> isize {
     -1

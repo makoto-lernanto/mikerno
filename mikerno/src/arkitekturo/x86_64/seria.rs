@@ -8,6 +8,12 @@ use core::fmt::{self, Write};
 
 const COM1: u16 = 0x3F8;
 
+/// Elsendu bajton al la I/O-porto `porto`.
+///
+/// # Sekureco
+/// `porto` devas esti I/O-porto de la pravalorizita UART, kaj la alvokanto
+/// devas plenumiĝi en Ring 0. Skribo al arbitra porto povas havi flankefikojn
+/// sur la aparataro.
 #[inline]
 unsafe fn eligi(porto: u16, valoro: u8) {
     unsafe {
@@ -15,6 +21,11 @@ unsafe fn eligi(porto: u16, valoro: u8) {
     }
 }
 
+/// Legu bajton el la I/O-porto `porto`.
+///
+/// # Sekureco
+/// `porto` devas esti I/O-porto, kiun la alvokanto rajtas legi en Ring 0.
+/// Legado de arbitra porto povas havi flankefikojn aŭ bloki la aparaton.
 #[inline]
 unsafe fn enigi(porto: u16) -> u8 {
     let valoro: u8;
