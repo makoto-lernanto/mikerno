@@ -1,5 +1,5 @@
 ---
-name: MiKerno
+name: mikerno
 description: Projekta gvidilo por labori en la deponejo MiKerno — eta unuprocesora kerno en Rust por x86_64 kaj arm64, kun ABI 2, Ring 3, FluoU, SNDS, Kani-DI kaj Esperanta dokumentaro. Uzu ĉi tion antaŭ ol ŝanĝi kodon, dokumentojn, version, ISO-on aŭ Eldonon.
 ---
 

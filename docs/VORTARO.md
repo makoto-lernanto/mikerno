@@ -5,7 +5,7 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 
 | Esperanto | Angla | Rimarko |
 | --- | --- | --- |
-| `procesoro` | processor / procesoro | Neniam uzu `cpu` en identigiloj. |
+| `procesoro` | processor | Neniam uzu `cpu` en identigiloj. |
 | `memoro` | memory | Neniam uzu `memory` aŭ `ram`. |
 | `fadeno` | thread | Neniam uzu `thread`. |
 | `procezo` | process | `Procezo`; neniam uzu `process`. |
