@@ -2123,8 +2123,8 @@ nombriĝas ankaŭ `kernologiko/src` kaj preterlasas la `#[cfg(test)]`-blokojn,
 0.8.0», `just testoj` → 61 passed, `cargo fmt`, ambaŭ `clippy`-vokoj kaj
 `cargo build --workspace --release`).
 
-**Lokaj rezultoj (2026-11-20, versio 0.8.0; ISO-oj konstruitaj antaŭ la
-puŝo, por praŝarĝa kontrolo).**
+**Lokaj rezultoj (2026-11-20, versio 0.8.0; ISO-oj konstruitaj el la puŝita
+kodo post la verda DI).**
 
 | Vojo | Linio |
 | --- | --- |
@@ -2133,6 +2133,26 @@ puŝo, por praŝarĝa kontrolo).**
 
 La SNDS-haketoj diferencas de tiuj de 0.7.4, ĉar la aldonitaj
 `horizonto.elf`/`saluto.elf` estis religitaj el la nova laborloko.
+
+**Nuba DI (2026-11-20).** Runo
+[#44729787782](https://github.com/makoto-lernanto/mikerno/actions/runs/44729787782)
+ĉe `7a07b25`: ĉiuj 45 taskoj verdaj — `kontroli-kaj-konstrui`,
+`kani-pretigi` kaj la 43 pruvoj de la matrico `kani-kontroli`; la runo
+daŭris 4 min 50 s. La unuaj du runoj ĉe `f042ea0`/`e1bb430` montris, ke la
+kombina pruvo `reenmeto_kaj_forigo` malaperas kun la liveranto ĉirkaŭ 20–26 s
+post la dua propraĵa redukto, do la pruvo disiĝis en tri pli malgrandajn:
+`reenmeto_konservas_la_kupon`, `forigo_konservas_la_kupon` kaj
+`forigo_redonas_la_novan_limdaton`. La konduto de la kupo ne ŝanĝiĝis, kaj
+`just testoj` restas la unua paŝo de la pordego.
+
+**Eldono.** [`v0.8.0`](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.8.0)
+(etikedo ĉe `7a07b25`) enhavas `mikerno.iso` (SHA-256
+`9dfc411d0e90f618e2ca8ee85851ed9c4d9d80c2961bdd51e0f7cfbe90e605ae`) kaj
+`mikerno-arm.iso` (SHA-256
+`bb5dac5cbc40c30cdff025346519732ccf852b10ec52392fb1ce70028e8a8f5e`). La du
+ISO-oj estis konstruitaj el la puŝita kodo kaj praŝarĝitaj antaŭ la alŝuto;
+la retejo montras la version 0.8.0 kaj la elŝutajn ligilojn al ĉi tiu
+etikedo.
 
 **Versio.** 0.8.0 (Fazo 1).
 
