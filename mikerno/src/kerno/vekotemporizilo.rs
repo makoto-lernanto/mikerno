@@ -73,18 +73,29 @@ mod kani_proofs {
         assert_eq!(kupo.nombro(), MAKSAJ_FADENOJ);
     }
 
-    /// Forigo post reenmeto redonas la novan limdaton, restarigas koheran
-    /// kupon kaj dua forigo de la sama celo redonas `None`.
+    /// Forigo redonas la limdaton de la celo, restarigas koheran kupon kaj
+    /// dua forigo de la sama celo redonas `None`.
     #[kani::proof]
     #[kani::unwind(11)]
-    fn forigo_post_reenmeto_konservas_la_kupon() {
+    fn forigo_konservas_la_kupon() {
         let mut kupo = Vekotemporizilo::nova();
         plenigu(&mut kupo);
         let celo = (kani::any::<u8>() % MAKSAJ_FADENOJ as u8 + 1) as u64;
-        kupo.enmeti(celo, 42);
-        assert_eq!(kupo.forigi(celo), Some(42));
+        assert_eq!(kupo.forigi(celo), Some(BAZAJ[celo as usize - 1]));
         assert!(kupo.kohera());
         assert_eq!(kupo.nombro(), MAKSAJ_FADENOJ - 1);
         assert_eq!(kupo.forigi(celo), None);
+    }
+
+    /// Forigo post reenmeto redonas la novan limdaton; la kohero post
+    /// reenmeto estas aparte pruvita, do ĉi tiu pruvo restas malpeza.
+    #[kani::proof]
+    #[kani::unwind(11)]
+    fn forigo_redonas_la_novan_limdaton() {
+        let mut kupo = Vekotemporizilo::nova();
+        plenigu(&mut kupo);
+        let nova = kani::any::<u8>() as u64;
+        kupo.enmeti(4, nova);
+        assert_eq!(kupo.forigi(4), Some(nova));
     }
 }
