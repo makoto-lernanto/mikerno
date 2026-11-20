@@ -44,6 +44,9 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `statika analizo` | lint | `cargo clippy`; neniam uzu `lint` en tekstoj. |
 | `Eldono` | GitHub Release | Publikigita versio kun la ISO-aktivaĵoj. |
 | `artefakto` | CI artifact | Dosiero, kiun DI-tasko suprenigas (ekz. `iso-bildoj`, `arm64-bildoj`); ĝi ne estas Eldono kaj foriĝas post 90 tagoj. |
+| `permesilo` | license | Laŭleĝa kondiĉaro de kodo aŭ de tria komponanto; la projekto mem estas MIT. |
+| `permesila kontrolo` | license check | `cargo deny check` laŭ la radika `deny.toml`; DI-tasko `permesiloj-kontroli`, loke `just permesiloj`. |
+| `kopilefto` | copyleft | Permesiloj kiel GPL, AGPL kaj LGPL, kiuj postulas la saman permesilon por derivaĵoj; la listo `allow` ilin ne enhavas. |
 | `aktivaĵo` | release asset | Dosiero alŝutita al Eldono. |
 | `interfaco` | interface / API | `API` restas nur en eksteraj protokolaj nomoj. |
 | `etendiana` | little-endian | La malalta bajto unue; 512-bajtaj sektoroj de SNDS. |

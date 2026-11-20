@@ -89,6 +89,12 @@ testoj:
 miri:
     cargo +nightly miri test -p kernologiko --target {{host}}
 
+# Permesila kaj dependaĵa kontrolo laŭ `deny.toml`. Postulas `cargo-deny`
+# (`cargo install cargo-deny --locked` aŭ la antaŭkonstruitan binaraĵon);
+# en DI ĝi ruliĝas kiel aparta tasko.
+permesiloj:
+    cargo deny check
+
 # Kani kaj Miri ruliĝas nur en DI: Kani kiel aparta tasko por ĉiu pruvo kaj
 # Miri kiel aparta tasko (vidu di.yml).
 

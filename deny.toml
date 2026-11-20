@@ -1,0 +1,43 @@
+# Reguloj de `cargo-deny` por MiKerno (M18, Fazo 3).
+#
+# La listo `allow` estas kompleta: ĉiu permesilo ne listigita — interalie GPL,
+# AGPL kaj LGPL — estas rifuzata. Se iam statike ligita LGPL-dependaĵo fariĝos
+# necesa, oni aldonu ĝin per `[[licenses.exceptions]]` kun klara kialo, anstataŭ
+# malfermi la liston por ĉiuj dependaĵoj.
+#
+# `exclude-dev` kaj la defaŭlta `include-dev = false` tenas `[dev-dependencies]`
+# ekster la kontrolo. `include-build` restas `true`, ĉar `[build-dependencies]`
+# povas influi la konstruatajn artefaktojn.
+
+[graph]
+exclude-dev = true
+
+[advisories]
+unmaintained = "all"
+unsound = "all"
+ignore = []
+
+[licenses]
+include-dev = false
+include-build = true
+confidence-threshold = 0.93
+# La permesoj estas anticipaj: la laborloko nun havas neniun eksteran
+# dependaĵon, do «ne renkontita» ne estas eraro.
+unused-allowed-license = "allow"
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "Unicode-DFS-2016",
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# La internaj `path`-dependaĵoj ne portas version (ĝin fiksas `Cargo.lock`),
+# do ili ne estas hazardaj `*`-postuloj.
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

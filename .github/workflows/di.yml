@@ -44,6 +44,26 @@ jobs:
       - name: Konstrui la arm64-bildon
         run: just konstrui-arm
 
+  # `cargo-deny` rifuzas permesilojn ekster la listo en `deny.toml` (interalie
+  # GPL, AGPL kaj LGPL) kaj nekonatajn fontojn de dependaĵoj. Ĝi estas aparta
+  # tasko, do `just kontroli` restas loke rulebla sen la ilo.
+  permesiloj-kontroli:
+    name: Permesila kontrolo (cargo-deny)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Elpreni la deponejon
+        uses: actions/checkout@v4
+
+      - name: Instali Rust 1.100.0
+        uses: dtolnay/rust-toolchain@1.100.0
+
+      - name: Instali cargo-deny
+        uses: taiki-e/install-action@cargo-deny
+
+      - name: Ruli cargo deny check
+        run: cargo deny check
+
   # Miri interpretas la MIR-on de la gastigantaj unu-testoj de `kernologiko`
   # kaj kaptas nedifinitan konduton (precipe en la `unsafe`-uzado), kiun la
   # ordinara testa rultempo ne montras. Ĝi bezonas noktan ilĉenon.

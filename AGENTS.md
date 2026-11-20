@@ -33,7 +33,7 @@ La versio havas la formon `0.x.y` kaj rilatas al la mejloŝtonoj:
 Ekzemple: la Fazoj 1/2/3 de M13 respondas al `0.3.0` / `0.3.1` / `0.3.2`.
 La formo `0.x.y` validas ekde M10; M0–M9 apartenas al la historio `0.0.x`.
 
-Nuna versio: `0.8.1` (M18, Fazo 2: QEMU-matrico kaj aŭtomata ISO-regenerado).
+Nuna versio: `0.8.2` (M18, Fazo 3: `cargo-deny` kaj permesila kontrolo).
 
 La sola fonto de la versio estas `[workspace.package] version` en `Cargo.toml`.
 La kerno legas ĝin per `env!("CARGO_PKG_VERSION")`, do `just ruli` kaj la ISO
@@ -63,6 +63,11 @@ rulas `--kontroli`.
 - La DI ankaŭ rulas `miri-kontroli`: nokta Rust kun Miri super la unu-testoj
   de `kernologiko` (`just miri`). Miri kaptas nedifinitan konduton, kiun la
   ordinara testa rultempo ne montras. Loke `just miri` estas la sama kontrolo.
+- La tasko `permesiloj-kontroli` rulas `cargo deny check` laŭ la radika
+  `deny.toml`. Nur MIT, Apache-2.0, BSD-3-Clause kaj Unicode-DFS-2016 estas
+  permesataj; GPL, AGPL kaj LGPL estas rifuzataj. Loke la saman kontrolon
+  ebligas `just permesiloj` (post `cargo install cargo-deny --locked`); ĝi ne
+  estas parto de `just kontroli`, por ke tiu resta loke rulebla sen la ilo.
 - Ĉiu `unsafe fn` portu sekurec-kontrakton (la antaŭkondiĉojn, kiujn la
   alvokanto devas garantii) kaj ĉiu `unsafe impl` portu `// SAFETY:`
   komenton; ambaŭ tekstoj estas en Esperanto. En la publika API de
@@ -83,7 +88,8 @@ rulas `--kontroli`.
   ilin re-eksportu prefere ol duobligi la kodon.
 - Post puŝo kontrolu la runon en la agoj-paĝo de la deponejo (aŭ per
   `gh run watch`); la pordego estas verda nur kiam la tuta matrico
-  `kani-kontroli` kaj la tasko `miri-kontroli` sukcesas. Detaloj estas en
+  `kani-kontroli` kaj la taskoj `miri-kontroli` kaj `permesiloj-kontroli`
+  sukcesas. Detaloj estas en
   `docs/MEJLOSTONOJ.md` §4.7–§4.8.
 
 ## Laborfluo por unu Fazo

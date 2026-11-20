@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-20 · Versio de la Cargo-laborloko: 0.8.1
+> Stato: 2026-11-20 · Versio de la Cargo-laborloko: 0.8.2
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -172,6 +172,7 @@ eniras la kernan bildon.
 | 2026-11-20 | 0.8.1 | 63 | 15194 | 11818 | 1988 | 1388 |
 | 2026-11-20 | 0.8.1 | 63 | 15196 | 11819 | 1989 | 1388 |
 | 2026-11-20 | 0.8.1 | 63 | 15196 | 11819 | 1989 | 1388 |
+| 2026-11-20 | 0.8.2 | 63 | 15196 | 11819 | 1989 | 1388 |
 
 ---
 
@@ -2017,8 +2018,22 @@ dependaĵaron.
 
 | Kriterio | Stato | Pruvo |
 | --- | --- | --- |
-| `cargo deny check` estas verda | Pruvota | La komando finiĝas kun exit code 0 en DI. |
-| Neniu GPL/AGPL | Pruvota | La raporto de `cargo-deny` montras neniujn malpermesitajn permesilojn. |
+| `cargo deny check` estas verda | Loke jes; DI pruvota | `just permesiloj` la 2026-11-20 per cargo-deny 0.22.0: `advisories ok, bans ok, licenses ok, sources ok`, eksitkodo 0. La DI-tasko `permesiloj-kontroli` konfirmos post la puŝo. |
+| Neniu GPL/AGPL | Jes | La laborloko havas neniun eksteran dependaĵon (`Cargo.lock` listigas nur la kvin membrojn), do neniu GPL/AGPL/LGPL-pakaĵo eniras la grafon; la listo `allow` ilin ne enhavas. |
+
+**Efektivigo (0.8.2).** La radika `deny.toml` permesas nur MIT, Apache-2.0,
+BSD-3-Clause kaj Unicode-DFS-2016; ĉio ne listigita estas rifuzata, do GPL,
+AGPL kaj LGPL ne trapasas sen eksplicita `[[licenses.exceptions]]`-ero kun
+kialo. `[graph] exclude-dev = true` kaj `[licenses] include-dev = false` tenas
+`[dev-dependencies]` ekster la kontrolo, dum `include-build = true` gardas
+`[build-dependencies]`. La `path`-dependaĵoj estas markitaj `publish = false`
+(do `allow-wildcard-paths` validas por ili), `[advisories]` rifuzas
+neflegatajn kaj nesolidajn kreaĵojn, `[sources]` rifuzas nekonatajn registrojn
+kaj git-fontojn, kaj `[bans]` malpermesas `*`-postulojn. Loke la kontrolon
+ebligas `just permesiloj`; en DI aparta tasko `permesiloj-kontroli` instalas
+`cargo-deny` kaj rulas `cargo deny check`, do `just kontroli` restas rulebla
+sen la ilo. Ĉar la laborloko nun havas neniun eksteran dependaĵon, la kontrolo
+estas precipe gardo por estontaj aldonoj.
 
 ##### Fazo 4: Purgado de `#[allow]` kaj Ring 3-escepta izolado (Versio 0.8.3)
 

@@ -17,7 +17,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IK kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.8.1 (Cargo-laborloko)
+- **Versio:** 0.8.2 (Cargo-laborloko)
 - **Arkitekturo:** `x86_64` kaj `arm64` (AArch64), unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -149,6 +149,7 @@ cargo install just          # opcia
 | python3 | SNDS-bildo por `tools/krei_snds_img.sh` (kutime jam instalita) |
 | Kani | Nur en DI (`cargo kani`) |
 | Miri | Nur en DI aŭ per `just miri`: nokta Rust kun `miri` kaj `rust-src` |
+| cargo-deny | Nur por `just permesiloj` kaj la DI-tasko `permesiloj-kontroli` (`cargo install cargo-deny --locked`) |
 
 Instalu la celajn triopojn:
 
@@ -172,6 +173,7 @@ just ruli-iso-arm   # konstruas kaj rulas `mikerno-arm.iso` per AAVMF
 just kontroli        # unu-testoj, formato, statika analizo (ambaŭ arkoj) kaj konstruo
 just testoj         # unu-testoj de `kernologiko` sur la gastiganto (sen QEMU)
 just miri           # la samaj unu-testoj sub Miri (postulas noktan Rust)
+just permesiloj     # permesila kaj dependaĵa kontrolo laŭ `deny.toml`
 ```
 
 `just ruli-arm` bezonas la celan triopon `aarch64-unknown-none`
@@ -808,7 +810,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.8.1!
+[MiKerno] Saluton, mi estas MiKerno v0.8.2!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
@@ -963,7 +965,8 @@ kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
 ```text
 .
 ├── Cargo.toml                  # laborloko (membroj, versio, statika analizo)
-├── justfile                    # konstrui / ruli / iso / kontroli
+├── deny.toml                   # permesilaj reguloj de `cargo-deny`
+├── justfile                    # konstrui / ruli / iso / kontroli / permesiloj
 ├── .cargo/config.toml          # cela triopo, rust-lld, QEMU-lanĉilo
 ├── mikerno/
 │   ├── Cargo.toml
@@ -1110,6 +1113,13 @@ de la koderoj en aliaj kernaj projektoj.
 
 La triaj komponantoj listigitaj sube havas siajn proprajn permesilojn; la MIT
 permesilo ne anstataŭas ilin.
+
+La dependaĵa kaj permesila kontrolo estas aŭtomatigita per `deny.toml`:
+permesataj estas nur MIT, Apache-2.0, BSD-3-Clause kaj Unicode-DFS-2016; ĉio
+alia — interalie GPL, AGPL kaj LGPL — estas rifuzata. `just permesiloj` (kaj la
+DI-tasko `permesiloj-kontroli`) rulas `cargo deny check`; la laborloko nun havas
+neniun eksteran dependaĵon, do la kontrolo estas precipe gardo por estontaj
+aldonoj.
 
 Enigitaj triaj komponantoj:
 
