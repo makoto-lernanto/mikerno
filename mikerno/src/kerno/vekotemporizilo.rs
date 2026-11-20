@@ -60,19 +60,29 @@ mod kani_proofs {
         assert_eq!(kupo.pinti(), None);
     }
 
-    /// Reenmeto ĝisdatigas la limdaton sen duobligi la eron; forigo redonas la
-    /// limdaton kaj restarigas koheran kupon.
+    /// Reenmeto ĝisdatigas la limdaton de ekzistanta fadeno sen duobligi la
+    /// eron kaj restarigas koheran kupon.
     #[kani::proof]
     #[kani::unwind(11)]
-    fn reenmeto_kaj_forigo() {
+    fn reenmeto_konservas_la_kupon() {
         let mut kupo = Vekotemporizilo::nova();
         plenigu(&mut kupo);
         let celo = (kani::any::<u8>() % MAKSAJ_FADENOJ as u8 + 1) as u64;
-        let nova = kani::any::<u8>() as u64;
-        kupo.enmeti(celo, nova);
+        kupo.enmeti(celo, kani::any::<u8>() as u64);
         assert!(kupo.kohera());
         assert_eq!(kupo.nombro(), MAKSAJ_FADENOJ);
-        assert_eq!(kupo.forigi(celo), Some(nova));
+    }
+
+    /// Forigo post reenmeto redonas la novan limdaton, restarigas koheran
+    /// kupon kaj dua forigo de la sama celo redonas `None`.
+    #[kani::proof]
+    #[kani::unwind(11)]
+    fn forigo_post_reenmeto_konservas_la_kupon() {
+        let mut kupo = Vekotemporizilo::nova();
+        plenigu(&mut kupo);
+        let celo = (kani::any::<u8>() % MAKSAJ_FADENOJ as u8 + 1) as u64;
+        kupo.enmeti(celo, 42);
+        assert_eq!(kupo.forigi(celo), Some(42));
         assert!(kupo.kohera());
         assert_eq!(kupo.nombro(), MAKSAJ_FADENOJ - 1);
         assert_eq!(kupo.forigi(celo), None);
