@@ -17,7 +17,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IK kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.7.4 (Cargo-laborloko)
+- **Versio:** 0.8.0 (Cargo-laborloko)
 - **Arkitekturo:** `x86_64` kaj `arm64` (AArch64), unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -168,7 +168,8 @@ just konstrui-arm     # arm64: plata `Image` + `horizonto`
 just ruli-arm       # arm64: konstruas kaj startigas la platan `Image`
 just iso-arm       # UEFI-bootebla `mikerno-arm.iso` (Limine + plata `Image`)
 just ruli-iso-arm   # konstruas kaj rulas `mikerno-arm.iso` per AAVMF
-just kontroli        # formato, statika analizo (ambaŭ arkoj) kaj konstruo
+just kontroli        # unu-testoj, formato, statika analizo (ambaŭ arkoj) kaj konstruo
+just testoj         # unu-testoj de `kernologiko` sur la gastiganto (sen QEMU)
 ```
 
 `just ruli-arm` bezonas la celan triopon `aarch64-unknown-none`
@@ -224,13 +225,15 @@ estas kreataj per `just konstrui-arm` kaj `just iso-arm` en la `arm64`-branĉo;
 
 ## Arĥitekturo
 
-La Cargo-laborloko havas tri kestojn:
+La Cargo-laborloko havas kvin kestojn:
 
 | Kesto | Speco | Rolo |
 | --- | --- | --- |
 | `mikerno` | `no_std` binara | La kerno: praŝarĝo, memoro, interrompoj, planisto, IK, konzolo |
+| `kernologiko` | `no_std` biblioteko | Arkitekture sendependa logiko (memoro, adresoj, vicoj, SNDS) kun gastigantaj unu-testoj |
 | `libmikerno` | `no_std` biblioteko | Komunaj `#[repr(C)]`-difinoj: mesaĝoj, kapabloj, sistemvokaj numeroj |
-| `horizonto` | `no_std` binara | La unua uzanta procezo, ligita jam super 4 GiB (`0x1_0000_0000`) |> **Noto:** la tuta Cargo-laborloko uzas `code-model=large`, ĉar `horizonto` estas
+| `horizonto` | `no_std` binara | La unua uzanta procezo, ligita jam super 4 GiB (`0x1_0000_0000`) |
+| `saluto` | `no_std` binara | Malgranda testoproceso lanĉata el SNDS per `ruli` |> **Noto:** la tuta Cargo-laborloko uzas `code-model=large`, ĉar `horizonto` estas
 > ligita super 4 GiB. La kerno estas ligita kun `relocation-model=pic` (ET_DYN)
 > por KASLR; `horizonto` ligas kun `-no-pie` kaj restas ET_EXEC kun statikaj
 > relokoj. Neniu dinamika ligilo aŭ ekstera dependaĵo aperas.
@@ -239,7 +242,7 @@ Dependa grafo:
 
 ```text
 horizonto ──> libmikerno
-mikerno    (neniu ekstera dependaĵo)
+mikerno    ──> kernologiko ──> libmikerno
 ```
 
 La kerna nukleo estas arkitekture sendependa: ĝi tuŝas la platformon nur tra
@@ -789,7 +792,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.7.4!
+[MiKerno] Saluton, mi estas MiKerno v0.8.0!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes

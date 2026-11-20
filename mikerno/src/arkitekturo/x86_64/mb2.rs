@@ -6,9 +6,9 @@ use core::slice;
 use crate::ekrano::FrambufaInformo;
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::{
-    EniraEraro, EniraInformo, MAKSAJ_MODULOJ, MAKSAJ_REGIONOJ, MemoraMapo, MemoraRegiono, Modulo,
-    RegionaTipo,
+    EniraEraro, EniraInformo, MAKSAJ_MODULOJ, MemoraMapo, MemoraRegiono, Modulo, RegionaTipo,
 };
+use kernologiko::memoro::MAKSAJ_REGIONOJ;
 
 pub const MAGIO: u32 = 0x36d7_6289;
 

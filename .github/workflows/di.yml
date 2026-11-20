@@ -11,7 +11,8 @@ permissions:
   contents: read
 
 jobs:
-  # Rapida rimensaĝo: versio, formato, statika analizo (ambaŭ arkoj) kaj konstruo.
+  # Rapida rimensaĝo: versio, unu-testoj, formato, statika analizo (ambaŭ arkoj)
+  # kaj konstruo.
   kontroli-kaj-konstrui:
     name: Kontroli kaj konstrui
     runs-on: ubuntu-latest

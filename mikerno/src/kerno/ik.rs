@@ -52,8 +52,9 @@ const _: () = {
     assert!(core::mem::offset_of!(Mesago, longo) == 24);
 };
 
-/// La mesaĝvica kapacito; la testa premrega scenaro uzas `+ 1` mesaĝojn.
-pub const MAKSAJ_MESAGOJ: usize = 16;
+/// La mesaĝvica kapacito kaj la FIFO loĝas en `kernologiko`, kie ili
+/// testeĝas sur la gastiganto.
+pub use kernologiko::mesagujo::{Ero, MAKSAJ_MESAGOJ, Mesagujo};
 /// La finpunkta tabelo kaj la kapablotabelo havas po 16 fendojn; `Tenilo`
 /// povas adresi nur `0..=15`.
 pub const MAKSAJ_FINPUNKTOJ: usize = 16;
@@ -114,6 +115,12 @@ const _: () = {
     assert!(IkEraro::Tempolimo.kodo() == libmikerno::syscall::TEMPOLIMO as i64);
 };
 
+impl From<kernologiko::mesagujo::Eraro> for IkEraro {
+    fn from(_: kernologiko::mesagujo::Eraro) -> Self {
+        Self::MesagujoPlena
+    }
+}
+
 /// La atenda politiko de IK-voko (`r10` en la sistemvoka ABI, C15).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Atendo {
@@ -148,54 +155,6 @@ fn absoluta_limdato(atendo: Atendo) -> Option<u64> {
             Some(crate::arkitekturo::temporizilaj_tikoj().saturating_add(tikoj))
         }
         _ => None,
-    }
-}
-
-#[derive(Clone, Copy)]
-struct Ero {
-    fonto: FadenoId,
-    mesago: Mesago,
-}
-
-#[derive(Clone, Copy)]
-struct Mesagujo {
-    eroj: [Option<Ero>; MAKSAJ_MESAGOJ],
-    nombro: usize,
-}
-
-impl Mesagujo {
-    const fn nova() -> Self {
-        Self {
-            eroj: [None; MAKSAJ_MESAGOJ],
-            nombro: 0,
-        }
-    }
-
-    fn plena(&self) -> bool {
-        self.nombro >= MAKSAJ_MESAGOJ
-    }
-
-    fn puŝi(&mut self, ero: Ero) -> Result<(), IkEraro> {
-        if self.plena() {
-            return Err(IkEraro::MesagujoPlena);
-        }
-        self.eroj[self.nombro] = Some(ero);
-        self.nombro += 1;
-        Ok(())
-    }
-
-    /// Prenu la unuan mesaĝon; `Some(fonto)` limigas al tiu sendinto, `None`
-    /// akceptas ajnan fonton (la fonta filtro de `RICEVI_TEMPO`, C4).
-    fn preni_de(&mut self, fonto: Option<FadenoId>) -> Option<Mesago> {
-        let indekso = (0..self.nombro)
-            .find(|&i| self.eroj[i].is_some_and(|e| fonto.is_none_or(|f| e.fonto == f)))?;
-        let ero = self.eroj[indekso].take()?;
-        for movo in indekso..self.nombro - 1 {
-            self.eroj[movo] = self.eroj[movo + 1];
-        }
-        self.nombro -= 1;
-        self.eroj[self.nombro] = None;
-        Some(ero.mesago)
     }
 }
 
@@ -745,7 +704,11 @@ pub fn sendi_mesagon(destinacio: FadenoId, mesago: &Mesago) -> Result<(), IkErar
             return Err(IkEraro::NevalidaCelloko);
         }
         let indekso = defaŭlta_indekso(destinacio).ok_or(IkEraro::TabeloPlena)?;
-        match senda_decido(finpunktoj()[indekso].vico.nombro, MAKSAJ_MESAGOJ, nuna != 0) {
+        match senda_decido(
+            finpunktoj()[indekso].vico.nombro(),
+            MAKSAJ_MESAGOJ,
+            nuna != 0,
+        ) {
             SendaDecido::Enmetu => return enmeti(indekso as u8, *mesago),
             SendaDecido::Rifuzi => return Err(IkEraro::MesagujoPlena),
             SendaDecido::Atendu => {
@@ -786,7 +749,7 @@ pub fn sendi_kapable(
             }
         }
         match senda_decido(
-            finpunktoj()[fendo as usize].vico.nombro,
+            finpunktoj()[fendo as usize].vico.nombro(),
             MAKSAJ_MESAGOJ,
             nuna != 0,
         ) {
@@ -1350,12 +1313,15 @@ mod kani_proofs {
             assert!(ujo.puŝi(ero).is_ok());
             indekso += 1;
         }
-        assert_eq!(ujo.nombro, MAKSAJ_MESAGOJ);
-        assert!(ujo.eroj[0].is_some());
+        assert_eq!(ujo.nombro(), MAKSAJ_MESAGOJ);
+        assert!(ujo.ero(0).is_some());
 
-        assert_eq!(ujo.puŝi(iu_ero(1)), Err(IkEraro::MesagujoPlena));
-        assert_eq!(ujo.nombro, MAKSAJ_MESAGOJ);
-        assert!(ujo.eroj[0].is_some());
+        assert_eq!(
+            ujo.puŝi(iu_ero(1)),
+            Err(kernologiko::mesagujo::Eraro::Plena)
+        );
+        assert_eq!(ujo.nombro(), MAKSAJ_MESAGOJ);
+        assert!(ujo.ero(0).is_some());
     }
 
     /// FIFO: de la sama fonto, la unue sendita mesaĝo unue revenas.
@@ -1384,9 +1350,9 @@ mod kani_proofs {
         assert_eq!(ricevita.tipo, 2);
         assert_eq!(ricevita.longo(), dua.longo());
 
-        assert_eq!(ujo.nombro, 0);
+        assert_eq!(ujo.nombro(), 0);
         assert!(ujo.preni_de(Some(fonto)).is_none());
-        assert!(ujo.eroj[0].is_none());
+        assert!(ujo.ero(0).is_none());
     }
 
     /// FIFO restas valida ankaŭ inter malsamaj fontoj: forpreno de unu fonto
@@ -1426,7 +1392,7 @@ mod kani_proofs {
         assert_eq!(ujo.preni_de(Some(fonto_a)).unwrap().tipo, 3);
         assert!(ujo.preni_de(Some(fonto_a)).is_none());
         assert!(ujo.preni_de(Some(fonto_b)).is_none());
-        assert_eq!(ujo.nombro, 0);
+        assert_eq!(ujo.nombro(), 0);
     }
 
     /// Fonta filtro: fremdaj mesaĝoj restas en la vico, la unua kongrua
@@ -1462,11 +1428,11 @@ mod kani_proofs {
         );
 
         assert_eq!(ujo.preni_de(Some(fonto_a)).unwrap().tipo, 1);
-        assert_eq!(ujo.nombro, 2);
+        assert_eq!(ujo.nombro(), 2);
         assert_eq!(ujo.preni_de(Some(fonto_a)).unwrap().tipo, 3);
-        assert_eq!(ujo.nombro, 1);
+        assert_eq!(ujo.nombro(), 1);
         assert_eq!(ujo.preni_de(None).unwrap().tipo, 2);
-        assert_eq!(ujo.nombro, 0);
+        assert_eq!(ujo.nombro(), 0);
         assert!(ujo.preni_de(Some(fonto_b)).is_none());
     }
 
@@ -1477,8 +1443,8 @@ mod kani_proofs {
         let fonto: FadenoId = kani::any();
 
         assert!(ujo.preni_de(Some(fonto)).is_none());
-        assert_eq!(ujo.nombro, 0);
-        assert!(ujo.eroj[0].is_none());
+        assert_eq!(ujo.nombro(), 0);
+        assert!(ujo.ero(0).is_none());
     }
 
     /// Forpreno konservas la invariantojn: `nombro` restas en limoj kaj ĉiuj
@@ -1491,11 +1457,11 @@ mod kani_proofs {
         assert!(ujo.puŝi(iu_ero(1)).is_ok());
 
         let _ = ujo.preni_de(Some(fonto));
-        assert!(ujo.nombro <= MAKSAJ_MESAGOJ);
+        assert!(ujo.nombro() <= MAKSAJ_MESAGOJ);
 
-        let mut indekso = ujo.nombro;
+        let mut indekso = ujo.nombro();
         while indekso < MAKSAJ_MESAGOJ {
-            assert!(ujo.eroj[indekso].is_none());
+            assert!(ujo.ero(indekso).is_none());
             indekso += 1;
         }
     }

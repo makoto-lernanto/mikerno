@@ -1,0 +1,13 @@
+[package]
+name = "kernologiko"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Arkitekture sendependa logiko de MiKerno, testebla sur la gastiganto."
+
+[dependencies]
+libmikerno = { path = "../libmikerno" }
+
+[lints]
+workspace = true

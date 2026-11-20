@@ -9,6 +9,8 @@ kerno_arm := "target/aarch64-unknown-none/release/mikerno"
 bildo_arm := "target/aarch64-unknown-none/release/mikerno.img"
 bildo_arm_iso := "mikerno-arm.iso"
 bildo := "mikerno.iso"
+# La gastiganta trinomo, sur kiu la puraj moduloj testiĝas kun `std`.
+host := `rustc -vV | sed -n 's/^host: //p'`
 
 default: konstrui
 
@@ -75,10 +77,16 @@ ruli-iso: iso
 kontroli-version:
     bash tools/versio.sh --kontroli
 
-# Loka kvalita pordego: versio + formato + statika analizo (ambaŭ arkoj) + konstruo.
+# Rulu la unu-testojn de la arkitekture sendependaj moduloj de `kernologiko`
+# sur la gastiganto (ne en la barela celo).
+testoj:
+    cargo test -p kernologiko --target {{host}}
+
+# Loka kvalita pordego: versio + unu-testoj + formato + statika analizo
+# (ambaŭ arkoj) + konstruo.
 # La arm64-analizo kovras ankaŭ `horizonto` (la Ligo-komandojn) kaj `saluto`.
 # Kani ruliĝas nur en DI, kiel aparta tasko por ĉiu pruvo (vidu di.yml).
-kontroli: kontroli-version
+kontroli: kontroli-version testoj
     cargo fmt --all -- --check
     cargo clippy --workspace --release -- -D warnings
     cargo clippy -p mikerno --release --target aarch64-unknown-none -- -D warnings

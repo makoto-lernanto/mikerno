@@ -12,8 +12,10 @@ use crate::memoro::virtuala::VirtuaAdreso;
 use super::objekto::{Fadeno, FadenoEnirpunkto, FadenoId, FadenoStato, Prioritato, ProcezaId};
 use super::procezo::{ProcezaEstado, marki};
 use super::vekotemporizilo::Vekotemporizilo;
+use kernologiko::preta_vico::PretaVico;
 
-pub const MAKSAJ_FADENOJ: usize = 8;
+pub use kernologiko::MAKSAJ_FADENOJ;
+
 pub const MAKSA_PRETA_ATENDO: u64 =
     (MAKSAJ_FADENOJ as u64 - 1) * Prioritato::Alta.tempopeco() as u64;
 const RIPAZA_ID: FadenoId = 0;
@@ -24,37 +26,6 @@ const RIPAZA_ID: FadenoId = 0;
 /// La izolaj procezoj jam finiĝis, kiam la ŝelo kreiĝas, kaj iliaj fenestroj
 /// `5`/`6` estas liberaj.
 const UNUA_DINAMIKA: FadenoId = 5;
-
-/// Cirkla vico kun unu plia loko, do `kapo == vosto` ĉiam signifas malplena.
-struct PretaVico {
-    eroj: [FadenoId; MAKSAJ_FADENOJ + 1],
-    kapo: usize,
-    vosto: usize,
-}
-
-impl PretaVico {
-    const fn nova() -> Self {
-        Self {
-            eroj: [0; MAKSAJ_FADENOJ + 1],
-            kapo: 0,
-            vosto: 0,
-        }
-    }
-
-    fn puŝi(&mut self, id: FadenoId) {
-        self.eroj[self.vosto] = id;
-        self.vosto = (self.vosto + 1) % self.eroj.len();
-    }
-
-    fn pop(&mut self) -> Option<FadenoId> {
-        if self.kapo == self.vosto {
-            return None;
-        }
-        let id = self.eroj[self.kapo];
-        self.kapo = (self.kapo + 1) % self.eroj.len();
-        Some(id)
-    }
-}
 
 #[derive(Clone, Copy, Debug)]
 pub enum PlanistaEraro {

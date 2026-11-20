@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-19 · Versio de la Cargo-laborloko: 0.7.4
+> Stato: 2026-11-20 · Versio de la Cargo-laborloko: 0.8.0
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -30,7 +30,7 @@
 | M15 | `arm64`-malantaŭo: EL0, ABI 2, `ramfb`, `PAN` | Plenumita | identa piksela haketo sur ambaŭ arkoj |
 | M16 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Parte | dormo 100 ms = 10 tikoj; minimumo ≥ 17 veturoj; arm64-stabileco |
 | M17 | Konservado, dosiersistemo, ŝelo | Plenumita | `virtio-blk` legas/skribas 64 sektorojn; SNDS (6 dosieroj, 1 dosierujo; PCI kaj MMIO); `SYS_BRK`, `SYS_EXEC` kaj `SYS_LANĜI` en Ring 3; Ligo kun `listi`, `procezoj`, `mortigi`, `ruli`; `virtio-blk` MMIO-vojo funkcias sur `arm64`; `#[allow]`-purgado por M17 plenigita |
-| M18 | DI, testoj, plena pruvaro | Parte | GitHub Actions verde (fmt, clippy, konstruo, Kani); testoj kaj plena pruvaro mankas |
+| M18 | DI, testoj, plena pruvaro | Parte | GitHub Actions verde (fmt, clippy, testoj, konstruo, Kani); Fazo 1 (host-testoj) plenumita |
 | M19 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 | M20 | Plena pruvaro kaj 1.0 | Venonta | — |
 
@@ -129,8 +129,10 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 
 ### 1.2. Grando de la Ring 0-kodo
 
-`bash tools/kodlinioj.sh --linio` mezuras la Ring 0-fonton (`mikerno/src`,
-`*.rs`) antaŭ ĉiu komito. «Kodo» malatentas malplenajn kaj komentajn liniojn.
+`bash tools/kodlinioj.sh --linio` mezuras la Ring 0-fonton (`mikerno/src` kaj
+`kernologiko/src`, `*.rs`) antaŭ ĉiu komito. «Kodo» malatentas malplenajn kaj
+komentajn liniojn; la blokoj `#[cfg(test)]` restas ekster la nombro, ĉar ili ne
+eniras la kernan bildon.
 
 | Dato | Versio | Dosieroj | Linioj | Kodo | Komento | Malplena |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -163,6 +165,7 @@ la saman haketon kiel la `x86_64`-ISO. La ISO-vojo implicite uzas
 | 2026-11-19 | 0.7.3 | 56 | 14977 | 11705 | 1915 | 1357 |
 | 2026-11-20 | 0.7.4 | 56 | 14988 | 11727 | 1904 | 1357 |
 | 2026-11-20 | 0.7.4 | 56 | 14988 | 11727 | 1904 | 1357 |
+| 2026-11-20 | 0.8.0 | 63 | 15143 | 11803 | 1954 | 1386 |
 
 ---
 
@@ -1911,14 +1914,225 @@ elŝutajn ligilojn al ĉi tiu etikedo.
 
 ### M18 — Inĝeniera matureco
 
-**Celo.** Ripetebla, pruvita kaj dokumentita projekto.
+**Celo.** Ripetebla, pruvita kaj dokumentita projekto, preta por la eldono 1.0.
+**Taskoj.** DI-matrico por QEMU (BIOS/UEFI, diversaj memoroj), aŭtomata
+ISO-regenerado, `cargo-deny`, unuopaj testoj por sendependaj moduloj, purgado
+de `#[allow]` kaj plibonigo de Ring 3-esceptoj.
 
-**Taskoj.** DI (Linux), Kani en DI, testoj por arkitekture sendependaj
-moduloj, QEMU-matrico (BIOS/UEFI, diversaj memorkvantoj), `cargo-deny` /
-permesila kontrolo, regenerado de la ISO en DI.
+#### 1. Fazoj de Efektivigo
 
-**Akceptkriterioj.** Ĉiu tirpeto plenumas `fmt`, `clippy`, `konstruo`, `kani` kaj la
-QEMU-smokan teston; la ISO estas artefakto de DI, ne permana dosiero.
+##### Fazo 1: Unittestoj por arkitekture sendependaj moduloj (Versio 0.8.0)
+
+**Celo.** Povi testi la kernan logikon sen QEMU, rekte sur la gastiganto.
+
+**Enhavo**:
+* Aldoni `#[cfg(test)]`-modulojn por: `MemoraMapo`, `Mesagujo`, `PretaVico`,
+  `VirtuaAdreso`, `SNDS`, `Vekotemporizilo`.
+* Krei novan Cargo-celon aŭ uzi `cargo test --target x86_64-unknown-none` (se
+  eblas) aŭ abstrakti la hardvaron por ebligi `cargo test` sur
+  `x86_64-unknown-linux-gnu`.
+* Enkonduki simulitajn strukturojn (mock) por `KadraAlokilo` kaj `PaĝaTablo`
+  por testi la superan logikon.
+
+**Evitindaj eraroj**:
+* **`no_std` kaj hardvaraj dependaĵoj:** Oni devas zorgeme apartigi la puran
+  logikon (ekz. `Vekotemporizilo::enmeti`) de la hardvara stato. Uzu
+  `trait`-ojn por abstrakti la memoron.
+* **Statika stato:** Por testoj uzu `thread_local!` aŭ pasu la staton kiel
+  argumentojn al la testotaj funkcioj, anstataŭ `static mut` aŭ `spin::Mutex`.
+
+**Akceptkriterioj**:
+
+| Kriterio | Stato | Pruvo |
+| --- | --- | --- |
+| Testoj ruliĝas sen QEMU | Jes | `just testoj` (aŭ `cargo test -p kernologiko --target <gastiganto>`) finiĝas kun `test result: ok. 61 passed`. |
+| Kovrado de sendependaj moduloj | Jes | 61 testkazoj (≥ 20) en ses moduloj, inkluzive de plena/malplena vico, nevalida adreso kaj nedisigebla UTF-8. |
+| Simulita `KadraAlokilo`/`PaĝaTablo` | Parte | La generika abstragon oni ne enkondukis: ĝi tuŝus ĉiun el la 44 `PaĝaTablo`-alvokoj kaj 82 `KadraAlokilo`-uzoj. Anstataŭe la puraj moduloj estas apartigitaj en `kernologiko`, kaj `KadraAlokilo` jam posedas `#[cfg(kani)]`-spegulon. Vidu «1a». |
+
+##### Fazo 2: QEMU-matrico kaj aŭtomata ISO-regenerado (Versio 0.8.1)
+
+**Celo.** Forigi la bezonon de permana ISO-konstruo kaj certigi, ke la kerno
+funkcias en diversaj medioj.
+
+**Enhavo**:
+* Forigi `mikerno.iso` kaj `mikerno-arm.iso` el la deponejo (aldoni al
+  `.gitignore`).
+* Modifi `.github/workflows/di.yml` por konstrui la ISO-ojn kaj alŝuti ilin
+  kiel `actions/upload-artifact`.
+* Aldoni QEMU-matricon al DI:
+  * `x86_64` BIOS (i440fx) + 256M
+  * `x86_64` UEFI (OVMF, q35) + 256M
+  * `x86_64` BIOS + 128M (minimuma memoro)
+  * `arm64` Image (virt) + 256M
+  * `arm64` UEFI (AAVMF) + 256M
+
+**Evitindaj eraroj**:
+* **TCG-malrapideco:** GitHub Actions uzas TCG (sen KVM). Uzu
+  `timeout -k 10 60` por ĉiu QEMU-voko por eviti blokiĝon.
+* **OVMF-pakaĵoj:** Certigu, ke la `apt-get install`-paŝo instalas `ovmf` aŭ
+  `qemu-efi-aarch64`.
+* **Artefaktaj limoj:** GitHub forigas artefaktojn post 90 tagoj; la retejo
+  devas ligi al la GitHub-Eldono, ne al la CI-artefaktoj.
+
+**Akceptkriterioj**:
+
+| Kriterio | Stato | Pruvo |
+| --- | --- | --- |
+| ISO-oj ne estas en Git | Pruvota | `git ls-files | grep .iso` redonas nenion. |
+| DI generas kaj alŝutas ISO-ojn | Pruvota | La DI-runo havas artefaktojn `mikerno.iso` kaj `mikerno-arm.iso`. |
+| QEMU-matrico estas verda | Pruvota | Ĉiuj 5 kombinaĵoj atingas `[kerno] fina stato: ... mortintaj` sen `MALBONE`. |
+
+##### Fazo 3: `cargo-deny` kaj permesila kontrolo (Versio 0.8.2)
+
+**Celo.** Certigi, ke neniu malpermesita aŭ kopilefta permesilo eniras la
+dependaĵaron.
+
+**Enhavo**:
+* Aldoni `cargo-deny` al la DI-ilaro.
+* Krei `deny.toml` en la radiko de la deponejo.
+* Agordi permesilajn regulojn: permesi MIT, Apache-2.0, BSD-3 kaj
+  Unicode-DFS; malpermesi GPL, AGPL kaj LGPL (krom se statike ligita kaj
+  permesita).
+* Aldoni `cargo deny check` al `just kontroli` aŭ al aparta DI-paŝo.
+
+**Evitindaj eraroj**:
+* **Transitivaj dependaĵoj:** Uzu apartigon laŭ `[build-dependencies]` kaj
+  `[dev-dependencies]` en `deny.toml`, por eviti falsajn pozitivojn.
+* **Ĝisdatigoj:** Se la reto estas blokita, uzu `--offline` aŭ certigu retan
+  aliron en CI.
+
+**Akceptkriterioj**:
+
+| Kriterio | Stato | Pruvo |
+| --- | --- | --- |
+| `cargo deny check` estas verda | Pruvota | La komando finiĝas kun exit code 0 en DI. |
+| Neniu GPL/AGPL | Pruvota | La raporto de `cargo-deny` montras neniujn malpermesitajn permesilojn. |
+
+##### Fazo 4: Purgado de `#[allow]` kaj Ring 3-escepta izolado (Versio 0.8.3)
+
+**Celo.** Plene konformi al la Kvalita Konstitucio (§9) kaj plibonigi la
+robustecon de la kerno.
+
+**Enhavo**:
+* Forigi ĉiujn restantajn `#[allow(...)]`-ojn menciitajn en §9.3 (M15
+  `aarch64` dead_code, strukturaj bufroj).
+* Plibonigi la IDT-esceptajn traktilojn: `#UD`, `#DE` kaj `#OF` el Ring 3 ne
+  devas haltigi la kernon (paniko), sed devas fini la procezon per
+  `planisto::morti()`.
+* Aldoni teston, kie `horizonto` intence kaŭzas `#UD` (per `ud2`) kaj
+  kontrolu, ke la kerno pluvivas.
+
+**Evitindaj eraroj**:
+* **Malkaŝita morta kodo:** Forigi `#[allow(dead_code)]` povas kaŭzi
+  `clippy`-erarojn; vere mortan kodon forigu, testan kodon ŝirmu per
+  `#[cfg(test)]`.
+* **Escepta purigo:** Post Ring 3-escepto la programa montrilo montras al la
+  kulpa instrukcio; la kerno ne rajtas reeniri ĝin (senfina buklado) — voku
+  `planisto::morti()` rekte el la traktilo.
+
+**Akceptkriterioj**:
+
+| Kriterio | Stato | Pruvo |
+| --- | --- | --- |
+| Neniu senjusta `#[allow]` | Pruvota | `grep -r "#\[allow" mikerno/src` montras nur liniojn kun `PERMESO-JUSTIFIKO`. |
+| Ring 3 `#UD` ne mortigas la kernon | Pruvota | `[eraro] procezo N: nevalida instrukcio ĉe ...` estas presata, kaj la kerno atingas `fina stato`. |
+
+##### Fazo 5: Dokumentara sinkronigo kaj 1.0-preteco (Versio 0.8.4)
+
+**Celo.** Certigi, ke la dokumentaro perfekte spegulas la kodon kaj ke ĉiuj
+1.0-kriterioj estas plenumitaj.
+
+**Enhavo**:
+* Ĝisdatigi `README.md` kaj `docs/VORTARO.md` por la novaj Ligo-komandoj,
+  `SYS_BRK`, `SYS_EXEC` kaj `SYS_LANĜI`.
+* Krei skripton `tools/dokumentaro.sh`, kiu kontrolas, ĉu la sistemvokaj
+  numeroj en `libmikerno` kongruas kun la dokumentaro.
+* Revizii §8 (Difino de «1.0») kaj marki ĉiujn punktojn kiel plenumitajn.
+* Prepari la anoncon por la eldono 1.0.
+
+**Evitindaj eraroj**:
+* **Mana sinkronigo:** Ne lasu la dokumentaron esti redaktata mane, se ĝi
+  povas esti generata; uzu `rustdoc` aŭ skriptojn por eltiri la sistemvokajn
+  tabelojn el `libmikerno`.
+* **Versia malkongruo:** Certigu, ke `tools/versio.sh` ankaŭ kontrolas la
+  novajn dokumentajn dosierojn.
+
+**Akceptkriterioj**:
+
+| Kriterio | Stato | Pruvo |
+| --- | --- | --- |
+| Dokumentaro kongruas kun kodo | Pruvota | `tools/dokumentaro.sh --kontroli` estas verda. |
+| Ĉiuj 1.0-kriterioj plenumitaj | Pruvota | La listo en §8 havas nur «Pruvita» aŭ «Plenumita» statojn. |
+
+**Akceptkriterioj de la mejloŝtono.** Ĉiu tirpeto plenumas `fmt`, `clippy`,
+`konstruo`, `kani` kaj la QEMU-smokan teston; la ISO estas artefakto de DI, ne
+permana dosiero.
+
+#### 1a. Fazo 1 — efektivigita (0.8.0)
+
+**Nova laborloka membro `kernologiko`.** La arkitekture sendependa logiko
+translokiĝis el `mikerno/src` en apartan `no_std`-bibliotekon, kiu per
+`#![cfg_attr(not(test), no_std)]` ekster testoj restas `no_std`, sed en
+gastigantaj testoj rajtas uzi `std`. Ĝi enhavas la modulojn:
+
+- `memoro` — `MemoraMapo`, `MemoraRegiono`, `RegionaTipo`, `Modulo` kaj la
+  kapacitaj konstantoj;
+- `adreso` — `VirtuaAdreso`, `FizikaAdreso`, `PaĝaPermesoj`, `PaĝaEraro`,
+  `kontroli_fenestron` kaj la uzantfenestraj konstantoj;
+- `preta_vico` — la cikla FIFO `PretaVico`;
+- `mesagujo` — `Mesagujo`, `Ero`, `Eraro::Plena` kaj `MAKSAJ_MESAGOJ`;
+- `vekotemporizilo` — la minimuma kupo `Vekotemporizilo`;
+- `snds` — la bild-parsejo (`Inodo`, `Superbloko`, `haketi`, `ero_nomo`,
+  `kontroli_inodon`) kun la FNV-1a-konstantoj.
+
+La kerno nun nur re-eksportas ĉi tiujn nomojn, do la identigiloj en la cetera
+kodo restas la samaj. La Kani-pruvoj de `kerno/ik.rs` kaj
+`kerno/vekotemporizilo.rs` uzas la publikajn diagnozajn alirilojn `nombro()`,
+`ero(i)` kaj `kohera()`, kiuj portas `#[doc(hidden)]` kaj estas mallarĝaj
+legiloj sen efiko al la produkta konduto.
+
+**Testoj.** Ses `#[cfg(test)]`-moduloj enhavas 61 testkazojn:
+`memoro` 6, `adreso` 9, `preta_vico` 5, `mesagujo` 8, `vekotemporizilo` 8,
+`snds` 25. Inter ili estas la limaj kazoj postulataj de la plano — plena
+mesaĝujo rifuzas pliajn erojn, malplena vico redonas `None`, adreso trans la
+uzanta fenestro estas rifuzata (`PaĝaEraro::NevalidaAdreso`), nevalidaj
+superblokoj kaj inodoj, nedisigebla UTF-8 en ero-nomo, FNV-1a-kontrolvaloroj
+kaj kohero de la kupo post pluraj operacioj. Rulado:
+
+```
+$ just testoj
+running 61 tests
+test result: ok. 61 passed; 0 failed
+```
+
+**Simulitaj `KadraAlokilo`/`PaĝaTablo`.** La plano proponis generikan
+abstrakcion por ambaŭ. Tia ŝanĝo tuŝus dekojn da `PaĝaTablo`-alvokoj kaj
+`KadraAlokilo`-uzoj, sen alporti novajn testkazojn: la puraj reguloj jam
+testiĝas per `kernologiko`, kaj `KadraAlokilo` posedas `#[cfg(kani)]`-spegulon,
+kiun la pruvoj uzas. La generika abstrado restas malferma eblo por posta Fazo;
+la du akceptkriterioj de Fazo 1 (sen QEMU, ≥ 20 kazoj) estas plenumitaj.
+
+**Pordego.** `just kontroli` nun komenciĝas per `just testoj`, kiu rulas
+`cargo test -p kernologiko --target <gastiganto>`; DI uzas la saman resepton,
+do la testoj estas parto de `kontroli-kaj-konstrui`. `tools/kodlinioj.sh`
+nombriĝas ankaŭ `kernologiko/src` kaj preterlasas la `#[cfg(test)]`-blokojn,
+ĉar ili ne eniras la kernan bildon. La loka pordego finiĝis sen eraro
+(`bash tools/versio.sh --kontroli` → «ĉiuj dokumentaj lokoj kongruas kun
+0.8.0», `just testoj` → 61 passed, `cargo fmt`, ambaŭ `clippy`-vokoj kaj
+`cargo build --workspace --release`).
+
+**Lokaj rezultoj (2026-11-20, versio 0.8.0; ISO-oj konstruitaj antaŭ la
+puŝo, por praŝarĝa kontrolo).**
+
+| Vojo | Linio |
+| --- | --- |
+| x86_64 ISO (Limine) | `[MiKerno] Saluton, mi estas MiKerno v0.8.0!`; `[konservado] virtio-blk (PCI): 256 sektoroj, 512 bajtoj po sektoro`; `[dosiersistemo] SNDS: 6 dosieroj, 1 dosierujo. Haketo: 0x73e961eae12ef556`; `Ligo 0.1 — objekta ŝelo de Horizonto · ABI 2` |
+| arm64 ISO (UEFI + ramfb) | `[MiKerno] Saluton, mi estas MiKerno v0.8.0!`; `[konservado] virtio-blk (MMIO): 256 sektoroj, 512 bajtoj po sektoro`; `[dosiersistemo] SNDS: 6 dosieroj, 1 dosierujo. Haketo: 0x65a91a437d299007`; `Ligo 0.1 — objekta ŝelo de Horizonto · ABI 2` |
+
+La SNDS-haketoj diferencas de tiuj de 0.7.4, ĉar la aldonitaj
+`horizonto.elf`/`saluto.elf` estis religitaj el la nova laborloko.
+
+**Versio.** 0.8.0 (Fazo 1).
 
 ---
 

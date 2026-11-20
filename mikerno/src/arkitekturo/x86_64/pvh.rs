@@ -5,9 +5,10 @@ use core::slice;
 
 use crate::kunhavigita::Kunhavigita;
 use crate::memoro::{
-    EniraEraro, EniraInformo, KADRA_GRANDO, MAKSAJ_MODULOJ, MAKSAJ_REGIONOJ, MemoraMapo,
-    MemoraRegiono, Modulo, RegionaTipo,
+    EniraEraro, EniraInformo, KADRA_GRANDO, MAKSAJ_MODULOJ, MemoraMapo, MemoraRegiono, Modulo,
+    RegionaTipo,
 };
+use kernologiko::memoro::MAKSAJ_REGIONOJ;
 
 const MAGIO: u32 = 0x336e_c578;
 const REZERVOJ: usize = 8 + MAKSAJ_MODULOJ;

@@ -1,119 +1,9 @@
 //! Minimum-kupo de dormantaj fadenoj, ordigita laŭ absoluta temporizila tiko.
 //!
-//! Ĉiu fadeno havas maksimume unu eron. `pozicioj` tenas la indicon en la
-//! tabelo, do enigo, forigo kaj anstataŭigo restas O(log n) sen memora
-//! alokado: la kapacito estas la nombro de planeblaj fadenoj.
+//! La efektivigo loĝas en `kernologiko::vekotemporizilo`, kie ĝi testeĝas sur
+//! la gastiganto; ĉi tiu modulo nur re-eksportas ĝin por la planisto.
 
-use super::objekto::FadenoId;
-use super::planisto::MAKSAJ_FADENOJ;
-
-/// Mankanta indico en `pozicioj`.
-const MANKAS: usize = usize::MAX;
-
-pub struct Vekotemporizilo {
-    eroj: [(u64, FadenoId); MAKSAJ_FADENOJ],
-    pozicioj: [usize; MAKSAJ_FADENOJ + 1],
-    nombro: usize,
-}
-
-impl Vekotemporizilo {
-    pub const fn nova() -> Self {
-        Self {
-            eroj: [(0, 0); MAKSAJ_FADENOJ],
-            pozicioj: [MANKAS; MAKSAJ_FADENOJ + 1],
-            nombro: 0,
-        }
-    }
-
-    fn pozicio(&self, id: FadenoId) -> Option<usize> {
-        let pozicio = *self.pozicioj.get(id as usize)?;
-        (pozicio != MANKAS).then_some(pozicio)
-    }
-
-    /// Enigu la fadenon aŭ anstataŭigu ĝian limdaton.
-    pub fn enmeti(&mut self, id: FadenoId, limdato: u64) {
-        if let Some(pozicio) = self.pozicio(id) {
-            self.eroj[pozicio] = (limdato, id);
-            self.supren(pozicio);
-            self.malsupren(pozicio);
-            return;
-        }
-        assert!(self.nombro < self.eroj.len(), "la veka kupo superpleniĝis");
-        let pozicio = self.nombro;
-        self.nombro += 1;
-        self.eroj[pozicio] = (limdato, id);
-        self.pozicioj[id as usize] = pozicio;
-        self.supren(pozicio);
-    }
-
-    /// Forigu la fadenon kaj redonu ĝian limdaton, se ĝi estis en la kupo.
-    pub fn forigi(&mut self, id: FadenoId) -> Option<u64> {
-        let pozicio = self.pozicio(id)?;
-        let limdato = self.eroj[pozicio].0;
-        self.pozicioj[id as usize] = MANKAS;
-        self.nombro -= 1;
-        if pozicio != self.nombro {
-            let lasta = self.eroj[self.nombro];
-            self.eroj[pozicio] = lasta;
-            self.pozicioj[lasta.1 as usize] = pozicio;
-            self.supren(pozicio);
-            self.malsupren(pozicio);
-        }
-        Some(limdato)
-    }
-
-    /// La plej frua limdato, sen forigo.
-    pub fn pinti(&self) -> Option<(u64, FadenoId)> {
-        (self.nombro > 0).then(|| self.eroj[0])
-    }
-
-    /// Forigu kaj redonu la eron kun la plej frua limdato.
-    pub fn elpreni(&mut self) -> Option<(u64, FadenoId)> {
-        let (limdato, id) = self.pinti()?;
-        self.forigi(id);
-        Some((limdato, id))
-    }
-
-    fn interŝanĝi(&mut self, a: usize, b: usize) {
-        if a == b {
-            return;
-        }
-        self.eroj.swap(a, b);
-        self.pozicioj[self.eroj[a].1 as usize] = a;
-        self.pozicioj[self.eroj[b].1 as usize] = b;
-    }
-
-    fn supren(&mut self, mut pozicio: usize) {
-        while pozicio > 0 {
-            let patro = (pozicio - 1) / 2;
-            if self.eroj[pozicio] >= self.eroj[patro] {
-                break;
-            }
-            self.interŝanĝi(pozicio, patro);
-            pozicio = patro;
-        }
-    }
-
-    fn malsupren(&mut self, mut pozicio: usize) {
-        loop {
-            let maldekstra = 2 * pozicio + 1;
-            if maldekstra >= self.nombro {
-                break;
-            }
-            let dekstra = maldekstra + 1;
-            let infano = if dekstra < self.nombro && self.eroj[dekstra] < self.eroj[maldekstra] {
-                dekstra
-            } else {
-                maldekstra
-            };
-            if self.eroj[pozicio] <= self.eroj[infano] {
-                break;
-            }
-            self.interŝanĝi(pozicio, infano);
-            pozicio = infano;
-        }
-    }
-}
+pub use kernologiko::vekotemporizilo::Vekotemporizilo;
 
 #[cfg(kani)]
 mod kani_proofs {
@@ -122,6 +12,7 @@ mod kani_proofs {
     //! arbitrajn limdatojn — por ke CBMC restu malpeza en CI.
 
     use super::*;
+    use kernologiko::MAKSAJ_FADENOJ;
 
     /// Limdatoj de la baza stato: malsamaj valoroj kun egalo (dufoje `7`) por
     /// ekzerci la komparojn de la kupo. La `0` de la fadeno `4` fiksas la
@@ -136,36 +27,6 @@ mod kani_proofs {
         }
     }
 
-    /// Ĉu la kupo estas kohera: ĉiu ero havas ĝustan indicon en `pozicioj`, la
-    /// identigiloj estas unikaj, la kupo-ordo validas kaj ambaŭ tabeloj kongruas.
-    fn kohera(kupo: &Vekotemporizilo) -> bool {
-        if kupo.nombro > MAKSAJ_FADENOJ {
-            return false;
-        }
-        let mut vidita = [false; MAKSAJ_FADENOJ + 1];
-        let mut indekso = 0;
-        while indekso < kupo.nombro {
-            let (_, id) = kupo.eroj[indekso];
-            let id = id as usize;
-            if id == 0 || id > MAKSAJ_FADENOJ || vidita[id] || kupo.pozicioj[id] != indekso {
-                return false;
-            }
-            vidita[id] = true;
-            if indekso > 0 && kupo.eroj[indekso] < kupo.eroj[(indekso - 1) / 2] {
-                return false;
-            }
-            indekso += 1;
-        }
-        let mut id = 0;
-        while id <= MAKSAJ_FADENOJ {
-            if (kupo.pozicioj[id] != MANKAS) != vidita[id] {
-                return false;
-            }
-            id += 1;
-        }
-        true
-    }
-
     /// Arbitra reenmeto konservas la kupon kohera kaj lasas la pinton je la
     /// fiksa minimumo `0`.
     #[kani::proof]
@@ -174,8 +35,8 @@ mod kani_proofs {
         let mut kupo = Vekotemporizilo::nova();
         plenigu(&mut kupo);
         kupo.enmeti(6, kani::any::<u8>() as u64);
-        assert!(kohera(&kupo));
-        assert_eq!(kupo.nombro, MAKSAJ_FADENOJ);
+        assert!(kupo.kohera());
+        assert_eq!(kupo.nombro(), MAKSAJ_FADENOJ);
         assert_eq!(kupo.pinti().map(|(limdato, _)| limdato), Some(0));
     }
 
@@ -195,7 +56,7 @@ mod kani_proofs {
             nombro += 1;
         }
         assert_eq!(nombro, MAKSAJ_FADENOJ);
-        assert!(kohera(&kupo));
+        assert!(kupo.kohera());
         assert_eq!(kupo.pinti(), None);
     }
 
@@ -209,11 +70,11 @@ mod kani_proofs {
         let celo = (kani::any::<u8>() % MAKSAJ_FADENOJ as u8 + 1) as u64;
         let nova = kani::any::<u8>() as u64;
         kupo.enmeti(celo, nova);
-        assert!(kohera(&kupo));
-        assert_eq!(kupo.nombro, MAKSAJ_FADENOJ);
+        assert!(kupo.kohera());
+        assert_eq!(kupo.nombro(), MAKSAJ_FADENOJ);
         assert_eq!(kupo.forigi(celo), Some(nova));
-        assert!(kohera(&kupo));
-        assert_eq!(kupo.nombro, MAKSAJ_FADENOJ - 1);
+        assert!(kupo.kohera());
+        assert_eq!(kupo.nombro(), MAKSAJ_FADENOJ - 1);
         assert_eq!(kupo.forigi(celo), None);
     }
 }

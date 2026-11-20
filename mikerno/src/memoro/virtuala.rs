@@ -1,8 +1,6 @@
 //! Arkitekture sendependa virtuala memoro: adresoj, permesoj kaj la trait-oj,
 //! per kiuj la nukleo priskribas paĝadon kaj adresajn spacojn.
 
-use core::fmt;
-
 use super::kadro::KadraAlokilo;
 use super::{KADRA_GRANDO, MemoraMapo};
 
@@ -50,156 +48,12 @@ pub fn kernaj_limoj() -> KernajLimoj {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct VirtuaAdreso(u64);
+pub use kernologiko::adreso::{
+    FizikaAdreso, PaĝaEraro, PaĝaPermesoj, UZANTA_BAZO, UZANTA_FINO, UZANTA_KUPO_BAZO,
+    UZANTA_KUPO_FINO, UZANTA_STAKO_GRANDE, UZANTA_STAKO_SUPRO, VirtuaAdreso,
+};
 
-impl VirtuaAdreso {
-    pub const fn nova(adreso: u64) -> Self {
-        Self(adreso)
-    }
-
-    pub const fn adreso(&self) -> u64 {
-        self.0
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct FizikaAdreso(u64);
-
-impl FizikaAdreso {
-    pub const fn nova(adreso: u64) -> Self {
-        Self(adreso)
-    }
-
-    pub const fn adreso(&self) -> u64 {
-        self.0
-    }
-}
-
-/// La komenco de la uzanta fenestro, super la identeca mapo de 4 GiB.
-pub const UZANTA_BAZO: u64 = 0x0000_0001_0000_0000;
-/// La supra limo de la uzanta fenestro en la kanonika malalta duono.
-pub const UZANTA_FINO: u64 = 0x0000_0080_0000_0000;
-/// Grando de la uzanta stako (64 KiB).
-pub const UZANTA_STAKO_GRANDE: usize = 64 * 1024;
-/// La pinto de la uzanta stako: bazo + 16 MiB; la stako kreskas malsupren.
-pub const UZANTA_STAKO_SUPRO: u64 = UZANTA_BAZO + 16 * 1024 * 1024;
-/// La bazo de la uzanta kupo (datumsegmento), 16 MiB super la stakpinto.
-pub const UZANTA_KUPO_BAZO: u64 = UZANTA_STAKO_SUPRO + 16 * 1024 * 1024;
-/// La supra limo de la uzanta kupo: ĝi finiĝas antaŭ la sekreta paĝo.
-pub const UZANTA_KUPO_FINO: u64 = 0x0000_0002_0000_0000;
-
-/// Rajtoj de unu paĝo. Legeblo ĉiam ĉeestas: la x86_64-backendo ne subtenas
-/// tute nelegeblajn paĝojn.
-#[derive(Clone, Copy)]
-pub struct PaĝaPermesoj {
-    pub skribebla: bool,
-    pub plenumebla: bool,
-    /// `false` por frambufa MMIO: la paĝo estas nekaŝebla (PCD).
-    pub kaŝebla: bool,
-    /// `true` por Ring 3-atingeblaj paĝoj: la bito `U` ĉe ĉiu nivelo.
-    pub uzanta: bool,
-}
-
-impl PaĝaPermesoj {
-    pub const SKRIBA: Self = Self {
-        skribebla: true,
-        plenumebla: false,
-        kaŝebla: true,
-        uzanta: false,
-    };
-
-    pub const SKRIBA_SENKAŜE: Self = Self {
-        skribebla: true,
-        plenumebla: false,
-        kaŝebla: false,
-        uzanta: false,
-    };
-
-    /// Kerna kodo (`.text`): Ring 0 rajtas legi kaj plenumi, ne skribi.
-    pub const KERNA_KODO: Self = Self {
-        skribebla: false,
-        plenumebla: true,
-        kaŝebla: true,
-        uzanta: false,
-    };
-
-    /// Kernaj nurlegaj datumoj (`.rodata`, moduloj): sen skribado, sen plenumo.
-    pub const KERNA_LEGA: Self = Self {
-        skribebla: false,
-        plenumebla: false,
-        kaŝebla: true,
-        uzanta: false,
-    };
-
-    /// Kernaj datumoj, `.bss` kaj la cetera uzebla RAM: skribebla, sen plenumo.
-    pub const KERNA_DATUMOJ: Self = Self {
-        skribebla: true,
-        plenumebla: false,
-        kaŝebla: true,
-        uzanta: false,
-    };
-
-    /// Uzantaj datumoj kaj stako: Ring 3 rajtas legi kaj skribi, sen plenumo.
-    pub const UZANTA_DATUMOJ: Self = Self {
-        skribebla: true,
-        plenumebla: false,
-        kaŝebla: true,
-        uzanta: true,
-    };
-
-    /// Nurlega uzanta paĝo (ekz. `.rodata`).
-    pub const UZANTA_LEGA: Self = Self {
-        skribebla: false,
-        plenumebla: false,
-        kaŝebla: true,
-        uzanta: true,
-    };
-
-    /// Uzanta kodo: Ring 3 rajtas legi kaj plenumi, sen skribi.
-    pub const UZANTA_KODO: Self = Self {
-        skribebla: false,
-        plenumebla: true,
-        kaŝebla: true,
-        uzanta: true,
-    };
-}
-
-impl fmt::Display for PaĝaPermesoj {
-    /// Mallonga formo por diagnozo: `R`, `RX`, `RW NX`, `RWX` plus `U`.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("R")?;
-        if self.skribebla {
-            f.write_str("W")?;
-        }
-        if self.plenumebla {
-            f.write_str("X")?;
-        } else {
-            f.write_str(" NX")?;
-        }
-        if self.uzanta {
-            f.write_str(" U")?;
-        }
-        Ok(())
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum PaĝaEraro {
-    NevalidaAdreso,
-    Konflikto,
-    Elĉerpita,
-}
-
-impl fmt::Display for PaĝaEraro {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(match self {
-            Self::NevalidaAdreso => "adreso aŭ kadro ne estas paĝ-aliniiĝinta",
-            Self::Konflikto => "paĝo jam mapita aŭ grandega paĝo blokas la operacion",
-            Self::Elĉerpita => "neniu libera kadro por paĝa tabelo",
-        })
-    }
-}
+use kernologiko::adreso::kontroli_fenestron;
 
 pub trait PaĝaTablo {
     fn mapigi(
@@ -236,21 +90,6 @@ pub trait PaĝaTablo {
         };
         self.mapigi(virtuala, fizika, permesoj, alokilo)
     }
-}
-
-/// Kontrolu, ke `[adreso, adreso + longo)` kuŝas tute en la uzanta fenestro
-/// sen ciferpremo. `longo == 0` estas ĉiam valida.
-fn kontroli_fenestron(adreso: u64, longo: usize) -> Result<(), PaĝaEraro> {
-    if longo == 0 {
-        return Ok(());
-    }
-    let fino = adreso
-        .checked_add(longo as u64)
-        .ok_or(PaĝaEraro::NevalidaAdreso)?;
-    if adreso < UZANTA_BAZO || fino > UZANTA_FINO {
-        return Err(PaĝaEraro::NevalidaAdreso);
-    }
-    Ok(())
 }
 
 pub trait AdresaSpaco: PaĝaTablo {

@@ -4,7 +4,7 @@ use crate::arkitekturo::Kunteksto;
 use crate::memoro::virtuala::VirtuaAdreso;
 
 pub type ProcezaId = u64;
-pub type FadenoId = u64;
+pub use kernologiko::FadenoId;
 pub type FadenoEnirpunkto = fn(FadenoId);
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

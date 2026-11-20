@@ -29,6 +29,10 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `tirpeto` | pull request (PR) | `pull_request` restas kiel la nomo de la GitHub-events. |
 | `Cargo-laborloko` | Cargo workspace | La radika `[workspace]` en `Cargo.toml`. |
 | `kesto` | crate | `crate` restas kiel la Rust-ŝlosilvorto. |
+| `kernologiko` | architecture-independent kernel logic | La laborloka membro `kernologiko`, kie loĝas la puraj moduloj; la kerno ilin re-eksportas. |
+| `unu-testo` | unit test | Bloko `#[cfg(test)]`; ruliĝas per `just testoj`. |
+| `gastiganto` | host | La maŝino, sur kiu la unu-testoj ruliĝas, kontraste al la barela celo. |
+| `simulaĵo` | mock | Anstataŭaĵo por aparatara aŭ stata tavolo; la plano nomas ĝin «mock». |
 | `pruvo` | Kani harness / proof | Unu funkcio markita per `#[kani::proof]`; la matrico `kani-kontroli`. |
 | `statika analizo` | lint | `cargo clippy`; neniam uzu `lint` en tekstoj. |
 | `Eldono` | GitHub Release | Publikigita versio kun la ISO-aktivaĵoj. |
