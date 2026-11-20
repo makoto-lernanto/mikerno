@@ -173,6 +173,7 @@ eniras la kernan bildon.
 | 2026-11-20 | 0.8.1 | 63 | 15196 | 11819 | 1989 | 1388 |
 | 2026-11-20 | 0.8.1 | 63 | 15196 | 11819 | 1989 | 1388 |
 | 2026-11-20 | 0.8.2 | 63 | 15196 | 11819 | 1989 | 1388 |
+| 2026-11-20 | 0.8.2 | 63 | 15196 | 11819 | 1989 | 1388 |
 
 ---
 
@@ -2018,7 +2019,7 @@ dependaĵaron.
 
 | Kriterio | Stato | Pruvo |
 | --- | --- | --- |
-| `cargo deny check` estas verda | Loke jes; DI pruvota | `just permesiloj` la 2026-11-20 per cargo-deny 0.22.0: `advisories ok, bans ok, licenses ok, sources ok`, eksitkodo 0. La DI-tasko `permesiloj-kontroli` konfirmos post la puŝo. |
+| `cargo deny check` estas verda | Jes | `just permesiloj` la 2026-11-20 per cargo-deny 0.22.0: `advisories ok, bans ok, licenses ok, sources ok`, eksitkodo 0. En DI la tasko `permesiloj-kontroli` sukcesis en la runo [#44752511554](https://github.com/makoto-lernanto/mikerno/actions/runs/44752511554). |
 | Neniu GPL/AGPL | Jes | La laborloko havas neniun eksteran dependaĵon (`Cargo.lock` listigas nur la kvin membrojn), do neniu GPL/AGPL/LGPL-pakaĵo eniras la grafon; la listo `allow` ilin ne enhavas. |
 
 **Efektivigo (0.8.2).** La radika `deny.toml` permesas nur MIT, Apache-2.0,
@@ -2034,6 +2035,26 @@ ebligas `just permesiloj`; en DI aparta tasko `permesiloj-kontroli` instalas
 `cargo-deny` kaj rulas `cargo deny check`, do `just kontroli` restas rulebla
 sen la ilo. Ĉar la laborloko nun havas neniun eksteran dependaĵon, la kontrolo
 estas precipe gardo por estontaj aldonoj.
+
+**Nuba DI (2026-11-20).** La runo
+[#44752511554](https://github.com/makoto-lernanto/mikerno/actions/runs/44752511554)
+ĉe `8486228` havas 53 verdajn taskojn, inkluzive la novan
+`permesiloj-kontroli`. Unu QEMU-tasko (`x86_64 BIOS 128M`) unue estis nuligita,
+ĉar `apt-get install` atingis la 15-minutan tempolimon de la tasko; post
+`gh run rerun --failed` ĝi sukcesis sen kodŝanĝo.
+
+**Eldono.** La Eldono
+[v0.8.2](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.8.2) montras
+al `8486228` kaj enhavas ambaŭ ISO-ojn, konstruitajn el la puŝita kodo:
+
+| Dosiero | SHA-256 |
+| --- | --- |
+| `mikerno.iso` | `f54869d990441837f23a9cb3eebd3ce7e0da124dfba47613bcb650e552b61a84` |
+| `mikerno-arm.iso` | `0a0d458bfec705230013b168ae3e189328b3b742652e7f0e7c345cf898113623` |
+
+La praŝarĝoj printis `[MiKerno] … v0.8.2!`, la saman pikselan haketon
+`0xecf1f6dbe1421575` kaj la finan staton sen `MALBONE` (1008 tikoj sur
+`x86_64`, 1007 sur `arm64`).
 
 ##### Fazo 4: Purgado de `#[allow]` kaj Ring 3-escepta izolado (Versio 0.8.3)
 
