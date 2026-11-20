@@ -164,6 +164,43 @@ window.TRADUKOJ_ANGLA = {
   "eligo.noto":
     "Selected lines from the real output; the full protocol is in MEJLOSTONOJ.md.",
 
+  "ligo.titolo": "The Ligo command reference — an example for every command",
+  "ligo.teksto":
+    "All 20 commands of the current shell (Ligo 0.1, ABI 2), each with an example you can type at the <code>ligo:~&gt;</code> prompt. The stages <code>filtri</code>, <code>ordigi</code>, <code>unua</code>, <code>sumi</code>, <code>nombri</code>, <code>montri</code> and <code>teksto</code> work only after <code>listi</code> or <code>procezoj</code>.",
+  "ligo.tabelo.aria": "Ligo commands and examples",
+  "ligo.kapo.komando": "Command",
+  "ligo.kapo.ekzemplo": "Example",
+  "ligo.kapo.signifo": "What it does",
+  "ligo.k.helpu": "Shows the command table and the pipeline example.",
+  "ligo.k.listi":
+    "Lists files with name, type, size and handle; with a path, lists that directory.",
+  "ligo.k.legi": "Reads a text file and shows it as a card with a handle.",
+  "ligo.k.procezoj":
+    "Shows the process table: pid, name, state, memory and permissions.",
+  "ligo.k.mortigi": "Ends a process; the shell (pid 1) is protected.",
+  "ligo.k.ruli": "Launches an ELF image from SNDS as a new process.",
+  "ligo.k.eldiri": "Creates a message record with the noto field.",
+  "ligo.k.pri":
+    "Shows the FluoU and kernel versions, the ABI version and the architectures.",
+  "ligo.k.temo": "Switches the theme to dark or light.",
+  "ligo.k.akcento": "Changes the accent: gold, coral, azure, green, violet or blue.",
+  "ligo.k.eniro": "Opens the Eniro command palette (temporarily with Ctrl+E).",
+  "ligo.k.filtri":
+    "Keeps only records that satisfy the condition; numeric fields accept >, <, >=, <=, == and !=, text fields ==, != and entenas.",
+  "ligo.k.ordigi": "Sorts by a field; malkreske reverses the order.",
+  "ligo.k.unua": "Takes the first n records.",
+  "ligo.k.sumi": "Sums a numeric field and shows a single scalar value.",
+  "ligo.k.nombri": "Shows the number of records as a scalar.",
+  "ligo.k.montri":
+    "Projects the selected columns; without arguments it shows the default ones.",
+  "ligo.k.teksto":
+    "Crosses the explicit text boundary: one record per line, no table.",
+  "ligo.k.purigi": "Clears the terminal and rewrites the welcome message.",
+  "ligo.k.fini": "Ends the shell; also Ctrl+D on an empty line.",
+  "ligo.noto":
+    "The examples use the files in the current SNDS image; <code>saluto.elf</code> is added by the launcher (<code>just ruli</code> or <code>just ruli-iso</code>).",
+  "ligo.montro": "Try it in the live view",
+
   "elŝuti.titolo": "Download and boot",
   "elŝuti.teksto":
     "Two ISO images for QEMU. Both were booted headlessly before the release; the console output above comes from them.",

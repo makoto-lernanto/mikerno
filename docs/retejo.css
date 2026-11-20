@@ -1619,6 +1619,91 @@ main {
   color: #A7ADCC;
 }
 
+/* ── Ligo-komandoj ───────────────────────────────────────────────────── */
+.ligo-komandoj {
+  margin-top: 26px;
+}
+
+.ligo-komandoj h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.ligo-komandoj > p {
+  margin: 0 0 14px;
+  max-width: 82ch;
+  color: var(--teksto2);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.komanda-tabelo-kontenero {
+  overflow-x: auto;
+  border: 1px solid var(--limo);
+  border-radius: var(--radiuso);
+  background: color-mix(in srgb, var(--surfaco) 72%, transparent);
+}
+
+.komanda-tabelo {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.komanda-tabelo th,
+.komanda-tabelo td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--limo2);
+  text-align: left;
+  vertical-align: top;
+}
+
+.komanda-tabelo thead th {
+  font: 600 10.5px/1.5 var(--mono);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--teksto3);
+  background: color-mix(in srgb, var(--teksto) 3%, transparent);
+}
+
+.komanda-tabelo tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.komanda-tabelo tbody tr:hover {
+  background: color-mix(in srgb, var(--akcento) 5%, transparent);
+}
+
+.komanda-tabelo code {
+  color: var(--akcento);
+  white-space: nowrap;
+}
+
+.komanda-tabelo td:nth-child(1) {
+  width: 24%;
+}
+
+.komanda-tabelo td:nth-child(2) {
+  width: 38%;
+}
+
+.komanda-tabelo td:nth-child(3) {
+  color: var(--teksto2);
+}
+
+.ligo-noto {
+  margin: 12px 0 0;
+  color: var(--teksto3);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.ligo-noto a {
+  margin-left: 4px;
+}
+
 /* ── Elŝuto ──────────────────────────────────────────────────────────── */
 .elŝutoj {
   display: grid;

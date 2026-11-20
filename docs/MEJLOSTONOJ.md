@@ -1099,6 +1099,12 @@ version per JavaScript.
 la paĝon kaj la tradukajn dosierojn; la foliumila kontrola trairo restas farebla
 sur la publikigita adreso.
 
+**Ligo-komandaro (2026-11-20).** Apud la seria eligo la retejo nun montras
+tabelon de ĉiuj 20 komandoj de Ligo kun ekzemplo por ĉiu; la angla mapado
+ricevis la samajn tekstojn, kaj `FLUOU.md` §8.3 listigas la ekzemplojn. La
+stadioj restas ligitaj al `listi` aŭ `procezoj`. Nur dokumentaro ŝanĝiĝis, do
+la ISO-oj ne estis rekonstruitaj.
+
 ---
 
 ## 5. Venontaj mejloŝtonoj

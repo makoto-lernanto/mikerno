@@ -660,6 +660,136 @@
             data-t="fenestro.remalfermi">Remalfermi</button>
         </div>
       </div>
+
+      <div class="ligo-komandoj" id="ligo-komandoj">
+        <h3 data-t="ligo.titolo">La komandaro de Ligo — ekzemplo por ĉiu komando</h3>
+        <p data-t-html="ligo.teksto">Ĉiuj 20 komandoj de la nuna ŝelo (Ligo 0.1, ABI 2),
+          kun ekzemplo tajpebla ĉe la prompto <code>ligo:~&gt;</code>. La stadioj
+          <code>filtri</code>, <code>ordigi</code>, <code>unua</code>,
+          <code>sumi</code>, <code>nombri</code>, <code>montri</code> kaj
+          <code>teksto</code> funkcias nur post <code>listi</code> aŭ
+          <code>procezoj</code>.</p>
+
+        <div class="komanda-tabelo-kontenero">
+          <table class="komanda-tabelo" aria-label="Komandoj de Ligo kaj ekzemploj"
+            data-t-aria="ligo.tabelo.aria">
+            <thead>
+              <tr>
+                <th data-t="ligo.kapo.komando">Komando</th>
+                <th data-t="ligo.kapo.ekzemplo">Ekzemplo</th>
+                <th data-t="ligo.kapo.signifo">Kion ĝi faras</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>helpu</code></td>
+                <td><code>helpu</code></td>
+                <td data-t="ligo.k.helpu">Montras la komandtabelon kaj la ekzemplon de dukto.</td>
+              </tr>
+              <tr>
+                <td><code>listi [vojo]</code></td>
+                <td><code>listi /notoj</code></td>
+                <td data-t="ligo.k.listi">Listigas dosierojn kun nomo, tipo, grandeco kaj tenilo; kun vojo, la enhavon de tiu dosierujo.</td>
+              </tr>
+              <tr>
+                <td><code>legi &lt;dosiero&gt;</code></td>
+                <td><code>legi bonveno.txt</code></td>
+                <td data-t="ligo.k.legi">Legas tekstan dosieron kaj montras ĝin kiel karton kun tenilo.</td>
+              </tr>
+              <tr>
+                <td><code>procezoj</code></td>
+                <td><code>procezoj</code></td>
+                <td data-t="ligo.k.procezoj">Montras la procezan tabelon: pid, nomo, stato, memoro kaj permesoj.</td>
+              </tr>
+              <tr>
+                <td><code>mortigi &lt;pid&gt;</code></td>
+                <td><code>mortigi 2</code></td>
+                <td data-t="ligo.k.mortigi">Finigas procezon; la ŝelo (pid 1) estas protektita.</td>
+              </tr>
+              <tr>
+                <td><code>ruli &lt;dosiero&gt;</code></td>
+                <td><code>ruli saluto.elf</code></td>
+                <td data-t="ligo.k.ruli">Lanĉas ELF-bildon el SNDS kiel novan procezon.</td>
+              </tr>
+              <tr>
+                <td><code>eldiri &lt;teksto&gt;</code></td>
+                <td><code>eldiri saluton</code></td>
+                <td data-t="ligo.k.eldiri">Kreas mesaĝan rekordon kun la kampo noto.</td>
+              </tr>
+              <tr>
+                <td><code>pri</code></td>
+                <td><code>pri</code></td>
+                <td data-t="ligo.k.pri">Montras la versiojn de FluoU kaj la kerno, la ABI-version kaj la arkojn.</td>
+              </tr>
+              <tr>
+                <td><code>temo &lt;malluma|hela&gt;</code></td>
+                <td><code>temo hela</code></td>
+                <td data-t="ligo.k.temo">Ŝanĝas la temon al malluma aŭ hela.</td>
+              </tr>
+              <tr>
+                <td><code>akcento &lt;nomo&gt;</code></td>
+                <td><code>akcento verdo</code></td>
+                <td data-t="ligo.k.akcento">Ŝanĝas la akcenton: oro, koralo, lazuro, verdo, viola aŭ bluo.</td>
+              </tr>
+              <tr>
+                <td><code>eniro</code></td>
+                <td><code>eniro</code></td>
+                <td data-t="ligo.k.eniro">Malfermas la komandan paletron Eniro (provizore per Ctrl+E).</td>
+              </tr>
+              <tr>
+                <td><code>filtri &lt;kampo&gt; &lt;operacio&gt; &lt;valoro&gt;</code></td>
+                <td><code>listi | filtri tipo == dosiero</code></td>
+                <td data-t="ligo.k.filtri">Konservas nur la rekordojn, kiuj plenumas la kondiĉon; nombraj kampoj akceptas &gt;, &lt;, &gt;=, &lt;=, == kaj !=, tekstaj kampoj ==, != kaj entenas.</td>
+              </tr>
+              <tr>
+                <td><code>ordigi &lt;kampo&gt; [malkreske]</code></td>
+                <td><code>listi | ordigi grandeco malkreske</code></td>
+                <td data-t="ligo.k.ordigi">Ordigas laŭ kampo; malkreske inversigas la ordon.</td>
+              </tr>
+              <tr>
+                <td><code>unua &lt;n&gt;</code></td>
+                <td><code>procezoj | unua 3</code></td>
+                <td data-t="ligo.k.unua">Prenas la unuajn n rekordojn.</td>
+              </tr>
+              <tr>
+                <td><code>sumi &lt;kampo&gt;</code></td>
+                <td><code>listi | sumi grandeco</code></td>
+                <td data-t="ligo.k.sumi">Sumas nombran kampon kaj montras unu skalan valoron.</td>
+              </tr>
+              <tr>
+                <td><code>nombri</code></td>
+                <td><code>listi | nombri</code></td>
+                <td data-t="ligo.k.nombri">Montras la nombron da rekordoj kiel skalaron.</td>
+              </tr>
+              <tr>
+                <td><code>montri [kampoj…]</code></td>
+                <td><code>procezoj | montri pid nomo memoro</code></td>
+                <td data-t="ligo.k.montri">Projekcias la elektitajn kolumnojn; sen argumentoj montras la defaŭltajn.</td>
+              </tr>
+              <tr>
+                <td><code>teksto</code></td>
+                <td><code>procezoj | teksto</code></td>
+                <td data-t="ligo.k.teksto">Transiras al la eksplicita teksta limo: unu rekordo po linio, sen tabelo.</td>
+              </tr>
+              <tr>
+                <td><code>purigi</code></td>
+                <td><code>purigi</code></td>
+                <td data-t="ligo.k.purigi">Malplenigas la terminalon kaj reskribas la bonvenon.</td>
+              </tr>
+              <tr>
+                <td><code>fini [kodo]</code></td>
+                <td><code>fini</code></td>
+                <td data-t="ligo.k.fini">Finas la ŝelon; ankaŭ Ctrl+D en malplena linio.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="ligo-noto"><span data-t-html="ligo.noto">La ekzemploj uzas la dosierojn de la nuna
+          SNDS-bildo; <code>saluto.elf</code> estas aldonata de la lanĉilo (<code>just ruli</code> aŭ
+          <code>just ruli-iso</code>).</span>
+          <a href="FLUOU-montro.html" data-t="ligo.montro">Provi en la vida montro</a>.</p>
+      </div>
     </section>
 
     <section class="sceno" id="elŝuti" data-aperu>

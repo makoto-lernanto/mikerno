@@ -531,17 +531,42 @@ stadio  := filtri | ordigi | unua | sumi | nombri | montri | teksto
 
 ### 8.3. Ekzemploj
 
+Ĉiu komando havas ekzemplon; la stadioj funkcias nur post `listi` aŭ
+`procezoj`.
+
+| Komando | Ekzemplo |
+| --- | --- |
+| `helpu` | `helpu` |
+| `listi [vojo]` | `listi /notoj` |
+| `legi <dosiero>` | `legi bonveno.txt` |
+| `procezoj` | `procezoj` |
+| `mortigi <pid>` | `mortigi 2` |
+| `ruli <dosiero>` | `ruli saluto.elf` |
+| `eldiri <teksto>` | `eldiri saluton` |
+| `pri` | `pri` |
+| `temo <malluma\|hela>` | `temo hela` |
+| `akcento <nomo>` | `akcento verdo` |
+| `eniro` | `eniro` |
+| `filtri <kampo> <operacio> <valoro>` | `listi \| filtri tipo == dosiero` |
+| `ordigi <kampo> [malkreske]` | `listi \| ordigi grandeco malkreske` |
+| `unua <n>` | `procezoj \| unua 3` |
+| `sumi <kampo>` | `listi \| sumi grandeco` |
+| `nombri` | `listi \| nombri` |
+| `montri [kampoj…]` | `procezoj \| montri pid nomo memoro` |
+| `teksto` | `procezoj \| teksto` |
+| `purigi` | `purigi` |
+| `fini [kodo]` | `fini` |
+
 ```text
 listi | filtri grandeco > 100 | ordigi grandeco malkreske | montri
 procezoj | filtri stato == Kuranta | montri pid nomo memoro
-legi manifesto.toml
 listi | sumi grandeco
 listi | nombri
-temo hela
 ```
 
-La unua ekzemplo legiĝas: «Listigu la dosierojn, konservu tiujn pli grandajn
+La unua dukto legiĝas: «Listigu la dosierojn, konservu tiujn pli grandajn
 ol 100 KiB, ordigu ilin malkreske laŭ grandeco kaj montru la rezulton.»
+`saluto.elf` venas de la lanĉilo (`just ruli` aŭ `just ruli-iso`).
 
 ---
 

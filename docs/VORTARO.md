@@ -474,7 +474,8 @@ Esperantajn vortojn sen ĉapelaj literoj kaj neniam la x-sistemon.
 
 La mesaĝa rekordo portas la kampon `noto`; `akcento` akceptas `oro`, `koralo`,
 `lazuro`, `verdo`, `viola` kaj `bluo` (`lazuro` estas la helblua akcento,
-`#4CC9FF`).
+`#4CC9FF`). Ekzemplo por ĉiu komando estas en `docs/FLUOU.md` §8.3 kaj en la
+retejo (`docs/index.html`, sekcio `#ligo-komandoj`).
 
 ## Protokolaj kaj aparataraj nomoj
 
