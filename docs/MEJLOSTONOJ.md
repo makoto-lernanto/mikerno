@@ -2112,6 +2112,26 @@ erarkodo=0x0; la procezo estas mortigata`,
 `[kerno] #UD-izolado (bone): procezo 3 malaperis; la kerno pluvivas`.
 La kontrolilo `tools/kontroli-qemu.sh` finiĝis sen `MALBONE` sur ambaŭ arkoj.
 
+**Nuba DI (2026-11-20).** La runo
+[#44765240714](https://github.com/makoto-lernanto/mikerno/actions/runs/44765240714)
+ĉe `01fde44` havas 53 verdajn taskojn. Denove unu QEMU-tasko
+(`x86_64 UEFI 256M`) estis nuligita, ĉar `apt-get install` atingis la
+15-minutan tempolimon de la tasko; post `gh run rerun --failed` ĝi sukcesis
+sen kodŝanĝo.
+
+**Eldono.** La Eldono
+[v0.8.3](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.8.3) montras
+al `01fde44` kaj enhavas ambaŭ ISO-ojn, konstruitajn el la puŝita kodo:
+
+| Dosiero | SHA-256 |
+| --- | --- |
+| `mikerno.iso` | `8ccb6a3bf8bffbc58ee794de56539168aca19c43868816ad3d986c4fa1ed9b49` |
+| `mikerno-arm.iso` | `34b09fa55b2f12b1cc87783e2d5297c312f81eeb714cd27b3ac538f9ce4eeae3` |
+
+La praŝarĝoj printis `[MiKerno] … v0.8.3!`, la saman pikselan haketon
+`0xecf1f6dbe1421575`, `[kerno] #UD-izolado (bone)` kaj la finan staton sen
+`MALBONE` (1023 tikoj sur `x86_64`, 1016 sur `arm64`).
+
 ##### Fazo 5: Dokumentara sinkronigo kaj 1.0-preteco (Versio 0.8.4)
 
 **Celo.** Certigi, ke la dokumentaro perfekte spegulas la kodon kaj ke ĉiuj
