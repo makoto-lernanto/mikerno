@@ -3,13 +3,11 @@
 //! Ĉi tiuj tipoj permesas al la nukleo pritrakti kadrojn kaj firmigajn
 //! raportojn sen koni la platforman aranĝon de la registroj.
 //!
-//! A1 ne ankoraŭ uzas ilin sur `arm64`; ili estos ligitaj en A3/A4.
-
-#![cfg_attr(target_arch = "aarch64", allow(dead_code))]
-
 /// Speco de virtio-transporto: PCI (x86_64) aŭ MMIO (arm64).
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum VirtioSpeco {
+    /// Nur `x86_64` konstruas ĉi tiun specon.
+    #[cfg(target_arch = "x86_64")]
     Pcia,
     /// Nur `arm64` konstruas ĉi tiun specon.
     #[cfg(target_arch = "aarch64")]
@@ -24,11 +22,14 @@ pub enum VirtioSpeco {
 pub struct VirtioTransporto {
     speco: VirtioSpeco,
     komuna: *mut u8,
+    #[cfg(target_arch = "x86_64")]
     sciiga: *mut u8,
     aparata: *mut u8,
+    #[cfg(target_arch = "x86_64")]
     sciiga_multobligo: u32,
 }
 
+#[cfg(target_arch = "x86_64")]
 mod pci_reg {
     pub const STATUS: u64 = 0x14;
     pub const DEVICE_FEATURE_SELECT: u64 = 0x00;
@@ -63,6 +64,7 @@ mod mmio_reg {
 }
 
 impl VirtioTransporto {
+    #[cfg(target_arch = "x86_64")]
     pub const fn nova_pcia(
         komuna: *mut u8,
         sciiga: *mut u8,
@@ -83,9 +85,7 @@ impl VirtioTransporto {
         Self {
             speco: VirtioSpeco::Mmio,
             komuna: bazo,
-            sciiga: bazo,
             aparata: bazo,
-            sciiga_multobligo: 1,
         }
     }
 
@@ -95,6 +95,7 @@ impl VirtioTransporto {
 
     pub fn stato(&self) -> u8 {
         match self.speco {
+            #[cfg(target_arch = "x86_64")]
             VirtioSpeco::Pcia => self.legi_u8(self.komuna, pci_reg::STATUS),
             // MMIO-registroj estas nur 32-bitaj; bajta aliro ne atingus la aparaton.
             #[cfg(target_arch = "aarch64")]
@@ -104,6 +105,7 @@ impl VirtioTransporto {
 
     pub fn agordi_staton(&self, valoro: u8) {
         match self.speco {
+            #[cfg(target_arch = "x86_64")]
             VirtioSpeco::Pcia => self.skribi_u8(self.komuna, pci_reg::STATUS, valoro),
             #[cfg(target_arch = "aarch64")]
             VirtioSpeco::Mmio => {
@@ -114,6 +116,7 @@ impl VirtioTransporto {
 
     pub fn legi_trajtojn(&self, paĝo: u32) -> u32 {
         match self.speco {
+            #[cfg(target_arch = "x86_64")]
             VirtioSpeco::Pcia => {
                 self.skribi_u32(self.komuna, pci_reg::DEVICE_FEATURE_SELECT, paĝo);
                 self.legi_u32(self.komuna, pci_reg::DEVICE_FEATURE)
@@ -128,6 +131,7 @@ impl VirtioTransporto {
 
     pub fn agordi_trajtojn(&self, paĝo: u32, valoro: u32) {
         match self.speco {
+            #[cfg(target_arch = "x86_64")]
             VirtioSpeco::Pcia => {
                 self.skribi_u32(self.komuna, pci_reg::DRIVER_FEATURE_SELECT, paĝo);
                 self.skribi_u32(self.komuna, pci_reg::DRIVER_FEATURE, valoro);
@@ -142,6 +146,7 @@ impl VirtioTransporto {
 
     pub fn elekti_vicon(&self, vico: u16) {
         match self.speco {
+            #[cfg(target_arch = "x86_64")]
             VirtioSpeco::Pcia => {
                 self.skribi_u16(self.komuna, pci_reg::QUEUE_SELECT, vico);
             }
@@ -154,6 +159,7 @@ impl VirtioTransporto {
 
     pub fn vica_grando(&self) -> u16 {
         match self.speco {
+            #[cfg(target_arch = "x86_64")]
             VirtioSpeco::Pcia => self.legi_u16(self.komuna, pci_reg::QUEUE_SIZE),
             #[cfg(target_arch = "aarch64")]
             VirtioSpeco::Mmio => self.legi_u32(self.komuna, mmio_reg::QUEUE_SIZE_MAX) as u16,
@@ -162,6 +168,7 @@ impl VirtioTransporto {
 
     pub fn agordi_vican_grandon(&self, grandeco: u16) {
         match self.speco {
+            #[cfg(target_arch = "x86_64")]
             VirtioSpeco::Pcia => {
                 self.skribi_u16(self.komuna, pci_reg::QUEUE_SIZE, grandeco);
             }
@@ -172,8 +179,10 @@ impl VirtioTransporto {
         }
     }
 
+    #[cfg(target_arch = "x86_64")]
     pub fn vica_sciiga_offsets(&self) -> u16 {
         match self.speco {
+            #[cfg(target_arch = "x86_64")]
             VirtioSpeco::Pcia => self.legi_u16(self.komuna, pci_reg::QUEUE_NOTIFY_OFF),
             // MMIO sciigas per la vica numero mem.
             #[cfg(target_arch = "aarch64")]
@@ -183,6 +192,7 @@ impl VirtioTransporto {
 
     pub fn agordi_vicajn_adresojn(&self, desc: u64, disponebla: u64, uzita: u64) {
         match self.speco {
+            #[cfg(target_arch = "x86_64")]
             VirtioSpeco::Pcia => {
                 self.skribi_u64(self.komuna, pci_reg::QUEUE_DESC, desc);
                 self.skribi_u64(self.komuna, pci_reg::QUEUE_DRIVER, disponebla);
@@ -210,6 +220,7 @@ impl VirtioTransporto {
 
     pub fn ebligi_vicon(&self) {
         match self.speco {
+            #[cfg(target_arch = "x86_64")]
             VirtioSpeco::Pcia => {
                 self.skribi_u16(self.komuna, pci_reg::QUEUE_ENABLE, 1);
             }
@@ -222,6 +233,7 @@ impl VirtioTransporto {
 
     pub fn sciigi(&self, vico: u16) {
         match self.speco {
+            #[cfg(target_arch = "x86_64")]
             VirtioSpeco::Pcia => {
                 let offset = self.vica_sciiga_offsets() as u64 * self.sciiga_multobligo as u64;
                 self.skribi_u16(self.sciiga, offset, vico);
@@ -236,6 +248,7 @@ impl VirtioTransporto {
     /// La kapacito de la aparato en 512-bajtaj sektoroj.
     pub fn kapacito(&self) -> u64 {
         let bazo = match self.speco {
+            #[cfg(target_arch = "x86_64")]
             VirtioSpeco::Pcia => 0,
             #[cfg(target_arch = "aarch64")]
             VirtioSpeco::Mmio => mmio_reg::DEVICE_CONFIG,
@@ -245,10 +258,12 @@ impl VirtioTransporto {
         malalta | (alta << 32)
     }
 
+    #[cfg(target_arch = "x86_64")]
     fn legi_u8(&self, bazo: *mut u8, offset: u64) -> u8 {
         unsafe { core::ptr::read_volatile(bazo.add(offset as usize)) }
     }
 
+    #[cfg(target_arch = "x86_64")]
     fn legi_u16(&self, bazo: *mut u8, offset: u64) -> u16 {
         unsafe { core::ptr::read_volatile(bazo.add(offset as usize).cast::<u16>()) }
     }
@@ -257,10 +272,12 @@ impl VirtioTransporto {
         unsafe { core::ptr::read_volatile(bazo.add(offset as usize).cast::<u32>()) }
     }
 
+    #[cfg(target_arch = "x86_64")]
     fn skribi_u8(&self, bazo: *mut u8, offset: u64, valoro: u8) {
         unsafe { core::ptr::write_volatile(bazo.add(offset as usize), valoro) }
     }
 
+    #[cfg(target_arch = "x86_64")]
     fn skribi_u16(&self, bazo: *mut u8, offset: u64, valoro: u16) {
         unsafe { core::ptr::write_volatile(bazo.add(offset as usize).cast::<u16>(), valoro) }
     }
@@ -269,20 +286,29 @@ impl VirtioTransporto {
         unsafe { core::ptr::write_volatile(bazo.add(offset as usize).cast::<u32>(), valoro) }
     }
 
+    #[cfg(target_arch = "x86_64")]
     fn skribi_u64(&self, bazo: *mut u8, offset: u64, valoro: u64) {
         unsafe { core::ptr::write_volatile(bazo.add(offset as usize).cast::<u64>(), valoro) }
     }
 }
 
 /// Speco de procesora escepto, rekonita de la malantaŭo.
+#[cfg(target_arch = "x86_64")]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum EsceptoTipo {
     PaĝaEraro,
     ProtektaEraro,
+    /// Divido per nulo (`#DE`).
+    DividaEraro,
+    /// Aritmetika troo (`#OF`).
+    TrooEraro,
+    /// Nevalida aŭ nekonata instrukcio (`#UD`).
+    NevalidaInstrukcio,
     Nekonata(u64),
 }
 
 /// Aliro al la konservita interrompa kadro sen koni la platformajn kampojn.
+#[cfg(target_arch = "x86_64")]
 pub trait SistemvokaKadro {
     /// La sistemvoka numero aŭ, por aliaj esceptoj, la vektoro.
     fn numero(&self) -> usize;

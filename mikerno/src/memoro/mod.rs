@@ -3,6 +3,7 @@
 pub mod kadro;
 pub mod virtuala;
 
+#[cfg(target_arch = "x86_64")]
 use core::fmt;
 
 pub use kernologiko::memoro::{
@@ -21,6 +22,7 @@ pub struct EniraInformo {
     pub moduloj: &'static [Modulo],
 }
 
+#[cfg(target_arch = "x86_64")]
 #[derive(Debug, Clone, Copy)]
 pub enum EniraEraro {
     NevalidaStarto,
@@ -32,6 +34,7 @@ pub enum EniraEraro {
     TroMultajModuloj,
 }
 
+#[cfg(target_arch = "x86_64")]
 impl fmt::Display for EniraEraro {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {

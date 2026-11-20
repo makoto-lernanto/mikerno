@@ -394,6 +394,7 @@ pub fn pravalorizi(spaco: &mut dyn AdresaSpaco, alokilo: &mut KadraAlokilo) -> R
     let trafiko =
         crate::arkitekturo::virtio_blk_transporto(spaco, alokilo).map_err(Eraro::Transporto)?;
     let speco = match trafiko.speco() {
+        #[cfg(target_arch = "x86_64")]
         VirtioSpeco::Pcia => "PCI",
         #[cfg(target_arch = "aarch64")]
         VirtioSpeco::Mmio => "MMIO",

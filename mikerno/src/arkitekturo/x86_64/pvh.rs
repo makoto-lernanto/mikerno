@@ -14,7 +14,6 @@ const MAGIO: u32 = 0x336e_c578;
 const REZERVOJ: usize = 8 + MAKSAJ_MODULOJ;
 
 #[repr(C)]
-#[allow(dead_code)]
 struct HvmStartInfo {
     magio: u32,
     versio: u32,
@@ -37,7 +36,6 @@ struct HvmMemmapEro {
 }
 
 #[repr(C)]
-#[allow(dead_code)]
 struct HvmModlistEro {
     adreso: u64,
     grando: u64,

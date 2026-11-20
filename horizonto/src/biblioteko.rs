@@ -3,8 +3,6 @@
 //! La protokolo venas el `libmikerno`; ĉi tiu modulo nur donas al la uzanta
 //! kodo Esperantajn nomojn sen montri la registran aranĝon.
 
-#![allow(dead_code)]
-
 use core::fmt::{self, Write};
 use core::sync::atomic::{AtomicUsize, Ordering};
 
@@ -57,10 +55,6 @@ pub fn aloki(grando: usize) -> Option<*mut u8> {
     // `exec` anstataŭigas la spacon.
     Some(komenco as *mut u8)
 }
-
-/// Fordonu blokon; la puŝa alokilo ne reuzas memoron, do la voko estas
-/// senefika. Ĝi ekzistas por la estonta liberlista alokilo.
-pub fn liberigi(_montrilo: *mut u8, _grando: usize) {}
 
 /// Skribu tekston al la kerna konzolo.
 pub fn skribi(teksto: &str) -> isize {
@@ -131,11 +125,6 @@ pub fn ricevi_kun_tempolimo(
 /// Sendu mesaĝon tra la tenilo kun tempolimo.
 pub fn sendi_kun_tempolimo(tenilo: Tenilo, mesago: &Mesago, tempolimo_ms: u64) -> isize {
     libmikerno::syscall::sendi_kun_tempolimo(tenilo, mesago, tempolimo_ms)
-}
-
-/// Donu la tenilon al la procezo `celo` kun la permesoj `permesoj`.
-pub fn doni(fonto: Tenilo, celo: u64, permesoj: Permesoj) -> isize {
-    libmikerno::syscall::doni(fonto, celo, permesoj)
 }
 
 /// Kreu finpunkton kun la donitaj permesoj; `> 0` estas la tenila nombro.

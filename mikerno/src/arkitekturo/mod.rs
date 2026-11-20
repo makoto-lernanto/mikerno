@@ -4,8 +4,9 @@ use core::fmt;
 
 pub mod komuna;
 
-#[cfg_attr(target_arch = "aarch64", allow(unused_imports))]
-pub use komuna::{EsceptoTipo, FirmigaRaporto, SistemvokaKadro};
+pub use komuna::FirmigaRaporto;
+#[cfg(target_arch = "x86_64")]
+pub use komuna::{EsceptoTipo, SistemvokaKadro};
 
 #[cfg(target_arch = "x86_64")]
 mod x86_64;

@@ -30,7 +30,7 @@ pub const MAKSAJ_PROCEZOJ: usize = 8;
 const KERNA_STAKO_GRANDE: usize = 16 * 1024;
 
 #[repr(align(16))]
-struct KernaStako(#[allow(dead_code)] [u8; KERNA_STAKO_GRANDE]);
+struct KernaStako([u8; KERNA_STAKO_GRANDE]);
 
 // La grando estas multoblo de 16, do ankaŭ la pinto restas 16-bajte
 // aliniiĝinta, kion postulas la x86-64-ABI kaj la interrompa kadro.
@@ -46,7 +46,7 @@ static mut KERNAJ_STAKOJ: [KernaStako; MAKSAJ_PROCEZOJ] =
 fn kerna_stako_pinto(id: ProcezaId) -> u64 {
     // SAFETY: la indekso estas ene de `KERNAJ_STAKOJ`; ni nur prenas la adreson
     // de la ero, sen krei referencon al la `static mut`.
-    let bazo = unsafe { core::ptr::addr_of!(KERNAJ_STAKOJ[id as usize]) as u64 };
+    let bazo = unsafe { core::ptr::addr_of!(KERNAJ_STAKOJ[id as usize].0) as u64 };
     bazo + KERNA_STAKO_GRANDE as u64
 }
 

@@ -18,7 +18,6 @@ const UEFI_MAKSIMUMA_MAPO: usize = 64 * 1024;
 
 #[derive(Clone, Copy)]
 pub struct MemoraRegiono {
-    #[allow(dead_code)]
     pub komenco: u64,
     pub longo: u64,
 }

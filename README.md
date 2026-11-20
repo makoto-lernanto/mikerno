@@ -17,7 +17,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IK kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.8.2 (Cargo-laborloko)
+- **Versio:** 0.8.3 (Cargo-laborloko)
 - **Arkitekturo:** `x86_64` kaj `arm64` (AArch64), unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -60,7 +60,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IK kaj uzanta procezo en Ring 3.
 | Kaskada forigo de adresa spaco (`detruu`) kun liberigo de paĝtabeloj | Funkcias | `arkitekturo/x86_64/pagado.rs` |
 | Preciza liberigo de privataj `PDPT`-oj (inkl. `PML4[0]`) sen tuŝi kunhavatajn kernajn mapojn | Funkcias | `pagado.rs`, `kerno/procezo.rs` |
 | Per-procesa adresa spaco: privata PML4, kunhavataj kernaj mapoj (`krei_kunhavantan`) | Funkcias | `kerno/procezo.rs`, `pagado.rs` |
-| Proceza detruo ĉe `SYS_FINI` kaj ĉe mortiga Ring 3-escepto (`#PF`, `#GP`) | Funkcias | `kerno/planisto.rs`, `interrompo/mod.rs` |
+| Proceza detruo ĉe `SYS_FINI` kaj ĉe mortiga Ring 3-escepto (`#PF`, `#GP`, `#DE`, `#OF`, `#UD`) | Funkcias | `kerno/planisto.rs`, `interrompo/mod.rs` |
 | `CR3`-ŝalto dum kuntekstŝanĝo kaj per-procesa `TSS.RSP0` (16 KiB kerna stako) | Funkcias | `kerno/planisto.rs`, `kerno/procezo.rs`, `tss.rs` |
 | Strikta uzanta mapado (`mapi_uzantan`): fenestra limkontrolo kaj devigata bito `U` | Funkcias | `memoro/virtuala.rs`, `kerno/uzantspaco.rs` |
 | 4-nivela paĝado (PML4 → PDPT → PD → PT), NX, PCD | Funkcias | `arkitekturo/x86_64/pagado.rs` |
@@ -80,7 +80,7 @@ reĝimo ĝis antaŭokupa planisto, mesaĝa IK kaj uzanta procezo en Ring 3.
 | Uzanta fenestro super 4 GiB, ELF64-ŝargo kun bito `U`, 64 KiB stako | Funkcias | `kerno/uzantspaco.rs`, `memoro/virtuala.rs` |
 | Ring 3-transiro per `iretq` (`CS=0x23`, `SS=0x1B`, `IF=1`) | Funkcias | `arkitekturo/x86_64/uzanta.rs` |
 | Unua uzanta procezo `horizonto`: `SKRIBI` + `FINI` el Ring 3 | Funkcias | `horizonto/`, `kerno/sistemvoko.rs` |
-| Ring 3-escepta kapto: `#PF`/`#GP` mortigas la procezon kaj la sistemo daŭras | Funkcias | `interrompo/mod.rs` |
+| Ring 3-escepta kapto: `#PF`, `#GP`, `#DE`, `#OF` kaj `#UD` mortigas nur la procezon kaj la sistemo daŭras | Funkcias | `interrompo/mod.rs` |
 | Samtempaj procezoj `4`/`5` kun sama sekreta adreso sed malsamaj kadroj | Funkcias | `kerno/mod.rs`, `kerno/uzantspaco.rs` |
 | Izolado de adresa spaco: spiono `#PF` ĉe nur-viktima paĝo, viktimo pluvivas | Funkcias | `horizonto/`, `interrompo/mod.rs` |
 | 29 formalaj pruvoj per Kani | Verkitaj | `kadro.rs`, `ik.rs` |
@@ -183,7 +183,8 @@ plenumas `svc #0`, posedas per-procezajn `TTBR0`-spacojn kaj rulas la saman
 IK-scenaron kiel `x86_64`; `horizonto` venas kiel `-initrd` aŭ kiel
 ISO-modulo. La frambufo venas el `ramfb` per `fw_cfg` (1280×800, `XR24`),
 `PXN`/`UXN`/`PAN` estas aktivaj, kaj la piksela fiksaĵo donas la saman
-haketon kiel la `x86_64`-ISO.
+haketon kiel la `x86_64`-ISO. Esceptoj el `EL0` — abortoj kaj nekonata kaŭzo
+(ekz. `udf`) — mortigas nur la kulpan procezon.
 `just iso-arm` krome postulas `xorriso`, `mkfs.fat` (dosfstools) kaj
 `mmd`/`mcopy` (mtools); `just ruli-iso-arm` bezonas UEFI-firmwaren
 (`qemu-efi-aarch64`, alirebla kiel `QEMU_EFI.fd` aŭ per `QEMU_ARM_EFI`).
@@ -421,10 +422,12 @@ ciferpremo kaj ŝaltas `U` ĉe la folio kaj ĉiuj gepatraj niveloj.
   ŝanĝi la kuntekston kaj la sekva tiko devas povi alveni dum la nova fadeno
   plenumas. Nekonataj esceptoj (`< 0x20`) raportas `rip`, `rsp`, `rflags`,
   `erarkodo` kaj — por vektoro 14 — `CR2`. Escepto el Ring 0 haltigas la
-  sistemon. Escepto `#PF` (14) aŭ `#GP` (13) el Ring 3 apartenas al la uzanta
+  sistemon. Escepto `#PF` (14), `#GP` (13), `#DE` (0), `#OF` (4) aŭ `#UD` (6)
+  el Ring 3 apartenas al la uzanta
   procezo: la kerno printas `[eraro] procezo N …` kun `rip`/`erarkodo`/`CR2`,
   vokas `planisto::morti()` (kiu detruas la procezan spacon) kaj daŭrigas kun
-  la sekva fadeno anstataŭ `halti()`.
+  la sekva fadeno anstataŭ `halti()`. `horizonto` provas tion per propra reĝimo,
+  kiu plenumas `ud2`; la kerna raporto konfirmas `#UD-izolado (bone)`.
 - **APIC** (`apic.rs`): la 8259-PIC estas maskita, la APIC-bazo venas el
   `IA32_APIC_BASE`, la spuria vektoro estas `0xFF`. Restas en MMIO-reĝimo (la
   x2APIC-bito estas nuligita de la masko).
@@ -810,7 +813,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.8.2!
+[MiKerno] Saluton, mi estas MiKerno v0.8.3!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes

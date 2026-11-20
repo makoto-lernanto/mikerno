@@ -15,8 +15,8 @@ mod ligo;
 use core::panic::PanicInfo;
 
 use libmikerno::starto::{
-    MAGIA_NUMERO, REĜIMO_EXEC, REĜIMO_FONO, REĜIMO_SEKRETO, REĜIMO_SPIONO, REĜIMO_ŜELO,
-    SEKRETA_ADRESO, SEKRETA_DUA_ADRESO, SEKRETA_ID_DEŜOVO,
+    MAGIA_NUMERO, REĜIMO_EXEC, REĜIMO_FONO, REĜIMO_NEVALIDA, REĜIMO_SEKRETO, REĜIMO_SPIONO,
+    REĜIMO_ŜELO, SEKRETA_ADRESO, SEKRETA_DUA_ADRESO, SEKRETA_ID_DEŜOVO,
 };
 use libmikerno::syscall::{
     SENFINA_TEMPOLIMO, SYS_KREI_FINPUNKTON, SYS_REVOKI, SYS_RICEVI, SYS_RICEVI_TEMPO, SYS_SENDI,
@@ -54,6 +54,9 @@ pub extern "C" fn horizonto_komenco(reĝimo: u64, identigilo: u64) -> ! {
             identigilo
         ));
         biblioteko::fini(0)
+    }
+    if reĝimo == REĜIMO_NEVALIDA {
+        kaŭzi_nevalidan(identigilo)
     }
     testi_identon(identigilo);
     testi_finpunktojn(identigilo);
@@ -484,6 +487,27 @@ fn testi_negativajn() {
             "[ring3] negativaj (F3): MALBONE (tenilo6={}, tenilo0={})\n",
             tenilo6, tenilo0
         ));
+    }
+}
+
+/// Fazo 4: intence plenumu nevalidan instrukcion. La kerna escepta traktilo
+/// mortigas nur ĉi tiun procezon; la instrukcio neniam revenas.
+fn kaŭzi_nevalidan(identigilo: u64) -> ! {
+    biblioteko::skribi_formaton(format_args!(
+        "[ring3] procezo {}: intence plenumas nevalidan instrukcion\n",
+        identigilo
+    ));
+    #[cfg(target_arch = "x86_64")]
+    // SAFETY: `ud2` intence kaŭzas `#UD`; la escepto mortigas la procezon
+    // anstataŭ reveni al ĉi tiu kodo.
+    unsafe {
+        core::arch::asm!("ud2", options(noreturn))
+    }
+    #[cfg(target_arch = "aarch64")]
+    // SAFETY: `udf #0` intence kaŭzas escepton kun `ESR_EL1.EC=0`; ĝi mortigas
+    // la procezon anstataŭ reveni al ĉi tiu kodo.
+    unsafe {
+        core::arch::asm!("udf #0", options(noreturn))
     }
 }
 

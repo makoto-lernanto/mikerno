@@ -9,7 +9,6 @@ use crate::arkitekturo::komuna::{EsceptoTipo, SistemvokaKadro};
 /// La stako, kiun la enira ŝelko konservas antaŭ ol voki Rust.
 #[repr(C)]
 #[derive(Clone, Copy)]
-#[allow(dead_code)]
 pub struct InterrompaKadro {
     pub rsp: u64,
     pub rax: u64,
@@ -81,6 +80,9 @@ impl SistemvokaKadro for InterrompaKadro {
 /// Klasifiku la vektoron laŭ la komuna escepta speco.
 pub fn escepto_speco(vektoro: u64) -> EsceptoTipo {
     match vektoro {
+        0 => EsceptoTipo::DividaEraro,
+        4 => EsceptoTipo::TrooEraro,
+        6 => EsceptoTipo::NevalidaInstrukcio,
         13 => EsceptoTipo::ProtektaEraro,
         14 => EsceptoTipo::PaĝaEraro,
         alia => EsceptoTipo::Nekonata(alia),

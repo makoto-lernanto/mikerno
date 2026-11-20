@@ -82,6 +82,10 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `datena aborto` | data abort | `ESR_EL1` EC `0x24`/`0x25`; EL0-aliro al folio sen la postulata permeso mortigas la procezon. |
 | `instrukcja aborto` | instruction abort | `ESR_EL1` EC `0x20`/`0x21`; traktata kiel `ProtektaEraro`. |
 | `ĝenerala protekta eraro` | general protection fault (#GP) | |
+| `divida eraro` | divide error (#DE) | Vektoro `0` sur `x86_64`; Ring 3-voko mortigas nur la procezon. |
+| `aritmetika troo` | arithmetic overflow (#OF) | Vektoro `4` sur `x86_64`; Ring 3-voko mortigas nur la procezon. |
+| `nevalida instrukcio` | invalid instruction (#UD) | Vektoro `6` sur `x86_64`; sur `arm64` `UDF` raportiĝas kiel nekonata kaŭzo (`ESR_EL1.EC=0`). Ring 3-voko mortigas nur la procezon. |
+| `nekonata kaŭzo` | unknown reason | `ESR_EL1` EC `0x00`; inkluzivas `UDF` el EL0. |
 | `interrompo` | interrupt | |
 | `interrompa peto` | interrupt request (IRQ) | Neniam uzu `IRQ` en identigiloj. |
 | `interrompa kadro` | interrupt frame | `InterrompaKadro`. |

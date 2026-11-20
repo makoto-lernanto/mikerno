@@ -13,7 +13,9 @@ use crate::memoro::kadro::KadraAlokilo;
 use crate::memoro::virtuala::{
     AdresaSpaco, PaĝaPermesoj, PaĝaTablo, UZANTA_BAZO, UZANTA_STAKO_SUPRO, VirtuaAdreso,
 };
-use libmikerno::starto::{REĜIMO_FONO, REĜIMO_SEKRETO, REĜIMO_SPIONO, REĜIMO_ŜELO};
+use libmikerno::starto::{
+    REĜIMO_FONO, REĜIMO_NEVALIDA, REĜIMO_SEKRETO, REĜIMO_SPIONO, REĜIMO_ŜELO,
+};
 
 pub mod exec;
 pub mod ik;
@@ -231,6 +233,7 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
     // revenas antaŭ ĝia fino; la kadrokontrolo kaj la statistiko sekvas post
     // la observa periodo, kiam ambaŭ procezoj jam malaperis.
     let mut izolado_antaŭ = None;
+    let mut nevalida_lanĉita = false;
     if let Some(modulo) = modulo {
         let antaŭ = {
             let alokilo = kadra_alokilo();
@@ -240,11 +243,31 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
             prepari_uzantan_procezon(&spaco, modulo, UZANTA_FADENO_ID, "viktimo", REĜIMO_SEKRETO);
         let spiono =
             prepari_uzantan_procezon(&spaco, modulo, SPIONA_FADENO_ID, "spiono", REĜIMO_SPIONO);
+        let nevalida = prepari_uzantan_procezon(
+            &spaco,
+            modulo,
+            NEVALIDA_PROCEZA_ID,
+            "nevalida",
+            REĜIMO_NEVALIDA,
+        );
+        nevalida_lanĉita = nevalida;
         if viktimo && spiono {
-            crate::skribu!("[kerno] du procezoj pretaj; unu planista voko\n");
+            crate::skribu!(
+                "[kerno] {} procezoj pretaj; unu planista voko\n",
+                if nevalida { "tri" } else { "du" }
+            );
             izolado_antaŭ = Some(antaŭ);
             planisto::lanĉi();
         } else {
+            if !viktimo {
+                detrui_uzantan(UZANTA_FADENO_ID);
+            }
+            if !spiono {
+                detrui_uzantan(SPIONA_FADENO_ID);
+            }
+            if !nevalida {
+                detrui_uzantan(NEVALIDA_PROCEZA_ID);
+            }
             crate::skribu!("[kerno] uzantaj procezoj ne pretiĝis; scenaro ne ekas\n");
         }
     }
@@ -261,6 +284,23 @@ pub fn ĉefa(informo: EniraInformo, bazo: u64, origino: u64) {
         crate::arkitekturo::atendi_interrompon();
     }
     crate::interrompo::malebligi_interrompojn();
+
+    // Fazo 4: la `#UD`-procezo plenumis `ud2`; la escepta traktilo devis
+    // mortigi nur ĝin. Mankanta procezo post la observa periodo pruvas, ke la
+    // cetera sistemo pluvivas.
+    if nevalida_lanĉita {
+        let restas = procezo::akiri(NEVALIDA_PROCEZA_ID).is_some();
+        crate::skribu!(
+            "[kerno] #UD-izolado ({}): procezo {} {}\n",
+            if restas { "MALBONE" } else { "bone" },
+            NEVALIDA_PROCEZA_ID,
+            if restas {
+                "ankoraŭ vivas"
+            } else {
+                "malaperis; la kerno pluvivas"
+            }
+        );
+    }
 
     // Post la izolada scenaro la ŝelo ekregas: ĝi okupas la fenestron `1` de la
     // fininta kerna fadeno, la fono la fenestron `2`. La procezoj kreiĝas nur
@@ -466,6 +506,10 @@ const UZANTA_FADENO_ID: u64 = TESTAJ_FADENOJ as u64 + 1;
 /// La spionprocezo: ĝi legas la duan sekretan paĝon, kiu ekzistas nur en la
 /// viktima spaco.
 const SPIONA_FADENO_ID: u64 = UZANTA_FADENO_ID + 1;
+/// La procezo, kiu intence plenumas nevalidan instrukcion (`#UD`); la
+/// identigilo estas libera dum la izolada fazo, kaj la procezo mortas antaŭ la
+/// ŝelo ekregas.
+const NEVALIDA_PROCEZA_ID: u64 = 3;
 /// La procezo de la objekta ŝelo `Ligo`; ĝi okupas la fenestron de la fininta
 /// kerna fadeno `1` nur post la testfazo.
 pub(crate) const ŜELA_PROCEZA_ID: u64 = 1;
@@ -598,7 +642,7 @@ impl core::fmt::Display for Priskribo {
 }
 
 #[repr(align(16))]
-struct FadenaStako(#[allow(dead_code)] [u8; STAKA_GRANDE]);
+struct FadenaStako([u8; STAKA_GRANDE]);
 static mut STAKOJ: [FadenaStako; TESTAJ_FADENOJ] =
     [const { FadenaStako([0; STAKA_GRANDE]) }; TESTAJ_FADENOJ];
 
@@ -613,7 +657,9 @@ fn krei_testajn_fadenojn() -> Result<(), planisto::PlanistaEraro> {
     ];
     for (indekso, prioritato) in prioritatoj.into_iter().enumerate() {
         let id = indekso as u64 + 1;
-        let pinto = &raw const STAKOJ as u64 + id * STAKA_GRANDE as u64;
+        // SAFETY: ni nur prenas la adreson de la `static mut`-ero, sen krei
+        // referencon aŭ legi ĝian enhavon.
+        let pinto = (unsafe { core::ptr::addr_of!(STAKOJ[0].0) as u64 }) + id * STAKA_GRANDE as u64;
         let mut fadeno = planisto::pretigi_fadenon(id, 0, VirtuaAdreso::nova(pinto), testa_fadeno);
         fadeno.prioritato = prioritato;
         planisto::aldoni_fadenon(fadeno)?;

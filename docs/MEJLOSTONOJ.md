@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-20 · Versio de la Cargo-laborloko: 0.8.2
+> Stato: 2026-11-20 · Versio de la Cargo-laborloko: 0.8.3
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -173,7 +173,7 @@ eniras la kernan bildon.
 | 2026-11-20 | 0.8.1 | 63 | 15196 | 11819 | 1989 | 1388 |
 | 2026-11-20 | 0.8.1 | 63 | 15196 | 11819 | 1989 | 1388 |
 | 2026-11-20 | 0.8.2 | 63 | 15196 | 11819 | 1989 | 1388 |
-| 2026-11-20 | 0.8.2 | 63 | 15196 | 11819 | 1989 | 1388 |
+| 2026-11-20 | 0.8.3 | 63 | 15262 | 11877 | 2005 | 1380 |
 
 ---
 
@@ -2082,8 +2082,35 @@ robustecon de la kerno.
 
 | Kriterio | Stato | Pruvo |
 | --- | --- | --- |
-| Neniu senjusta `#[allow]` | Pruvota | `grep -r "#\[allow" mikerno/src` montras nur liniojn kun `PERMESO-JUSTIFIKO`. |
-| Ring 3 `#UD` ne mortigas la kernon | Pruvota | `[eraro] procezo N: nevalida instrukcio ĉe ...` estas presata, kaj la kerno atingas `fina stato`. |
+| Neniu senjusta `#[allow]` | Jes | `grep -r "#\[allow" mikerno/src` (same por la ceteraj membroj) redonas nenion. La ritmaj bufroj uziĝas per `core::ptr::addr_of!`, la platformaj eroj estas ŝirmitaj per `cfg(target_arch = ...)` aŭ forigitaj. |
+| Ring 3 `#UD` ne mortigas la kernon | Jes | `[eraro] procezo 3: nevalida instrukcio ĉe rip=0x…`; poste `[kerno] #UD-izolado (bone): procezo 3 malaperis; la kerno pluvivas` kaj `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj` en QEMU (x86_64: 1018 tikoj, arm64: 1012). |
+
+**Efektivigo (0.8.3).** Ĉiuj `#[allow(dead_code)]`-oj malaperis. La
+ritmaj bufroj (`KernaStako`, `FadenaStako`, `Kernostako`) ne plu bezonas
+`allow`: la stakpinto venas el `core::ptr::addr_of!`, kiu legas la kampon per
+`unsafe`-bloko kun `SAFETY`-kialo. Aliaj eroj estis vere platformaj aŭ mortaj:
+`VirtioSpeco::Pcia`, `nova_pcia`, la PCI-registroj kaj la bajtaj legiloj
+ŝirmiĝas per `cfg(target_arch = "x86_64")`, same `EsceptoTipo`,
+`SistemvokaKadro` kaj `EniraEraro`; la neuzata `SistemvokaKadro`-implemento
+por `arm64` anstataŭiĝis per tri propraj metodoj (`numero`, `el_uzanto`,
+`agordi_rezulton`), kaj la mortaj volvaĵoj `liberigi`/`doni` el
+`horizonto/src/biblioteko.rs` foriĝis.
+
+La escepta politiko nun apartigas `#DE` (vektoro `0`), `#OF` (`4`) kaj `#UD`
+(`6`) al la uzanta procezo: `escepto_speco` redonas `DividaEraro`,
+`TrooEraro` aŭ `NevalidaInstrukcio`, kaj `trakti_escepton` vokas
+`planisto::morti()` anstataŭ `halti()`. Sur `arm64` la `ESR_EL1.EC=0`
+(nekonata kaŭzo, inkluzive `UDF`) aldoniĝis al la EL0-abortoj.
+
+Por la testo `horizonto` ricevis `REĜIMO_NEVALIDA`; ĝi plenumas `ud2`
+(`x86_64`) aŭ `udf #0` (`arm64`). La kerno preparas trian procezon (id `3`)
+kune kun la viktimo kaj la spiono, kaj post la observa periodo kontrolas, ke
+ĝi malaperis. Loka praŝarĝo:
+`[ring3] procezo 3: intence plenumas nevalidan instrukcion`,
+`[eraro] procezo 3: nevalida instrukcio ĉe rip=0x0000000100002e75,
+erarkodo=0x0; la procezo estas mortigata`,
+`[kerno] #UD-izolado (bone): procezo 3 malaperis; la kerno pluvivas`.
+La kontrolilo `tools/kontroli-qemu.sh` finiĝis sen `MALBONE` sur ambaŭ arkoj.
 
 ##### Fazo 5: Dokumentara sinkronigo kaj 1.0-preteco (Versio 0.8.4)
 

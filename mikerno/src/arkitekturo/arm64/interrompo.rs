@@ -7,10 +7,10 @@
 
 use core::arch::{asm, global_asm};
 
-use crate::arkitekturo::komuna::SistemvokaKadro;
-
 /// `ESR_EL1.EC` de `SVC` el AArch64.
 const EC_SVC64: u64 = 0x15;
+/// `ESR_EL1.EC` de nekonata kaŭzo; inkluzivas `UDF` (nevalidan instrukcion).
+const EC_NEKONATA_KAŬZO: u64 = 0x00;
 /// `ESR_EL1.EC` de nekonata instrukcio.
 const EC_NEKONATA: u64 = 0x10;
 const EC_INSTRUKCIA_ABORTO_EL0: u64 = 0x20;
@@ -49,8 +49,9 @@ impl InterrompaKadro {
     }
 }
 
-impl SistemvokaKadro for InterrompaKadro {
-    fn numero(&self) -> usize {
+impl InterrompaKadro {
+    /// La sistemvoka numero (`x8`) se la escepto estas `SVC`.
+    pub fn numero(&self) -> usize {
         if self.estas_svc() {
             (self.x[8] & 0xFFFF_FFFF) as usize
         } else {
@@ -58,40 +59,14 @@ impl SistemvokaKadro for InterrompaKadro {
         }
     }
 
-    fn argumento(&self, indekso: usize) -> u64 {
-        self.x.get(indekso).copied().unwrap_or(0)
-    }
-
-    fn agordi_rezulton(&mut self, rezulto: u64) {
-        self.x[0] = rezulto;
-    }
-
-    fn el_uzanto(&self) -> bool {
+    /// Ĉu la escepto venis el `EL0`?
+    pub fn el_uzanto(&self) -> bool {
         self.spsr & 0xF == 0
     }
 
-    fn vektoro(&self) -> u64 {
-        self.vektoro
-    }
-
-    fn erarkodo(&self) -> u64 {
-        self.escepta_kodo()
-    }
-
-    fn instrukcipunkto(&self) -> u64 {
-        self.elr
-    }
-
-    fn stakmontrilo(&self) -> u64 {
-        if self.el_uzanto() {
-            self.sp_el0
-        } else {
-            self.sp
-        }
-    }
-
-    fn stato(&self) -> u64 {
-        self.spsr
+    /// Skribu la rezulton de la sistemvoko en `x0`.
+    pub fn agordi_rezulton(&mut self, rezulto: u64) {
+        self.x[0] = rezulto;
     }
 }
 
@@ -220,7 +195,8 @@ pub fn pravalorizi() {
 fn uzanta_aborto(ec: u64) -> bool {
     matches!(
         ec,
-        EC_NEKONATA
+        EC_NEKONATA_KAŬZO
+            | EC_NEKONATA
             | EC_INSTRUKCIA_ABORTO_EL0
             | EC_INSTRUKCIA_ABORTO_EL1
             | EC_DATENA_ABORTO_EL0
@@ -230,6 +206,7 @@ fn uzanta_aborto(ec: u64) -> bool {
 
 fn aborta_nomo(ec: u64) -> &'static str {
     match ec {
+        EC_NEKONATA_KAŬZO => "nekonata kaŭzo",
         EC_INSTRUKCIA_ABORTO_EL0 | EC_INSTRUKCIA_ABORTO_EL1 => "instrukcia aborto",
         EC_DATENA_ABORTO_EL0 | EC_DATENA_ABORTO_EL1 => "datena aborto",
         _ => "nekonata escepto",

@@ -19,6 +19,9 @@ pub const REĜIMO_FONO: u64 = 5;
 /// La procezo plenumas la objekta ŝelo `Ligo`: ĝi legas komandojn el la seria
 /// konzolo kaj vivas ĝis `fini`.
 pub const REĜIMO_ŜELO: u64 = 6;
+/// La procezo intence plenumas nevalidan instrukcion; la kerna escepta
+/// traktilo devas mortigi nur ĝin, ne haltigi la sistemon.
+pub const REĜIMO_NEVALIDA: u64 = 7;
 
 /// La komuna virtuala adreso de la sekreta paĝo. Ĉiu procezo vidas ĝin je la
 /// sama adreso, sed ĝi tradukiĝas al propra fizika kadro.

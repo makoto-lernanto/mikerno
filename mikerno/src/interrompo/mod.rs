@@ -120,14 +120,27 @@ pub(crate) const fn estas_apic_vektoro(vektoro: usize) -> bool {
 #[cfg(target_arch = "x86_64")]
 fn trakti_escepton(kadro: &mut InterrompaKadro) -> ! {
     let speco = crate::arkitekturo::escepto_speco(kadro.vektoro());
-    // `#GP` kaj `#PF` el Ring 3 apartenas al la uzanta procezo, ne al la
-    // kerno: la procezo estas mortigata kaj la planisto daŭrigas. Ĉiuj aliaj
-    // esceptoj — ankaŭ la samaj vektoroj el Ring 0 — restas fatalaj.
-    if kadro.el_uzanto() && matches!(speco, EsceptoTipo::PaĝaEraro | EsceptoTipo::ProtektaEraro) {
-        let nomo = if speco == EsceptoTipo::PaĝaEraro {
-            "paĝa eraro"
-        } else {
-            "ĝenerala protekta eraro"
+    // `#PF`, `#GP`, `#DE`, `#OF` kaj `#UD` el Ring 3 apartenas al la uzanta
+    // procezo, ne al la kerno: la procezo estas mortigata kaj la planisto
+    // daŭrigas. Ĉiuj aliaj esceptoj — ankaŭ la samaj vektoroj el Ring 0 —
+    // restas fatalaj.
+    if kadro.el_uzanto()
+        && matches!(
+            speco,
+            EsceptoTipo::PaĝaEraro
+                | EsceptoTipo::ProtektaEraro
+                | EsceptoTipo::DividaEraro
+                | EsceptoTipo::TrooEraro
+                | EsceptoTipo::NevalidaInstrukcio
+        )
+    {
+        let nomo = match speco {
+            EsceptoTipo::PaĝaEraro => "paĝa eraro",
+            EsceptoTipo::ProtektaEraro => "ĝenerala protekta eraro",
+            EsceptoTipo::DividaEraro => "divida eraro",
+            EsceptoTipo::TrooEraro => "aritmetika troo",
+            EsceptoTipo::NevalidaInstrukcio => "nevalida instrukcio",
+            EsceptoTipo::Nekonata(_) => "nekonata escepto",
         };
         crate::skribu!(
             "\n[eraro] procezo {}: {} ĉe rip=0x{:016x}, erarkodo=0x{:x}",

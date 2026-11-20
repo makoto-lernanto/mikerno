@@ -24,7 +24,7 @@ const RIPAZA_ID: FadenoId = 0;
 /// La identigiloj `1..=4` apartenas al la kernaj provfadenoj; la statistiko
 /// legas iliajn `veturoj`- kaj `plenumtikoj`-erojn poste, do ili ne reuziĝas.
 /// La izolaj procezoj jam finiĝis, kiam la ŝelo kreiĝas, kaj iliaj fenestroj
-/// `5`/`6` estas liberaj.
+/// `5`/`6`/`7` estas liberaj.
 const UNUA_DINAMIKA: FadenoId = 5;
 
 #[derive(Clone, Copy, Debug)]

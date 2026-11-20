@@ -1,8 +1,5 @@
 #![no_std]
 #![no_main]
-// Kelkaj komunaj memoro-tipoj (Multiboot2-regionspecoj, `EniraEraro`, la
-// identeca `SKRIBA`-permeso) havas sencon nur en la `x86_64`-eniro.
-#![cfg_attr(target_arch = "aarch64", allow(dead_code))]
 
 mod arkitekturo;
 mod ekrano;

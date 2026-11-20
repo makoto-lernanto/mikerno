@@ -40,13 +40,15 @@ static mut TASKA_STATO: TaskaStataSegmento = TaskaStataSegmento {
 const _: () = assert!(size_of::<TaskaStataSegmento>() == 104);
 
 #[repr(align(16))]
-struct Kernostako(#[allow(dead_code)] [u8; KERNOSTAKO_GRANDE]);
+struct Kernostako([u8; KERNOSTAKO_GRANDE]);
 
 static mut KERNOSTAKO: Kernostako = Kernostako([0; KERNOSTAKO_GRANDE]);
 
 /// La defaŭlta kerna stakpinto por la nukleo (procezo `0`).
 pub fn defaŭlta_pinto() -> u64 {
-    &raw const KERNOSTAKO as u64 + KERNOSTAKO_GRANDE as u64
+    // SAFETY: ni nur prenas la adreson de la `static mut`-ero, sen krei
+    // referencon aŭ legi ĝian enhavon.
+    (unsafe { core::ptr::addr_of!(KERNOSTAKO.0) as u64 }) + KERNOSTAKO_GRANDE as u64
 }
 
 /// Agordu `RSP0` al la kerna stako de la nuna procezo.
