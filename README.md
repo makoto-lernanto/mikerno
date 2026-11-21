@@ -1102,8 +1102,8 @@ kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
   bildon al hazarda 2 MiB-aliniiĝinta bazo kaj relokas ĝin; la kerno restas en
   la malalta duono, do la identeca mapo kaj ĉiuj ekzistantaj scenaroj
   senŝanĝe funkcias. Alta-duona kerno ne estis necesa por tiu ĉi firmigo, kaj
-  IOMMU-izolado venas en M19 (post 1.0).
-- **Unuprocesora**: neniu SMP, afineco, prioritatoj aŭ dormantaj temporiziloj.
+  IOMMU-izolado venas en M20 (post 1.0).
+- **Unuprocesora**: neniu SMP aŭ CPU-afineco.
 - **Fiksaj limoj**: 8 fadenoj, 16 mesaĝoj po fadeno, 64 bajtoj po mesaĝo,
   4 GiB fizika memoro.
 - **IK**: la finpunktaj objektoj havas generaciojn kaj referenckalkulon, kaj

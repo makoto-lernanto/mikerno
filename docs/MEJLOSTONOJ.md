@@ -31,15 +31,16 @@
 | M16 | Dormantaj temporiziloj kaj prioritatoj | Plenumita | dormo 100 ms = 10 tikoj; prioritatoj 1:2:4; specimenoj sumo == horloĝo; arm64-stabileco |
 | M17 | Konservado, dosiersistemo, ŝelo | Plenumita | `virtio-blk` legas/skribas 64 sektorojn; SNDS (6 dosieroj, 1 dosierujo; PCI kaj MMIO); `SYS_BRK`, `SYS_EXEC` kaj `SYS_LANĜI` en Ring 3; Ligo kun `listi`, `procezoj`, `mortigi`, `ruli`; `virtio-blk` MMIO-vojo funkcias sur `arm64`; `#[allow]`-purgado por M17 plenigita |
 | M18 | DI, testoj, plena pruvaro | Plenumita | GitHub Actions verde (fmt, clippy, 71 host-testoj, konstruo, Miri, 43 Kani-pruvoj); ses fazoj 0.8.0–0.8.5, ĉiu kun verda DI kaj ISO el la Eldono |
-| M19 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
-| M20 | Plena pruvaro kaj 1.0 | Venonta | — |
+| M19 | Plena pruvaro kaj 1.0 | Venonta | — |
+| M20 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 | M21 | SMP, afineco kaj IPI | Post 1.0 | — |
 
 ### 1.1. La `arm64`-ŝpuro (A0–A4), kunfandita en M15
 
 `arm64` disvolviĝis kiel aparta ŝpuro kun fazoj A0–A4. Ĝi estis kunfandita en
 `main` la 2026-11-15 kaj fariĝis la mejloŝtono M15 (`0.5.0`); la antaŭe planitaj
-M15–M18 translokiĝis al M16–M19. La plano, la kouplingo al `x86_64` kaj la cela
+M15–M18 translokiĝis al M16–M19 (la tiama numerado; poste M19 kaj M20
+interŝanĝiĝis). La plano, la kouplingo al `x86_64` kaj la cela
 dosieruja strukturo estas en [ARM.md](ARM.md). Dum la ŝpuro la versio estis
 antaŭeldono (`0.4.3-arm.N`).
 
@@ -282,7 +283,7 @@ APIC-on; neniu paĝa eraro aperas dum la tuta testa scenaro.
 **Resto.** La identeca mapo jam respektas W^X laŭ sekcioj (0.2.5), SMEP
 (0.3.0) kaj SMAP (0.3.1) baras Ring 0 de uzantaj folioj, kaj KASLR (0.3.2)
 hazardigas la kernan bazadreson per ET_DYN-relokado; la per-procesa mapado
-venis en M12. IOMMU-izolado restas en M19.
+venis en M12. IOMMU-izolado restas en M20.
 
 ---
 
@@ -782,7 +783,7 @@ senefikan nuligon, ĉar CBMC ne modeligas absolutan fizikan skribon.
 pordego restas en GitHub Actions (vidu §4.7), kaj `cargo kani` ne ruliĝas
 loke. `miri-kontroli` kovras la unu-testojn de `kernologiko`; `loom` restas
 neuzata, ĉar la kerno estas unuprocesora kaj protektas la kritikajn sekciojn
-per malŝaltitaj interrompoj. M20 plu pritraktas la `PaĝaTablo`-abstrakcion kaj
+per malŝaltitaj interrompoj. M19 plu pritraktas la `PaĝaTablo`-abstrakcion kaj
 la 1.0-eldonon.
 
 ---
@@ -1579,7 +1580,7 @@ enhavas `mikerno.iso` (SHA-256
 `af405daa3aa573315902382c2fe30d744cd3fbc541a26dc9b858cc8c1c364de4`).
 
 **Limigoj.** Nur modernaj transportoj, nur QEMU, polusa atendo, unu vico, po
-unu sektoro per peto, sen IOMMU (M19) kaj sen interrompoj por la fino de DMA.
+unu sektoro per peto, sen IOMMU (M20) kaj sen interrompoj por la fino de DMA.
 
 **Versio.** 0.7.0 (Fazo 1).
 
@@ -1945,7 +1946,7 @@ elŝutajn ligilojn al ĉi tiu etikedo.
 | :--- | :--- | :--- |
 | Alta | Neniu `fork`; nur `exec` | Post 1.0 (postulas kopiadon de adresaj spacoj) |
 | Meza | SNDS estas nurlega | M17-poste: aldoni `skribi` kaj `krei` |
-| Meza | Neniu IOMMU por `virtio` DMA | M19 (Aparata izolado) |
+| Meza | Neniu IOMMU por `virtio` DMA | M20 (Aparata izolado) |
 | Malalta | Ŝelo uzas polusan legadon por COM1 | Post 1.0: uzi interromp-bazitan I/O |
 
 ---
@@ -1985,7 +1986,7 @@ de `#[allow]` kaj plibonigo de Ring 3-esceptoj.
 | --- | --- | --- |
 | Testoj ruliĝas sen QEMU | Jes | `just testoj` (aŭ `cargo test -p kernologiko --target <gastiganto>`) finiĝas kun `test result: ok. 61 passed`. |
 | Kovrado de sendependaj moduloj | Jes | 61 testkazoj (≥ 20) en ses moduloj, inkluzive de plena/malplena vico, nevalida adreso kaj nedisigebla UTF-8. |
-| Simulita `KadraAlokilo`/`PaĝaTablo` | Parte | `KadraAlokilo` fariĝis ĵenera laŭ la bitara grando kaj pruviĝas sur la produktaj metodoj (M9, 2026-11-21); por `PaĝaTablo` la generika abstrado restas malferma ĝis M20. Vidu «1a». |
+| Simulita `KadraAlokilo`/`PaĝaTablo` | Parte | `KadraAlokilo` fariĝis ĵenera laŭ la bitara grando kaj pruviĝas sur la produktaj metodoj (M9, 2026-11-21); por `PaĝaTablo` la generika abstrado restas malferma ĝis M19. Vidu «1a». |
 
 ##### Fazo 2: QEMU-matrico kaj aŭtomata ISO-regenerado (Versio 0.8.1)
 
@@ -2330,7 +2331,7 @@ kun 53 verdaj taskoj kaj la Eldono v0.8.5. La sola ne plene plenumita
 subkriterio — la generika `KadraAlokilo`/`PaĝaTablo`-abstrakcio de Fazo 1 — estis
 anstataŭita per la apartigo de la puraj moduloj en `kernologiko`;
 `KadraAlokilo` mem fariĝis ĵenera laŭ la bitara grando kaj pruviĝas sur la
-produktaj metodoj (M9, 2026-11-21). La `PaĝaTablo`-abstrakcio restas por M20.
+produktaj metodoj (M9, 2026-11-21). La `PaĝaTablo`-abstrakcio restas por M19.
 
 #### 1a. Fazo 1 — efektivigita (0.8.0)
 
@@ -2374,7 +2375,7 @@ abstrakcion por ambaŭ. Tia ŝanĝo tuŝus dekojn da `PaĝaTablo`-alvokoj, sen
 alporti novajn testkazojn: la puraj reguloj jam testiĝas per `kernologiko`.
 `KadraAlokilo` solviĝis alie: ĝi nun estas ĵenera laŭ la bitara grando, do la
 Kani-pruvoj alvokas la produktajn metodojn (M9). La `PaĝaTablo`-abstrakcio
-restas malferma por M20; la du akceptkriterioj de Fazo 1 (sen QEMU, ≥ 20 kazoj)
+restas malferma por M19; la du akceptkriterioj de Fazo 1 (sen QEMU, ≥ 20 kazoj)
 estas plenumitaj.
 
 **Pordego.** `just kontroli` nun komenciĝas per `just testoj`, kiu rulas
@@ -2574,7 +2575,23 @@ komitero kaj praŝarĝitaj per `tools/kontroli-qemu.sh`: `x86_64` atingis
 
 ---
 
-### M19 — Aparata izolado (post 1.0)
+### M19 — Plena pruvaro kaj 1.0
+
+**Celo.** Fermi la `0.8.x`-linion kaj etikedi `v1.0.0` surbaze de la pruvaro
+jam verda.
+
+**Taskoj.** Revizii kaj datigi `docs/ANONCO-1.0.md`, ruli la plenan pordegon
+loke kaj en DI, konstrui ambaŭ ISO-ojn el la puŝita komitero, registri iliajn
+SHA-256-valorojn kaj akceptajn liniojn, kaj publikigi la etikedon.
+
+**Akceptkriterioj.** Ĉiuj kvin paŝoj de la eldona kontrolo en
+`docs/ANONCO-1.0.md` plenumitaj: `just kontroli` verda, la tuta DI-matrico
+verda, ambaŭ ISO-oj praŝarĝitaj sen `MALBONE`, la valoroj registritaj kaj la
+etikedo `v1.0.0` publikigita. La ses kriterioj de §8 estas jam plenumitaj.
+
+---
+
+### M20 — Aparata izolado (post 1.0)
 
 **Celo.** Malhelpi, ke aparato atingu arbitran fizikan memoron per DMA.
 
@@ -2616,7 +2633,7 @@ mejloŝtono venas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo el M17.
 | Alta | Ring 3-esceptoj ekster `#PF`, `#GP`, `#DE`, `#OF` kaj `#UD` haltigas la sistemon | Ne rekaptebla eraro por la ceteraj vektoroj | Post 1.0 |
 | Malalta | Dokumentoj kaj `Cargo.toml` povas malkongrui | Konfuzaj eldonoj | `tools/versio.sh --kontroli` en `just kontroli` |
 | Meza | Neniu ĝenerala `mmap`; la uzanta kupo nur pligrandiĝas per `SYS_BRK` | Neniu mapado de dosieroj aŭ malmapado | Post 1.0 |
-| Meza | Neniu IOMMU | Aparata DMA ne estas izolita | M19 |
+| Meza | Neniu IOMMU | Aparata DMA ne estas izolita | M20 |
 | Meza | Frambufo sen rulumo | Malbona uzsperto | M6-poste |
 | Malalta | `Kunhavigita::akiri` liveras krudan montrilon el `&self` | La derivo de referenco devas esti eksplicita `unsafe` | reviziita (M17 F5); la disciplino restas dokumentita |
 
@@ -2626,7 +2643,7 @@ mejloŝtono venas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo el M17.
 
 MiKerno atingos 1.0 kiam ĉiuj jenaj kriterioj estos plenigitaj. La revizio de
 0.8.4 (M18 Fazo 5) konfirmas, ke ili ĉiuj estas plenigitaj; la eldono 1.0 mem
-venos kun M20, kiu finigas la plenan pruvaron.
+venos kun M19, kiu finigas la plenan pruvaron.
 
 | # | Kriterio | Stato | Pruvo |
 | --- | --- | --- | --- |

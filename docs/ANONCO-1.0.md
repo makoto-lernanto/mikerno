@@ -1,7 +1,7 @@
 # MiKerno 1.0 — anonco (preparo)
 
 > **Stato:** prepara teksto por la eldono 1.0. La eldono venos kun la mejloŝtono
-> M20 (plena pruvaro); ĝis tiam la nuna eldono estas 0.8.5. Ĉi tiu dokumento
+> M19 (plena pruvaro); ĝis tiam la nuna eldono estas 0.8.5. Ĉi tiu dokumento
 > ne estas publikigita anonco.
 >
 > Ĝisdatigita por versio: 0.8.5 (Cargo-laborloko)
@@ -54,7 +54,7 @@ vojoj kaj `~` inkluzive) kaj `fini` finas la sesion.
 
 ## Vojo al la eldono
 
-M20 finigas la formalan pruvaron kaj etikedas 1.0. M19 (IOMMU kaj aparata
+M19 finigas la formalan pruvaron kaj etikedas 1.0. M20 (IOMMU kaj aparata
 izolado) restas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo.
 
 **Eldona kontrolo por 1.0:**
@@ -73,6 +73,6 @@ izolado) restas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo.
 
 - Neniu `fork`: novaj procezoj venas per `SYS_LANĜI` aŭ `SYS_EXEC`, ne per
   kopiado de adresa spaco.
-- Unuprocesora: neniu SMP, afineco aŭ prioritatoj.
+- Unuprocesora: neniu SMP aŭ CPU-afineco.
 - La kernaj stakoj estas statika tabelo de ok blokoj.
-- IOMMU-izolado venas en M19.
+- IOMMU-izolado venas en M20.

@@ -35,7 +35,7 @@ praŝarĝa vojo. Tial la ŝpuro iris paralele al M16–M18:
   ĉefan `0.x.y`-linion;
 - kunfando nur post kiam A4 estas verda; la numero estis elektita laŭ la
   tiama stato: **M15 → `0.5.0`** (2026-11-15). La antaŭe planitaj M15–M18
-  translokiĝis al M16–M19.
+  translokiĝis al M16–M19 (la tiama numerado; poste M19 kaj M20 interŝanĝiĝis).
 
 `tools/versio.sh` akceptas ankaŭ la antaŭeldonon `0.x.y-arm.N` (farita en A1),
 kaj `AGENTS.md` priskribas tiun versiadon.
