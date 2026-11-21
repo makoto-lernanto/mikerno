@@ -2254,14 +2254,33 @@ tutan bufron anstataŭ la validan longon; la riparo tranĉas la legatan slice-on
 je `nuna_longo`, kaj la scenaro pruvas, ke la stato restas kohera post eraro.
 
 Loka pordego: `just kontroli` finiĝis sen eraro (71 unu-testoj, `fmt`, ambaŭ
-`clippy`-vokoj, konstruo). Ambaŭ ISO-oj praŝarĝiĝis senkape sen `MALBONE`:
-`[MiKerno] … v0.8.5!` kun la sama piksela haketo `0xecf1f6dbe1421575` kaj
-`fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj` (1009 tikoj sur `x86_64`,
-1021 sur `arm64`). La lokaj ISO-oj el la nepuŝita kodo havas la SHA-256
-`ad5deda393c391ba4dc30d3e18002f0af4acf430aca52d9517da470d12ba9df0`
+`clippy`-vokoj, konstruo). La ISO-oj konstruitaj el la puŝita kodo praŝarĝiĝis
+senkape sen `MALBONE`: `[MiKerno] … v0.8.5!` kun la sama piksela haketo
+`0xecf1f6dbe1421575` kaj `fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj`
+(1019 tikoj sur `x86_64`, 1020 sur `arm64`). Ilia SHA-256 estas
+`6ac5a3855b873460bd2d7eaf22eee5b6d5260f85e28f4862fb748b087fffbd0f`
 (`mikerno.iso`) kaj
-`97153a84733d964c6efd92b82c1a3779c1fe5de08019ba69ad0038c13554a35e`
+`6c2943f82774bdfc4ab69296e9b5ed1de172c233587a88ad53c7988c217cb1e2`
 (`mikerno-arm.iso`).
+
+**Nuba DI (2026-11-21).** La runo
+[#44908392008](https://github.com/makoto-lernanto/mikerno/actions/runs/44908392008)
+ĉe `3f5f19e` havas 53 verdajn taskojn: `kontroli-kaj-konstrui`, la kvin
+QEMU-kombinaĵojn, `miri-kontroli`, `permesiloj-kontroli`, `kani-pretigi` kaj
+la tutan matricon `kani-kontroli`; neniu tasko estis nuligita aŭ malsukcesa.
+
+**Eldono.** La Eldono
+[v0.8.5](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.8.5) montras
+al `3f5f19e` kaj enhavas ambaŭ ISO-ojn konstruitajn el la puŝita kodo:
+
+| Dosiero | SHA-256 |
+| --- | --- |
+| `mikerno.iso` | `6ac5a3855b873460bd2d7eaf22eee5b6d5260f85e28f4862fb748b087fffbd0f` |
+| `mikerno-arm.iso` | `6c2943f82774bdfc4ab69296e9b5ed1de172c233587a88ad53c7988c217cb1e2` |
+
+La praŝarĝoj printis `[MiKerno] … v0.8.5!`, la saman pikselan haketon
+`0xecf1f6dbe1421575` kaj la finan staton sen `MALBONE` (1019 tikoj sur
+`x86_64`, 1020 sur `arm64`).
 
 **Akceptkriterioj de la mejloŝtono.** Ĉiu tirpeto plenumas `fmt`, `clippy`,
 `konstruo`, `kani` kaj la QEMU-smokan teston; la ISO estas artefakto de DI, ne
