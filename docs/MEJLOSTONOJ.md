@@ -21,18 +21,19 @@
 | M6 | Frambufo-konzolo kaj COM1 | Plenumita | `1280x800, 32 bitoj/pikselo` (ISO) |
 | M7 | Antaŭokupa planisto kaj kuntekstŝanĝo | Plenumita | 3 fadenoj interplektitaj kaj finitaj |
 | M8 | Mesaĝa IK kun kapabloj | Plenumita | mesaĝoj liveritaj, fadeno 3 vekita |
-| M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt, clippy, testoj kaj Miri verdaj; 43 Kani-pruvoj verdaj, sed ankoraŭ per spegulo — la produktaj tipoj venas en M20 |
+| M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Plenumita | fmt, clippy, testoj kaj Miri verdaj; 43 Kani-pruvoj sur la produktaj tipoj (`KadraAlokilo` ĵenera laŭ la bitara grando) |
 | M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Plenumita | ABI difinita; `horizonto` plenumiĝas en Ring 3 |
 | M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj |
 | M12 | Per-procesaj adresspacoj | Plenumita | W^X laŭ sekcioj, `CR0.WP`, proceza izolado (spiono `#PF`, viktimo pluvivas), egalaj kadroj |
 | M13 | Kerna memoro-firmigo: SMEP, SMAP, KASLR | Plenumita | SMEP, SMAP kaj KASLR pruvitaj per Ring 0-provoj kaj tri startoj |
 | M14 | IK-firmigo: objektoj, rajtoj, tempolimoj | Plenumita | Ring 0/Ring 3-scenaroj kaj AC/CR3/EOI-provoj verdaj (ABI 2) |
 | M15 | `arm64`-malantaŭo: EL0, ABI 2, `ramfb`, `PAN` | Plenumita | identa piksela haketo sur ambaŭ arkoj |
-| M16 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Parte | dormo 100 ms = 10 tikoj; prioritatoj 1:2:4; specimenoj sumo == horloĝo; arm64-stabileco; SMP-esploro ne farita (ekster 1.0) |
+| M16 | Dormantaj temporiziloj kaj prioritatoj | Plenumita | dormo 100 ms = 10 tikoj; prioritatoj 1:2:4; specimenoj sumo == horloĝo; arm64-stabileco |
 | M17 | Konservado, dosiersistemo, ŝelo | Plenumita | `virtio-blk` legas/skribas 64 sektorojn; SNDS (6 dosieroj, 1 dosierujo; PCI kaj MMIO); `SYS_BRK`, `SYS_EXEC` kaj `SYS_LANĜI` en Ring 3; Ligo kun `listi`, `procezoj`, `mortigi`, `ruli`; `virtio-blk` MMIO-vojo funkcias sur `arm64`; `#[allow]`-purgado por M17 plenigita |
 | M18 | DI, testoj, plena pruvaro | Plenumita | GitHub Actions verde (fmt, clippy, 71 host-testoj, konstruo, Miri, 43 Kani-pruvoj); ses fazoj 0.8.0–0.8.5, ĉiu kun verda DI kaj ISO el la Eldono |
 | M19 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 | M20 | Plena pruvaro kaj 1.0 | Venonta | — |
+| M21 | SMP, afineco kaj IPI | Post 1.0 | — |
 
 ### 1.1. La `arm64`-ŝpuro (A0–A4), kunfandita en M15
 
@@ -176,6 +177,7 @@ eniras la kernan bildon.
 | 2026-11-20 | 0.8.3 | 63 | 15262 | 11877 | 2005 | 1380 |
 | 2026-11-21 | 0.8.4 | 63 | 15261 | 11876 | 2005 | 1380 |
 | 2026-11-21 | 0.8.5 | 64 | 15377 | 11962 | 2025 | 1390 |
+| 2026-11-21 | 0.8.5 | 64 | 15347 | 11925 | 2034 | 1388 |
 
 ---
 
@@ -741,8 +743,11 @@ Kani-pruvoj por `arm64` ne estas parto de M15 (vidu [ARM.md](ARM.md) §2).
 - `cargo fmt --all -- --check` — pura.
 - `cargo clippy --workspace --release` — sen avertoj.
 - `cargo build --workspace --release` — sukcesa.
-- 26 Kani-pruvoj: 6 en `memoro/kadro.rs`, 20 en `kerno/ik.rs`; ĉiuj maŝine
-  pruvitaj per Kani 0.68.0 (CBMC 6.11.0) en WSL2 Ubuntu; vidu §4.6.
+- 43 Kani-pruvoj: 6 en `memoro/kadro.rs`, 20 en `kerno/ik.rs`, 9 en
+  `kerno/planisto.rs`, 5 en `kerno/vekotemporizilo.rs`, 2 en
+  `arkitekturo/x86_64/pagado.rs` kaj 1 en `interrompo/mod.rs`. La unuaj 26
+  pruviĝis per Kani 0.68.0 (CBMC 6.11.0) en WSL2 (§4.6); la tuta matrico nun
+  ruliĝas en GitHub Actions (§4.7).
 - `just kontroli` difinas la formalan pordegon.
 
 **Pruvoj kaj `unwind`-limoj.** La pruvoj grupiĝas laŭ la pruvata tavolo; `—`
@@ -750,25 +755,35 @@ signifas la defaŭltan `unwind`-valoron.
 
 | Dosiero | Pruvoj | `unwind` |
 | --- | --- | --- |
-| `memoro/kadro.rs` | intervalo, preterpaso de uzataj kadroj, duobla liberigo, reuzo, sen duobla alokado, marki/malmarki | 70 (krom la lasta) |
+| `memoro/kadro.rs` | intervalo, preterpaso de uzataj kadroj, duobla liberigo, reuzo, sen duobla alokado, marki/malmarki (sur `KadraAlokilo<8>`) | 70 (krom la lasta) |
 | `kerno/ik.rs` | mesaĝujo: ena longo, pleneco, preno, FIFO, FIFO inter fontoj, malpleno | 70/20/20/8/8/— |
 | `kerno/ik.rs` | teniloj kaj finpunktoj: kodigo, generacioj, referencoj, libera fendo | —/—/—/20 |
 | `kerno/ik.rs` | kapabloj: rajtoj de `SENDI`/`RICEVI`, `DONI`, transproceza izolado | — |
 | `kerno/ik.rs` | revoko, premrego, senda bito, fonta filtro | —/—/—/8 |
 | `kerno/ik.rs` | tempolimoj: politiko de `r10`, minimuma tiko | — |
+| `kerno/vekotemporizilo.rs` | kupo: pinto, elpreno, reenmeto, forigo, nova limdato | 11 |
+| `kerno/planisto.rs` | plenumtempo, prioritatoj, cedo, blokado | 12–32 |
+| `arkitekturo/x86_64/pagado.rs` | `CR3`-radiko: aliniiĝo kaj masko | — |
+| `interrompo/mod.rs` | `EOI` nur por APIC-vektoroj | — |
 
-**Mankanta.**
+**Mankanta.** Nenio el la origina celo. La pruvoj ankoraŭ ne kovras la
+1M-kadran instancon, sed tio estas limo de la pruvilo, ne duobligo de la
+logiko.
 
-- La pruvoj spegulas la logikon per 64-kadra modelo anstataŭ pruvi la
-  produktan `KadraAlokilo`; tiun laboron transprenas M20.
-- La formala pordego nun rulas en GitHub Actions (vidu §4.7), kaj `cargo kani`
-  ne plu ruliĝas loke. `miri-kontroli` kovras la unu-testojn de `kernologiko`;
-  `loom` restas neuzata, ĉar la kerno estas unuprocesora kaj protektas la
-  kritikajn sekciojn per malŝaltitaj interrompoj.
+**Fermo (2026-11-21).** La `#[cfg(kani)]`-spegulo de `KadraAlokilo` malaperis.
+La tipo nun estas ĵenera laŭ la bitara grando
+(`KadraAlokilo<const BAJTOJ: usize = BITMAPO_BAJTOJ>`), kaj la ses pruvoj
+instancigas `KadraAlokilo<8>` (64 kadroj) kaj alvokas la samajn metodojn, kiujn
+la kerno uzas. `liberigi` dividiĝis en publikan vokon kaj privatan
+`liberigi_kun`, kiu ricevas la nuligan operacion; la pruvoj transdonas
+senefikan nuligon, ĉar CBMC ne modeligas absolutan fizikan skribon.
 
-**Sekva paŝo.** La unu-testoj por la arkitekture sendependaj partoj
-(`MemoraMapo`, `Mesagujo`, `PretaVico`, `VirtuaAdreso`) ekzistas ekde M18 Fazo 1
-(0.8.0); la pruvoj kontraŭ la produktaj tipoj restas la celo de M20.
+**Sekva paŝo.** La pruvoj kontraŭ la produktaj tipoj estas faritaj. La formala
+pordego restas en GitHub Actions (vidu §4.7), kaj `cargo kani` ne ruliĝas
+loke. `miri-kontroli` kovras la unu-testojn de `kernologiko`; `loom` restas
+neuzata, ĉar la kerno estas unuprocesora kaj protektas la kritikajn sekciojn
+per malŝaltitaj interrompoj. M20 plu pritraktas la `PaĝaTablo`-abstrakcion kaj
+la 1.0-eldonon.
 
 ---
 
@@ -1218,7 +1233,7 @@ voko redonas `-11` sen cedi, kaj `r10 = u32::MAX` blokas ĝis mesaĝo aŭ revoko
 **Celo.** Dormantaj fadenoj, prioritatoj kaj mezuro de plenumtempo.
 
 **Taskoj.** Unuopa vekotemporizilo (min-kupo), `dormi(md)`, prioritatoj aŭ
-loteria planado, statistiko, eventuala SMP-esploro kun IPI.
+loteria planado, statistiko.
 
 **Akceptkriterioj.** Fadeno dormanta 100 ms vekiĝas en tolero; la planisto ne
 malsatigas fadenojn; la ripoza kunteksto restas senŝanĝa.
@@ -1430,8 +1445,11 @@ de M16 Fazo 3 estas verda.
 
 **Versio.** 0.6.2 (Fazo 3).
 
-**Restanta parto.** La SMP-esploro estis «eventuala» kaj restas ekster la celo
-de 1.0; M16 tenas la staton «Parte» nur pro ĝi.
+**Fermo (2026-11-21).** La tri fazoj plenumis la akceptkriteriojn. La
+«eventuala SMP-esploro kun IPI» estis forigita el la celo de 1.0: la kerno estas
+unuprocesora kaj protektas la kritikajn sekciojn per malŝaltitaj interrompoj, do
+SMP postulus apartajn ŝlosilojn, po-CPU-staton kaj IPI-infrastrukturon. La laboro
+restas en la vojmapo kiel M21, post 1.0.
 
 ---
 
@@ -1967,7 +1985,7 @@ de `#[allow]` kaj plibonigo de Ring 3-esceptoj.
 | --- | --- | --- |
 | Testoj ruliĝas sen QEMU | Jes | `just testoj` (aŭ `cargo test -p kernologiko --target <gastiganto>`) finiĝas kun `test result: ok. 61 passed`. |
 | Kovrado de sendependaj moduloj | Jes | 61 testkazoj (≥ 20) en ses moduloj, inkluzive de plena/malplena vico, nevalida adreso kaj nedisigebla UTF-8. |
-| Simulita `KadraAlokilo`/`PaĝaTablo` | Parte | La generika abstragon oni ne enkondukis: ĝi tuŝus ĉiun el la 44 `PaĝaTablo`-alvokoj kaj 82 `KadraAlokilo`-uzoj. Anstataŭe la puraj moduloj estas apartigitaj en `kernologiko`, kaj `KadraAlokilo` jam posedas `#[cfg(kani)]`-spegulon. Vidu «1a». |
+| Simulita `KadraAlokilo`/`PaĝaTablo` | Parte | `KadraAlokilo` fariĝis ĵenera laŭ la bitara grando kaj pruviĝas sur la produktaj metodoj (M9, 2026-11-21); por `PaĝaTablo` la generika abstrado restas malferma ĝis M20. Vidu «1a». |
 
 ##### Fazo 2: QEMU-matrico kaj aŭtomata ISO-regenerado (Versio 0.8.1)
 
@@ -2298,9 +2316,9 @@ relativaj vojoj (0.8.5). La lasta pruvo estas la runo
 [#44908392008](https://github.com/makoto-lernanto/mikerno/actions/runs/44908392008)
 kun 53 verdaj taskoj kaj la Eldono v0.8.5. La sola ne plene plenumita
 subkriterio — la generika `KadraAlokilo`/`PaĝaTablo`-abstrakcio de Fazo 1 — estis
-anstataŭita per la apartigo de la puraj moduloj en `kernologiko` kaj la
-`#[cfg(kani)]`-spegulo; la restanta laboro, nome pruvoj kontraŭ la produktaj
-tipoj, transiras al M20.
+anstataŭita per la apartigo de la puraj moduloj en `kernologiko`;
+`KadraAlokilo` mem fariĝis ĵenera laŭ la bitara grando kaj pruviĝas sur la
+produktaj metodoj (M9, 2026-11-21). La `PaĝaTablo`-abstrakcio restas por M20.
 
 #### 1a. Fazo 1 — efektivigita (0.8.0)
 
@@ -2340,11 +2358,12 @@ test result: ok. 61 passed; 0 failed
 ```
 
 **Simulitaj `KadraAlokilo`/`PaĝaTablo`.** La plano proponis generikan
-abstrakcion por ambaŭ. Tia ŝanĝo tuŝus dekojn da `PaĝaTablo`-alvokoj kaj
-`KadraAlokilo`-uzoj, sen alporti novajn testkazojn: la puraj reguloj jam
-testiĝas per `kernologiko`, kaj `KadraAlokilo` posedas `#[cfg(kani)]`-spegulon,
-kiun la pruvoj uzas. La generika abstrado restas malferma eblo por posta Fazo;
-la du akceptkriterioj de Fazo 1 (sen QEMU, ≥ 20 kazoj) estas plenumitaj.
+abstrakcion por ambaŭ. Tia ŝanĝo tuŝus dekojn da `PaĝaTablo`-alvokoj, sen
+alporti novajn testkazojn: la puraj reguloj jam testiĝas per `kernologiko`.
+`KadraAlokilo` solviĝis alie: ĝi nun estas ĵenera laŭ la bitara grando, do la
+Kani-pruvoj alvokas la produktajn metodojn (M9). La `PaĝaTablo`-abstrakcio
+restas malferma por M20; la du akceptkriterioj de Fazo 1 (sen QEMU, ≥ 20 kazoj)
+estas plenumitaj.
 
 **Pordego.** `just kontroli` nun komenciĝas per `just testoj`, kiu rulas
 `cargo test -p kernologiko --target <gastiganto>`; DI uzas la saman resepton,
@@ -2573,7 +2592,7 @@ mejloŝtono venas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo el M17.
 | Kopiataj mesaĝoj | Sendanto povas tuj reuzi sian bufron | 64-bajta limo |
 | Sama virtuala adreso por la sekreta paĝo | La pruvo montras fizikan izoladon, ne nur malsamajn adresojn | Nur unu paĝo por procezo; la dua paĝo restas viktima provo |
 | Unu `planisto::lanĉi()` por ambaŭ procezoj | La du procezoj vere interplektiĝas; neniu dua starta vojo | La praŝarĝo devas decidi la tutan aron antaŭe |
-| Kani-speguloj | Traktebla stato-spaco | La produkta kodo ne estas pruvita |
+| Kani-pruvoj sur malgranda bitaro | Traktebla stato-spaco | La pruvoj ne kovras la 1M-kadran instancon |
 
 ---
 
@@ -2588,7 +2607,6 @@ mejloŝtono venas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo el M17.
 | Meza | Neniu IOMMU | Aparata DMA ne estas izolita | M19 |
 | Meza | Frambufo sen rulumo | Malbona uzsperto | M6-poste |
 | Malalta | `Kunhavigita::akiri` liveras krudan montrilon el `&self` | La derivo de referenco devas esti eksplicita `unsafe` | reviziita (M17 F5); la disciplino restas dokumentita |
-| Malalta | Kani-modelo ≠ produkta kodo | Pruvoj ne rekte aplikeblas | M20 |
 
 ---
 

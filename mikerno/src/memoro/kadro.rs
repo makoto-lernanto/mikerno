@@ -4,7 +4,10 @@ use super::{KADRA_GRANDO, MemoraMapo, MemoraRegiono};
 
 pub const MAKSA_FIZIKA_MEMORO: u64 = 4 * 1024 * 1024 * 1024;
 pub const MAKSA_KADROJ: usize = (MAKSA_FIZIKA_MEMORO / KADRA_GRANDO) as usize;
-const BITMAPO_BAJTOJ: usize = MAKSA_KADROJ / 8;
+/// Grando de la bitaro, kiu kovras `MAKSA_KADROJ` kadrojn.
+pub const BITMAPO_BAJTOJ: usize = MAKSA_KADROJ / 8;
+
+const _: () = assert!(BITMAPO_BAJTOJ * 8 == MAKSA_KADROJ);
 
 unsafe extern "C" {
     static __kerna_komenco: u8;
@@ -29,15 +32,25 @@ impl Kadro {
     }
 }
 
-pub struct KadraAlokilo {
-    bitmapo: [u8; BITMAPO_BAJTOJ],
+/// Bitmapa alokilo, ĵenera laŭ la grando de la bitaro. La nombro da kadroj
+/// estas `BAJTOJ * 8`; la defaŭlta valoro kongruas kun `MAKSA_KADROJ`.
+///
+/// La parametro ekzistas por la pruvoj: Kani ne traktas la pli ol unu milionon
+/// da kadroj de la produkta instanco, do ĝi instancigas la saman tipon kun
+/// malgranda bitaro anstataŭ kopii la logikon.
+pub struct KadraAlokilo<const BAJTOJ: usize = BITMAPO_BAJTOJ> {
+    bitmapo: [u8; BAJTOJ],
     sekva: usize,
 }
 
-impl KadraAlokilo {
+impl<const BAJTOJ: usize> KadraAlokilo<BAJTOJ> {
+    const fn kadroj() -> usize {
+        BAJTOJ * 8
+    }
+
     pub const fn nova() -> Self {
         Self {
-            bitmapo: [0; BITMAPO_BAJTOJ],
+            bitmapo: [0; BAJTOJ],
             sekva: 0,
         }
     }
@@ -70,7 +83,7 @@ impl KadraAlokilo {
     }
 
     pub fn aloki(&mut self) -> Option<Kadro> {
-        while self.sekva < MAKSA_KADROJ {
+        while self.sekva < Self::kadroj() {
             let indekso = self.sekva;
             self.sekva += 1;
             if !self.kadro_uzata(indekso) {
@@ -85,11 +98,11 @@ impl KadraAlokilo {
     /// sufiĉe longa libera intervalo. La kadroj restas okupataj ĝis eksplicita
     /// `liberigi`. Uzata de `ramfb` (arm64) kaj de la virtio-vicoj.
     pub fn aloki_kontiguajn(&mut self, n: usize) -> Option<Kadro> {
-        if n == 0 || n > MAKSA_KADROJ {
+        if n == 0 || n > Self::kadroj() {
             return None;
         }
         let mut indekso = 0;
-        while indekso + n <= MAKSA_KADROJ {
+        while indekso + n <= Self::kadroj() {
             if self.kadro_uzata(indekso) {
                 indekso += 1;
                 continue;
@@ -115,15 +128,25 @@ impl KadraAlokilo {
     /// ne malfermas du kadrojn. La enhavo estas nuligata, por ke la sekva
     /// posedanto ne vidu malnovajn datumojn de alia procezo.
     pub fn liberigi(&mut self, kadro: Kadro) {
+        // SAFETY: `liberigi_kun` alvokas `nuligi` nur post kontrolo, ke la
+        // kadro estas okupata; la indekso estas malpli ol `BAJTOJ * 8`, kaj la
+        // enlinia aserto de `liberigi_kun` limigas tion al la unuaj 4 GiB, kiuj
+        // estas identece mapitaj.
+        self.liberigi_kun(kadro, |adreso| unsafe {
+            core::ptr::write_bytes(adreso as *mut u8, 0, KADRA_GRANDO as usize);
+        });
+    }
+
+    /// La komuna vojo de `liberigi`: `nuligi` ricevas la fizikan adreson de
+    /// kadro, kiu estis okupata. La pruvoj uzas senefikan `nuligi`, ĉar la
+    /// nuligo skribas al absoluta fizika adreso, kiun CBMC ne modeligas.
+    fn liberigi_kun<F: FnOnce(u64)>(&mut self, kadro: Kadro, nuligi: F) {
+        const { assert!(BAJTOJ * 8 <= MAKSA_KADROJ) };
         let indekso = kadro.indekso();
-        if indekso >= MAKSA_KADROJ || !self.kadro_uzata(indekso) {
+        if indekso >= Self::kadroj() || !self.kadro_uzata(indekso) {
             return;
         }
-        // SAFETY: la kadro venas de la bitaro kaj kuŝas en la unuaj 4 GiB, kiuj
-        // estas identece mapitaj; ĝi estas uzata, do ĝia enhavo estas nia.
-        unsafe {
-            core::ptr::write_bytes(kadro.adreso() as *mut u8, 0, KADRA_GRANDO as usize);
-        }
+        nuligi(kadro.adreso());
         self.marki(indekso, false);
         // La skanilo nur antaŭeniras; retreatigu ĝin, por ke la kadro estu
         // reuzata antaŭ ol la tuta bitaro estos denove traserĉata.
@@ -138,11 +161,14 @@ impl KadraAlokilo {
         // vektorigilo de la nuna rustc miskalkulas la bajtan formon en kelkaj
         // enliniaj kopioj (la ĝusta 984 598 fariĝis 8 292 689 659 472).
         let mut uzataj = 0usize;
-        let (vortoj, _) = self.bitmapo.as_chunks::<8>();
+        let (vortoj, resto) = self.bitmapo.as_chunks::<8>();
         for vorto in vortoj {
             uzataj += u64::from_le_bytes(*vorto).count_ones() as usize;
         }
-        MAKSA_KADROJ - uzataj
+        for bajto in resto {
+            uzataj += bajto.count_ones() as usize;
+        }
+        Self::kadroj() - uzataj
     }
 
     fn kadro_uzata(&self, indekso: usize) -> bool {
@@ -163,7 +189,7 @@ impl KadraAlokilo {
             return;
         }
         let unua = (komenco / KADRA_GRANDO) as usize;
-        let lasta = (fino.div_ceil(KADRA_GRANDO) as usize).min(MAKSA_KADROJ);
+        let lasta = (fino.div_ceil(KADRA_GRANDO) as usize).min(Self::kadroj());
         for indekso in unua..lasta {
             self.marki(indekso, uzata);
         }
@@ -172,104 +198,45 @@ impl KadraAlokilo {
 
 #[cfg(kani)]
 mod kani_proofs {
-    //! Kani-pruvoj por la bitmapa kadro-alokilo.
+    //! Pruvoj por la produktaj metodoj de `KadraAlokilo`.
     //!
-    //! La produkta `KadraAlokilo` pritraktas pli ol unu milionon da kadroj kaj
-    //! skanas ilin per `while`-buklo, do rekta pruvo eksplodus la stato-spacon.
-    //! Ĉi tiu modulo spegulas ĝian bit-logikon sur 64 kadroj kaj limigas la
-    //! enigojn per `kani::assume`, por ke la pruvoj restu trakteblaj.
+    //! La produkta instanco havas pli ol unu milionon da kadroj kaj skanas ilin
+    //! per `while`-bukloj, do rekta pruvo eksplodus la stato-spacon. La tipo
+    //! estas ĵenera laŭ la bitara grando, do ĉi tiuj pruvoj instancigas la
+    //! saman tipon kun 64 kadroj (`KadraAlokilo<8>`) kaj alvokas la samajn
+    //! metodojn, kiujn la kerno uzas. Neniu logiko estas duobligata.
 
-    const PROVAJ_KADROJ: usize = 64;
-    const PROVAJ_BAJTOJ: usize = PROVAJ_KADROJ / 8;
+    use super::{KadraAlokilo, Kadro};
 
-    /// Spegulo de `KadraAlokilo`: la samaj operacioj kaj bit-aranĝo, sed kun
-    /// 64 kadroj anstataŭ `MAKSA_KADROJ`.
-    struct Modelo {
-        bitmapo: [u8; PROVAJ_BAJTOJ],
-        sekva: usize,
+    const PROVAJ_BAJTOJ: usize = 8;
+    const PROVAJ_KADROJ: usize = PROVAJ_BAJTOJ * 8;
+
+    type Provilo = KadraAlokilo<PROVAJ_BAJTOJ>;
+
+    /// Konstruas staton, en kiu la unuaj `uzataj` kadroj estas okupataj.
+    fn kun_uzataj(uzataj: usize) -> Provilo {
+        let mut alokilo = Provilo::nova();
+        let mut indekso = 0;
+        while indekso < uzataj {
+            alokilo.marki(indekso, true);
+            indekso += 1;
+        }
+        // Produktaj `aloki`-vokoj ankaŭ antaŭenigus `sekva`.
+        alokilo.sekva = uzataj;
+        alokilo
     }
 
-    impl Modelo {
-        const fn nova() -> Self {
-            Self {
-                bitmapo: [0; PROVAJ_BAJTOJ],
-                sekva: 0,
+    /// Konstruas staton, en kiu ĉiuj kadroj krom `libera` estas okupataj.
+    fn kun_unu_libera(libera: usize) -> Provilo {
+        let mut alokilo = Provilo::nova();
+        let mut indekso = 0;
+        while indekso < PROVAJ_KADROJ {
+            if indekso != libera {
+                alokilo.marki(indekso, true);
             }
+            indekso += 1;
         }
-
-        fn kadro_uzata(&self, indekso: usize) -> bool {
-            self.bitmapo[indekso / 8] & (1 << (indekso % 8)) != 0
-        }
-
-        fn marki(&mut self, indekso: usize, uzata: bool) {
-            let bito = 1u8 << (indekso % 8);
-            if uzata {
-                self.bitmapo[indekso / 8] |= bito;
-            } else {
-                self.bitmapo[indekso / 8] &= !bito;
-            }
-        }
-
-        fn aloki(&mut self) -> Option<usize> {
-            while self.sekva < PROVAJ_KADROJ {
-                let indekso = self.sekva;
-                self.sekva += 1;
-                if !self.kadro_uzata(indekso) {
-                    self.marki(indekso, true);
-                    return Some(indekso);
-                }
-            }
-            None
-        }
-
-        /// Spegulo de la produkta `liberigi`: ignoras neokupatajn kadrojn kaj
-        /// retreatigas `sekva`, por ke la kadro estu reuzata.
-        fn liberigi(&mut self, indekso: usize) {
-            if indekso >= PROVAJ_KADROJ || !self.kadro_uzata(indekso) {
-                return;
-            }
-            self.marki(indekso, false);
-            if indekso < self.sekva {
-                self.sekva = indekso;
-            }
-        }
-
-        fn agordi_intervalon(&mut self, komenco: u64, fino: u64, uzata: bool) {
-            if fino <= komenco {
-                return;
-            }
-            let unua = (komenco / super::KADRA_GRANDO) as usize;
-            let lasta = (fino.div_ceil(super::KADRA_GRANDO) as usize).min(PROVAJ_KADROJ);
-            for indekso in unua..lasta {
-                self.marki(indekso, uzata);
-            }
-        }
-
-        /// Konstruas staton, en kiu la unuaj `uzataj` kadroj estas okupataj.
-        fn kun_uzataj(uzataj: usize) -> Self {
-            let mut modelo = Self::nova();
-            let mut indekso = 0;
-            while indekso < uzataj {
-                modelo.marki(indekso, true);
-                indekso += 1;
-            }
-            // Produktaj `aloki`-vokoj ankaŭ antaŭenigus `sekva`.
-            modelo.sekva = uzataj;
-            modelo
-        }
-
-        /// Konstruas staton, en kiu ĉiuj kadroj krom `libera` estas okupataj.
-        fn kun_unu_libera(libera: usize) -> Self {
-            let mut modelo = Self::nova();
-            let mut indekso = 0;
-            while indekso < PROVAJ_KADROJ {
-                if indekso != libera {
-                    modelo.marki(indekso, true);
-                }
-                indekso += 1;
-            }
-            modelo
-        }
+        alokilo
     }
 
     /// `aloki` neniam eliras la bitaron, resendas kadron en limoj kaj
@@ -279,22 +246,25 @@ mod kani_proofs {
     fn aloki_preterpasas_uzatajn_kadrojn() {
         let uzataj: usize = kani::any();
         kani::assume(uzataj <= PROVAJ_KADROJ);
-        let mut modelo = Modelo::kun_uzataj(uzataj);
+        let mut alokilo = kun_uzataj(uzataj);
 
-        let unua = modelo.aloki();
+        let unua = alokilo.aloki();
         if uzataj == PROVAJ_KADROJ {
-            assert_eq!(unua, None);
+            assert!(unua.is_none());
         } else {
-            assert_eq!(unua, Some(uzataj));
-            assert!(modelo.kadro_uzata(uzataj));
+            assert_eq!(unua.map(|kadro| kadro.indekso()), Some(uzataj));
+            assert!(alokilo.kadro_uzata(uzataj));
 
-            let dua = modelo.aloki();
+            let dua = alokilo.aloki();
             if uzataj + 1 == PROVAJ_KADROJ {
-                assert_eq!(dua, None);
+                assert!(dua.is_none());
             } else {
-                assert_eq!(dua, Some(uzataj + 1));
-                assert_ne!(dua, unua);
-                assert!(modelo.kadro_uzata(uzataj + 1));
+                assert_eq!(dua.map(|kadro| kadro.indekso()), Some(uzataj + 1));
+                assert_ne!(
+                    dua.map(|kadro| kadro.indekso()),
+                    unua.map(|kadro| kadro.indekso())
+                );
+                assert!(alokilo.kadro_uzata(uzataj + 1));
             }
         }
     }
@@ -306,12 +276,12 @@ mod kani_proofs {
     fn neniom_da_duobla_alokado() {
         let libera: usize = kani::any();
         kani::assume(libera < PROVAJ_KADROJ);
-        let mut modelo = Modelo::kun_unu_libera(libera);
+        let mut alokilo = kun_unu_libera(libera);
 
-        assert_eq!(modelo.aloki(), Some(libera));
-        assert!(modelo.kadro_uzata(libera));
-        assert_eq!(modelo.aloki(), None);
-        assert_eq!(modelo.sekva, PROVAJ_KADROJ);
+        assert_eq!(alokilo.aloki().map(|kadro| kadro.indekso()), Some(libera));
+        assert!(alokilo.kadro_uzata(libera));
+        assert!(alokilo.aloki().is_none());
+        assert_eq!(alokilo.sekva, PROVAJ_KADROJ);
     }
 
     /// Liberigo malmarkas nur la donitan kadron, retreatigas `sekva` kaj
@@ -321,15 +291,15 @@ mod kani_proofs {
     fn liberigo_lasas_la_kadron_reuzebla() {
         let indekso: usize = kani::any();
         kani::assume(indekso < PROVAJ_KADROJ);
-        let mut modelo = Modelo::kun_uzataj(PROVAJ_KADROJ);
+        let mut alokilo = kun_uzataj(PROVAJ_KADROJ);
 
-        assert!(modelo.kadro_uzata(indekso));
-        modelo.liberigi(indekso);
-        assert!(!modelo.kadro_uzata(indekso));
-        assert_eq!(modelo.sekva, indekso);
+        assert!(alokilo.kadro_uzata(indekso));
+        alokilo.liberigi_kun(Kadro(indekso as u64), |_| {});
+        assert!(!alokilo.kadro_uzata(indekso));
+        assert_eq!(alokilo.sekva, indekso);
 
-        assert_eq!(modelo.aloki(), Some(indekso));
-        assert!(modelo.kadro_uzata(indekso));
+        assert_eq!(alokilo.aloki().map(|kadro| kadro.indekso()), Some(indekso));
+        assert!(alokilo.kadro_uzata(indekso));
     }
 
     /// Duobla liberigo estas senefika: la dua voko ne ŝanĝas la bitaron kaj
@@ -339,15 +309,15 @@ mod kani_proofs {
     fn duobla_liberigo_estas_senefika() {
         let indekso: usize = kani::any();
         kani::assume(indekso < PROVAJ_KADROJ);
-        let mut modelo = Modelo::kun_uzataj(PROVAJ_KADROJ);
+        let mut alokilo = kun_uzataj(PROVAJ_KADROJ);
 
-        modelo.liberigi(indekso);
-        let bitmapo = modelo.bitmapo;
-        let sekva = modelo.sekva;
-        modelo.liberigi(indekso);
+        alokilo.liberigi_kun(Kadro(indekso as u64), |_| {});
+        let bitmapo = alokilo.bitmapo;
+        let sekva = alokilo.sekva;
+        alokilo.liberigi_kun(Kadro(indekso as u64), |_| {});
 
-        assert_eq!(modelo.bitmapo, bitmapo);
-        assert_eq!(modelo.sekva, sekva);
+        assert_eq!(alokilo.bitmapo, bitmapo);
+        assert_eq!(alokilo.sekva, sekva);
     }
 
     /// `marki` kaj ĝia malo sekurigas la biton sen eliri la bitaron.
@@ -355,12 +325,12 @@ mod kani_proofs {
     fn marki_kaj_malmarki_sen_paniko() {
         let indekso: usize = kani::any();
         kani::assume(indekso < PROVAJ_KADROJ);
-        let mut modelo = Modelo::nova();
+        let mut alokilo = Provilo::nova();
 
-        modelo.marki(indekso, true);
-        assert!(modelo.kadro_uzata(indekso));
-        modelo.marki(indekso, false);
-        assert!(!modelo.kadro_uzata(indekso));
+        alokilo.marki(indekso, true);
+        assert!(alokilo.kadro_uzata(indekso));
+        alokilo.marki(indekso, false);
+        assert!(!alokilo.kadro_uzata(indekso));
     }
 
     /// `agordi_intervalon` akceptas arbitrajn 64-bitajn limojn sen eliri la
@@ -368,19 +338,19 @@ mod kani_proofs {
     #[kani::proof]
     #[kani::unwind(70)]
     fn agordi_intervalon_sen_paniko() {
-        let mut modelo = Modelo::nova();
+        let mut alokilo = Provilo::nova();
         let komenco: u64 = kani::any();
         let fino: u64 = kani::any();
         let uzata: bool = kani::any();
 
-        modelo.agordi_intervalon(komenco, fino, uzata);
+        alokilo.agordi_intervalon(komenco, fino, uzata);
 
         if fino > komenco {
             let unua = (komenco / super::KADRA_GRANDO) as usize;
             let lasta = (fino.div_ceil(super::KADRA_GRANDO) as usize).min(PROVAJ_KADROJ);
             let mut indekso = unua.min(PROVAJ_KADROJ);
             while indekso < lasta {
-                assert_eq!(modelo.kadro_uzata(indekso), uzata);
+                assert_eq!(alokilo.kadro_uzata(indekso), uzata);
                 indekso += 1;
             }
         }
