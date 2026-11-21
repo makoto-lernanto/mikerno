@@ -2577,14 +2577,95 @@ komitero kaj praŝarĝitaj per `tools/kontroli-qemu.sh`: `x86_64` atingis
 
 ### M19 — Plena pruvaro kaj 1.0
 
-**Celo.** Fermi la `0.8.x`-linion kaj etikedi `v1.0.0` surbaze de la pruvaro
-jam verda.
+**Celo.** Fermi la `0.8.x`-linion: forigi la lastan «Parte»-eron de M18,
+frostigi la ABI-on, kompletigi la pruvokatalogon kaj publikigi `v1.0.0`.
 
-**Taskoj.** Revizii kaj datigi `docs/ANONCO-1.0.md`, ruli la plenan pordegon
-loke kaj en DI, konstrui ambaŭ ISO-ojn el la puŝita komitero, registri iliajn
-SHA-256-valorojn kaj akceptajn liniojn, kaj publikigi la etikedon.
+**Taskoj.** Kvin fazoj; la kvar unuaj sekvas la mapadon `Fazo Y → 0.9.(Y−1)`,
+kaj la lasta estas la eldono mem kun la versio `1.0.0`.
 
-**Akceptkriterioj.** Ĉiuj kvin paŝoj de la eldona kontrolo en
+| Fazo | Versio | Enhavo | Akcepto |
+| --- | --- | --- | --- |
+| 1 | `0.9.0` | `PaĝaTablo`-abstrakcio kaj pruvoj | la «Parte»-ero de M18 fermita; novaj pruvoj verde |
+| 2 | `0.9.1` | ABI-frosto: kontrakto pri grandezo kaj unu referenca tabelo | `const`-asertoj kaj unu-testoj verde; ABI 2 frostigita |
+| 3 | `0.9.2` | Pruvokatalogo kaj plena pordega revizio | katalogo kongruas kun la `#[kani::proof]`-atributoj; DI kaj kvin QEMU-kombinaĵoj verde |
+| 4 | `0.9.3` | Eldonkandidato: anonco, ISO-oj, haketoj | ambaŭ ISO-oj praŝarĝitaj; SHA-256 kaj akceptaj linioj registritaj |
+| 5 | `1.0.0` | Etikedo kaj publikigo | Eldono `v1.0.0` kun ambaŭ ISO-oj; la kerno presas `v1.0.0` |
+
+**Fazo 1 (0.9.0) — `PaĝaTablo`-abstrakcio kaj pruvoj.**
+
+- La puraj reguloj de `PaĝaTablo` — indeksa malkompono de virtuala adreso,
+  `PaĝaPermesoj` → PTE-bitoj kaj la trairo de privataj subtabeloj — ricevas la
+  saman traktadon kiel `KadraAlokilo`: ĵenera aŭ pura tipo, kies produktajn
+  metodojn alvokas la pruvoj.
+- La novaj puraj reguloj ricevas `#[cfg(test)]`-kazojn en `kernologiko`.
+- Kani-pruvoj sur la produktaj metodoj: aliniiĝo, W^X-kodigo, la identa
+  konvertiĝo inter adreso kaj indekso kaj la kompleta liberigo de privataj
+  subtabeloj.
+- La vico «Simulita `KadraAlokilo`/`PaĝaTablo`» de M18 kaj la notoj «ĝis M19»
+  fermiĝas.
+
+**Akcepto.** `just kontroli` verda (inkluzive la novajn unu-testojn); la novaj
+pruvoj aperas kaj sukcesas en la matrico `kani-kontroli`; `x86_64` kaj `arm64`
+praŝarĝiĝas sen `MALBONE` kaj la frambufa haketo restas identa inter la arkoj;
+la vico de M18 montras «Jes».
+
+**Fazo 2 (0.9.1) — ABI-frosto.**
+
+- `const`-asertoj en `libmikerno` (kaj unu-testoj en `kernologiko`) pri
+  `size_of::<Tenilo>() == 4`, `size_of::<Mesago>() == 96` kaj `ABI_VERSIO == 2`.
+- Unu referenca tabelo de la ABI 2 — numeroj `1`–`20`, argumentoj kaj
+  erar-kodoj — ligita al la konstantoj de `libmikerno`.
+- Deklaro, ke ABI 2 estas frostigita: post 1.0 ajna nekongrua ŝanĝo postulas
+  `ABI_VERSIO = 3`.
+
+**Akcepto.** La asertoj kompiliĝas por ambaŭ celoj; unu-testo legas la
+konstantojn kaj pruvas la unikecon de la 20 numeroj; `tools/dokumentaro.sh
+--kontroli` restas verda; la semantiko de ĉiu sistemvoko estas senŝanĝa.
+
+**Fazo 3 (0.9.2) — Pruvokatalogo kaj plena pordego.**
+
+- La pruvokatalogo en §3 ricevas unu vicon por ĉiu `#[kani::proof]` kun la
+  modula dosiero, la pruvata invarianto kaj la DI-tasko.
+- `tools/dokumentaro.sh --kontroli` komparas la nombron da katalogo-vicoj kun
+  la nombro da `#[kani::proof]`-atributoj en la deponejo.
+- Plena revizio de `di.yml`: `kontroli-kaj-konstrui`, `miri-kontroli`,
+  `permesiloj-kontroli`, `kani-kontroli`, `paki-iso` kaj la kvin
+  `qemu-kontroli`, sen nuligita aŭ preterlasita tasko.
+
+**Akcepto.** La katalogo kaj la atributoj kongruas; `just kontroli` kaj la
+tuta DI-matrico estas verdaj; la kvin QEMU-kombinaĵoj atingas
+`[kerno] fina stato:` sen `MALBONE`.
+
+**Fazo 4 (0.9.3) — Eldonkandidato.**
+
+- Revizii kaj datigi `docs/ANONCO-1.0.md` (ankoraŭ kiel «prepara»),
+  sinkronigi `README.md`, konstrui `just iso` kaj `just iso-arm` el la puŝita
+  komitero, praŝarĝi ambaŭ per `tools/kontroli-qemu.sh` kaj registri la
+  SHA-256-valorojn kaj la akceptajn liniojn.
+- Prepari la priskribon de la Eldono kun la du haketoj kaj la ĉefaj akceptaj
+  linioj.
+
+**Akcepto.** Ambaŭ ISO-oj praŝarĝiĝas sen `MALBONE`; la valoroj aperas en ĉi
+tiu dokumento; `just kontroli` kaj la DI-matrico restas verdaj.
+
+**Fazo 5 (1.0.0) — Etikedo kaj publikigo.**
+
+- `[workspace.package] version` → `1.0.0`, poste
+  `bash tools/versio.sh --ĝisdatigi`; plena pordego kaj DI el la puŝita kodo.
+- Rekonstrui ambaŭ ISO-ojn, kontroli ilin kaj publikigi la Eldonon `v1.0.0`
+  (ne antaŭeldono) kun ambaŭ aktivaĵoj kaj iliaj SHA-256-valoroj.
+- Publikigi la anoncon (forigi la staton «prepara») kaj marki M19 kiel
+  «Plenumita» en la superrigardo.
+
+**Akcepto.** La kerno presas `MiKerno v1.0.0` ĉe ambaŭ arkoj kaj ambaŭ
+praŝarĝaj vojoj; `tools/versio.sh --kontroli` kongruas ĉie kun `1.0.0`; la
+Eldono `v1.0.0` estas la plej nova kaj enhavas `mikerno.iso` kaj
+`mikerno-arm.iso`; la anonco estas publikigita kaj M19 montriĝas «Plenumita».
+
+**Versinoto.** Fazo 5 escepte uzas `1.0.0` anstataŭ la formo `0.9.4`, kiun
+donus la mapado, ĉar 1.0 estas la cellinio; la fazoj 1–4 sekvas la regulon.
+
+**Akceptkriterioj de la mejloŝtono.** Ĉiuj kvin paŝoj de la eldona kontrolo en
 `docs/ANONCO-1.0.md` plenumitaj: `just kontroli` verda, la tuta DI-matrico
 verda, ambaŭ ISO-oj praŝarĝitaj sen `MALBONE`, la valoroj registritaj kaj la
 etikedo `v1.0.0` publikigita. La ses kriterioj de §8 estas jam plenumitaj.
