@@ -2175,8 +2175,27 @@ terminojn por `ENIGI`, `LISTI`, `LEGI`, `PROCEZOJ`, `MORTIGI` kaj `LANĜI`.
 Loka pordego: `just kontroli` finiĝis sen eraro (61 unu-testoj, `fmt`, ambaŭ
 `clippy`-vokoj, konstruo), kaj ambaŭ ISO-oj el 0.8.4 praŝarĝiĝis senkape sen
 `MALBONE`: `[MiKerno] … v0.8.4!` kun `#UD-izolado (bone)` kaj
-`fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj` (1013 tikoj sur `x86_64`,
-1018 sur `arm64`).
+`fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj` (1018 tikoj sur `x86_64`,
+1014 sur `arm64`).
+
+**Nuba DI (2026-11-21).** La runo
+[#44905256498](https://github.com/makoto-lernanto/mikerno/actions/runs/44905256498)
+ĉe `5ff93eb` havas 53 verdajn taskojn, inkluzive la novan
+`kontroli-dokumentaron`-paŝon en `kontroli-kaj-konstrui` kaj la kvin
+QEMU-kombinaĵojn; neniu tasko estis nuligita aŭ ripetita.
+
+**Eldono.** La Eldono
+[v0.8.4](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.8.4) montras
+al `5ff93eb` kaj enhavas ambaŭ ISO-ojn, konstruitajn el la puŝita kodo:
+
+| Dosiero | SHA-256 |
+| --- | --- |
+| `mikerno.iso` | `11f493d0a5f594e3fb14d032fa2ec0013dc709ebf2d70b5cb2f8ebfaaf35d428` |
+| `mikerno-arm.iso` | `8837bad810fef80c454128f660f0335b9b5e053d03a8c1705c64bdc5f28b6016` |
+
+La praŝarĝoj printis `[MiKerno] … v0.8.4!`, la saman pikselan haketon
+`0xecf1f6dbe1421575`, `[kerno] #UD-izolado (bone)` kaj la finan staton sen
+`MALBONE` (1018 tikoj sur `x86_64`, 1014 sur `arm64`).
 
 **Akceptkriterioj de la mejloŝtono.** Ĉiu tirpeto plenumas `fmt`, `clippy`,
 `konstruo`, `kani` kaj la QEMU-smokan teston; la ISO estas artefakto de DI, ne
