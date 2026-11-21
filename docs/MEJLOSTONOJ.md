@@ -2291,18 +2291,30 @@ senkape sen `MALBONE`: `[MiKerno] … v0.8.5!` kun la sama piksela haketo
 QEMU-kombinaĵojn, `miri-kontroli`, `permesiloj-kontroli`, `kani-pretigi` kaj
 la tutan matricon `kani-kontroli`; neniu tasko estis nuligita aŭ malsukcesa.
 
+**Rekonstruo post M9/M16 (2026-11-21).** La fermo de M9 kaj M16 (`a0d9257`)
+rekonstruis ambaŭ ISO-ojn el la puŝita kodo; ili praŝarĝiĝis senkape sen
+`MALBONE`, kun la sama piksela haketo `0xecf1f6dbe1421575` (1021 tikoj sur
+`x86_64`, 1009 sur `arm64`; la tiko-nombro varias inter ruloj). La aktualaj
+SHA-256 estas
+`1eccaee95a519ba81bed20b6e9e7d00c88729eee25270cda906a980fe729cc58`
+(`mikerno.iso`) kaj
+`1eddee6ec855cb0dc5a3b557c0db13fdfeb75e6f6566aff53ba1adec3489366c`
+(`mikerno-arm.iso`). La DI-runo
+[#44913044319](https://github.com/makoto-lernanto/mikerno/actions/runs/44913044319)
+ĉe `a0d9257` havas 53 verdajn taskojn.
+
 **Eldono.** La Eldono
 [v0.8.5](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.8.5) montras
-al `3f5f19e` kaj enhavas ambaŭ ISO-ojn konstruitajn el la puŝita kodo:
+al `3f5f19e`; post M9/M16 ĝiaj ISO-oj estis rekonstruitaj el `a0d9257`:
 
 | Dosiero | SHA-256 |
 | --- | --- |
-| `mikerno.iso` | `6ac5a3855b873460bd2d7eaf22eee5b6d5260f85e28f4862fb748b087fffbd0f` |
-| `mikerno-arm.iso` | `6c2943f82774bdfc4ab69296e9b5ed1de172c233587a88ad53c7988c217cb1e2` |
+| `mikerno.iso` | `1eccaee95a519ba81bed20b6e9e7d00c88729eee25270cda906a980fe729cc58` |
+| `mikerno-arm.iso` | `1eddee6ec855cb0dc5a3b557c0db13fdfeb75e6f6566aff53ba1adec3489366c` |
 
 La praŝarĝoj printis `[MiKerno] … v0.8.5!`, la saman pikselan haketon
-`0xecf1f6dbe1421575` kaj la finan staton sen `MALBONE` (1019 tikoj sur
-`x86_64`, 1020 sur `arm64`).
+`0xecf1f6dbe1421575` kaj la finan staton sen `MALBONE` (1021 tikoj sur
+`x86_64`, 1009 sur `arm64`; la tiko-nombro varias inter ruloj).
 
 **Akceptkriterioj de la mejloŝtono.** Ĉiu tirpeto plenumas `fmt`, `clippy`,
 `konstruo`, `kani` kaj la QEMU-smokan teston; la ISO estas artefakto de DI, ne
