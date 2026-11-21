@@ -446,11 +446,15 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `protekta procezo` | protected process | `pid ≤ 1`; `mortigi` rifuzas kaj la kerno redonas `-13`. |
 | `ŝelo` | shell | Procezo 1 (`REĜIMO_ŜELO`); la krado `horizonto` eniras `ligo::starti()`. |
 | `fono` | background process | Procezo 2 (`REĜIMO_FONO`); dormas ĝis `mortigi 2`. |
-| `prompto` | prompt | `ligo:~> `; reskribata per `\r\x1b[K` post ĉiu klavo. |
+| `prompto` | prompt | `ligo:~> `, `ligo:~/notoj>` aŭ `ligo:/…>`; `~` sekvas la nunan dosierujon; reskribata per `\r\x1b[K` post ĉiu klavo. |
+| `hejmo` | home directory | `/hejmo` en SNDS; la starta dosierujo de Ligo kaj la signifo de `~`. |
+| `nuna dosierujo` | current directory | La stato de Ligo, ŝanĝata per `iri`; relativaj vojoj solviĝas kontraŭ ĝi. |
+| `voja solvilo` | path resolver | `kernologiko::vojo::kunigi`: normaligas `~`, `.` kaj `..` antaŭ la sistemvoko. |
+| `kunigi`, `por_invito` | join, prompt path | `kernologiko::vojo`: `kunigi` solvas vojon kontraŭ `HEJMO` (`/hejmo`) kaj `VOJA_MAKSIMO` (160); `por_invito` redonas `~`, `~/…` aŭ la plenan vojon. `VojaEraro` distingas `TroLonga`, `Neabsoluta` kaj `NevalidaTilde`. |
 | `historio` | history | Ringo de ok antaŭaj linioj; `↑`/`↓`. |
 | `kompletigo` | completion | `Tab`: komuna prefikso aŭ listo de la komandaro. |
 | `krado` | crate | Laborloka membro: `mikerno`, `libmikerno`, `horizonto`, `saluto`. |
-| `saluto` | hello program | Krado `saluto`; `ruli saluto.elf` pruvas `SYS_LANĜI` per `[saluto] saluton el la procezo N; ĝis revido`. |
+| `saluto` | hello program | Krado `saluto`; `ruli /saluto.elf` pruvas `SYS_LANĜI` per `[saluto] saluton el la procezo N; ĝis revido`. |
 | `piksela egaleco` | pixel parity | Inter `x86_64` kaj `arm64`. |
 | `aplikaja manifesto` | application manifest | Enhavas `gu = "fluoU"`. |
 | `izolita aplikaĵo` | sandboxed application | Minimumaj kapabloj. |
@@ -475,11 +479,13 @@ Esperantajn vortojn sen ĉapelaj literoj kaj neniam la x-sistemon.
 | Esperanto | Angla (malpermesita) | Signifo |
 | --- | --- | --- |
 | `helpu` | `help` | Montri la helpon |
-| `listi` | `ls` | Listigi dosierojn |
+| `listi` | `ls` | Listigi dosierojn (sen argumento: la nuna dosierujo) |
 | `legi` | `cat` | Legi dosieron |
+| `iri` | `cd` | Ŝanĝi la nunan dosierujon (sen argumento: `~`, do `/hejmo`) |
+| `kie` | `pwd` | Montri la plenan vojon de la nuna dosierujo |
 | `procezoj` | `ps` | Montri procezojn |
 | `mortigi` | `kill` | Mortigi procezon (`pid ≤ 1` estas protektita) |
-| `ruli` | — | Ruli novan ELF el SNDS (`SYS_LANĜI`) |
+| `ruli` | — | Ruli novan ELF el SNDS (`SYS_LANĜI`); `saluto.elf` kuŝas en `/` |
 | `fini` | `exit` | Fini la ŝelon (`SYS_FINI`); `Ctrl+D` en malplena linio same |
 | `eldiri` | `echo` | Krei mesaĝan rekordon |
 | `pri` | — | Sistemaj informoj |

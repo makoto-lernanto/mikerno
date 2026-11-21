@@ -92,8 +92,10 @@ fluas tra la sama kadro.
 | `theme` | `temo` |
 | `accent` | `akcento` |
 
-- **L07.** La prompto de Ligo estas `ligo:~>`; la helpa tabelo, la
-  kompletigo kaj la historio uzas nur la Esperantajn nomojn.
+- **L07.** La prompto de Ligo enhavas la nunan dosierujon: `ligo:~>` en la
+  hejmo, `ligo:~/notoj>` sub ĝi, alie `ligo:/…>` (ekzemple `ligo:/>`). La
+  signo `~` estas `/hejmo` mem kaj malaperas, kiam `iri` forlasas ĝin. La
+  helpa tabelo, la kompletigo kaj la historio uzas nur la Esperantajn nomojn.
 - **L08.** La sistema tiparo `DEVI` kovri la Esperantajn literojn
   `ĉ ĝ ĥ ĵ ŝ ŭ` kaj la citilojn `« »` en ĉiu streko, kiun FluoU uzas.
 
@@ -466,8 +468,10 @@ ne ekzistas kaj ne estas tajpeblaj.
 | Komando | Signifo | Rezulto |
 | --- | --- | --- |
 | `helpu` | Montri la komandtabelon kaj la helpon | Tabelo |
-| `listi` | Listigi dosierojn | `nomo`, `tipo`, `grandeco`, `tenilo`; en interago kolora tabelo |
+| `listi [vojo]` | Listigi dosierojn (defaŭlte la nuna dosierujo) | `nomo`, `tipo`, `grandeco`, `tenilo`; en interago kolora tabelo |
 | `legi <dosiero>` | Legi dosieron | Dosiera karto kun `tenilo` |
+| `iri [vojo]` | Ŝanĝi la nunan dosierujon (defaŭlte `~`) | Sukceso aŭ eraro |
+| `kie` | Montri la nunan dosierujon | Skalaro |
 | `procezoj` | Montri la procezan tabelon | `pid`, `nomo`, `stato`, `memoro`, `permesoj` |
 | `mortigi <pid>` | Mortigi procezon | Sukceso aŭ eraro |
 | `ruli <dosiero>` | Ruli ELF-bildon el SNDS kiel novan procezon | Sukceso aŭ eraro |
@@ -487,6 +491,11 @@ ne ekzistas kaj ne estas tajpeblaj.
 
 `lazuro` estas la Ligo-nomo de la helblua FluoU-akcento (`#4CC9FF`). Mesaĝa
 rekordo havas unu kampon, `noto`.
+
+La ŝelo startas en `/hejmo`. Ĉiu voja argumento estas solvata antaŭ la
+sistemvoko: `~` kaj `~/…` signifas `/hejmo`, relativaj vojoj komenciĝas en la
+nuna dosierujo, `.` malaperas kaj `..` forprenas komponanton sed neniam
+eliras `/`. Nur la normaligita absoluta vojo atingas SNDS.
 
 La malpermesitaj anglaj nomoj (`ls`, `cat`, `ps`, `kill`, `echo`, `help`,
 `clear`) ne ekzistas, eĉ ne kiel kaŝitaj aliasoj. Provon uzi ilin oni raportu
@@ -539,9 +548,11 @@ stadio  := filtri | ordigi | unua | sumi | nombri | montri | teksto
 | `helpu` | `helpu` |
 | `listi [vojo]` | `listi /notoj` |
 | `legi <dosiero>` | `legi bonveno.txt` |
+| `iri [vojo]` | `iri ../notoj` |
+| `kie` | `kie` |
 | `procezoj` | `procezoj` |
 | `mortigi <pid>` | `mortigi 2` |
-| `ruli <dosiero>` | `ruli saluto.elf` |
+| `ruli <dosiero>` | `ruli /saluto.elf` |
 | `eldiri <teksto>` | `eldiri saluton` |
 | `pri` | `pri` |
 | `temo <malluma\|hela>` | `temo hela` |
@@ -566,7 +577,8 @@ listi | nombri
 
 La unua dukto legiĝas: «Listigu la dosierojn, konservu tiujn pli grandajn
 ol 100 KiB, ordigu ilin malkreske laŭ grandeco kaj montru la rezulton.»
-`saluto.elf` venas de la lanĉilo (`just ruli` aŭ `just ruli-iso`).
+`saluto.elf` venas de la lanĉilo (`just ruli` aŭ `just ruli-iso`) kaj kuŝas
+en la radiko, do la ekzemplo uzas `ruli /saluto.elf`.
 
 ---
 

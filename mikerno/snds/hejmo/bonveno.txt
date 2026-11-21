@@ -1,0 +1,5 @@
+Bonvenon al la hejma dosierujo de Ligo!
+
+La signo ~ en la invito montras ĉi tiun dosierujon. Post `iri notoj`
+la invito fariĝas `ligo:~/notoj>`; `iri ~` revenas ĉi tien kaj `kie`
+montras la plenan vojon.

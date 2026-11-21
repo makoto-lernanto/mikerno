@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-20 · Versio de la Cargo-laborloko: 0.8.4
+> Stato: 2026-11-21 · Versio de la Cargo-laborloko: 0.8.5
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -175,6 +175,7 @@ eniras la kernan bildon.
 | 2026-11-20 | 0.8.2 | 63 | 15196 | 11819 | 1989 | 1388 |
 | 2026-11-20 | 0.8.3 | 63 | 15262 | 11877 | 2005 | 1380 |
 | 2026-11-21 | 0.8.4 | 63 | 15261 | 11876 | 2005 | 1380 |
+| 2026-11-21 | 0.8.5 | 64 | 15377 | 11962 | 2025 | 1390 |
 
 ---
 
@@ -2196,6 +2197,71 @@ al `5ff93eb` kaj enhavas ambaŭ ISO-ojn, konstruitajn el la puŝita kodo:
 La praŝarĝoj printis `[MiKerno] … v0.8.4!`, la saman pikselan haketon
 `0xecf1f6dbe1421575`, `[kerno] #UD-izolado (bone)` kaj la finan staton sen
 `MALBONE` (1018 tikoj sur `x86_64`, 1014 sur `arm64`).
+
+##### Fazo 6: Hejma dosierujo, `iri` kaj relativaj vojoj (Versio 0.8.5)
+
+**Celo.** Ligo ricevu veran laboran dosierujon kun Linux-simila hejma
+dosierujo. La signo `~` en la invito estu la hejma dosierujo mem, ne fiksa
+glifo; kiam `iri` ŝanĝas la dosierujon, `~` malaperu aŭ reaperu laŭ la nova
+pozicio, same kiel en bash.
+
+**Enhavo**:
+* Aldoni al la SNDS-bildo la dosierujon `/hejmo` kun `bonveno.txt` kaj
+  `notoj/unua.txt`.
+* Krei la puran funkcion `kunigi` en nova modulado `kernologiko::vojo`, kiu
+  solvas relativan vojon kontraŭ la nuna dosierujo (`iri ..`, `.`, `~` kaj
+  `~/…`) sen dependi de la kerno; ĝi ricevas `#[cfg(test)]`-kazojn.
+* Ligo tenu la nunan dosierujon (bufro kun `VOJA_MAKSIMO`) kaj startu en
+  `/hejmo`. La invito montriĝu kiel `ligo:~>`, `ligo:~/notoj>`,
+  `ligo:/notoj>` aŭ `ligo:/>` laŭ la sama regulo kiel bash.
+* Novaj komandoj `iri <vojo>` (ŝanĝi la dosierujon post ekzisto-kontrolo) kaj
+  `kie` (montri la plenan vojon). Ĉiuj vojo-ricevantaj komandoj (`legi`,
+  `listi`, `ruli`, `iri`) komprenu relativajn vojojn kaj `~`.
+* Ĝisdatigi la helpon, `KOMANDOJ`, `README.md`, `docs/VORTARO.md`,
+  `docs/FLUOU.md` (§8.1, §8.3 kaj la regulon L07) kaj la konservadan
+  dokumentaron pri la nova bilda dosierujo.
+
+**Evitindaj eraroj**:
+* **Fiksa invito:** Ne printu `ligo:~>` kiel konstanton; la signo `~` devas
+  deveni el la nuna dosierujo, alie `iri` montrus malveran pozicion.
+* **Duobla solvado:** La voja solvado restu nur en `kernologiko::vojo`; la
+  ŝelo kaj la kerno ne ripetu la regulojn per apartaj bukloj.
+* **Trafado ekster la radiko:** `..` ĉe `/` restu `/`; la solvilo neniam
+  produktu vojon, kiu eliras la radikon.
+
+**Akceptkriterioj**:
+
+| Kriterio | Stato | Pruvo |
+| --- | --- | --- |
+| `~` sekvas la nunan dosierujon | Jes | QEMU: `ligo:~>` → `iri notoj` → `ligo:~/notoj>` → `kie` → `/hejmo/notoj`; `iri ../../..` → `ligo:/>` kaj `kie` → `/`; `iri ~` revenas al `ligo:~>`. |
+| Relativaj vojoj kaj `..` | Jes | En `/notoj`, `listi ..` listigas `/` kaj `legi ../bonveno.txt` montras `/bonveno.txt`; `iri /nenio` raportas `la dosierujo ne ekzistas` kaj `kie` restas `/notoj`; `iri /hejmo/bonveno.txt` raportas `ne estas dosierujo`. |
+| La solvilo estas unuigita | Jes | `kernologiko::vojo` havas 10 unu-testojn (relativaj, absolutaj, `~`, `.`, `..`, radika limo, UTF-8, tro longa bufro); entute 71 testoj kaj `just kontroli` verdas. |
+
+**Efektivigo (0.8.5).** La nova `kernologiko::vojo` liveras `HEJMO`
+(`/hejmo`), `VOJA_MAKSIMO`, `VojaEraro`, `kunigi` kaj `por_invito`. `kunigi`
+atentas absolutajn vojojn, `~`/`~/…`, `.` kaj `..`; ĝi normaligas oblajn
+skladojn kaj haltas ĉe la radiko. `por_invito` redonas `~` en la hejmo, `~/…`
+sub ĝi kaj alie la plenan vojon. La SNDS-bildo ricevis `/hejmo/bonveno.txt` kaj
+`/hejmo/notoj/unua.txt`.
+
+Ligo alokas apartan 160-bajtan bufron por la nuna dosierujo kaj startas en
+`/hejmo`. Ĉiu el `listi`, `legi`, `ruli` kaj `iri` solvas sian argumenton per
+`kunigi` antaŭ la sistemvoko; `iri` sen argumento revenas al `~`, kaj sukceso
+postulas, ke `SYS_LISTI` agnoskas la celon kiel dosierujon. `kie` montras la
+plenan vojon. `KOMANDOJ` kreskis de 19 al 21, do la helpo kaj `Tab`-kompletigo
+listigas ankaŭ `iri` kaj `kie`. QEMU malkaŝis unuan version, kiu transdonis la
+tutan bufron anstataŭ la validan longon; la riparo tranĉas la legatan slice-on
+je `nuna_longo`, kaj la scenaro pruvas, ke la stato restas kohera post eraro.
+
+Loka pordego: `just kontroli` finiĝis sen eraro (71 unu-testoj, `fmt`, ambaŭ
+`clippy`-vokoj, konstruo). Ambaŭ ISO-oj praŝarĝiĝis senkape sen `MALBONE`:
+`[MiKerno] … v0.8.5!` kun la sama piksela haketo `0xecf1f6dbe1421575` kaj
+`fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj` (1009 tikoj sur `x86_64`,
+1021 sur `arm64`). La lokaj ISO-oj el la nepuŝita kodo havas la SHA-256
+`ad5deda393c391ba4dc30d3e18002f0af4acf430aca52d9517da470d12ba9df0`
+(`mikerno.iso`) kaj
+`97153a84733d964c6efd92b82c1a3779c1fe5de08019ba69ad0038c13554a35e`
+(`mikerno-arm.iso`).
 
 **Akceptkriterioj de la mejloŝtono.** Ĉiu tirpeto plenumas `fmt`, `clippy`,
 `konstruo`, `kani` kaj la QEMU-smokan teston; la ISO estas artefakto de DI, ne

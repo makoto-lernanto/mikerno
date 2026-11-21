@@ -8,6 +8,7 @@ publish = false
 description = "La unua uzanta procezo de MiKerno (Ring 3)."
 
 [dependencies]
+kernologiko = { path = "../kernologiko" }
 libmikerno = { path = "../libmikerno" }
 
 [lints]

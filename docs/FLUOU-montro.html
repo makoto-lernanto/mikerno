@@ -2381,6 +2381,8 @@
       { nomo: "helpu", priskribo: "Montri la komandtabelon kaj la helpon" },
       { nomo: "listi", priskribo: "Listigi dosierojn kun nomo, tipo, grandeco kaj tenilo" },
       { nomo: "legi", priskribo: "Legi dosieron kiel rekordon kun tenilo" },
+      { nomo: "iri", priskribo: "Ŝanĝi la nunan dosierujon" },
+      { nomo: "kie", priskribo: "Montri la plenan vojon de la nuna dosierujo" },
       { nomo: "procezoj", priskribo: "Montri la procezan tabelon" },
       { nomo: "mortigi", priskribo: "Mortigi procezon (ne protektan)" },
       { nomo: "eldiri", priskribo: "Krei mesaĝan rekordon" },
@@ -2451,6 +2453,33 @@
     let ligoHistoriaIndekso = 0;
     let lastRecords = null;
     let lastColumns = null;
+    let nunaDosierujo = "/hejmo";
+
+    function solviVojon(vojo) {
+      const kruda = String(vojo || "").trim() || "~";
+      const absoluta = kruda === "~" || kruda.startsWith("~/") || kruda.startsWith("/");
+      if (kruda.startsWith("~") && kruda !== "~" && !kruda.startsWith("~/")) return null;
+      const bazo = absoluta ? [] : nunaDosierujo.split("/").filter(Boolean);
+      const resto = kruda === "~" ? "" : kruda.startsWith("~/") ? kruda.slice(2) : kruda.replace(/^\//, "");
+      if (kruda === "~" || kruda.startsWith("~/")) bazo.push("hejmo");
+      for (const peco of resto.split("/")) {
+        if (!peco || peco === ".") continue;
+        if (peco === "..") bazo.pop();
+        else bazo.push(peco);
+      }
+      return "/" + bazo.join("/");
+    }
+
+    function montroDe(vojo) {
+      if (vojo === "/hejmo") return "~";
+      if (vojo.startsWith("/hejmo/")) return "~" + vojo.slice(6);
+      return vojo;
+    }
+
+    function ĝisdatigiPrompton() {
+      document.querySelector("label.prompto[for='ligoEniro']").textContent =
+        "ligo:" + montroDe(nunaDosierujo) + ">";
+    }
 
     function linio(html, klaso) {
       const d = document.createElement("div");
@@ -2515,6 +2544,7 @@
       linio('<span class="terminala-marko">Komandaro de Ligo</span>');
       tabelo(KOMANDOJ.map((k) => ({ komando: k.nomo, priskribo: k.priskribo })), ["komando", "priskribo"]);
       linio("Duktoj: <code>listi | filtri grandeco &gt; 100 | ordigi grandeco malkreske | montri</code>", "muted");
+      linio("Vojoj: <code>~</code> = <code>/hejmo</code>; relativaj vojoj komenciĝas en la nuna dosierujo.", "muted");
     }
 
     function pri() {
@@ -2704,6 +2734,14 @@
         case "listi": lastRecords = DOSIEROJ.map((d) => Object.assign({}, d)); break;
         case "procezoj": lastRecords = PROCEZOJ.map((p) => Object.assign({}, p)); break;
         case "legi": legiDosieron(krudaArgumento); return;
+        case "iri": {
+          const celo = solviVojon(krudaArgumento);
+          if (celo === null) { eraro("iri: nevalida vojo: " + krudaArgumento + " (-2)"); return; }
+          nunaDosierujo = celo;
+          ĝisdatigiPrompton();
+          return;
+        }
+        case "kie": skalaro("NUNA DOSIERUJO", nunaDosierujo); return;
         case "mortigi": mortigi(argumentoj); return;
         case "pri": pri(); return;
         case "temo": temoElLigo(argumentoj); return;
@@ -2743,7 +2781,8 @@
       if (!pura) return;
       const eho = document.createElement("div");
       eho.className = "linio komanda";
-      eho.innerHTML = '<span class="prompto">ligo:~></span> <span>' + eskapi(pura) + "</span>";
+      eho.innerHTML = '<span class="prompto">ligo:' + eskapi(montroDe(nunaDosierujo)) + "></span> <span>" +
+        eskapi(pura) + "</span>";
       terminalaKorpo.appendChild(eho);
       if (ligoHistorio[ligoHistorio.length - 1] !== pura) ligoHistorio.push(pura);
       ligoHistoriaIndekso = ligoHistorio.length;

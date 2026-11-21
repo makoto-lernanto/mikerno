@@ -13,6 +13,7 @@ use core::cmp::Ordering;
 use core::fmt::Write as _;
 use core::sync::atomic::{AtomicU8, Ordering as AtomOrdering};
 
+use kernologiko::vojo::{HEJMO, VOJA_MAKSIMO, kunigi, por_invito};
 use libmikerno::registro::{
     Dosierero, NOMA_LONGO, PERMESOJ_LONGO, ProcezoRekordo, STATO_KURANTA, STATO_PRETA,
     TIPO_DOSIERUJO,
@@ -464,6 +465,14 @@ fn sen_citiloj(argumento: &str) -> &str {
     argumento
 }
 
+/// Solvu `vojo` kontraŭ la nuna dosierujo `nuna`; `None` se la vojo ne
+/// solveblas (tro longa, `~uzanto` aŭ nevalida nuna dosierujo).
+fn solvi<'a>(vojo: &str, nuna: &[u8], eligo: &'a mut [u8; VOJA_MAKSIMO]) -> Option<&'a str> {
+    let nuna = core::str::from_utf8(nuna).ok()?;
+    let longo = kunigi(nuna, vojo, eligo).ok()?;
+    core::str::from_utf8(&eligo[..longo]).ok()
+}
+
 /// Ĉu la teksto estas la komando aŭ stadio `nomo`? La komandnomoj estas
 /// Esperantaj; nur la askiaj literoj ignoras usklecon.
 fn estas(teksto: &str, nomo: &str) -> bool {
@@ -471,13 +480,15 @@ fn estas(teksto: &str, nomo: &str) -> bool {
 }
 
 /// La komandoj kaj stadioj de Ligo, por la helpa tabelo.
-const KOMANDOJ: [(&str, &str); 19] = [
+const KOMANDOJ: [(&str, &str); 21] = [
     ("helpu", "Montri la komandtabelon kaj la helpon"),
     (
         "listi",
         "Listigi dosierojn kun nomo, tipo, grandeco kaj tenilo",
     ),
     ("legi", "Legi dosieron kiel rekordon kun tenilo"),
+    ("iri", "Ŝanĝi la nunan dosierujon"),
+    ("kie", "Montri la plenan vojon de la nuna dosierujo"),
     ("procezoj", "Montri la procezan tabelon"),
     ("mortigi", "Mortigi procezon (ne protektan)"),
     ("ruli", "Ruli bildon el SNDS kiel novan procezon"),
@@ -520,6 +531,9 @@ fn helpo() {
     biblioteko::skribi_formaton(format_args!(
         "{FG_TEKSTO3}Duktoj: {NULIGI}{FG_TEKSTO2}listi | filtri grandeco > 100 | ordigi grandeco malkreske | montri{NULIGI}\n"
     ));
+    biblioteko::skribi_formaton(format_args!(
+        "{FG_TEKSTO3}Vojoj: {NULIGI}{FG_TEKSTO2}~ = /hejmo; relativaj vojoj komenciĝas en la nuna dosierujo.{NULIGI}\n"
+    ));
 }
 
 fn pri() {
@@ -538,11 +552,14 @@ fn pri() {
     tabelo(&vico, &[]);
 }
 
-fn listi(argumento: &str) -> Option<Vico> {
-    let mut vojo = sen_citiloj(argumento);
-    if vojo.is_empty() {
-        vojo = "/";
-    }
+fn listi(argumento: &str, nuna: &[u8]) -> Option<Vico> {
+    let kruda = sen_citiloj(argumento);
+    let kruda = if kruda.is_empty() { "." } else { kruda };
+    let mut voja_bufro = [0u8; VOJA_MAKSIMO];
+    let Some(vojo) = solvi(kruda, nuna, &mut voja_bufro) else {
+        eraro_kun("listi", "nevalida vojo: ", kruda, -2);
+        return None;
+    };
     let mut eroj = [Dosierero::nova(); MAKS_REKORDOJ];
     let rezulto = biblioteko::listi(vojo, &mut eroj);
     if rezulto < 0 {
@@ -558,6 +575,35 @@ fn listi(argumento: &str) -> Option<Vico> {
         vico.puŝi(Rekordo::el_dosierero(ero));
     }
     Some(vico)
+}
+
+fn iri(argumento: &str, nuna: &mut [u8], nuna_longo: &mut usize) {
+    let kruda = sen_citiloj(argumento);
+    let kruda = if kruda.is_empty() { HEJMO } else { kruda };
+    let mut voja_bufro = [0u8; VOJA_MAKSIMO];
+    let Some(vojo) = solvi(kruda, &nuna[..*nuna_longo], &mut voja_bufro) else {
+        eraro_kun("iri", "nevalida vojo: ", kruda, -2);
+        return;
+    };
+    let mut eroj = [Dosierero::nova(); MAKS_REKORDOJ];
+    let rezulto = biblioteko::listi(vojo, &mut eroj);
+    if rezulto < 0 {
+        if rezulto == libmikerno::syscall::NE_TROVITA {
+            eraro_kun("iri", "la dosierujo ne ekzistas: ", vojo, -3);
+        } else {
+            eraro_kun("iri", "ne estas dosierujo: ", vojo, -2);
+        }
+        return;
+    }
+    nuna[..vojo.len()].copy_from_slice(vojo.as_bytes());
+    *nuna_longo = vojo.len();
+}
+
+fn kie(nuna: &[u8]) {
+    let Ok(nuna) = core::str::from_utf8(nuna) else {
+        return;
+    };
+    skalaro("NUNA DOSIERUJO", nuna);
 }
 
 fn trovi_tenilon(vojo: &str) -> Option<u32> {
@@ -577,12 +623,17 @@ fn trovi_tenilon(vojo: &str) -> Option<u32> {
         .map(|ero| ero.inodo)
 }
 
-fn legi(argumento: &str) {
-    let vojo = sen_citiloj(argumento);
-    if vojo.is_empty() {
+fn legi(argumento: &str, nuna: &[u8]) {
+    let kruda = sen_citiloj(argumento);
+    if kruda.is_empty() {
         eraro("legi", "mankas dosiernomo", -2);
         return;
     }
+    let mut voja_bufro = [0u8; VOJA_MAKSIMO];
+    let Some(vojo) = solvi(kruda, nuna, &mut voja_bufro) else {
+        eraro_kun("legi", "nevalida vojo: ", kruda, -2);
+        return;
+    };
     let mut bufro = [0u8; MAKS_LEGO];
     let rezulto = biblioteko::legi(vojo, &mut bufro);
     if rezulto < 0 {
@@ -668,12 +719,17 @@ fn mortigi(argumento: &str) {
     }
 }
 
-fn ruli(argumento: &str) {
-    let vojo = sen_citiloj(argumento);
-    if vojo.is_empty() {
+fn ruli(argumento: &str, nuna: &[u8]) {
+    let kruda = sen_citiloj(argumento);
+    if kruda.is_empty() {
         eraro("ruli", "mankas dosiernomo", -2);
         return;
     }
+    let mut voja_bufro = [0u8; VOJA_MAKSIMO];
+    let Some(vojo) = solvi(kruda, nuna, &mut voja_bufro) else {
+        eraro_kun("ruli", "nevalida vojo: ", kruda, -2);
+        return;
+    };
     let rezulto = biblioteko::ruli(vojo);
     if rezulto > 0 {
         let mut mesaĝo = Bufro::nova();
@@ -1008,13 +1064,14 @@ fn nekonata(vorto: &str) {
 }
 
 /// Analizu kaj plenumu unu linion; la dukto portas rekordojn, ne tekston.
-fn plenumi(linio: &str) {
+fn plenumi(linio: &str, nuna: &mut [u8], nuna_longo: &mut usize) {
     let mut partoj = linio.split('|');
     let unua_parto = partoj.next().unwrap_or("").trim();
     if unua_parto.is_empty() {
         return;
     }
     let (vorto, argumento) = disigu(unua_parto);
+    let nuna_longo_nuna = *nuna_longo;
     if estas(vorto, "fini") {
         let kodo = argumento.trim().parse::<usize>().unwrap_or(0);
         biblioteko::fini(kodo);
@@ -1024,13 +1081,19 @@ fn plenumi(linio: &str) {
         helpo();
         return;
     } else if estas(vorto, "legi") {
-        legi(argumento);
+        legi(argumento, &nuna[..nuna_longo_nuna]);
+        return;
+    } else if estas(vorto, "iri") {
+        iri(argumento, nuna, nuna_longo);
+        return;
+    } else if estas(vorto, "kie") {
+        kie(&nuna[..nuna_longo_nuna]);
         return;
     } else if estas(vorto, "mortigi") {
         mortigi(argumento);
         return;
     } else if estas(vorto, "ruli") {
-        ruli(argumento);
+        ruli(argumento, &nuna[..nuna_longo_nuna]);
         return;
     } else if estas(vorto, "eldiri") {
         eldiri(argumento);
@@ -1051,7 +1114,7 @@ fn plenumi(linio: &str) {
         purigi();
         return;
     } else if estas(vorto, "listi") {
-        listi(argumento)
+        listi(argumento, &nuna[..nuna_longo_nuna])
     } else if estas(vorto, "procezoj") {
         let tabelo_vico = procezoj();
         if tabelo_vico.nombro == 0 {
@@ -1137,14 +1200,20 @@ fn bonvenon() {
     ));
 }
 
-fn skribi_prompton() {
-    biblioteko::skribi_formaton(format_args!("{}{GRASA}ligo:~>{NULIGI} ", akcenta()));
+fn skribi_prompton(nuna: &[u8]) {
+    let mut montro_bufro = [0u8; VOJA_MAKSIMO];
+    let montro = core::str::from_utf8(nuna)
+        .ok()
+        .and_then(|nuna| por_invito(nuna, &mut montro_bufro).ok())
+        .and_then(|longo| core::str::from_utf8(&montro_bufro[..longo]).ok())
+        .unwrap_or("~");
+    biblioteko::skribi_formaton(format_args!("{}{GRASA}ligo:{montro}>{NULIGI} ", akcenta()));
 }
 
 /// Redesegnu la aktivan linion post ĉiu eniga bajto (O09).
-fn desegni(linio: &[u8]) {
+fn desegni(linio: &[u8], nuna: &[u8]) {
     biblioteko::skribi("\r\x1b[K");
-    skribi_prompton();
+    skribi_prompton(nuna);
     if let Ok(teksto) = core::str::from_utf8(linio) {
         biblioteko::skribi(teksto);
     }
@@ -1341,7 +1410,7 @@ enum Legaĵo {
 
 /// Legu unu linion el la seria konzolo; la seria terminalo ne faras lokan
 /// reson, do la ŝelo redesegnas la linion post ĉiu bajto (C17.6).
-fn legi_linion(bufro: &mut [u8]) -> Legaĵo {
+fn legi_linion(bufro: &mut [u8], nuna: &[u8]) -> Legaĵo {
     let historio = historio();
     let mut longo = 0usize;
     let mut vizito = 0usize;
@@ -1367,7 +1436,7 @@ fn legi_linion(bufro: &mut [u8]) -> Legaĵo {
                     while longo > 0 && (bufro[longo] & 0xC0) == 0x80 {
                         longo -= 1;
                     }
-                    desegni(&bufro[..longo]);
+                    desegni(&bufro[..longo], nuna);
                 }
             }
             0x03 => {
@@ -1383,11 +1452,11 @@ fn legi_linion(bufro: &mut [u8]) -> Legaĵo {
             0x09 => {
                 // La kandidataro, se preskribita, jam finiĝas per nova linio.
                 kompletigi(bufro, &mut longo);
-                desegni(&bufro[..longo]);
+                desegni(&bufro[..longo], nuna);
             }
             0x0c => {
                 purigi();
-                desegni(&bufro[..longo]);
+                desegni(&bufro[..longo], nuna);
             }
             0x1b => match skipo_eskapon() {
                 Eskapo::Supra => {
@@ -1399,7 +1468,7 @@ fn legi_linion(bufro: &mut [u8]) -> Legaĵo {
                         longo = teksto.len();
                         bufro[..longo].copy_from_slice(teksto);
                         vizito = nova;
-                        desegni(&bufro[..longo]);
+                        desegni(&bufro[..longo], nuna);
                     }
                 }
                 Eskapo::Malsupra => {
@@ -1412,7 +1481,7 @@ fn legi_linion(bufro: &mut [u8]) -> Legaĵo {
                             longo = teksto.len();
                             bufro[..longo].copy_from_slice(teksto);
                         }
-                        desegni(&bufro[..longo]);
+                        desegni(&bufro[..longo], nuna);
                     }
                 }
                 Eskapo::Alia => {}
@@ -1420,7 +1489,7 @@ fn legi_linion(bufro: &mut [u8]) -> Legaĵo {
             0x20..=0xff if longo < bufro.len() => {
                 bufro[longo] = bajto;
                 longo += 1;
-                desegni(&bufro[..longo]);
+                desegni(&bufro[..longo], nuna);
             }
             _ => {}
         }
@@ -1437,13 +1506,21 @@ pub fn starti() -> ! {
     // proceza spaco; la bufro estas 256 bajtoj kaj la bloko restas valida ĝis
     // la procezo finiĝas per `fini`, do ĝia vivo kovras la tutan ŝelon.
     let bufro = unsafe { core::slice::from_raw_parts_mut(kupo, LINIA_MAKSIMO) };
+    let Some(voja_kupo) = biblioteko::aloki(VOJA_MAKSIMO) else {
+        biblioteko::skribi("[ligo] la kupo ne estas disponebla\n");
+        biblioteko::fini(3)
+    };
+    // SAFETY: sama kontrakto kiel ĉe `bufro`; la dua bloko estas `VOJA_MAKSIMO`
+    // bajtoj kaj restas valida dum la tuta ŝelo.
+    let nuna = unsafe { core::slice::from_raw_parts_mut(voja_kupo, VOJA_MAKSIMO) };
+    let mut nuna_longo = kopii_en(nuna, HEJMO);
     bonvenon();
     loop {
-        skribi_prompton();
-        match legi_linion(bufro) {
+        skribi_prompton(&nuna[..nuna_longo]);
+        match legi_linion(bufro, &nuna[..nuna_longo]) {
             Legaĵo::Teksto(longo) => {
                 if let Ok(teksto) = core::str::from_utf8(&bufro[..longo]) {
-                    plenumi(teksto);
+                    plenumi(teksto, nuna, &mut nuna_longo);
                 }
             }
             Legaĵo::Interrompo => {}

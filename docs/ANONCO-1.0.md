@@ -1,10 +1,10 @@
 # MiKerno 1.0 — anonco (preparo)
 
 > **Stato:** prepara teksto por la eldono 1.0. La eldono venos kun la mejloŝtono
-> M20 (plena pruvaro); ĝis tiam la nuna eldono estas 0.8.4. Ĉi tiu dokumento
+> M20 (plena pruvaro); ĝis tiam la nuna eldono estas 0.8.5. Ĉi tiu dokumento
 > ne estas publikigita anonco.
 >
-> Ĝisdatigita por versio: 0.8.4 (Cargo-laborloko)
+> Ĝisdatigita por versio: 0.8.5 (Cargo-laborloko)
 
 ## Malgranda kerno, plena kontrolo
 
@@ -44,12 +44,13 @@ sistemvoka ABI, kaj ne povu legi la kernon aŭ alian procezon.
 
 ## Provu la nunan eldonon
 
-La nuna eldono 0.8.4 enhavas ĉion supre escepte la lastan formalan pruvaron.
+La nuna eldono 0.8.5 enhavas ĉion supre escepte la lastan formalan pruvaron.
 Elŝutu `mikerno.iso` aŭ `mikerno-arm.iso` el la
 [GitHub-Eldono](https://github.com/makoto-lernanto/mikerno/releases), aŭ
-konstruu loke per `just iso` kaj `just iso-arm`. La ŝelo Ligo atendas la
-prompton `ligo:~>`; `helpu` montras la komandojn, `listi` la SNDS-dosierojn kaj
-`fini` finas la sesion.
+konstruu loke per `just iso` kaj `just iso-arm`. La ŝelo Ligo startas en
+`/hejmo` kaj atendas la prompton `ligo:~>`; `helpu` montras la komandojn,
+`listi` la SNDS-dosierojn, `iri` kaj `kie` moviĝas tra la arbo (relativaj
+vojoj kaj `~` inkluzive) kaj `fini` finas la sesion.
 
 ## Vojo al la eldono
 

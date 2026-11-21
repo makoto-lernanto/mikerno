@@ -17,7 +17,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IK kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.8.4 (Cargo-laborloko)
+- **Versio:** 0.8.5 (Cargo-laborloko)
 - **Arkitekturo:** `x86_64` kaj `arm64` (AArch64), unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -765,15 +765,18 @@ tie vere cedas la procesoron).
 ### Ligo
 
 `horizonto` fariĝas la objekta ŝelo Ligo, kiam la kerno lanĉas ĝin per
-`REĜIMO_ŜELO`. La prompto estas `ligo:~>`; la komandoj estas Esperantaj kaj
-puraj ASCII. La deviga priskribo, la gramatiko de la dukto kaj ekzemploj estas
-en `docs/FLUOU.md` §8.
+`REĜIMO_ŜELO`. La ŝelo startas en `/hejmo`; la invito montras `~` anstataŭ tiu
+prefikso (`ligo:~>`, `ligo:~/notoj>` aŭ `ligo:/…>`). La komandoj estas
+Esperantaj kaj puraj ASCII. La deviga priskribo, la gramatiko de la dukto kaj
+ekzemploj estas en `docs/FLUOU.md` §8.
 
 | Komando | Signifo |
 | --- | --- |
 | `helpu` | Montri la komandtabelon |
 | `listi [vojo]` | Listigi dosierojn (`SYS_LISTI`) |
 | `legi <dosiero>` | Legi dosieron (`SYS_LEGI`) |
+| `iri [vojo]` | Ŝanĝi la nunan dosierujon (sen argumento: `/hejmo`) |
+| `kie` | Montri la plenan vojon de la nuna dosierujo |
 | `procezoj` | Montri la procezojn (`SYS_PROCEZOJ`) |
 | `mortigi <pid>` | Mortigi procezon (`SYS_MORTIGI`; `pid ≤ 1` estas protektita) |
 | `ruli <dosiero>` | Lanĉi novan ELF el SNDS (`SYS_LANĜI`) |
@@ -786,6 +789,11 @@ en `docs/FLUOU.md` §8.
 | `filtri`, `ordigi`, `unua`, `sumi`, `nombri`, `montri` | Stadioj de la rekorda dukto |
 | `teksto` | Transiri al la eksplicita teksta limo |
 | `purigi` | Malplenigi la terminalon |
+
+Vojoj estas komprenataj kiel en Linux: `~` estas `/hejmo`, relativaj vojoj
+komenciĝas en la nuna dosierujo, kaj `..` neniam eliras la radikon. La solvilo
+loĝas en `kernologiko::vojo`, do la ŝelo kaj ĝiaj testoj uzas la samajn
+regulojn.
 
 ---
 
@@ -845,7 +853,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.8.4!
+[MiKerno] Saluton, mi estas MiKerno v0.8.5!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
@@ -1006,6 +1014,7 @@ kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
 ├── mikerno/
 │   ├── Cargo.toml
 │   ├── build.rs                # liveras boot/linker.ld nur al la kerno
+│   ├── snds/                   # bilda enhavo: /bonveno.txt, /hejmo, /notoj
 │   ├── boot/
 │   │   ├── linker.ld           # 1 MiB, ET_DYN, RELATIVE-relokoj
 │   │   └── limine.conf         # ISO-menuo (Multiboot2)
@@ -1051,9 +1060,11 @@ kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
 │           └── fonto/*.bin     # kvar rasterigitaj strekoj (DejaVu)
 ├── libmikerno/
 │   └── src/{lib,kapablo,mesago,syscall}.rs
+├── kernologiko/
+│   └── src/{lib,adreso,memoro,mesagujo,preta_vico,snds,vekotemporizilo,vojo}.rs
 ├── horizonto/
 │   ├── build.rs, linker.ld     # 0x1_0000_0000 (4 GiB)
-│   └── src/{main,biblioteko}.rs
+│   └── src/{main,biblioteko,ligo}.rs
 ├── tools/
 │   ├── run-qemu.sh             # QEMU-lanĉilo por WSL2/Linux
 │   ├── dokumentaro.sh          # sistemvokaj numeroj kontraŭ la dokumentaro
