@@ -17,7 +17,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IK kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.8.3 (Cargo-laborloko)
+- **Versio:** 0.8.4 (Cargo-laborloko)
 - **Arkitekturo:** `x86_64` kaj `arm64` (AArch64), unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -574,15 +574,18 @@ distribuo de kapabloj venas en la sekvaj fazoj (M17).
 - sistemvokaj numeroj: `SYS_SENDI = 1`, `SYS_RICEVI = 2`, `SYS_SKRIBI = 3`,
   `SYS_FINI = 4`, `SYS_CEDI = 5`, `SYS_KREI_FINPUNKTON = 6`, `SYS_DONI = 7`,
   `SYS_REVOKI = 8`, `SYS_RICEVI_TEMPO = 9`, `SYS_SENDI_TEMPO = 10`,
-  `SYS_FERMI = 11`, `SYS_DORMI = 12`,
+  `SYS_FERMI = 11`, `SYS_DORMI = 12`, `SYS_BRK = 13`, `SYS_EXEC = 14`,
+  `SYS_ENIGI = 15`, `SYS_LISTI = 16`, `SYS_LEGI = 17`, `SYS_PROCEZOJ = 18`,
+  `SYS_MORTIGI = 19`, `SYS_LANĜI = 20`,
 - `Tenilo` — 32-bita kapabla tenilo (8 bitoj da indekso + 24 bitoj da
   generacio, generacio ekde `1`); la novaj erar-kodoj estas `-9`, `-11`, `-28`,
   `-32`, `-90` kaj `-110`,
 - registra ABI: `rax` = numero, `rdi`/`rsi`/`rdx`/`r10` = argumentoj, `rax` =
   rezulto; la voko estas `int 0x80`;
 - starta ABI: `horizonto_komenco(reĝimo: u64, identigilo: u64)` — la kerno
-  transdonas la reĝimon en `RDI` (`REĜIMO_SEKRETO = 2`, `REĜIMO_SPIONO = 3`) kaj
-  la procezan identigilon en `RSI`.
+  transdonas la reĝimon en `RDI` (`REĜIMO_SEKRETO = 2`, `REĜIMO_SPIONO = 3`,
+  `REĜIMO_EXEC = 4`, `REĜIMO_FONO = 5`, `REĜIMO_ŜELO = 6`,
+  `REĜIMO_NEVALIDA = 7`) kaj la procezan identigilon en `RSI`.
 
 ### Uzanta fenestro
 
@@ -746,14 +749,43 @@ La kerna dispetĉilo (`arkitekturo/x86_64/sistemvoko.rs`) legas
 skribas la rezulton reen en `kadro.rax`. La mesaĝa aranĝo venas el
 `libmikerno::Mesago`, do la kerno kaj Ring 3 kopias la saman `#[repr(C)]`
 strukturon; la kongruo estas fiksita per kompila-tempaj asertoj.
-`kerno/sistemvoko.rs` efektivigas `SENDI`, `RICEVI`, `SKRIBI`, `FINI`, `CEDI`,
-`KREI_FINPUNKTON`, `DONI`, `REVOKI`, `FERMI`, `RICEVI_TEMPO` kaj `SENDI_TEMPO`:
-Ring 3-bufroj estas ne-nulaj, limigitaj kaj ene de la anoncitaj bilda kaj stakaj
-regionoj (la limoj venas el la nuna procezo mem, `Procezo::bildaj_limoj()`); la
-tenilaj vokoj validigas la kapablon en du niveloj (fendo + finpunkta generacio);
+`kerno/sistemvoko.rs` efektivigas ĉiujn numerojn `1`–`20` el
+`libmikerno::syscall`: la mesaĝaj kaj kapablaj vokoj (`SENDI`, `RICEVI`,
+`KREI_FINPUNKTON`, `DONI`, `REVOKI`, `FERMI`), la tempaj vokoj (`RICEVI_TEMPO`,
+`SENDI_TEMPO`, `DORMI`), la procezaj (`FINI`, `CEDI`, `MORTIGI`, `LANĜI`,
+`EXEC`), la konsolaj (`SKRIBI`, `ENIGI`) kaj la SNDS/procezaj legiloj
+(`LISTI`, `LEGI`, `PROCEZOJ`), plus `BRK` por la kupa limo. Ring 3-bufroj estas
+ne-nulaj, limigitaj kaj ene de la anoncitaj bilda kaj stakaj regionoj (la
+limoj venas el la nuna procezo mem, `Procezo::bildaj_limoj()`); la tenilaj
+vokoj validigas la kapablon en du niveloj (fendo + finpunkta generacio);
 `SYS_FINI` vokas `planisto::morti()` kaj neniam revenas.
 Ring 0-memtesto pruvas la vojon per `int 0x80` en la unua fadeno (`SYS_CEDI`
 tie vere cedas la procesoron).
+
+### Ligo
+
+`horizonto` fariĝas la objekta ŝelo Ligo, kiam la kerno lanĉas ĝin per
+`REĜIMO_ŜELO`. La prompto estas `ligo:~>`; la komandoj estas Esperantaj kaj
+puraj ASCII. La deviga priskribo, la gramatiko de la dukto kaj ekzemploj estas
+en `docs/FLUOU.md` §8.
+
+| Komando | Signifo |
+| --- | --- |
+| `helpu` | Montri la komandtabelon |
+| `listi [vojo]` | Listigi dosierojn (`SYS_LISTI`) |
+| `legi <dosiero>` | Legi dosieron (`SYS_LEGI`) |
+| `procezoj` | Montri la procezojn (`SYS_PROCEZOJ`) |
+| `mortigi <pid>` | Mortigi procezon (`SYS_MORTIGI`; `pid ≤ 1` estas protektita) |
+| `ruli <dosiero>` | Lanĉi novan ELF el SNDS (`SYS_LANĜI`) |
+| `fini` | Fini la ŝelon (`SYS_FINI`); `Ctrl+D` en malplena linio same |
+| `eldiri <teksto>` | Krei mesaĝan rekordon |
+| `pri` | Montri sistemajn informojn |
+| `temo <malluma\|hela>` | Ŝanĝi la temon |
+| `akcento <nomo>` | Ŝanĝi la akcenton |
+| `eniro` | Malfermi Eniron |
+| `filtri`, `ordigi`, `unua`, `sumi`, `nombri`, `montri` | Stadioj de la rekorda dukto |
+| `teksto` | Transiri al la eksplicita teksta limo |
+| `purigi` | Malplenigi la terminalon |
 
 ---
 
@@ -813,7 +845,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.8.3!
+[MiKerno] Saluton, mi estas MiKerno v0.8.4!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
@@ -1010,7 +1042,7 @@ kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
 │       │   ├── objekto.rs      # Fadeno, stato, konteksta posedo
 │       │   ├── procezo.rs      # Procezo, proceza stato, privata spaco
 │       │   ├── planisto.rs    # rondiga planisto
-│       │   ├── sistemvoko.rs   # SKRIBI/FINI/CEDI/SENDI/RICEVI/KREI_FINPUNKTON/DONI/REVOKI/FERMI
+│       │   ├── sistemvoko.rs   # ĉiuj `SYS_*` (1–20): mesaĝoj, kapabloj, procezoj, SNDS
 │       │   ├── uzantspaco.rs   # ELF64-ŝargo, stako, U-kontrolo
 │       │   └── ik.rs          # mesaĝoj, kapabloj + Kani-pruvoj
 │       └── ekrano/
@@ -1024,10 +1056,12 @@ kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
 │   └── src/{main,biblioteko}.rs
 ├── tools/
 │   ├── run-qemu.sh             # QEMU-lanĉilo por WSL2/Linux
+│   ├── dokumentaro.sh          # sistemvokaj numeroj kontraŭ la dokumentaro
 │   ├── font/generi.py          # DejaVu → bitmapaj strekoj
 │   └── limine/                 # praŝarĝilo (binaraj dosieroj)
 ├── third_party/dejavu/         # permesilo de la fonto
 └── docs/
+    ├── ANONCO-1.0.md           # preparita anonco por la eldono 1.0
     ├── ARM.md                  # plano por la arm64-ŝpuro
     ├── FLUOU.md                # deviga GU-gvidilo (FluoU)
     ├── FLUOU-montro.html       # vida montro de la gvidilo
@@ -1039,9 +1073,10 @@ kaj la saman FNV-1a-haketon, do la bildo estas komparebla bajto post bajto.
 
 ## Limigoj kaj sekva laboro
 
-- **Neniu `fork`/`exec`**: la du `horizonto`-procezoj ekzistas kaj interplektiĝas
-  ekde la starto, sed Ring 3 ne povas krei novan procezon nek anstataŭigi sian
-  bildon; la praŝarĝo decidas la aron antaŭ la unua planista voko.
+- **Neniu `fork`**: Ring 3 ne povas kopii adresan spacon. Novaj procezoj
+  kreiĝas per `SYS_LANĜI` (ELF el SNDS), kaj `SYS_EXEC` anstataŭigas la bildon
+  de la nuna procezo; la praŝarĝo decidas la komencan aron antaŭ la unua
+  planista voko.
 - **Statikaj kernaj stakoj**: la kernaj stakoj estas fiksa tabelo de ok
   statikaj 16 KiB blokoj en `.bss` anstataŭ kadraj alokoj; la proceza detruo
   ne resorbas tiujn blokojn.

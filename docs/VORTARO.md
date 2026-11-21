@@ -14,6 +14,8 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `QEMU-matrico` | QEMU matrix | DI-tasko `qemu-kontroli`: kvin praŝarĝoj kun malsamaj maŝino, firmvaro kaj memoro. |
 | `paki-iso` | ISO packaging | DI-tasko, kiu konstruas ambaŭ ISO-ojn kaj alŝutas ilin kiel artefaktojn. |
 | `kontrolilo de QEMU` | QEMU harness | `tools/kontroli-qemu.sh`: atendas `ligo:~>`, sendas `fini` kaj validigas `[kerno] fina stato` sen `MALBONE`. |
+| `dokumenta kontrolilo` | documentation checker | `tools/dokumentaro.sh --kontroli`: komparas la `SYS_*`-numerojn en `libmikerno` kun `README.md` kaj ĉi tiu vortaro. |
+| `anonco` | announcement | `docs/ANONCO-1.0.md`: preparita teksto por la eldono 1.0; `tools/versio.sh` kontrolas ĝian kongruan version. |
 | `KI` | command-line interface (CLI) | Komandliniaj Iloj; en Versio la dosierujo `versio-ki`. |
 | `EAS` | content-addressable storage (CAS) | Enhavadresita Stokado; en Versio `libversio::stokado`. |
 | `dosiera objekto` | blob | La kruda enhavo de unu dosiero; la tipo estas `Dosiero`. Neniam uzu `blob` en tekstoj aŭ identigiloj. |
@@ -124,6 +126,12 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `brk` | brk | `SYS_BRK` (13): etendas la uzantan datumsegmenton kaj redonas la nunan limon; nur pligrandigas (`etendi_kupon`). |
 | `bump-alokilo` | bump allocator | `horizonto/src/biblioteko.rs`: montrilo nur antaŭen, `liberigi` estas malplena. |
 | `exec` | exec | `SYS_EXEC` (14): anstataŭigas la nunan procezon per ELF el SNDS (C17.5). |
+| `enigi` | read a byte | `SYS_ENIGI` (15): blokas ĝis bajto venas el COM1 aŭ PL011 kaj redonas ĝin. |
+| `listi` | list | `SYS_LISTI` (16): kopias SNDS-registrojn; la Ligo-komando `listi` uzas ĝin. |
+| `legi` | read | `SYS_LEGI` (17): legas tutan SNDS-dosieron; la Ligo-komando `legi` uzas ĝin. |
+| `procezoj` | processes | `SYS_PROCEZOJ` (18): kopias `ProcezoRekordo`-jn; bazo de la samnoma komando. |
+| `mortigi` | kill | `SYS_MORTIGI` (19): finigas procezon; `pid ≤ 1` estas protektita (`NEPERMITITA`). |
+| `lanĉi` | launch | `SYS_LANĜI` (20): kreas novan procezon el ELF en SNDS; la komando `ruli` uzas ĝin. |
 | `anstataŭigi la adresan spacon` | replace the address space | `Procezo::anstataŭigi_spacon`: ŝaltas la kernan radikon, anstataŭigas, restarigas la kupan limon kaj detruas la malnovan spacon. |
 | `munti el bufro` | mount from buffer | `uzantspaco::munti_el_bufro`: la sama `ŝargi_bildon` kiel la praŝarĝo, sed el kontiguaj kadroj. |
 | `kontiguaj kadroj` | contiguous frames | `aloki_kontiguajn`: fizika regiono por legi la ELF-on el SNDS. |

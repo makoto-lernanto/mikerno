@@ -77,6 +77,10 @@ ruli-iso: iso
 kontroli-version:
     bash tools/versio.sh --kontroli
 
+# Kontrolu, ke la sistemvokaj numeroj kongruas kun README kaj `VORTARO.md`.
+kontroli-dokumentaron:
+    bash tools/dokumentaro.sh --kontroli
+
 # Rulu la unu-testojn de la arkitekture sendependaj moduloj de `kernologiko`
 # sur la gastiganto (ne en la barela celo).
 testoj:
@@ -98,10 +102,10 @@ permesiloj:
 # Kani kaj Miri ruliĝas nur en DI: Kani kiel aparta tasko por ĉiu pruvo kaj
 # Miri kiel aparta tasko (vidu di.yml).
 
-# Loka kvalita pordego: versio + unu-testoj + formato + statika analizo
-# (ambaŭ arkoj) + konstruo.
+# Loka kvalita pordego: versio + dokumentaj sistemvokoj + unu-testoj + formato
+# + statika analizo (ambaŭ arkoj) + konstruo.
 # La arm64-analizo kovras ankaŭ `horizonto` (la Ligo-komandojn) kaj `saluto`.
-kontroli: kontroli-version testoj
+kontroli: kontroli-version kontroli-dokumentaron testoj
     cargo fmt --all -- --check
     cargo clippy --workspace --release -- -D warnings
     cargo clippy -p mikerno --release --target aarch64-unknown-none -- -D warnings

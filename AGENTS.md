@@ -33,8 +33,7 @@ La versio havas la formon `0.x.y` kaj rilatas al la mejloŝtonoj:
 Ekzemple: la Fazoj 1/2/3 de M13 respondas al `0.3.0` / `0.3.1` / `0.3.2`.
 La formo `0.x.y` validas ekde M10; M0–M9 apartenas al la historio `0.0.x`.
 
-Nuna versio: `0.8.3` (M18, Fazo 4: purigado de `#[allow]` kaj Ring 3-escepta
-izolado).
+Nuna versio: `0.8.4` (M18, Fazo 5: dokumentara sinkronigo kaj 1.0-preteco).
 
 La sola fonto de la versio estas `[workspace.package] version` en `Cargo.toml`.
 La kerno legas ĝin per `env!("CARGO_PKG_VERSION")`, do `just ruli` kaj la ISO
@@ -75,7 +74,9 @@ rulas `--kontroli`.
   `libmikerno` la titolo restas `# Safety`, ĉar Clippy postulas ĝin.
 - Loke oni **ne** rulas `cargo kani`; WSL2 elĉerpiĝas je memoro kaj
   diskonektiĝas. `just kontroli` nun enhavas nur la sen-Kani-ajn kontrolojn kaj
-  estas loke rulebla: `bash tools/versio.sh --kontroli`, `just testoj`
+  estas loke rulebla: `bash tools/versio.sh --kontroli`,
+  `bash tools/dokumentaro.sh --kontroli` (sistemvokaj numeroj kontraŭ la
+  dokumentaro), `just testoj`
   (`cargo test -p kernologiko --target <gastiganto>`),
   `cargo fmt --all -- --check`,
   `cargo clippy --workspace --release -- -D warnings`,

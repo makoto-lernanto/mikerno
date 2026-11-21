@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-20 · Versio de la Cargo-laborloko: 0.8.3
+> Stato: 2026-11-20 · Versio de la Cargo-laborloko: 0.8.4
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -174,6 +174,7 @@ eniras la kernan bildon.
 | 2026-11-20 | 0.8.1 | 63 | 15196 | 11819 | 1989 | 1388 |
 | 2026-11-20 | 0.8.2 | 63 | 15196 | 11819 | 1989 | 1388 |
 | 2026-11-20 | 0.8.3 | 63 | 15262 | 11877 | 2005 | 1380 |
+| 2026-11-21 | 0.8.4 | 63 | 15261 | 11876 | 2005 | 1380 |
 
 ---
 
@@ -2156,8 +2157,26 @@ La praŝarĝoj printis `[MiKerno] … v0.8.3!`, la saman pikselan haketon
 
 | Kriterio | Stato | Pruvo |
 | --- | --- | --- |
-| Dokumentaro kongruas kun kodo | Pruvota | `tools/dokumentaro.sh --kontroli` estas verda. |
-| Ĉiuj 1.0-kriterioj plenumitaj | Pruvota | La listo en §8 havas nur «Pruvita» aŭ «Plenumita» statojn. |
+| Dokumentaro kongruas kun kodo | Jes | `bash tools/dokumentaro.sh --kontroli` -> `dokumentaro: 20 sistemvokoj kongruas kun README.md kaj docs/VORTARO.md`; la kontrolo estas parto de `just kontroli`. |
+| Ĉiuj 1.0-kriterioj plenumitaj | Jes | La tabelo en §8 havas nur «Plenumita»-staton, ĉiu kun pruvo. |
+
+**Efektivigo (0.8.4).** La nova `tools/dokumentaro.sh --kontroli` eltiras
+ĉiun `pub const SYS_*: usize = N;` el `libmikerno/src/syscall.rs` kaj serĉas
+la parojn `SYS_X = N` aŭ `SYS_X` (N) en `README.md` kaj `docs/VORTARO.md`;
+malkongrua aŭ mankanta numero haltigas la pordegon per la nova celo
+`kontroli-dokumentaron`. README nun listigas la numerojn `1`–`20`, la startajn
+reĝimojn `2`–`7`, tabelon de la Ligo-komandoj kaj la ĝustigitan limigon
+«neniu `fork`» ( `SYS_LANĜI` kaj `SYS_EXEC` ekzistas); VORTARO ricevis la
+terminojn por `ENIGI`, `LISTI`, `LEGI`, `PROCEZOJ`, `MORTIGI` kaj `LANĜI`.
+§8 estis reviziita kaj ĉiuj ses kriterioj havas pruvon. La prepara anonco
+`docs/ANONCO-1.0.md` priskribas la eldonon 1.0 kaj ĝian kontrolan liston;
+`tools/versio.sh --kontroli` nun kovras ankaŭ ĝin.
+
+Loka pordego: `just kontroli` finiĝis sen eraro (61 unu-testoj, `fmt`, ambaŭ
+`clippy`-vokoj, konstruo), kaj ambaŭ ISO-oj el 0.8.4 praŝarĝiĝis senkape sen
+`MALBONE`: `[MiKerno] … v0.8.4!` kun `#UD-izolado (bone)` kaj
+`fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj` (1013 tikoj sur `x86_64`,
+1018 sur `arm64`).
 
 **Akceptkriterioj de la mejloŝtono.** Ĉiu tirpeto plenumas `fmt`, `clippy`,
 `konstruo`, `kani` kaj la QEMU-smokan teston; la ISO estas artefakto de DI, ne
@@ -2459,18 +2478,18 @@ mejloŝtono venas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo el M17.
 
 ## 8. Difino de «1.0»
 
-MiKerno atingos 1.0 kiam:
+MiKerno atingos 1.0 kiam ĉiuj jenaj kriterioj estos plenigitaj. La revizio de
+0.8.4 (M18 Fazo 5) konfirmas, ke ili ĉiuj estas plenigitaj; la eldono 1.0 mem
+venos kun M20, kiu finigas la plenan pruvaron.
 
-1. `horizonto` (aŭ alia uzanta procezo) ruliĝas en Ring 3 kun propra adresa
-   spaco, sen povoj legi la kernon aŭ alian procezon.
-2. Sistemvokoj `SKRIBI`, `FINI`, `CEDI`, `SENDI`, `RICEVI` funkcias kaj estas
-   dokumentitaj en `libmikerno`.
-3. IK havas apartajn finpunktajn objektojn, rajtojn kaj tempolimojn.
-4. Kadroj kaj paĝtabeloj estas liberigeblaj; longa testado ne elĉerpas memoron.
-5. La ISO estas konstruata de DI, kaj `fmt`, `clippy`, `konstruo`, `kani` kaj
-   QEMU-smoka testo estas devigaj.
-6. La dokumentaro (README, ĉi tiu dokumento, sistemvoka referenco) estas
-   kompleta kaj kongrua kun la kodo.
+| # | Kriterio | Stato | Pruvo |
+| --- | --- | --- | --- |
+| 1 | `horizonto` (aŭ alia uzanta procezo) ruliĝas en Ring 3 kun propra adresa spaco, sen povoj legi la kernon aŭ alian procezon. | Plenumita | Privataj `PML4`/`PDPT`-oj por ĉiu procezo; la scenaro «viktimo kaj spiono» montras la saman sekretan virtualan adreson super malsamaj kadroj kaj `#PF` (`erarkodo=0x4`) por la spiono. La suma kontrolo `[memoro] izolado (bone)` komparas la liberajn kadrojn antaŭ/post la scenaro. |
+| 2 | Sistemvokoj `SKRIBI`, `FINI`, `CEDI`, `SENDI` kaj `RICEVI` funkcias kaj estas dokumentitaj en `libmikerno`. | Plenumita | `libmikerno/src/syscall.rs` fiksas la numerojn `1`–`20`; `README.md` kaj `docs/VORTARO.md` priskribas ilin, kaj `tools/dokumentaro.sh --kontroli` certigas la kongruon. La Ring 3-scenaroj kaj `horizonto`/`saluto` uzas la vokojn. |
+| 3 | IK havas apartajn finpunktajn objektojn, rajtojn kaj tempolimojn. | Plenumita | ABI 2: `FinaPunkto`, `Kapablo`, `Tenilo` kun du-nivela generacia kontrolo, `KREI_FINPUNKTON`/`DONI`/`REVOKI`/`FERMI`, revokaj vekoj (`-32`), sendblokado (`-11`), tro longa mesaĝo (`-90`), tempolimoj (`-110`, `SENFINA_TEMPOLIMO`), `IkStatistiko` kaj purigo ĉe proceza detruo. |
+| 4 | Kadroj kaj paĝtabeloj estas liberigeblaj; longa testado ne elĉerpas memoron. | Plenumita | `detrui` liberigas la privatajn paĝtabelojn kaj la procezajn kadrojn (raporto `[procezo] N detruita: … kadroj liberigitaj`); la reuzoprovo kreas kaj detruas procezojn dekfoje kaj postulas saman nombron da liberaj kadroj antaŭ/post. La kvin QEMU-kombinaĵoj ripetas la kontrolon sen `MALBONE`. |
+| 5 | La ISO estas konstruata de DI, kaj `fmt`, `clippy`, `konstruo`, `kani` kaj QEMU-smoka testo estas devigaj. | Plenumita | `.github/workflows/di.yml`: `kontroli-kaj-konstrui` rulas `just kontroli` kaj `just konstrui-arm`; `paki-iso` konstruas ambaŭ ISO-ojn; `miri-kontroli`, la 43-taskoj `kani-kontroli` kaj la kvin `qemu-kontroli` estas devigaj por verda pordego. La runo de 0.8.3 havis 53 verdajn taskojn. |
+| 6 | La dokumentaro (README, ĉi tiu dokumento, sistemvoka referenco) estas kompleta kaj kongrua kun la kodo. | Plenumita | `tools/dokumentaro.sh --kontroli` komparas ĉiun `SYS_*`-numeron kun `README.md` kaj `docs/VORTARO.md`; `tools/versio.sh --kontroli` kovras README, ĉi tiun dokumenton, `AGENTS.md`, la retejon kaj la anoncon. La Ligo-komandoj kaj la startaj reĝimoj estas listigitaj en README, FLUOU §8 kaj la vortaro. |
 
 ---
 

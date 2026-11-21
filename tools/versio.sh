@@ -20,6 +20,7 @@ README="$ROOT/README.md"
 MEJLOSTONOJ="$ROOT/docs/MEJLOSTONOJ.md"
 AGENTS="$ROOT/AGENTS.md"
 RETEJO="$ROOT/docs/index.html"
+ANONCO="$ROOT/docs/ANONCO-1.0.md"
 KERNO="$ROOT/mikerno/src/kerno/mod.rs"
 LIMINE="$ROOT/mikerno/boot/limine.conf"
 
@@ -64,6 +65,9 @@ kontroli_ĉiujn() {
     kontroli "$RETEJO" \
         's/^<html lang="eo" data-versio="([0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?)">$/\1/p' \
         "docs/index.html (retejo)" || eraro=1
+    kontroli "$ANONCO" \
+        's/^> Ĝisdatigita por versio: ([0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?) \(Cargo-laborloko\)$/\1/p' \
+        "docs/ANONCO-1.0.md" || eraro=1
     if grep -oE 'data-versio-montri>[^<]+' "$RETEJO" |
         sed 's/.*>//' | grep -qvxF "$VERSIO"; then
         echo "versio: docs/index.html montras alian videblan version ol $VERSIO" >&2
@@ -86,6 +90,7 @@ kontroli_ĉiujn() {
     sed -E -i "s/^(> Stato: .* · Versio de la Cargo-laborloko: )[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?$/\1$VERSIO/" "$MEJLOSTONOJ"
     sed -E -i "s/^(Nuna versio: \`)[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?(\`)/\1$VERSIO\3/" "$AGENTS"
     sed -E -i "s/^(<html lang=\"eo\" data-versio=\")[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?(\">)$/\1$VERSIO\3/" "$RETEJO"
+    sed -E -i "s/^(> Ĝisdatigita por versio: )[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?/\1$VERSIO/" "$ANONCO"
     sed -E -i "s#(data-versio-montri>)[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?(</span>)#\1$VERSIO\3#g" "$RETEJO"
     sed -E -i "s#(href=\"[^\"]*/v)[0-9]+\.[0-9]+\.[0-9]+(-arm\.[0-9]+)?#\1$VERSIO#g" "$RETEJO"
 }
