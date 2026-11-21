@@ -21,16 +21,16 @@
 | M6 | Frambufo-konzolo kaj COM1 | Plenumita | `1280x800, 32 bitoj/pikselo` (ISO) |
 | M7 | Antaŭokupa planisto kaj kuntekstŝanĝo | Plenumita | 3 fadenoj interplektitaj kaj finitaj |
 | M8 | Mesaĝa IK kun kapabloj | Plenumita | mesaĝoj liveritaj, fadeno 3 vekita |
-| M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt/clippy verdaj; 26 pruvoj maŝine plenumitaj kaj verdaj |
+| M9 | Kvalita pordego: fmt, clippy, Kani-pruvoj | Parte | fmt, clippy, testoj kaj Miri verdaj; 43 Kani-pruvoj verdaj, sed ankoraŭ per spegulo — la produktaj tipoj venas en M20 |
 | M10 | Uzantspaca kontrakto (`libmikerno`, `horizonto`) | Plenumita | ABI difinita; `horizonto` plenumiĝas en Ring 3 |
 | M11 | Ring 3 kaj sistemvokoj | Plenumita | `int 0x80` el Ring 0 kaj Ring 3, negativaj kazoj, ambaŭ praŝarĝaj vojoj |
 | M12 | Per-procesaj adresspacoj | Plenumita | W^X laŭ sekcioj, `CR0.WP`, proceza izolado (spiono `#PF`, viktimo pluvivas), egalaj kadroj |
 | M13 | Kerna memoro-firmigo: SMEP, SMAP, KASLR | Plenumita | SMEP, SMAP kaj KASLR pruvitaj per Ring 0-provoj kaj tri startoj |
 | M14 | IK-firmigo: objektoj, rajtoj, tempolimoj | Plenumita | Ring 0/Ring 3-scenaroj kaj AC/CR3/EOI-provoj verdaj (ABI 2) |
 | M15 | `arm64`-malantaŭo: EL0, ABI 2, `ramfb`, `PAN` | Plenumita | identa piksela haketo sur ambaŭ arkoj |
-| M16 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Parte | dormo 100 ms = 10 tikoj; minimumo ≥ 17 veturoj; arm64-stabileco |
+| M16 | Dormantaj temporiziloj, prioritatoj, SMP-esploro | Parte | dormo 100 ms = 10 tikoj; prioritatoj 1:2:4; specimenoj sumo == horloĝo; arm64-stabileco; SMP-esploro ne farita (ekster 1.0) |
 | M17 | Konservado, dosiersistemo, ŝelo | Plenumita | `virtio-blk` legas/skribas 64 sektorojn; SNDS (6 dosieroj, 1 dosierujo; PCI kaj MMIO); `SYS_BRK`, `SYS_EXEC` kaj `SYS_LANĜI` en Ring 3; Ligo kun `listi`, `procezoj`, `mortigi`, `ruli`; `virtio-blk` MMIO-vojo funkcias sur `arm64`; `#[allow]`-purgado por M17 plenigita |
-| M18 | DI, testoj, plena pruvaro | Parte | GitHub Actions verde (fmt, clippy, testoj, konstruo, Miri, Kani); Fazo 1 (host-testoj) plenumita |
+| M18 | DI, testoj, plena pruvaro | Plenumita | GitHub Actions verde (fmt, clippy, 71 host-testoj, konstruo, Miri, 43 Kani-pruvoj); ses fazoj 0.8.0–0.8.5, ĉiu kun verda DI kaj ISO el la Eldono |
 | M19 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 | M20 | Plena pruvaro kaj 1.0 | Venonta | — |
 
@@ -760,14 +760,15 @@ signifas la defaŭltan `unwind`-valoron.
 **Mankanta.**
 
 - La pruvoj spegulas la logikon per 64-kadra modelo anstataŭ pruvi la
-  produktan `KadraAlokilo`.
-- La formala pordego nun rulas en GitHub Actions (vidu §4.7); `cargo kani` ne
-  plu ruliĝas loke. Ankoraŭ mankas unuopa aŭ bitnivela testo, `miri` kaj
-  `loom`.
+  produktan `KadraAlokilo`; tiun laboron transprenas M20.
+- La formala pordego nun rulas en GitHub Actions (vidu §4.7), kaj `cargo kani`
+  ne plu ruliĝas loke. `miri-kontroli` kovras la unu-testojn de `kernologiko`;
+  `loom` restas neuzata, ĉar la kerno estas unuprocesora kaj protektas la
+  kritikajn sekciojn per malŝaltitaj interrompoj.
 
-**Sekva paŝo.** Alproksimigi la pruvojn al la produkta kodo per etaj
-abstraktaĵoj kaj aldoni testojn por la arkitekture sendependaj partoj
-(`MemoraMapo`, `Mesagujo`, `PretaVico`, `VirtuaAdreso`).
+**Sekva paŝo.** La unu-testoj por la arkitekture sendependaj partoj
+(`MemoraMapo`, `Mesagujo`, `PretaVico`, `VirtuaAdreso`) ekzistas ekde M18 Fazo 1
+(0.8.0); la pruvoj kontraŭ la produktaj tipoj restas la celo de M20.
 
 ---
 
@@ -1107,8 +1108,8 @@ la paĝon kaj la tradukajn dosierojn; la foliumila kontrola trairo restas farebl
 sur la publikigita adreso.
 
 **Ligo-komandaro (2026-11-20).** Apud la seria eligo la retejo nun montras
-tabelon de ĉiuj 20 komandoj de Ligo kun ekzemplo por ĉiu; la angla mapado
-ricevis la samajn tekstojn, kaj `FLUOU.md` §8.3 listigas la ekzemplojn. La
+tabelon de la komandoj de Ligo (siatempe 20) kun ekzemplo por ĉiu; la angla
+mapado ricevis la samajn tekstojn, kaj `FLUOU.md` §8.3 listigas la ekzemplojn. La
 stadioj restas ligitaj al `listi` aŭ `procezoj`. Nur dokumentaro ŝanĝiĝis, do
 la ISO-oj ne estis rekonstruitaj.
 
@@ -1428,6 +1429,9 @@ rulita loke; la DI-matrico eltrovis ĉiujn pruvojn aŭtomate. La formala pordego
 de M16 Fazo 3 estas verda.
 
 **Versio.** 0.6.2 (Fazo 3).
+
+**Restanta parto.** La SMP-esploro estis «eventuala» kaj restas ekster la celo
+de 1.0; M16 tenas la staton «Parte» nur pro ĝi.
 
 ---
 
@@ -1924,7 +1928,7 @@ elŝutajn ligilojn al ĉi tiu etikedo.
 | Alta | Neniu `fork`; nur `exec` | Post 1.0 (postulas kopiadon de adresaj spacoj) |
 | Meza | SNDS estas nurlega | M17-poste: aldoni `skribi` kaj `krei` |
 | Meza | Neniu IOMMU por `virtio` DMA | M19 (Aparata izolado) |
-| Malalta | Ŝelo uzas polusan legadon por COM1 | M18: uzi interromp-bazitan I/O |
+| Malalta | Ŝelo uzas polusan legadon por COM1 | Post 1.0: uzi interromp-bazitan I/O |
 
 ---
 
@@ -2286,6 +2290,18 @@ La praŝarĝoj printis `[MiKerno] … v0.8.5!`, la saman pikselan haketon
 `konstruo`, `kani` kaj la QEMU-smokan teston; la ISO estas artefakto de DI, ne
 permana dosiero.
 
+**Fermo (2026-11-21).** Ĉiuj ses fazoj de M18 estas plenumitaj: la host-testoj
+(0.8.0), la QEMU-matrico kaj aŭtomata ISO-regenerado (0.8.1), `cargo-deny`
+(0.8.2), la purgado de `#[allow]` kaj la Ring 3-escepta izolado (0.8.3), la
+dokumentara sinkronigo (0.8.4) kaj la hejma dosierujo kun `iri`, `kie` kaj
+relativaj vojoj (0.8.5). La lasta pruvo estas la runo
+[#44908392008](https://github.com/makoto-lernanto/mikerno/actions/runs/44908392008)
+kun 53 verdaj taskoj kaj la Eldono v0.8.5. La sola ne plene plenumita
+subkriterio — la generika `KadraAlokilo`/`PaĝaTablo`-abstrakcio de Fazo 1 — estis
+anstataŭita per la apartigo de la puraj moduloj en `kernologiko` kaj la
+`#[cfg(kani)]`-spegulo; la restanta laboro, nome pruvoj kontraŭ la produktaj
+tipoj, transiras al M20.
+
 #### 1a. Fazo 1 — efektivigita (0.8.0)
 
 **Nova laborloka membro `kernologiko`.** La arkitekture sendependa logiko
@@ -2565,18 +2581,14 @@ mejloŝtono venas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo el M17.
 
 | Prioritate | Ŝuldo | Efiko | Rimedo |
 | --- | --- | --- | --- |
-| Alta | Neniu `fork`/`exec`; procezoj estas preparitaj de la praŝarĝo | Ne eblas dinamika lanĉo el Ring 3 | M17 (`fork`/`exec`) |
-| Alta | Ring 3-esceptoj krom `#PF`/`#GP` haltigas la sistemon | Ne rekaptebla eraro (ekz. `#UD`) | M12/M18 |
-| Alta | Neniu DI nek testoj | Regresoj nerimarkeblaj | M18 |
-| Alta | Malaktuala ISO | Konfuzaj testrezultoj | DI + versio |
+| Alta | Neniu `fork`; `SYS_LANĜI` kaj `SYS_EXEC` kovras la dinamikan lanĉon | Ne eblas kopii adresan spacon | Post 1.0 |
+| Alta | Ring 3-esceptoj ekster `#PF`, `#GP`, `#DE`, `#OF` kaj `#UD` haltigas la sistemon | Ne rekaptebla eraro por la ceteraj vektoroj | Post 1.0 |
 | Malalta | Dokumentoj kaj `Cargo.toml` povas malkongrui | Konfuzaj eldonoj | `tools/versio.sh --kontroli` en `just kontroli` |
-| Meza | IK-finfunkto = fadeno | Ne eblas sendependaj objektoj | M14 |
-| Meza | Sekreta paĝo estas unu fiksa mapado por procezo | Neniu ĝenerala `mmap`/`brk` por uzantaj datumoj | M17 |
+| Meza | Neniu ĝenerala `mmap`; la uzanta kupo nur pligrandiĝas per `SYS_BRK` | Neniu mapado de dosieroj aŭ malmapado | Post 1.0 |
 | Meza | Neniu IOMMU | Aparata DMA ne estas izolita | M19 |
 | Meza | Frambufo sen rulumo | Malbona uzsperto | M6-poste |
 | Malalta | `Kunhavigita::akiri` liveras krudan montrilon el `&self` | La derivo de referenco devas esti eksplicita `unsafe` | reviziita (M17 F5); la disciplino restas dokumentita |
-| Malalta | Kani-modelo ≠ produkta kodo | Pruvoj ne rekte aplikeblas | M9 |
-| Malalta | Antaŭkonstituciaj `#[allow]`-oj sen `PERMESO-JUSTIFIKO` | Povas kaŝi neuzatan aŭ neŝatatan kodon | revizii dum M18 (§9.3) |
+| Malalta | Kani-modelo ≠ produkta kodo | Pruvoj ne rekte aplikeblas | M20 |
 
 ---
 
@@ -2652,17 +2664,15 @@ pordegon `just kontroli`, la DI-matricon `kani-kontroli` kaj la platformajn
 akceptojn. Ekde 2026-11-16 `just kontroli` ne plu enhavas Kani-on; `cargo kani`
 ruliĝas nur en GitHub Actions, po unu pruvo (§4.7–§4.8).
 
-### 9.3. Jam ekzistantaj `#[allow]`-oj
+### 9.3. `#[allow]`-esceptoj
 
-La esceptoj starigitaj antaŭ ĉi tiu konstitucio — la `cfg_attr`-aj
-`allow(dead_code)`/`allow(unused_imports)` por `aarch64` (M15) kaj la
-`allow(dead_code)` ĉe strukturaj bufroj — restas registritaj kiel teknika
-ŝuldo (§7). La esceptoj de M17 — la du
+Ĉiuj antaŭkonstituciaj esceptoj estis forigitaj: la du
 `cfg_attr(target_arch = "x86_64", allow(dead_code))` de `komuna.rs` kaj la
-`allow(clippy::mut_from_ref)` de `Kunhavigita` — estis forigitaj en Fazo 5
-(0.7.4): la MMIO-eroj nun estas baritaj per `#[cfg(target_arch = "aarch64")]`,
-kaj `akiri` redonas krudan montrilon. Oni ne aldonu novajn sen la aprobo de la
-uzanto laŭ §9.1; kiam Fazo tuŝas ekzistantan escepton, ĝi ricevu
+`allow(clippy::mut_from_ref)` de `Kunhavigita` foriĝis en M17 Fazo 5 (0.7.4),
+kaj la `cfg_attr`-aj `allow(dead_code)`/`allow(unused_imports)` por `aarch64`
+(M15) kaj la `allow(dead_code)` ĉe strukturaj bufroj en M18 Fazo 4 (0.8.3).
+`grep -r '#\[allow'` tra la laborloko nun trovas nenion. Oni ne aldonu novajn sen
+la aprobo de la uzanto laŭ §9.1; kiam Fazo tuŝas eventualan escepton, ĝi ricevu
 `PERMESO-JUSTIFIKO`-komenton.
 
 ---

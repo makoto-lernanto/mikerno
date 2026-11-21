@@ -46,7 +46,7 @@ window.TRADUKOJ_ANGLA = {
   "pri.konservado": "Storage",
   "pri.pruvoj": "Proofs",
   "pri.verda": "green",
-  "pri.di": "DI green: 43/43 jobs",
+  "pri.di": "DI green: 53/53 jobs",
   "fenestro.regiloj": "Window controls",
   "fenestro.kaŝita": "Window hidden",
   "fenestro.kaŝita.teksto": "The window is waiting on the desktop.",
@@ -147,9 +147,9 @@ window.TRADUKOJ_ANGLA = {
   "mej.m15.titolo": "arm64",
   "mej.m15.teksto": "EL0, ABI 2, ramfb and PAN.",
   "mej.m17.titolo": "Storage",
-  "mej.m17.teksto": "virtio-blk over PCI and MMIO; SNDS with 4 files.",
+  "mej.m17.teksto": "virtio-blk over PCI and MMIO; SNDS and the Ligo shell.",
   "mej.m18.titolo": "DI and verification",
-  "mej.m18.teksto": "43/43 jobs green; tests are still coming.",
+  "mej.m18.teksto": "53/53 jobs green; 71 host tests, Miri and 43 Kani proofs.",
   "mej.ligilo": "All milestones in the documentation",
 
   "eligo.titolo": "Not a mock-up — the console",
@@ -166,7 +166,7 @@ window.TRADUKOJ_ANGLA = {
 
   "ligo.titolo": "The Ligo command reference — an example for every command",
   "ligo.teksto":
-    "All 20 commands of the current shell (Ligo 0.1, ABI 2), each with an example you can type at the <code>ligo:~&gt;</code> prompt. The stages <code>filtri</code>, <code>ordigi</code>, <code>unua</code>, <code>sumi</code>, <code>nombri</code>, <code>montri</code> and <code>teksto</code> work only after <code>listi</code> or <code>procezoj</code>.",
+    "All commands of the current shell (Ligo 0.1, ABI 2), each with an example you can type at the <code>ligo:~&gt;</code> prompt. The stages <code>filtri</code>, <code>ordigi</code>, <code>unua</code>, <code>sumi</code>, <code>nombri</code>, <code>montri</code> and <code>teksto</code> work only after <code>listi</code> or <code>procezoj</code>.",
   "ligo.tabelo.aria": "Ligo commands and examples",
   "ligo.kapo.komando": "Command",
   "ligo.kapo.ekzemplo": "Example",
@@ -175,6 +175,9 @@ window.TRADUKOJ_ANGLA = {
   "ligo.k.listi":
     "Lists files with name, type, size and handle; with a path, lists that directory.",
   "ligo.k.legi": "Reads a text file and shows it as a card with a handle.",
+  "ligo.k.iri":
+    "Changes the current directory; relative paths and <code>~</code> are understood, and without an argument it returns to the home directory <code>/hejmo</code>.",
+  "ligo.k.kie": "Shows the full path of the current directory.",
   "ligo.k.procezoj":
     "Shows the process table: pid, name, state, memory and permissions.",
   "ligo.k.mortigi": "Ends a process; the shell (pid 1) is protected.",

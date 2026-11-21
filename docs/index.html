@@ -171,12 +171,12 @@
             <div class="pri-chelo"><span data-t="pri.lingvo">Lingvo</span><strong>Rust · no_std</strong></div>
             <div class="pri-chelo"><span data-t="pri.planisto">Planisto</span><strong data-t="pri.planisto.valoro">antaŭokupa · 100 Hz</strong></div>
             <div class="pri-chelo"><span data-t="pri.konservado">Konservado</span><strong>virtio-blk · SNDS</strong></div>
-            <div class="pri-chelo"><span data-t="pri.pruvoj">Pruvoj</span><strong>41 · Kani</strong></div>
-            <div class="pri-chelo"><span>DI</span><strong>43/43 · <span data-t="pri.verda">verda</span></strong></div>
+            <div class="pri-chelo"><span data-t="pri.pruvoj">Pruvoj</span><strong>43 · Kani</strong></div>
+            <div class="pri-chelo"><span>DI</span><strong>53/53 · <span data-t="pri.verda">verda</span></strong></div>
           </div>
           <div class="fenestra-piedo">
             <span class="stato-punkto" aria-hidden="true"></span>
-            <span data-t="pri.di">DI verda: 43/43 taskoj</span>
+            <span data-t="pri.di">DI verda: 53/53 taskoj</span>
             <span class="sildeto tenila">TENILO 0x0101</span>
           </div>
         </div>
@@ -536,17 +536,17 @@
           <h3 data-t="mej.m15.titolo">arm64</h3>
           <p data-t="mej.m15.teksto">EL0, ABI 2, ramfb kaj PAN.</p>
         </li>
-        <li class="mejloŝtono revelo nuna">
+        <li class="mejloŝtono revelo">
           <span class="tempa-punkto" aria-hidden="true"></span>
-          <div class="mejla-kapo"><strong>M17</strong><span class="stato nuna" data-t="stato.nun">Nun</span></div>
+          <div class="mejla-kapo"><strong>M17</strong><span class="stato plenumita" data-t="stato.plenumita">Plenumita</span></div>
           <h3 data-t="mej.m17.titolo">Konservado</h3>
-          <p data-t="mej.m17.teksto">virtio-blk tra PCI kaj MMIO; SNDS kun 4 dosieroj.</p>
+          <p data-t="mej.m17.teksto">virtio-blk per PCI kaj MMIO; SNDS kaj la ŝelo Ligo.</p>
         </li>
         <li class="mejloŝtono revelo">
           <span class="tempa-punkto" aria-hidden="true"></span>
-          <div class="mejla-kapo"><strong>M18</strong><span class="stato parte" data-t="stato.parte">Parte</span></div>
+          <div class="mejla-kapo"><strong>M18</strong><span class="stato plenumita" data-t="stato.plenumita">Plenumita</span></div>
           <h3 data-t="mej.m18.titolo">DI kaj pruvaro</h3>
-          <p data-t="mej.m18.teksto">43/43 taskoj verdaj; testoj ankoraŭ venas.</p>
+          <p data-t="mej.m18.teksto">53/53 taskoj verdaj; 71 host-testoj, Miri kaj 43 Kani-pruvoj.</p>
         </li>
       </ol>
 
@@ -617,35 +617,37 @@
 
           <div class="terminala-korpo">
             <pre class="log" id="eligoX86" data-log="x86" aria-label="Seria eligo de x86_64"
-              data-t-aria="eligo.x86.aria"><span class="linio">[MiKerno] Saluton, mi estas MiKerno v0.8.0!</span>
-<span class="linio">[kerno] KASLR: kerna bazo 0x3c00000 (deŝovo 0x3b00000)</span>
+              data-t-aria="eligo.x86.aria"><span class="linio">[MiKerno] Saluton, mi estas MiKerno v0.8.5!</span>
+<span class="linio">[kerno] KASLR: kerna bazo 0x9c00000 (deŝovo 0x9b00000); la bildo venis de 0x100000</span>
 <span class="linio">[kerno] SMEP subtenata: jes</span>
 <span class="linio">[kerno] SMAP subtenata: jes</span>
 <span class="linio">[kerno] memoro: 7 regionoj, 255 MiB uzeblaj</span>
 <span class="linio">[kerno] frambufo 1280x800, 32 bitoj/pikselo</span>
-<span class="linio sukceso">[konservado] virtio-blk (PCI): 128 sektoroj, 512 bajtoj po sektoro</span>
-<span class="linio sukceso">[konservado] virtio-blk: 64 sektoroj legitaj, haketo 0x840ee03e1d84f800</span>
+<span class="linio sukceso">[konservado] virtio-blk (PCI): 256 sektoroj, 512 bajtoj po sektoro</span>
+<span class="linio sukceso">[konservado] virtio-blk: 64 sektoroj legitaj, haketo 0x9ff4560dc9667a84</span>
 <span class="linio sukceso">[konservado] virtio-blk: skribo kaj restarigo (bone)</span>
-<span class="linio sukceso">[dosiersistemo] SNDS: 4 dosieroj, 1 dosierujo. Haketo: 0x3ba743bb3a5561c3</span>
+<span class="linio sukceso">[dosiersistemo] SNDS: 8 dosieroj, 3 dosierujoj. Haketo: 0x973570511d733833</span>
 <span class="linio sukceso">[dosiersistemo] legado (bone): bonveno.txt, 18 bajtoj</span>
 <span class="linio sukceso">[dosiersistemo] listado de notoj: dua.txt, unua.txt</span>
-<span class="linio akcento">[ekrano] piksela fiksaĵo 1280x800, 32 bitoj/pikselo, tiparo 12x24; haketo 0xecf1f6dbe1421575</span>
-<span class="linio">[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj</span></pre>
+<span class="linio">[kerno] ŝelo startas kiel procezo 1; por fini: fini</span>
+<span class="linio">[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 1014 tikoj</span>
+<span class="linio akcento">[ekrano] piksela fiksaĵo 1280x800, 32 bitoj/pikselo, tiparo 12x24; haketo 0xecf1f6dbe1421575</span></pre>
             <pre class="log" id="eligoArm" data-log="arm" aria-label="Seria eligo de arm64"
-              data-t-aria="eligo.arm.aria" hidden><span class="linio">[MiKerno] Saluton, mi estas MiKerno v0.8.0!</span>
+              data-t-aria="eligo.arm.aria" hidden><span class="linio">[MiKerno] Saluton, mi estas MiKerno v0.8.5!</span>
 <span class="linio">[kerno] PXN subtenata: jes</span>
 <span class="linio">[kerno] UXN subtenata: jes</span>
 <span class="linio">[kerno] PAN subtenata: jes</span>
 <span class="linio">[kerno] memoro: 7 regionoj, 226 MiB uzeblaj</span>
 <span class="linio">[kerno] frambufo 1280x800, 32 bitoj/pikselo</span>
-<span class="linio sukceso">[konservado] virtio-blk (MMIO): 128 sektoroj, 512 bajtoj po sektoro</span>
-<span class="linio sukceso">[konservado] virtio-blk: 64 sektoroj legitaj, haketo 0x840ee03e1d84f800</span>
+<span class="linio sukceso">[konservado] virtio-blk (MMIO): 256 sektoroj, 512 bajtoj po sektoro</span>
+<span class="linio sukceso">[konservado] virtio-blk: 64 sektoroj legitaj, haketo 0x4e2f7bb3781bbb91</span>
 <span class="linio sukceso">[konservado] virtio-blk: skribo kaj restarigo (bone)</span>
-<span class="linio sukceso">[dosiersistemo] SNDS: 4 dosieroj, 1 dosierujo. Haketo: 0x3ba743bb3a5561c3</span>
+<span class="linio sukceso">[dosiersistemo] SNDS: 8 dosieroj, 3 dosierujoj. Haketo: 0x77366cdfab334011</span>
 <span class="linio sukceso">[dosiersistemo] legado (bone): bonveno.txt, 18 bajtoj</span>
 <span class="linio sukceso">[dosiersistemo] listado de notoj: dua.txt, unua.txt</span>
-<span class="linio akcento">[ekrano] piksela fiksaĵo 1280x800, 32 bitoj/pikselo, tiparo 12x24; haketo 0xecf1f6dbe1421575</span>
-<span class="linio">[kerno] fina stato: 6 mortintaj, 0 pretaj, 0 blokitaj; 1000 tikoj</span></pre>
+<span class="linio">[kerno] ŝelo startas kiel procezo 1; por fini: fini</span>
+<span class="linio">[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 1014 tikoj</span>
+<span class="linio akcento">[ekrano] piksela fiksaĵo 1280x800, 32 bitoj/pikselo, tiparo 12x24; haketo 0xecf1f6dbe1421575</span></pre>
           </div>
 
           <div class="terminala-piedo">
@@ -663,7 +665,7 @@
 
       <div class="ligo-komandoj" id="ligo-komandoj">
         <h3 data-t="ligo.titolo">La komandaro de Ligo — ekzemplo por ĉiu komando</h3>
-        <p data-t-html="ligo.teksto">Ĉiuj 20 komandoj de la nuna ŝelo (Ligo 0.1, ABI 2),
+        <p data-t-html="ligo.teksto">Ĉiuj komandoj de la nuna ŝelo (Ligo 0.1, ABI 2),
           kun ekzemplo tajpebla ĉe la prompto <code>ligo:~&gt;</code>. La stadioj
           <code>filtri</code>, <code>ordigi</code>, <code>unua</code>,
           <code>sumi</code>, <code>nombri</code>, <code>montri</code> kaj
@@ -695,6 +697,16 @@
                 <td><code>legi &lt;dosiero&gt;</code></td>
                 <td><code>legi bonveno.txt</code></td>
                 <td data-t="ligo.k.legi">Legas tekstan dosieron kaj montras ĝin kiel karton kun tenilo.</td>
+              </tr>
+              <tr>
+                <td><code>iri [vojo]</code></td>
+                <td><code>iri ../notoj</code></td>
+                <td data-t="ligo.k.iri">Ŝanĝas la nunan dosierujon; relativaj vojoj kaj <code>~</code> estas komprenataj, kaj sen argumento ĝi revenas al la hejmo <code>/hejmo</code>.</td>
+              </tr>
+              <tr>
+                <td><code>kie</code></td>
+                <td><code>kie</code></td>
+                <td data-t="ligo.k.kie">Montras la plenan vojon de la nuna dosierujo.</td>
               </tr>
               <tr>
                 <td><code>procezoj</code></td>
