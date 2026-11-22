@@ -4,7 +4,7 @@
 > M19 (plena pruvaro); ĝis tiam la nuna eldono estas 0.8.5. Ĉi tiu dokumento
 > ne estas publikigita anonco.
 >
-> Ĝisdatigita por versio: 0.8.5 (Cargo-laborloko)
+> Ĝisdatigita por versio: 0.9.0 (Cargo-laborloko)
 
 ## Malgranda kerno, plena kontrolo
 

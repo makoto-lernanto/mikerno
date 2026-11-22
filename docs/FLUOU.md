@@ -499,7 +499,7 @@ eliras `/`. Nur la normaligita absoluta vojo atingas SNDS.
 
 La malpermesitaj anglaj nomoj (`ls`, `cat`, `ps`, `kill`, `echo`, `help`,
 `clear`) ne ekzistas, eĉ ne kiel kaŝitaj aliasoj. Provon uzi ilin oni raportu
-per `Nekonata komando: "ls" (-2) — tajpu helpu`.
+per `Nekonata komando: «ls» (-2) — tajpu helpu`.
 
 ### 8.2. Gramatiko
 

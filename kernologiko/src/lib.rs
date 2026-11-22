@@ -20,6 +20,7 @@
 pub mod adreso;
 pub mod memoro;
 pub mod mesagujo;
+pub mod pagado;
 pub mod preta_vico;
 pub mod snds;
 pub mod vekotemporizilo;

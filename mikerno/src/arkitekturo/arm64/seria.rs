@@ -29,7 +29,7 @@ pub fn pravalorizi(bazo: usize) {
         BAZO = bazo;
         write_volatile((bazo + CR) as *mut u32, 0);
         write_volatile((bazo + ICR) as *mut u32, 0x7FF);
-        // UARTCLK = 24 MHz: 24_000_000 / (16 * 115200) = 13.0208.
+        // UARTCLK = 24 MHz: 24_000_000 / (16 * 115200) = 13,0208.
         write_volatile((bazo + IBRD) as *mut u32, 13);
         write_volatile((bazo + FBRD) as *mut u32, 1);
         write_volatile((bazo + LCR_H) as *mut u32, 0x70); // 8N1, FIFO

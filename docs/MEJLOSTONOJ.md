@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-21 · Versio de la Cargo-laborloko: 0.8.5
+> Stato: 2026-11-22 · Versio de la Cargo-laborloko: 0.9.0
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -31,7 +31,7 @@
 | M16 | Dormantaj temporiziloj kaj prioritatoj | Plenumita | dormo 100 ms = 10 tikoj; prioritatoj 1:2:4; specimenoj sumo == horloĝo; arm64-stabileco |
 | M17 | Konservado, dosiersistemo, ŝelo | Plenumita | `virtio-blk` legas/skribas 64 sektorojn; SNDS (6 dosieroj, 1 dosierujo; PCI kaj MMIO); `SYS_BRK`, `SYS_EXEC` kaj `SYS_LANĜI` en Ring 3; Ligo kun `listi`, `procezoj`, `mortigi`, `ruli`; `virtio-blk` MMIO-vojo funkcias sur `arm64`; `#[allow]`-purgado por M17 plenigita |
 | M18 | DI, testoj, plena pruvaro | Plenumita | GitHub Actions verde (fmt, clippy, 71 host-testoj, konstruo, Miri, 43 Kani-pruvoj); ses fazoj 0.8.0–0.8.5, ĉiu kun verda DI kaj ISO el la Eldono |
-| M19 | Plena pruvaro kaj 1.0 | Venonta | — |
+| M19 | Plena pruvaro kaj 1.0 | Daŭranta | Fazo 1 (0.9.0): la `PaĝaTablo`-reguloj en `kernologiko`, 52 Kani-pruvoj; identa ISO-haketo sur ambaŭ arkoj |
 | M20 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 | M21 | SMP, afineco kaj IPI | Post 1.0 | — |
 
@@ -179,6 +179,7 @@ eniras la kernan bildon.
 | 2026-11-21 | 0.8.4 | 63 | 15261 | 11876 | 2005 | 1380 |
 | 2026-11-21 | 0.8.5 | 64 | 15377 | 11962 | 2025 | 1390 |
 | 2026-11-21 | 0.8.5 | 64 | 15347 | 11925 | 2034 | 1388 |
+| 2026-11-22 | 0.9.0 | 65 | 15646 | 12155 | 2068 | 1423 |
 
 ---
 
@@ -948,7 +949,7 @@ La tuta laborloko estis rekompilita de nulo per Rust 1.100.0:
 
 | Kontrolo | Rezulto |
 | --- | --- |
-| `cargo build --workspace --release` | Sukceso en 5.76 s |
+| `cargo build --workspace --release` | Sukceso en 5,76 s |
 | `cargo clippy --workspace --release` | Sukceso, sen avertoj (post riparo de 12 novaj avertoj) |
 | `cargo fmt --all -- --check` | Neniu diferenco |
 | PVH-starto (`qemu64,+smep,+smap`) | Verda: `KASLR: kerna bazo 0x800000`, `reuzo (bone): 10 cikloj, 64839 kadroj antaŭ, 64839 post`, `izolado (bone): 64839 kadroj antaŭ, 64839 post`, 5 mortintaj fadenoj, `SMAP-malobservo` mortigas nur la Ring 3-procezon |
@@ -1062,7 +1063,7 @@ protokolo de la dua provo montras `60420 VCC(s), 23706 remaining after
 simplification`, `Runtime Symex: 97.97 s`, kaj la nuligon ≈37 s poste, meze de
 la solvado de `reenmeto_kaj_forigo`. La memlimo de `ubuntu-latest` (16 GB)
 klarigas la signalon: komparebla Kani-projekto ligis la saman
-`shutdown signal`/exit 143 al CBMC-pinto de 11.8 GB
+`shutdown signal`/exit 143 al CBMC-pinto de 11,8 GB
 ([pulseengine/rivet#839](https://github.com/pulseengine/rivet/issues/839)).
 Temas do pri mempremo de la gastiganto, ne pri uzanta nuligo nek pri pruva
 regreso.
@@ -1823,13 +1824,13 @@ restas malpermesita.
 
 | Vojo | Linio |
 | --- | --- |
-| x86_64 PVH | `[kerno] ŝelo startas kiel procezo 1; por fini: fini`; `listi` -> `bonveno.txt 18 B TENILO 0x0001`, `horizonto.elf 94.7 KiB`, `legu.txt 158 B`, `notoj dosierujo 128 B`, `saluto.elf 15.6 KiB`; `listi \| sumi grandeco` -> `SUMO DE GRANDECO 110.7 KiB`; `procezoj` -> `1 ŝelo Kuranta`, `2 fono Preta`; `mortigi 2` -> `[procezo] 2 detruita: 1 privataj PDPT-oj, PML4 0x261000, 45 kadroj liberigitaj` kaj `Procezo 2 (fono) finiĝis.`; `ruli saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000c31)`, `Procezo 3 lanĉita: saluto.elf` kaj `[saluto] saluton el la procezo 3; ĝis revido`; `fini` -> `[kerno] ŝelo finiĝis; la kerno daŭras`; `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 2710 tikoj` |
-| arm64 Image | la sama interagado per PL011; `listi` montras `18 B`, `91.7 KiB` kaj `128 B`, `sumi grandeco` -> `SUMO DE GRANDECO 108.2 KiB`; `mortigi 2` -> `[procezo] 2 detruita: 9 privataj subtabeloj, TTBR0 0x4053c000, 43 kadroj liberigitaj` kaj `Procezo 2 (fono) finiĝis.`; `ruli saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000028)`; `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 2840 tikoj` |
+| x86_64 PVH | `[kerno] ŝelo startas kiel procezo 1; por fini: fini`; `listi` -> `bonveno.txt 18 B TENILO 0x0001`, `horizonto.elf 94,7 KiB`, `legu.txt 158 B`, `notoj dosierujo 128 B`, `saluto.elf 15,6 KiB`; `listi \| sumi grandeco` -> `SUMO DE GRANDECO 110,7 KiB`; `procezoj` -> `1 ŝelo Kuranta`, `2 fono Preta`; `mortigi 2` -> `[procezo] 2 detruita: 1 privataj PDPT-oj, PML4 0x261000, 45 kadroj liberigitaj` kaj `Procezo 2 (fono) finiĝis.`; `ruli saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000c31)`, `Procezo 3 lanĉita: saluto.elf` kaj `[saluto] saluton el la procezo 3; ĝis revido`; `fini` -> `[kerno] ŝelo finiĝis; la kerno daŭras`; `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 2710 tikoj` |
+| arm64 Image | la sama interagado per PL011; `listi` montras `18 B`, `91,7 KiB` kaj `128 B`, `sumi grandeco` -> `SUMO DE GRANDECO 108,2 KiB`; `mortigi 2` -> `[procezo] 2 detruita: 9 privataj subtabeloj, TTBR0 0x4053c000, 43 kadroj liberigitaj` kaj `Procezo 2 (fono) finiĝis.`; `ruli saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000028)`; `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 2840 tikoj` |
 
 Ambaŭ vojoj havas nul `MALBONE`-liniojn; la ŝelo kaj la fono malaperas antaŭ
 la fina stato, do la kadra bilanco restas pura. La nesukcesaj komandoj
 ellasas la Esperantajn erarojn kun la kodo kaj ne haltigas la ŝelon: `ls` ->
-`Nekonata komando: "ls" (-2) — tajpu helpu`, `legi neniu.txt` ->
+`Nekonata komando: «ls» (-2) — tajpu helpu`, `legi neniu.txt` ->
 `✕ legi: dosiero ne ekzistas: neniu.txt (-3)`, `mortigi 1` ->
 `procezo 1 estas protekta sistema procezo (-1)`.
 
@@ -1895,8 +1896,8 @@ La loka pordego finiĝis sen eraro per:
 
 | Vojo | Linio |
 | --- | --- |
-| x86_64 PVH | `[konservado] virtio-blk (PCI): 256 sektoroj, 512 bajtoj po sektoro`; `[dosiersistemo] SNDS: 6 dosieroj, 1 dosierujo. Haketo: 0xcd95864fee35a274`; `listi` -> `bonveno.txt 18 B TENILO 0x0001`, `horizonto.elf 94.7 KiB`, `saluto.elf 15.6 KiB`; `procezoj` -> `1 ŝelo Kuranta`, `2 fono Preta`; `ruli saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000c31)`, `Procezo 3 lanĉita: saluto.elf`, `[saluto] saluton el la procezo 3; ĝis revido`; `fini` -> `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 1447 tikoj` |
-| arm64 Image | `[konservado] virtio-blk (MMIO): 256 sektoroj, 512 bajtoj po sektoro`; `[dosiersistemo] SNDS: 6 dosieroj, 1 dosierujo. Haketo: 0x5aa97779fbdd1bcb`; `listi` -> `horizonto.elf 91.6 KiB`, `saluto.elf 16.2 KiB`; `procezoj` -> `1 ŝelo Kuranta`, `2 fono Preta`; `ruli saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000028)`; `fini` -> `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 2128 tikoj` |
+| x86_64 PVH | `[konservado] virtio-blk (PCI): 256 sektoroj, 512 bajtoj po sektoro`; `[dosiersistemo] SNDS: 6 dosieroj, 1 dosierujo. Haketo: 0xcd95864fee35a274`; `listi` -> `bonveno.txt 18 B TENILO 0x0001`, `horizonto.elf 94,7 KiB`, `saluto.elf 15,6 KiB`; `procezoj` -> `1 ŝelo Kuranta`, `2 fono Preta`; `ruli saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000c31)`, `Procezo 3 lanĉita: saluto.elf`, `[saluto] saluton el la procezo 3; ĝis revido`; `fini` -> `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 1447 tikoj` |
+| arm64 Image | `[konservado] virtio-blk (MMIO): 256 sektoroj, 512 bajtoj po sektoro`; `[dosiersistemo] SNDS: 6 dosieroj, 1 dosierujo. Haketo: 0x5aa97779fbdd1bcb`; `listi` -> `horizonto.elf 91,6 KiB`, `saluto.elf 16,2 KiB`; `procezoj` -> `1 ŝelo Kuranta`, `2 fono Preta`; `ruli saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000028)`; `fini` -> `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 2128 tikoj` |
 
 Ambaŭ vojoj havas nul `[horloĝo]`-liniojn dum la interagado, kaj la ŝelo kaj
 la lanĉitaj procezoj malaperas antaŭ la fina kadra bilanco.
@@ -1933,7 +1934,7 @@ elŝutajn ligilojn al ĉi tiu etikedo.
 | `SYS_BRK` funkcias en Ring 3 | Plenumita (Fazo 3) | `[ring3] kupo: alokita 4096 bajtoj ĉe 0x102000000` (x86_64 kaj arm64) |
 | `SYS_EXEC` anstataŭigas la procezon | Plenumita (Fazo 3) | `[kerno] exec: procezo 5 anstataŭigita per horizonto.elf (39648 bajtoj, enirpunkto 0x100002140)`; `[ring3] exec: nova bildo funkcias (procezo 5)` |
 | Ŝelo startas kaj akceptas enigon | Plenumita (Fazo 4) | `[kerno] ŝelo startas kiel procezo 1; por fini: fini`; prompto `ligo:~> ` kun linia redaktado (historio, `Tab`, `Ctrl+C`, `Ctrl+L`) |
-| `listi` kaj `legi` funkcias | Plenumita (Fazo 4) | `ligo:~> listi` -> `bonveno.txt 18 B TENILO 0x0001`, `horizonto.elf 94.7 KiB`, `notoj dosierujo 128 B` <br> `ligo:~> legi bonveno.txt` -> `│ Saluton, MiKerno!` kun `TENILO 0x0001` |
+| `listi` kaj `legi` funkcias | Plenumita (Fazo 4) | `ligo:~> listi` -> `bonveno.txt 18 B TENILO 0x0001`, `horizonto.elf 94,7 KiB`, `notoj dosierujo 128 B` <br> `ligo:~> legi bonveno.txt` -> `│ Saluton, MiKerno!` kun `TENILO 0x0001` |
 | `procezoj` kaj `mortigi` funkcias | Plenumita (Fazo 4) | `ligo:~> procezoj` -> `1 ŝelo Kuranta`, `2 fono Preta` <br> `ligo:~> mortigi 2` -> `[procezo] 2 detruita: 1 privataj PDPT-oj, PML4 0x261000, 45 kadroj liberigitaj`, `Procezo 2 (fono) finiĝis.`; `mortigi 1` rifuzata per `-1` |
 | `ruli` startas novan ELF | Plenumita (Fazo 4) | `ligo:~> ruli saluto.elf` -> `[kerno] nova procezo 3 lanĉita el SNDS: saluto.elf (enirpunkto 0x100000c31)`; `[saluto] saluton el la procezo 3; ĝis revido` |
 | `arm64` vojo restas verda | Plenumita (Fazo 4) | `QEMU_DISPLAY=none bash tools/run-qemu-arm.sh release` montras la saman interagadon per PL011; `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj; 2840 tikoj` |
@@ -1986,7 +1987,7 @@ de `#[allow]` kaj plibonigo de Ring 3-esceptoj.
 | --- | --- | --- |
 | Testoj ruliĝas sen QEMU | Jes | `just testoj` (aŭ `cargo test -p kernologiko --target <gastiganto>`) finiĝas kun `test result: ok. 61 passed`. |
 | Kovrado de sendependaj moduloj | Jes | 61 testkazoj (≥ 20) en ses moduloj, inkluzive de plena/malplena vico, nevalida adreso kaj nedisigebla UTF-8. |
-| Simulita `KadraAlokilo`/`PaĝaTablo` | Parte | `KadraAlokilo` fariĝis ĵenera laŭ la bitara grando kaj pruviĝas sur la produktaj metodoj (M9, 2026-11-21); por `PaĝaTablo` la generika abstrado restas malferma ĝis M19. Vidu «1a». |
+| Simulita `KadraAlokilo`/`PaĝaTablo` | Jes | `KadraAlokilo` fariĝis ĵenera laŭ la bitara grando kaj pruviĝas sur la produktaj metodoj (M9, 2026-11-21). M19 Fazo 1 (2026-11-22) faris la saman por `PaĝaTablo`: la indeksaj, PTE-kodigaj kaj privataj-subtabelaj reguloj loĝas en `kernologiko::pagado`, kaj la Kani-pruvoj alvokas la produktajn metodojn de ambaŭ malantaŭoj; vidu «1. Fazo 1 — efektivigita» en M19. |
 
 ##### Fazo 2: QEMU-matrico kaj aŭtomata ISO-regenerado (Versio 0.8.1)
 
@@ -2331,7 +2332,9 @@ kun 53 verdaj taskoj kaj la Eldono v0.8.5. La sola ne plene plenumita
 subkriterio — la generika `KadraAlokilo`/`PaĝaTablo`-abstrakcio de Fazo 1 — estis
 anstataŭita per la apartigo de la puraj moduloj en `kernologiko`;
 `KadraAlokilo` mem fariĝis ĵenera laŭ la bitara grando kaj pruviĝas sur la
-produktaj metodoj (M9, 2026-11-21). La `PaĝaTablo`-abstrakcio restas por M19.
+produktaj metodoj (M9, 2026-11-21). La `PaĝaTablo`-abstrakcio fermiĝis en M19
+Fazo 1 (2026-11-22): la puraj reguloj transloĝis al `kernologiko::pagado` kaj
+nova pruvaro trafas la produktajn metodojn de ambaŭ malantaŭoj.
 
 #### 1a. Fazo 1 — efektivigita (0.8.0)
 
@@ -2375,8 +2378,11 @@ abstrakcion por ambaŭ. Tia ŝanĝo tuŝus dekojn da `PaĝaTablo`-alvokoj, sen
 alporti novajn testkazojn: la puraj reguloj jam testiĝas per `kernologiko`.
 `KadraAlokilo` solviĝis alie: ĝi nun estas ĵenera laŭ la bitara grando, do la
 Kani-pruvoj alvokas la produktajn metodojn (M9). La `PaĝaTablo`-abstrakcio
-restas malferma por M19; la du akceptkriterioj de Fazo 1 (sen QEMU, ≥ 20 kazoj)
-estas plenumitaj.
+fermiĝis en M19 Fazo 1 (2026-11-22): ĝiaj indeksaj, PTE-kodigaj kaj
+privataj-subtabelaj reguloj loĝas en `kernologiko::pagado`, la posedregistro
+`PrivatajSubtabeloj` estas ĵenera laŭ la vortnombro, kaj naŭ novaj pruvoj
+trairas la produktajn metodojn de `x86_64` kaj `arm64`. La du akceptkriterioj
+de la M18 Fazo 1 (sen QEMU, ≥ 20 kazoj) estis plenumitaj jam tiam.
 
 **Pordego.** `just kontroli` nun komenciĝas per `just testoj`, kiu rulas
 `cargo test -p kernologiko --target <gastiganto>`; DI uzas la saman resepton,
@@ -2669,6 +2675,56 @@ donus la mapado, ĉar 1.0 estas la cellinio; la fazoj 1–4 sekvas la regulon.
 `docs/ANONCO-1.0.md` plenumitaj: `just kontroli` verda, la tuta DI-matrico
 verda, ambaŭ ISO-oj praŝarĝitaj sen `MALBONE`, la valoroj registritaj kaj la
 etikedo `v1.0.0` publikigita. La ses kriterioj de §8 estas jam plenumitaj.
+
+#### 1. Fazo 1 — efektivigita (0.9.0)
+
+**Puraj reguloj en `kernologiko::pagado`.** Nova modulo (`kernologiko/src/pagado.rs`)
+entenas la arkitekture sendependan parton de ambaŭ paĝtabelaj malantaŭoj:
+
+- `NIVELOJ`, `EROJ`, `aliniiĝinta`, `nivela_amplekso`, `paĝa_indekso` kaj
+  `indeksa_bazo` — la malkompono de virtuala adreso en kvar 9-bitajn indeksojn
+  kaj la inversa uzo ĉe la uzanta fenestro;
+- `PrivatajSubtabeloj<const VORTOJ: usize = 8>` — posedregistro de ĝis 512
+  privataj subtabeloj per bitbildo, kun `registri`, `malregistri`, `estas`,
+  `indeksoj`, `nombro` kaj `malplena`; la produktaj malantaŭoj uzas la
+  implicitan grandecon, la pruvoj uzas malgrandan;
+- `pagado::x86_64` — la PTE-bitoj (`PREZENTA`, `SKRIBEBA`, `UZANTA`,
+  `NEKAŜEBLA`, `GRANDA`, `NE_PLENUMEBLA`), la adresaj maskoj, `PRIVATAJ_VORTOJ`,
+  `permesaj_eroj` kaj `permesoj_el_ero`;
+- `pagado::arm64` — la priskribaj bitoj (`BLOKO`, `TABELO`, `PAĜO`, `AF`,
+  `SH_ENA`, `PXN`, `UXN`, `AP_EL0`, `AP_RO`, `ATTR_MASK`, `ATTR_APARATO`), la
+  adresaj maskoj, `atributo` kaj `el_descriptor`.
+
+`mikerno/src/arkitekturo/x86_64/pagado.rs` kaj `…/arm64/pagado.rs` nun importas
+ĉion ĉi; iliaj lokalaj konstantoj kaj helpiloj malaperis. La `x86_64`-vojo
+registras kaj malregistras la privatajn `PDPT`-ojn per `PrivatajSubtabeloj`, kaj
+la `arm64`-vojo trairas la saman registron per `indeksoj()` dum `detruu`.
+
+**Unu-testoj.** Dek novaj `#[cfg(test)]`-kazoj en `kernologiko` kovras la
+aliniiĝon, la indeksan inverson, la limojn de la tabelo, la registradon sen
+duplikatoj kaj ekster la kapacito, la traireblon de `indeksoj()`, kaj la
+reverseblon kaj W^X-on de la permesoj sur ambaŭ arkoj. Entute 81 host-testoj.
+
+**Kani-pruvoj.** Naŭ novaj pruvoj alvokas la produktajn metodojn; la katalogo
+kreskas de 43 al 52:
+
+- `x86_64`: `adreso_malkomponiĝas_en_kvar_nivelojn`,
+  `indekso_kaj_bazo_estas_inversaj`, `permesoj_kaj_eroj_estas_reverseblaj`,
+  `politikaj_permesoj_respektas_wx`,
+  `ero_konservas_la_aliniiĝon_de_la_fizika_adreso` kaj
+  `privataj_subtabeloj_estas_plene_liberigitaj`;
+- `arm64`: `arm_permesoj_kaj_priskriboj_estas_reverseblaj`,
+  `arm_politikaj_permesoj_respektas_wx` kaj
+  `arm_folio_konservas_la_aliniiĝon`.
+
+**Lokaj rezultoj (2026-11-22, versio 0.9.0).** `just kontroli` finiĝis sen
+eraro: 81 host-testoj, `fmt`, du `clippy`-vokoj (laborloko kaj
+`aarch64-unknown-none`) kaj `cargo build --workspace --release`.
+`just iso` kaj `just iso-arm` konstruitaj el la laborarbo; ambaŭ praŝarĝiĝis per
+`QEMU_DISPLAY=none` sen `MALBONE` kaj liveris la saman pikselan haketon
+`0xecf1f6dbe1421575` (1280x800, 32 bitoj/pikselo, tiparo 12x24). La Ring
+0-kodo mezuriĝas je 12 155 kodo-linioj (65 dosieroj). La formala pordego
+(`kani-kontroli` kun 52 taskoj) atendas la puŝon.
 
 ---
 

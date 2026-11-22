@@ -11,6 +11,12 @@
 use core::arch::asm;
 use core::ptr::{read_volatile, write_bytes, write_volatile};
 
+use kernologiko::pagado::arm64::{
+    ADRESA_MASKO, AF, ATTR_APARATO, BLOKA_MASKO, BLOKO, DU_MIB_MASKO, PAĜO, PXN, SH_ENA, TABELO,
+    UXN, atributo, el_descriptor,
+};
+use kernologiko::pagado::{aliniiĝinta, paĝa_indekso};
+
 use super::procesoro;
 use crate::memoro::kadro::{KadraAlokilo, Kadro};
 use crate::memoro::virtuala::{
@@ -19,20 +25,6 @@ use crate::memoro::virtuala::{
 };
 use crate::memoro::{KADRA_GRANDO, MemoraMapo};
 
-const BLOKO: u64 = 1;
-const TABELO: u64 = 0b11;
-const PAĜO: u64 = 0b11;
-const AF: u64 = 1 << 10;
-const SH_ENA: u64 = 3 << 8;
-const PXN: u64 = 1 << 53;
-const UXN: u64 = 1 << 54;
-const AP_EL0: u64 = 1 << 6;
-const AP_RO: u64 = 1 << 7;
-const ATTR_MASK: u64 = 0b111 << 2;
-const ATTR_APARATO: u64 = 1 << 2;
-const ADRESA_MASKO: u64 = 0x0000_FFFF_FFFF_F000;
-const BLOKA_MASKO: u64 = 0x0000_FFFF_C000_0000;
-const DU_MIB_MASKO: u64 = 0x0000_FFFF_FFE0_0000;
 const TTBR_MASKO: u64 = 0x0000_FFFF_FFFF_FFFF;
 
 /// La bazo de la kerna `Image`; la frua ligilo fiksas ĝin kaj `build.rs`
@@ -136,10 +128,6 @@ impl ArmAdresaSpaco {
         unsafe { write_volatile(parent, tabelo | TABELO) };
         Ok(tabelo as *mut u64)
     }
-
-    fn paĝa_indekso(adreso: u64, nivelo: u32) -> usize {
-        ((adreso >> (12 + 9 * nivelo)) & 0x1FF) as usize
-    }
 }
 
 fn legi_eron(ero: *const u64) -> u64 {
@@ -168,44 +156,6 @@ fn skribi_eron_en(bazo: *mut u64, indekso: usize, valoro: u64) {
     skribi_eron(unsafe { bazo.add(indekso) }, valoro);
 }
 
-fn atributo(permesoj: PaĝaPermesoj) -> u64 {
-    let mut ero = AF;
-    if permesoj.kaŝebla {
-        ero |= SH_ENA;
-    } else {
-        ero |= ATTR_APARATO;
-    }
-    if permesoj.uzanta {
-        ero |= AP_EL0 | PXN;
-        if !permesoj.plenumebla {
-            ero |= UXN;
-        }
-    } else {
-        ero |= UXN;
-        if !permesoj.plenumebla {
-            ero |= PXN;
-        }
-    }
-    if !permesoj.skribebla {
-        ero |= AP_RO;
-    }
-    ero
-}
-
-fn el_descriptor(ero: u64) -> PaĝaPermesoj {
-    let uzanta = ero & AP_EL0 != 0;
-    PaĝaPermesoj {
-        skribebla: ero & AP_RO == 0,
-        plenumebla: if uzanta {
-            ero & UXN == 0
-        } else {
-            ero & PXN == 0
-        },
-        kaŝebla: ero & ATTR_MASK == 0,
-        uzanta,
-    }
-}
-
 impl PaĝaTablo for ArmAdresaSpaco {
     fn mapigi(
         &mut self,
@@ -216,27 +166,27 @@ impl PaĝaTablo for ArmAdresaSpaco {
     ) -> Result<(), PaĝaEraro> {
         let va = virtuala.adreso();
         let pa = fizika.adreso();
-        if !va.is_multiple_of(KADRA_GRANDO) || !pa.is_multiple_of(KADRA_GRANDO) {
+        if !aliniiĝinta(va) || !aliniiĝinta(pa) {
             return Err(PaĝaEraro::NevalidaAdreso);
         }
         let radiko = self.radiko;
         let l0 = radiko as *mut u64;
         let l1 = Self::subtableo(
-            ero_adreso(l0, Self::paĝa_indekso(va, 3)),
+            ero_adreso(l0, paĝa_indekso(va, 3)),
             alokilo,
             &mut self.privataj,
         )?;
         let l2 = Self::subtableo(
-            ero_adreso(l1, Self::paĝa_indekso(va, 2)),
+            ero_adreso(l1, paĝa_indekso(va, 2)),
             alokilo,
             &mut self.privataj,
         )?;
         let l3 = Self::subtableo(
-            ero_adreso(l2, Self::paĝa_indekso(va, 1)),
+            ero_adreso(l2, paĝa_indekso(va, 1)),
             alokilo,
             &mut self.privataj,
         )?;
-        let folio = ero_adreso(l3, Self::paĝa_indekso(va, 0));
+        let folio = ero_adreso(l3, paĝa_indekso(va, 0));
         if legi_eron(folio) & 1 != 0 {
             return Err(PaĝaEraro::Konflikto);
         }
@@ -247,12 +197,12 @@ impl PaĝaTablo for ArmAdresaSpaco {
     fn traduki(&self, virtuala: VirtuaAdreso) -> Option<FizikaAdreso> {
         let va = virtuala.adreso();
         let l0 = self.radiko as *const u64;
-        let e0 = ero(l0, Self::paĝa_indekso(va, 3));
+        let e0 = ero(l0, paĝa_indekso(va, 3));
         if e0 & TABELO != TABELO {
             return None;
         }
         let l1 = (e0 & ADRESA_MASKO) as *const u64;
-        let e1 = ero(l1, Self::paĝa_indekso(va, 2));
+        let e1 = ero(l1, paĝa_indekso(va, 2));
         if e1 & BLOKO == BLOKO && e1 & TABELO != TABELO {
             return Some(FizikaAdreso::nova(
                 (e1 & BLOKA_MASKO) + (va & ((1 << 30) - 1)),
@@ -262,7 +212,7 @@ impl PaĝaTablo for ArmAdresaSpaco {
             return None;
         }
         let l2 = (e1 & ADRESA_MASKO) as *const u64;
-        let e2 = ero(l2, Self::paĝa_indekso(va, 1));
+        let e2 = ero(l2, paĝa_indekso(va, 1));
         if e2 & BLOKO == BLOKO && e2 & TABELO != TABELO {
             return Some(FizikaAdreso::nova(
                 (e2 & DU_MIB_MASKO) + (va & ((1 << 21) - 1)),
@@ -272,7 +222,7 @@ impl PaĝaTablo for ArmAdresaSpaco {
             return None;
         }
         let l3 = (e2 & ADRESA_MASKO) as *const u64;
-        let e3 = ero(l3, Self::paĝa_indekso(va, 0));
+        let e3 = ero(l3, paĝa_indekso(va, 0));
         if e3 & 1 == 0 {
             return None;
         }
@@ -284,22 +234,22 @@ impl PaĝaTablo for ArmAdresaSpaco {
     fn permesoj(&self, virtuala: VirtuaAdreso) -> Option<PaĝaPermesoj> {
         let va = virtuala.adreso();
         let l0 = self.radiko as *const u64;
-        let e0 = ero(l0, Self::paĝa_indekso(va, 3));
+        let e0 = ero(l0, paĝa_indekso(va, 3));
         if e0 & TABELO != TABELO {
             return None;
         }
         let l1 = (e0 & ADRESA_MASKO) as *const u64;
-        let e1 = ero(l1, Self::paĝa_indekso(va, 2));
+        let e1 = ero(l1, paĝa_indekso(va, 2));
         if e1 & TABELO != TABELO {
             return (e1 & 1 != 0).then(|| el_descriptor(e1));
         }
         let l2 = (e1 & ADRESA_MASKO) as *const u64;
-        let e2 = ero(l2, Self::paĝa_indekso(va, 1));
+        let e2 = ero(l2, paĝa_indekso(va, 1));
         if e2 & TABELO != TABELO {
             return (e2 & 1 != 0).then(|| el_descriptor(e2));
         }
         let l3 = (e2 & ADRESA_MASKO) as *const u64;
-        let e3 = ero(l3, Self::paĝa_indekso(va, 0));
+        let e3 = ero(l3, paĝa_indekso(va, 0));
         (e3 & 1 != 0).then(|| el_descriptor(e3))
     }
 
@@ -525,3 +475,63 @@ pub unsafe fn ŝalti_radikon(radiko: u64) {
 
 /// La uzanta fenestro devas kuŝi super la kerna identeca mapo.
 const _: () = assert!(UZANTA_BAZO >= 0x1_0000_0000);
+
+#[cfg(kani)]
+mod kani_proofs {
+    //! Pruvoj por la arm64-priskriboj: permesoj estas reverseblaj, la politiko
+    //! respektas W^X, kaj la folia adreso restas aliniiĝinta.
+
+    use super::{ADRESA_MASKO, PAĜO, atributo, el_descriptor};
+    use crate::memoro::virtuala::PaĝaPermesos;
+    use kernologiko::pagado::aliniiĝinta;
+
+    fn iuj_permesoj() -> PaĝaPermesos {
+        PaĝaPermesos {
+            skribebla: kani::any(),
+            plenumebla: kani::any(),
+            kaŝebla: kani::any(),
+            uzanta: kani::any(),
+        }
+    }
+
+    fn samaj(dekstra: PaĝaPermesos, maldekstra: PaĝaPermesos) -> bool {
+        dekstra.skribebla == maldekstra.skribebla
+            && dekstra.plenumebla == maldekstra.plenumebla
+            && dekstra.kaŝebla == maldekstra.kaŝebla
+            && dekstra.uzanta == maldekstra.uzanta
+    }
+
+    #[kani::proof]
+    fn arm_permesoj_kaj_priskriboj_estas_reverseblaj() {
+        let permesoj = iuj_permesoj();
+        assert!(samaj(permesoj, el_descriptor(atributo(permesoj) | PAĜO)));
+    }
+
+    fn sen_wx(permesoj: PaĝaPermesos) {
+        assert!(!(permesoj.skribebla && permesoj.plenumebla));
+        let priskribo = el_descriptor(atributo(permesoj) | PAĜO);
+        assert!(!(priskribo.skribebla && priskribo.plenumebla));
+    }
+
+    #[kani::proof]
+    fn arm_politikaj_permesoj_respektas_wx() {
+        sen_wx(PaĝaPermesos::SKRIBA);
+        sen_wx(PaĝaPermesos::SKRIBA_SENKAŜE);
+        sen_wx(PaĝaPermesos::KERNA_KODO);
+        sen_wx(PaĝaPermesos::KERNA_LEGA);
+        sen_wx(PaĝaPermesos::KERNA_DATUMOJ);
+        sen_wx(PaĝaPermesos::UZANTA_DATUMOJ);
+        sen_wx(PaĝaPermesos::UZANTA_LEGA);
+        sen_wx(PaĝaPermesos::UZANTA_KODO);
+    }
+
+    #[kani::proof]
+    fn arm_folio_konservas_la_aliniiĝon() {
+        let fizika: u64 = kani::any();
+        kani::assume(fizika < (1u64 << 48));
+        kani::assume(aliniiĝinta(fizika));
+        let priskribo = fizika | PAĜO | atributo(iuj_permesoj());
+        assert_eq!(priskribo & ADRESA_MASKO, fizika);
+        assert!(aliniiĝinta(priskribo & ADRESA_MASKO));
+    }
+}

@@ -2678,7 +2678,7 @@
     function temoElLigo(argumentoj) {
       const valoro = (argumentoj[0] || "").toLowerCase();
       if (valoro !== "malluma" && valoro !== "hela") {
-        eraro('temo: uzu "malluma" aŭ "hela" (-3)');
+        eraro('temo: uzu «malluma» aŭ «hela» (-3)');
         return;
       }
       agordiTemon(valoro, false);
@@ -2752,7 +2752,7 @@
         case "nombri": case "montri": case "teksto":
           eraro("Neniuj rekordoj. Komencu per listi aŭ procezoj (-2)"); return;
         default:
-          eraro('Nekonata komando: "' + komando + '" (-2) — tajpu helpu'); return;
+          eraro('Nekonata komando: «' + komando + '» (-2) — tajpu helpu'); return;
       }
 
       for (let i = 1; i < partoj.length; i++) {
@@ -2769,7 +2769,7 @@
           case "montri": lastRecords = montri(lastRecords, stArg); break;
           case "teksto": lastRecords = tekstaLimo(lastRecords); break;
           default:
-            eraro('Nekonata stadio: "' + stadio + '" (-2)'); return;
+            eraro('Nekonata stadio: «' + stadio + '» (-2)'); return;
         }
       }
 

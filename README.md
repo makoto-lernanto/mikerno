@@ -17,7 +17,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IK kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.8.5 (Cargo-laborloko)
+- **Versio:** 0.9.0 (Cargo-laborloko)
 - **Arkitekturo:** `x86_64` kaj `arm64` (AArch64), unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -853,7 +853,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.8.5!
+[MiKerno] Saluton, mi estas MiKerno v0.9.0!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
@@ -1153,8 +1153,8 @@ La plena, numerita vojkarto kun akceptkriterioj estas en
 La originala kodo de MiKerno estas publikigita sub la permesilo **MIT** (vidu
 [`LICENSE`](LICENSE)). Vi rajtas uzi, modifi, kunfandi, publikigi, disdoni kaj
 vendi la programaron, kondiĉe ke la kopirajta avizo kaj la permesila teksto
-restu kunigitaj kun la disdonataĵo. La programaro estas provizita "tia, kia ĝi
-estas", sen ia ajn garantio.
+restu kunigitaj kun la disdonataĵo. La programaro estas provizita «tia, kia ĝi
+estas», sen ia ajn garantio.
 
 MiKerno elektis MIT anstataŭ Apache-2.0 ĉar la kerno estas malgranda kaj sen
 eksteraj dependaĵoj, kaj ĉar MIT restas kongrua kun GPLv2 — tio faciligas reuzon
@@ -1184,7 +1184,7 @@ pakaĵon (vidu [Postuloj](#postuloj)).
 La bitaj tabeloj estas derivaĵoj de DejaVu Sans Mono. La permesilo postulas,
 ke la kopirajtaj kaj permesaj tekstoj estu kunigitaj kun la fontprogramaro —
 tial `third_party/dejavu/LICENSE.txt` estas parto de la deponejo. La nomoj
-"Bitstream" kaj "Vera" ne estas uzataj por la derivaĵoj. Kontrolu la
+«Bitstream» kaj «Vera» ne estas uzataj por la derivaĵoj. Kontrolu la
 koncernajn permesilojn antaŭ ol redistribui la ISO-on.
 
 Fontdosiero uzita por generi la tabelojn: `DejaVuSansMono.ttf`, SHA-256

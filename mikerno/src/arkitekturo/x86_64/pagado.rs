@@ -6,6 +6,14 @@
 use core::arch::asm;
 use core::ptr;
 
+use kernologiko::pagado::x86_64::{
+    ADRESO_MASKO, DU_MIB_BAZA_MASKO, GRANDA, PREZENTA, PRIVATAJ_VORTOJ, SKRIBEBA, UZANTA,
+    permesaj_eroj, permesoj_el_ero,
+};
+use kernologiko::pagado::{
+    PrivatajSubtabeloj, aliniiĝinta, indeksa_bazo, nivela_amplekso, paĝa_indekso,
+};
+
 use crate::memoro::KADRA_GRANDO;
 use crate::memoro::kadro::{KadraAlokilo, Kadro};
 use crate::memoro::virtuala::{
@@ -15,17 +23,6 @@ use crate::memoro::virtuala::{
 
 use super::procesoro;
 
-const PREZENTA: u64 = 1 << 0;
-const SKRIBEBA: u64 = 1 << 1;
-const UZANTA: u64 = 1 << 2;
-const NEKAŜEBLA: u64 = 1 << 4;
-const GRANDA: u64 = 1 << 7;
-const NE_PLENUMEBLA: u64 = 1 << 63;
-
-/// Bitoj 51:12 — la fizika kadro de folia ero.
-const ADRESO_MASKO: u64 = 0x000F_FFFF_FFFF_F000;
-/// Bitoj 51:21 — la bazo de 2 MiB grandega paĝo.
-const DU_MIB_BAZA_MASKO: u64 = 0x000F_FFFF_FFE0_0000;
 /// `CR4.PCIDE` (bito 17): proces-kuntekstaj identigiloj.
 const PCIDE_BITO: u64 = 1 << 17;
 
@@ -89,14 +86,12 @@ pub fn pravalorizi() {
     }
 }
 
-/// Po unu bito por ĉiu PML4-ero: `1` se la suba PDPT estis alokita nur por
-/// ĉi tiu spaco kaj do rajtas esti liberigita dum `detruu`.
-const PRIVATAJ_VORTOJ: usize = 512 / 64;
-
 /// Adresa spaco de la nukleo: posedas la radikan paĝan tabelon.
 pub struct X86AdresaSpaco {
     radiko: Kadro,
-    privataj_pdptoj: [u64; PRIVATAJ_VORTOJ],
+    /// Po unu bito por ĉiu PML4-ero: la suba PDPT estis alokita nur por ĉi
+    /// tiu spaco kaj do rajtas esti liberigita dum `detruu`.
+    privataj_pdptoj: PrivatajSubtabeloj<PRIVATAJ_VORTOJ>,
 }
 
 /// La radika paĝtabelo enhavita en `CR3`-valoro.
@@ -158,7 +153,7 @@ impl X86AdresaSpaco {
         nuligi(kadro);
         Ok(Self {
             radiko: kadro,
-            privataj_pdptoj: [0; PRIVATAJ_VORTOJ],
+            privataj_pdptoj: PrivatajSubtabeloj::nova(),
         })
     }
 
@@ -166,16 +161,12 @@ impl X86AdresaSpaco {
         FizikaAdreso::nova(self.radiko.adreso())
     }
 
-    fn ĉu_privata(&self, indekso: usize) -> bool {
-        self.privataj_pdptoj[indekso / 64] & (1 << (indekso % 64)) != 0
-    }
-
     /// La folia ero, kiu tradukas `virtuala`, kaj ĝia nivelo (1 = 2 MiB-folio,
     /// 0 = 4 KiB-folio).
     fn folia_ero(&self, virtuala: VirtuaAdreso) -> Option<(u64, u32)> {
         let mut tabelo = self.radiko();
         for nivelo in (1..=3).rev() {
-            let valoro = ero(tabelo, indico(virtuala, nivelo));
+            let valoro = ero(tabelo, paĝa_indekso(virtuala.adreso(), nivelo));
             if valoro & PREZENTA == 0 {
                 return None;
             }
@@ -184,7 +175,7 @@ impl X86AdresaSpaco {
             }
             tabelo = FizikaAdreso::nova(valoro & ADRESO_MASKO);
         }
-        let folio = ero(tabelo, indico(virtuala, 0));
+        let folio = ero(tabelo, paĝa_indekso(virtuala.adreso(), 0));
         (folio & PREZENTA != 0).then_some((folio, 0))
     }
 }
@@ -213,10 +204,7 @@ impl AdresaSpaco for X86AdresaSpaco {
     }
 
     fn privataj_subtabeloj(&self) -> usize {
-        self.privataj_pdptoj
-            .iter()
-            .map(|vorto| vorto.count_ones() as usize)
-            .sum()
+        self.privataj_pdptoj.nombro()
     }
 
     fn ŝalti(&self) {
@@ -226,7 +214,7 @@ impl AdresaSpaco for X86AdresaSpaco {
         unsafe { ŝalti_radikon(self.radiko()) };
     }
 
-    fn detruu(self, alokilo: &mut KadraAlokilo) -> Result<(), PaĝaEraro> {
+    fn detruu(mut self, alokilo: &mut KadraAlokilo) -> Result<(), PaĝaEraro> {
         // 1. La uzanta fenestro: folioj kaj la tabeloj, kiuj restas malplenaj.
         liberigi_intervalon(self.radiko(), UZANTA_BAZO, UZANTA_FINO, alokilo)?;
 
@@ -236,10 +224,8 @@ impl AdresaSpaco for X86AdresaSpaco {
         // uzanta ero restus, ĝi kuŝus ekster la fenestro kaj la spaco estus
         // difektita — tiam ni rifuzas liberigi la PDPT-on anstataŭ riski
         // kernan mapon.
-        for indekso in 0..512 {
-            if !self.ĉu_privata(indekso) {
-                continue;
-            }
+        let privataj = self.privataj_pdptoj;
+        for indekso in privataj.indeksoj() {
             let valoro = ero(self.radiko(), indekso);
             if valoro & PREZENTA == 0 {
                 continue;
@@ -250,6 +236,7 @@ impl AdresaSpaco for X86AdresaSpaco {
             }
             agordi_eron(self.radiko(), indekso, 0);
             alokilo.liberigi(Kadro::el_adreso(pdpt.adreso()));
+            self.privataj_pdptoj.malregistri(indekso);
         }
 
         // 3. La radika kadro mem.
@@ -266,17 +253,30 @@ impl PaĝaTablo for X86AdresaSpaco {
         permesoj: PaĝaPermesoj,
         alokilo: &mut KadraAlokilo,
     ) -> Result<(), PaĝaEraro> {
-        if !virtuala.adreso().is_multiple_of(KADRA_GRANDO)
-            || !fizika.adreso().is_multiple_of(KADRA_GRANDO)
-        {
+        if !aliniiĝinta(virtuala.adreso()) || !aliniiĝinta(fizika.adreso()) {
             return Err(PaĝaEraro::NevalidaAdreso);
         }
 
-        let pdpt = suba_tabelo(self.radiko(), indico(virtuala, 3), permesoj.uzanta, alokilo)?;
-        let pd = suba_tabelo(pdpt, indico(virtuala, 2), permesoj.uzanta, alokilo)?;
-        let pt = suba_tabelo(pd, indico(virtuala, 1), permesoj.uzanta, alokilo)?;
+        let pdpt = suba_tabelo(
+            self.radiko(),
+            paĝa_indekso(virtuala.adreso(), 3),
+            permesoj.uzanta,
+            alokilo,
+        )?;
+        let pd = suba_tabelo(
+            pdpt,
+            paĝa_indekso(virtuala.adreso(), 2),
+            permesoj.uzanta,
+            alokilo,
+        )?;
+        let pt = suba_tabelo(
+            pd,
+            paĝa_indekso(virtuala.adreso(), 1),
+            permesoj.uzanta,
+            alokilo,
+        )?;
 
-        let indekso = indico(virtuala, 0);
+        let indekso = paĝa_indekso(virtuala.adreso(), 0);
         if ero(pt, indekso) & PREZENTA != 0 {
             return Err(PaĝaEraro::Konflikto);
         }
@@ -331,11 +331,6 @@ impl PaĝaTablo for X86AdresaSpaco {
     }
 }
 
-/// Indekso en la tabelo de la donita nivelo (0 = PT, 3 = PML4).
-fn indico(virtuala: VirtuaAdreso, nivelo: u32) -> usize {
-    ((virtuala.adreso() >> (12 + nivelo * 9)) & 0x1FF) as usize
-}
-
 fn ero(tabelo: FizikaAdreso, indekso: usize) -> u64 {
     unsafe { ptr::read_volatile((tabelo.adreso() + indekso as u64 * 8) as *const u64) }
 }
@@ -364,7 +359,7 @@ fn nuligi(kadro: Kadro) {
 fn kopii_kernajn(
     fonto: FizikaAdreso,
     celo: FizikaAdreso,
-    privataj: &mut [u64; PRIVATAJ_VORTOJ],
+    privataj: &mut PrivatajSubtabeloj<PRIVATAJ_VORTOJ>,
     alokilo: &mut KadraAlokilo,
 ) -> Result<(), PaĝaEraro> {
     for indekso in 0..512 {
@@ -395,7 +390,7 @@ fn kopii_kernajn(
         // La flagoj de la PML4-ero (inkluzive `U`, kiu malfermas la fenestron)
         // restas; nur la adreso montras al la privata PDPT.
         agordi_eron(celo, indekso, (valoro & !ADRESO_MASKO) | kadro.adreso());
-        privataj[indekso / 64] |= 1 << (indekso % 64);
+        privataj.registri(indekso);
     }
     Ok(())
 }
@@ -426,7 +421,7 @@ fn ĉu_uzanta_tabelo(tabelo: FizikaAdreso) -> bool {
 /// Ĉu la PML4-ero `indekso` enhavas parton de la uzanta fenestro? Tia ero
 /// neniam estas kunhavata: novaj uzantaj mapoj aperus ankaŭ en la fonta spaco.
 fn fenestra_indekso(indekso: usize) -> bool {
-    let bazo = indekso as u64 * nivela_amplekso(3);
+    let bazo = indeksa_bazo(3, indekso);
     let fino = bazo + nivela_amplekso(3);
     bazo < UZANTA_FINO && fino > UZANTA_BAZO
 }
@@ -444,11 +439,6 @@ fn liberigi_intervalon(
         return Ok(());
     }
     liberigi_nivelon(radiko, 3, 0, komenco, fino, alokilo)
-}
-
-/// Amplekso de unu ero en la donita nivelo (0 = PT, 3 = PML4).
-const fn nivela_amplekso(nivelo: u32) -> u64 {
-    1u64 << (12 + nivelo * 9)
 }
 
 fn liberigi_nivelon(
@@ -540,54 +530,35 @@ fn suba_tabelo(
 /// Ĉu unu paĝo estas atingebla de Ring 3? La bito `U` devas esti ĉe ĉiuj
 /// niveloj; skribo postulas ankaŭ la biton `W` ĉe la folio.
 fn folio_uzanta(radiko: FizikaAdreso, adreso: u64, skriba: bool) -> bool {
-    let virtuala = VirtuaAdreso::nova(adreso);
-    let pml4 = ero(radiko, indico(virtuala, 3));
+    let pml4 = ero(radiko, paĝa_indekso(adreso, 3));
     if pml4 & (PREZENTA | UZANTA) != (PREZENTA | UZANTA) {
         return false;
     }
-    let pdpt = ero(FizikaAdreso::nova(pml4 & ADRESO_MASKO), indico(virtuala, 2));
+    let pdpt = ero(
+        FizikaAdreso::nova(pml4 & ADRESO_MASKO),
+        paĝa_indekso(adreso, 2),
+    );
     if pdpt & (PREZENTA | UZANTA) != (PREZENTA | UZANTA) {
         return false;
     }
-    let pd = ero(FizikaAdreso::nova(pdpt & ADRESO_MASKO), indico(virtuala, 1));
+    let pd = ero(
+        FizikaAdreso::nova(pdpt & ADRESO_MASKO),
+        paĝa_indekso(adreso, 1),
+    );
     if pd & (PREZENTA | UZANTA) != (PREZENTA | UZANTA) {
         return false;
     }
     if pd & GRANDA != 0 {
         return !skriba || pd & SKRIBEBA != 0;
     }
-    let pt = ero(FizikaAdreso::nova(pd & ADRESO_MASKO), indico(virtuala, 0));
+    let pt = ero(
+        FizikaAdreso::nova(pd & ADRESO_MASKO),
+        paĝa_indekso(adreso, 0),
+    );
     if pt & (PREZENTA | UZANTA) != (PREZENTA | UZANTA) {
         return false;
     }
     !skriba || pt & SKRIBEBA != 0
-}
-
-fn permesaj_eroj(permesoj: PaĝaPermesoj) -> u64 {
-    let mut valoro = 0;
-    if permesoj.skribebla {
-        valoro |= SKRIBEBA;
-    }
-    if permesoj.uzanta {
-        valoro |= UZANTA;
-    }
-    if !permesoj.plenumebla {
-        valoro |= NE_PLENUMEBLA;
-    }
-    if !permesoj.kaŝebla {
-        valoro |= NEKAŜEBLA;
-    }
-    valoro
-}
-
-/// La permesoj, kiujn folia ero donas al la tradukita paĝo.
-fn permesoj_el_ero(ero: u64) -> PaĝaPermesoj {
-    PaĝaPermesoj {
-        skribebla: ero & SKRIBEBA != 0,
-        plenumebla: ero & NE_PLENUMEBLA == 0,
-        kaŝebla: ero & NEKAŜEBLA == 0,
-        uzanta: ero & UZANTA != 0,
-    }
 }
 
 #[cfg(kani)]
@@ -595,7 +566,14 @@ mod kani_proofs {
     //! Pruvoj por la `CR3`-disciplino: la radiko estas paĝ-aliniiĝinta, kaj por
     //! fizika `CR3`-valoro la masko forprenas ĝuste la malaltajn 12 bitojn.
 
-    use super::{ADRESO_MASKO, radiko_ero};
+    use super::{ADRESO_MASKO, PREZENTA, radiko_ero};
+    use crate::memoro::virtuala::PaĝaPermesos;
+    use kernologiko::pagado::x86_64::{
+        NE_PLENUMEBLA, PRIVATAJ_VORTOJ, SKRIBEBA, permesaj_eroj, permesoj_el_ero,
+    };
+    use kernologiko::pagado::{
+        EROJ, PrivatajSubtabeloj, aliniiĝinta, indeksa_bazo, nivela_amplekso, paĝa_indekso,
+    };
 
     #[kani::proof]
     fn cr3_radiko_estas_paĝe_aliniita() {
@@ -618,5 +596,103 @@ mod kani_proofs {
         if cr3 & 0xFFF == 0 {
             assert_eq!(radiko, cr3);
         }
+    }
+
+    fn kontrolu_malkomponon(nivelo: u32, adreso: u64) {
+        let indekso = paĝa_indekso(adreso, nivelo);
+        assert!(indekso < EROJ);
+        let bazo = indeksa_bazo(nivelo, indekso);
+        let amplekso = nivela_amplekso(nivelo);
+        assert_eq!(bazo, adreso & (0x1FFu64 << (12 + 9 * nivelo)));
+        let fenestro = amplekso * EROJ as u64;
+        assert_eq!(adreso & (fenestro - 1), bazo + (adreso & (amplekso - 1)));
+    }
+
+    #[kani::proof]
+    fn adreso_malkomponiĝas_en_kvar_nivelojn() {
+        let adreso: u64 = kani::any();
+        // La kvar niveloj kovras la kanonikan 48-bitan virtualan spacon.
+        kani::assume(adreso < (1u64 << 48));
+        kontrolu_malkomponon(0, adreso);
+        kontrolu_malkomponon(1, adreso);
+        kontrolu_malkomponon(2, adreso);
+        kontrolu_malkomponon(3, adreso);
+    }
+
+    #[kani::proof]
+    fn indekso_kaj_bazo_estas_inversaj() {
+        let indekso: u16 = kani::any();
+        kani::assume(indekso < 512);
+        let indekso = indekso as usize;
+        assert_eq!(paĝa_indekso(indeksa_bazo(0, indekso), 0), indekso);
+        assert_eq!(paĝa_indekso(indeksa_bazo(1, indekso), 1), indekso);
+        assert_eq!(paĝa_indekso(indeksa_bazo(2, indekso), 2), indekso);
+        assert_eq!(paĝa_indekso(indeksa_bazo(3, indekso), 3), indekso);
+    }
+
+    fn iuj_permesoj() -> PaĝaPermesos {
+        PaĝaPermesos {
+            skribebla: kani::any(),
+            plenumebla: kani::any(),
+            kaŝebla: kani::any(),
+            uzanta: kani::any(),
+        }
+    }
+
+    #[kani::proof]
+    fn permesoj_kaj_eroj_estas_reverseblaj() {
+        let permesoj = iuj_permesoj();
+        let eroj = permesaj_eroj(permesoj);
+        let malkodita = permesoj_el_ero(eroj);
+        assert_eq!(malkodita.skribebla, permesoj.skribebla);
+        assert_eq!(malkodita.plenumebla, permesoj.plenumebla);
+        assert_eq!(malkodita.kaŝebla, permesoj.kaŝebla);
+        assert_eq!(malkodita.uzanta, permesoj.uzanta);
+        assert_eq!(eroj & SKRIBEBA != 0, permesoj.skribebla);
+        assert_eq!(eroj & NE_PLENUMEBLA != 0, !permesoj.plenumebla);
+    }
+
+    fn sen_wx(permesoj: PaĝaPermesos) {
+        assert!(!(permesoj.skribebla && permesoj.plenumebla));
+        let eroj = permesaj_eroj(permesoj);
+        assert!(!(eroj & SKRIBEBA != 0 && eroj & NE_PLENUMEBLA == 0));
+    }
+
+    #[kani::proof]
+    fn politikaj_permesoj_respektas_wx() {
+        sen_wx(PaĝaPermesos::SKRIBA);
+        sen_wx(PaĝaPermesos::SKRIBA_SENKAŜE);
+        sen_wx(PaĝaPermesos::KERNA_KODO);
+        sen_wx(PaĝaPermesos::KERNA_LEGA);
+        sen_wx(PaĝaPermesos::KERNA_DATUMOJ);
+        sen_wx(PaĝaPermesos::UZANTA_DATUMOJ);
+        sen_wx(PaĝaPermesos::UZANTA_LEGA);
+        sen_wx(PaĝaPermesos::UZANTA_KODO);
+    }
+
+    #[kani::proof]
+    fn ero_konservas_la_aliniiĝon_de_la_fizika_adreso() {
+        let fizika: u64 = kani::any();
+        kani::assume(fizika < (1u64 << 52));
+        kani::assume(aliniiĝinta(fizika));
+        let ero = fizika | PREZENTA | permesaj_eroj(iuj_permesoj());
+        assert_eq!(ero & ADRESO_MASKO, fizika);
+        assert!(aliniiĝinta(ero & ADRESO_MASKO));
+    }
+
+    #[kani::proof]
+    fn privataj_subtabeloj_estas_plene_liberigitaj() {
+        let mut registro = PrivatajSubtabeloj::<PRIVATAJ_VORTOJ>::nova();
+        let indekso: u16 = kani::any();
+        kani::assume(indekso < 512);
+        let indekso = indekso as usize;
+        registro.registri(indekso);
+        registro.registri(indekso);
+        assert!(registro.estas(indekso));
+        assert_eq!(registro.nombro(), 1);
+        registro.malregistri(indekso);
+        assert!(!registro.estas(indekso));
+        assert_eq!(registro.nombro(), 0);
+        assert!(registro.malplena());
     }
 }

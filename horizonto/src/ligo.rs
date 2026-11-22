@@ -278,7 +278,7 @@ fn kvanto(bufro: &mut Bufro, valoro: u64, dividanto: u64, unuo: &str) {
     bufro.malplenigu();
     let entjero = valoro / dividanto;
     let dekimo = (valoro % dividanto) * 10 / dividanto;
-    let _ = write!(bufro, "{entjero}.{dekimo}{unuo}");
+    let _ = write!(bufro, "{entjero},{dekimo}{unuo}");
 }
 
 /// Aro da samspecaj rekordoj, kiun la dukto transdonas inter stadioj.
@@ -760,7 +760,7 @@ fn eldiri(argumento: &str) {
 fn temo(argumento: &str) {
     let valoro = argumento.trim();
     if !estas(valoro, "malluma") && !estas(valoro, "hela") {
-        eraro("temo", "uzu \"malluma\" aŭ \"hela\"", -3);
+        eraro("temo", "uzu «malluma» aŭ «hela»", -3);
         return;
     }
     let mut mesaĝo = Bufro::nova();
@@ -1059,7 +1059,7 @@ fn teksta_limo(vico: &Vico) {
 
 fn nekonata(vorto: &str) {
     biblioteko::skribi_formaton(format_args!(
-        "{FG_DANĜERO}Nekonata komando: \"{vorto}\" (-2) — tajpu helpu{NULIGI}\n"
+        "{FG_DANĜERO}Nekonata komando: «{vorto}» (-2) — tajpu helpu{NULIGI}\n"
     ));
 }
 
@@ -1172,7 +1172,7 @@ fn plenumi(linio: &str, nuna: &mut [u8], nuna_longo: &mut usize) {
             vico = None;
         } else {
             let mut mesaĝo = Bufro::nova();
-            let _ = write!(mesaĝo, "Nekonata stadio: \"{stadio}\" (-2)");
+            let _ = write!(mesaĝo, "Nekonata stadio: «{stadio}» (-2)");
             eraro_senprefikse(mesaĝo.teksto());
             vico = None;
         }

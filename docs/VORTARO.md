@@ -79,7 +79,12 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `radika adreso` | root address | Fizika adreso de `PML4` (`CR3`) aŭ de la radika `L0`-tabelo (`TTBR0_EL1`). |
 | `radiko-ero` | root entry | `radiko_ero(cr3)` eltiras bitojn 51:12; la malaltaj 12 bitoj estas nulaj, ĉar `PCIDE` estas malŝaltita. |
 | `aktivigi` | activate | Ŝalti la procezan `CR3` aŭ `TTBR0_EL1` kaj `TSS.RSP0` antaŭ kuntekstŝanĝo. |
-| `paĝa tabelo` | page table | `PaĝaTablo`. |
+| `paĝa tabelo` | page table | `PaĝaTablo`; la puraj reguloj (indeksoj, PTE-bitoj, privataj subtabeloj) loĝas en `kernologiko::pagado`. |
+| `paĝa indekso` | page index | `paĝa_indekso(adreso, nivelo)`: 9 bitoj el bitoj 12+9·nivelo; `kernologiko::pagado`. |
+| `indeksa bazo` | index base | `indeksa_bazo(nivelo, indekso)`: la parto de la adreso, kiun kovras unu tabela ero; uzata por la uzanta fenestro. |
+| `nivela amplekso` | level span | `nivela_amplekso(nivelo) = 1 << (12 + 9·nivelo)`: la amplekso de unu ero de tiu nivelo. |
+| `privataj subtabeloj` | private subtables | `PrivatajSubtabeloj<const VORTOJ: usize = 8>`: bitbilda posedregistro; `VORTOJ = 8` kovras la 512 erojn de unu tabelo. |
+| `posedregistro` | ownership bitmap | `registri`/`malregistri`/`indeksoj`; `detruu` liberigas nur la registritajn privatajn subtabelojn. |
 | `paĝa eraro` | page fault (#PF) | |
 | `datena aborto` | data abort | `ESR_EL1` EC `0x24`/`0x25`; EL0-aliro al folio sen la postulata permeso mortigas la procezon. |
 | `instrukcja aborto` | instruction abort | `ESR_EL1` EC `0x20`/`0x21`; traktata kiel `ProtektaEraro`. |
@@ -288,7 +293,7 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `liberigi` | free / release | Redoni kadron al la alokilo; duobla liberigo estas senefika. |
 | `detruu` | destroy | Malmapu kaj liberigu la tutan adresan spacon. |
 | `detruo` | destruction / teardown | La substantivo de `detruu`; `detrui` estas la transitiva formo. |
-| `privata PDPT` | private PDPT | Kampo `privataj_pdptoj`; trajta aliro `privataj_subtabeloj`. |
+| `privata PDPT` | private PDPT | Kampo `privataj_pdptoj: PrivatajSubtabeloj<PRIVATAJ_VORTOJ>`; trajta aliro `privataj_subtabeloj`. |
 | `reuzo` | reuse | `testi_procezan_reuzon`; la alokilo reuzas liberigitajn kadrojn. |
 | `ciklo` | cycle | Unu krea-detrua ripeto en la reuzoprovo. |
 | `komenca reĝimo` | start mode | `REĜIMO_SEKRETO`, `REĜIMO_SPIONO`; transdonata en `RDI`. |
@@ -328,7 +333,7 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `skribebla` | writable | |
 | `ĉeesta` | present | |
 | `grandega paĝo` | huge page | |
-| `aliniiĝinta` | aligned | |
+| `aliniiĝinta` | aligned | `aliniiĝinta(adreso)`: `adreso.is_multiple_of(KADRA_GRANDO)`; `kernologiko::pagado`. |
 | `ŝpuro` | track | Aparta disvolva linio; la ARM-ŝpuro estis kunfandita en M15. |
 | `platforma malantaŭo` | platform backend | `malantaŭo` en `arkitekturo`; `x86_64` aŭ `arm64`. |
 | `interrompa kadro` | interrupt frame | `InterrompaKadro`: platforma tipo en `x86_64/interrompo.rs` aŭ `arm64/interrompo.rs`. |
@@ -561,3 +566,9 @@ eksteraj protokolaj nomoj:
     diakritojn («paĝado», «paĝa tabelo»). Ne-ASKIAj identigiloj kiel
     `PaĝaTablo` estas permesataj; la limo koncernas nur la aŭtomatan
     modulŝarĝon (E0754).
+13. Decimaloj en Esperanta prozo uzas komon (`91,7 KiB`, `5,76 s`). Punkton
+    konservas nur versioj, nomoj de iloj kaj literalaj eligaĵoj de eksteraj
+    programoj.
+14. Prozo, konzolaj mesaĝoj kaj montrataj tekstoj uzu la angulajn citilojn
+    «…» kaj ‹…›. La ASKIA `"` restas nur en la sintakso de programlingvoj kaj
+    dosierformatoj (ankaŭ la angla mapado de la retejo).

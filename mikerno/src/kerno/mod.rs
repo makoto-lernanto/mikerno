@@ -914,7 +914,7 @@ fn testa_fadeno(id: u64) {
     } else if id == 2 {
         match ik::ricevi_mesagon(0) {
             Ok(mesago) => crate::skribu!(
-                "[fadeno 2] ricevis mesaĝon: tipo {}, ricevonto {} (finpunkta id), \"{}\"\n",
+                "[fadeno 2] ricevis mesaĝon: tipo {}, ricevonto {} (finpunkta id), «{}»\n",
                 mesago.tipo,
                 mesago.ricevonto,
                 teksto(&mesago)
@@ -953,7 +953,7 @@ fn testa_fadeno(id: u64) {
         // revoka veko devas liveri `-32`, ne pendigi aŭ redoni `-9`.
         match ik::ricevi_mesagon(1) {
             Ok(mesago) => crate::skribu!(
-                "[fadeno 3] neatendita mesaĝo: ricevonto {}, \"{}\"\n",
+                "[fadeno 3] neatendita mesaĝo: ricevonto {}, «{}»\n",
                 mesago.ricevonto,
                 teksto(&mesago)
             ),

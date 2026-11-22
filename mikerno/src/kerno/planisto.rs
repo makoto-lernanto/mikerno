@@ -221,7 +221,7 @@ impl Planisto {
         if let Some(fadeno) = self.fadenoj[id as usize].as_mut() {
             fadeno.stato = FadenoStato::Blokitaj;
         }
-        // Procezo sen kuranta fadeno ne plu estas "kuranta".
+        // Procezo sen kuranta fadeno ne plu estas «kuranta».
         self.stato_procezan(id, ProcezaEstado::Preta);
         let sekva = self.elekti_proksiman().unwrap_or(RIPAZA_ID);
         self.kurigu(sekva);
