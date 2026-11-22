@@ -180,6 +180,7 @@ eniras la kernan bildon.
 | 2026-11-21 | 0.8.5 | 64 | 15377 | 11962 | 2025 | 1390 |
 | 2026-11-21 | 0.8.5 | 64 | 15347 | 11925 | 2034 | 1388 |
 | 2026-11-22 | 0.9.0 | 65 | 15646 | 12155 | 2068 | 1423 |
+| 2026-11-22 | 0.9.0 | 65 | 15648 | 12155 | 2070 | 1423 |
 
 ---
 
@@ -2716,6 +2717,11 @@ kreskas de 43 al 52:
 - `arm64`: `arm_permesoj_kaj_priskriboj_estas_reverseblaj`,
   `arm_politikaj_permesoj_respektas_wx` kaj
   `arm_folio_konservas_la_aliniiĝon`.
+
+La tri `arm64`-pruvoj loĝas en `arkitekturo::komuna`, ĉar la `arm64`-modulo
+mem ne kompiliĝas sur la gastiganto, kie rulas Kani; ili alvokas la produktajn
+regulojn el `kernologiko::pagado::arm64`. Tiel ĉiuj 52 pruvoj aperas en la
+matrico.
 
 **Lokaj rezultoj (2026-11-22, versio 0.9.0).** `just kontroli` finiĝis sen
 eraro: 81 host-testoj, `fmt`, du `clippy`-vokoj (laborloko kaj

@@ -375,3 +375,65 @@ impl FirmigaRaporto {
         &self.trajtoj[..self.nombro]
     }
 }
+
+#[cfg(kani)]
+mod kani_proofs {
+    //! Pruvoj por la `arm64`-priskriboj. Ili loĝas ĉi tie, ĉar la
+    //! `arm64`-modulo ne kompiliĝas sur la gastiganto, kie rulas Kani; la
+    //! pruvataj funkcioj mem estas arkitekture sendependaj
+    //! (`kernologiko::pagado::arm64`).
+
+    use crate::memoro::virtuala::PaĝaPermesoj;
+    use kernologiko::pagado::aliniiĝinta;
+    use kernologiko::pagado::arm64::{ADRESA_MASKO, PAĜO, atributo, el_descriptor};
+
+    fn iuj_permesoj() -> PaĝaPermesoj {
+        PaĝaPermesoj {
+            skribebla: kani::any(),
+            plenumebla: kani::any(),
+            kaŝebla: kani::any(),
+            uzanta: kani::any(),
+        }
+    }
+
+    fn samaj(dekstra: PaĝaPermesoj, maldekstra: PaĝaPermesoj) -> bool {
+        dekstra.skribebla == maldekstra.skribebla
+            && dekstra.plenumebla == maldekstra.plenumebla
+            && dekstra.kaŝebla == maldekstra.kaŝebla
+            && dekstra.uzanta == maldekstra.uzanta
+    }
+
+    #[kani::proof]
+    fn arm_permesoj_kaj_priskriboj_estas_reverseblaj() {
+        let permesoj = iuj_permesoj();
+        assert!(samaj(permesoj, el_descriptor(atributo(permesoj) | PAĜO)));
+    }
+
+    fn sen_wx(permesoj: PaĝaPermesoj) {
+        assert!(!(permesoj.skribebla && permesoj.plenumebla));
+        let priskribo = el_descriptor(atributo(permesoj) | PAĜO);
+        assert!(!(priskribo.skribebla && priskribo.plenumebla));
+    }
+
+    #[kani::proof]
+    fn arm_politikaj_permesoj_respektas_wx() {
+        sen_wx(PaĝaPermesoj::SKRIBA);
+        sen_wx(PaĝaPermesoj::SKRIBA_SENKAŜE);
+        sen_wx(PaĝaPermesoj::KERNA_KODO);
+        sen_wx(PaĝaPermesoj::KERNA_LEGA);
+        sen_wx(PaĝaPermesoj::KERNA_DATUMOJ);
+        sen_wx(PaĝaPermesoj::UZANTA_DATUMOJ);
+        sen_wx(PaĝaPermesoj::UZANTA_LEGA);
+        sen_wx(PaĝaPermesoj::UZANTA_KODO);
+    }
+
+    #[kani::proof]
+    fn arm_folio_konservas_la_aliniiĝon() {
+        let fizika: u64 = kani::any();
+        kani::assume(fizika < (1u64 << 48));
+        kani::assume(aliniiĝinta(fizika));
+        let priskribo = fizika | PAĜO | atributo(iuj_permesoj());
+        assert_eq!(priskribo & ADRESA_MASKO, fizika);
+        assert!(aliniiĝinta(priskribo & ADRESA_MASKO));
+    }
+}
