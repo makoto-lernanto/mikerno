@@ -567,7 +567,7 @@ mod kani_proofs {
     //! fizika `CR3`-valoro la masko forprenas ĝuste la malaltajn 12 bitojn.
 
     use super::{ADRESO_MASKO, PREZENTA, radiko_ero};
-    use crate::memoro::virtuala::PaĝaPermesos;
+    use crate::memoro::virtuala::PaĝaPermesoj;
     use kernologiko::pagado::x86_64::{
         NE_PLENUMEBLA, PRIVATAJ_VORTOJ, SKRIBEBA, permesaj_eroj, permesoj_el_ero,
     };
@@ -630,8 +630,8 @@ mod kani_proofs {
         assert_eq!(paĝa_indekso(indeksa_bazo(3, indekso), 3), indekso);
     }
 
-    fn iuj_permesoj() -> PaĝaPermesos {
-        PaĝaPermesos {
+    fn iuj_permesoj() -> PaĝaPermesoj {
+        PaĝaPermesoj {
             skribebla: kani::any(),
             plenumebla: kani::any(),
             kaŝebla: kani::any(),
@@ -652,7 +652,7 @@ mod kani_proofs {
         assert_eq!(eroj & NE_PLENUMEBLA != 0, !permesoj.plenumebla);
     }
 
-    fn sen_wx(permesoj: PaĝaPermesos) {
+    fn sen_wx(permesoj: PaĝaPermesoj) {
         assert!(!(permesoj.skribebla && permesoj.plenumebla));
         let eroj = permesaj_eroj(permesoj);
         assert!(!(eroj & SKRIBEBA != 0 && eroj & NE_PLENUMEBLA == 0));
@@ -660,14 +660,14 @@ mod kani_proofs {
 
     #[kani::proof]
     fn politikaj_permesoj_respektas_wx() {
-        sen_wx(PaĝaPermesos::SKRIBA);
-        sen_wx(PaĝaPermesos::SKRIBA_SENKAŜE);
-        sen_wx(PaĝaPermesos::KERNA_KODO);
-        sen_wx(PaĝaPermesos::KERNA_LEGA);
-        sen_wx(PaĝaPermesos::KERNA_DATUMOJ);
-        sen_wx(PaĝaPermesos::UZANTA_DATUMOJ);
-        sen_wx(PaĝaPermesos::UZANTA_LEGA);
-        sen_wx(PaĝaPermesos::UZANTA_KODO);
+        sen_wx(PaĝaPermesoj::SKRIBA);
+        sen_wx(PaĝaPermesoj::SKRIBA_SENKAŜE);
+        sen_wx(PaĝaPermesoj::KERNA_KODO);
+        sen_wx(PaĝaPermesoj::KERNA_LEGA);
+        sen_wx(PaĝaPermesoj::KERNA_DATUMOJ);
+        sen_wx(PaĝaPermesoj::UZANTA_DATUMOJ);
+        sen_wx(PaĝaPermesoj::UZANTA_LEGA);
+        sen_wx(PaĝaPermesoj::UZANTA_KODO);
     }
 
     #[kani::proof]

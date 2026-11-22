@@ -75,12 +75,12 @@ impl<const VORTOJ: usize> PrivatajSubtabeloj<VORTOJ> {
         Self::loko(indekso).is_some_and(|(vorto, bito)| self.vortoj[vorto] & (1u64 << bito) != 0)
     }
 
-    /// Kiom da indeksoj estas registritaj.
     /// La registritaj indeksoj, kreskante.
     pub fn indeksoj(&self) -> impl Iterator<Item = usize> + '_ {
         (0..Self::kapacito()).filter(|indekso| self.estas(*indekso))
     }
 
+    /// Kiom da indeksoj estas registritaj.
     pub fn nombro(&self) -> usize {
         self.vortoj
             .iter()
