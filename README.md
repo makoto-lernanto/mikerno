@@ -1146,6 +1146,14 @@ La plena, numerita vojkarto kun akceptkriterioj estas en
   `arkitekturo/mod.rs`; la nukleo ne rajtas uzi `x86_64`-specifan kodon rekte.
 - Pruvu novan logikon per Kani, se ĝi estas sendependa de aparataro.
 
+### Subskriboj
+
+Ekde la 2026-11-22 la komitoj kaj Eldonoj de `makoto-lernanto` estas
+subskribitaj per GPG-ŝlosilo (identigilo `A61A98D06B0B8E8F`; fingrospuro
+`DD00 4F35 AC37 9928 DA48 9884 A61A 98D0 6B0B 8E8F`). GitHub montras la
+subskribitajn komitojn kiel «Verified», do la deveno de la kodo estas
+kontrolebla per `git log --show-signature`.
+
 ---
 
 ## Licenco kaj triaj komponantoj
