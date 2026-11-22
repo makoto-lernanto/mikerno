@@ -2729,8 +2729,29 @@ eraro: 81 host-testoj, `fmt`, du `clippy`-vokoj (laborloko kaj
 `just iso` kaj `just iso-arm` konstruitaj el la laborarbo; ambaŭ praŝarĝiĝis per
 `QEMU_DISPLAY=none` sen `MALBONE` kaj liveris la saman pikselan haketon
 `0xecf1f6dbe1421575` (1280x800, 32 bitoj/pikselo, tiparo 12x24). La Ring
-0-kodo mezuriĝas je 12 155 kodo-linioj (65 dosieroj). La formala pordego
-(`kani-kontroli` kun 52 taskoj) atendas la puŝon.
+0-kodo mezuriĝas je 12 155 kodo-linioj (65 dosieroj).
+
+**Nuba DI (2026-11-22).** La unua runo
+[#45010762187](https://github.com/makoto-lernanto/mikerno/actions/runs/45010762187)
+ĉe `3c902c9` malkovris tajperaron en la pruvmodulo (`PaĝaPermesos` anstataŭ
+`PaĝaPermesoj`), kiun la ordinara konstruo ne kompilas. La dua runo
+[#45022205997](https://github.com/makoto-lernanto/mikerno/actions/runs/45022205997)
+ĉe `af24eed` estis verda, sed havis nur 49 pruvojn, ĉar la `arm64`-modulo ne
+kompiliĝas sur la gastiganto. Post la transloĝigo de la tri `arm64`-pruvoj al
+`arkitekturo::komuna`, la tria runo
+[#45022757323](https://github.com/makoto-lernanto/mikerno/actions/runs/45022757323)
+ĉe `71854ce` havis 62 verdajn taskojn, inkluzive ĉiujn 52 pruvojn de la matrico
+`kani-kontroli`.
+
+**Eldono.** [`v0.9.0`](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.9.0)
+(etikedo ĉe `71854ce`) enhavas `mikerno.iso` (SHA-256
+`78a9cad214e266003615c206eb28ad38b2318e30fa84b9a57699fc49c285f7ce`) kaj
+`mikerno-arm.iso` (SHA-256
+`fd7db0eb423cc378dd24b5a0c52feb6c126c1bac369e08b5f1971f4749b61b09`). La du
+ISO-oj estis konstruitaj el la puŝita kodo kaj praŝarĝitaj antaŭ la alŝuto:
+ambaŭ presis `[MiKerno] Saluton, mi estas MiKerno v0.9.0!` kaj
+`[ekrano] piksela fiksaĵo 1280x800, 32 bitoj/pikselo, tiparo 12x24; haketo
+0xecf1f6dbe1421575`, sen `MALBONE`.
 
 ---
 
