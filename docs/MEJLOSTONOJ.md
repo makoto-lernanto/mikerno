@@ -31,7 +31,7 @@
 | M16 | Dormantaj temporiziloj kaj prioritatoj | Plenumita | dormo 100 ms = 10 tikoj; prioritatoj 1:2:4; specimenoj sumo == horloĝo; arm64-stabileco |
 | M17 | Konservado, dosiersistemo, ŝelo | Plenumita | `virtio-blk` legas/skribas 64 sektorojn; SNDS (6 dosieroj, 1 dosierujo; PCI kaj MMIO); `SYS_BRK`, `SYS_EXEC` kaj `SYS_LANĜI` en Ring 3; Ligo kun `listi`, `procezoj`, `mortigi`, `ruli`; `virtio-blk` MMIO-vojo funkcias sur `arm64`; `#[allow]`-purgado por M17 plenigita |
 | M18 | DI, testoj, plena pruvaro | Plenumita | GitHub Actions verde (fmt, clippy, 71 host-testoj, konstruo, Miri, 43 Kani-pruvoj); ses fazoj 0.8.0–0.8.5, ĉiu kun verda DI kaj ISO el la Eldono |
-| M19 | Plena pruvaro kaj 1.0 | Daŭranta | Fazo 4 (0.9.3): eldonkandidato loke konstruita kaj praŝarĝita; la fina puŝita-DI-konfirmo kaj publikigo restas |
+| M19 | Plena pruvaro kaj 1.0 | Daŭranta | Fazo 4 (0.9.3): antaŭeldono post verda DI kun ambaŭ ISO-oj; Fazo 5 (1.0.0) restas |
 | M20 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 | M21 | SMP, afineco kaj IPI | Post 1.0 | — |
 
@@ -183,6 +183,7 @@ eniras la kernan bildon.
 | 2026-11-22 | 0.9.0 | 65 | 15648 | 12155 | 2070 | 1423 |
 | 2026-11-24 | 0.9.1 | 66 | 15678 | 12184 | 2070 | 1424 |
 | 2026-11-24 | 0.9.2 | 66 | 15678 | 12184 | 2070 | 1424 |
+| 2026-11-24 | 0.9.3 | 66 | 15678 | 12184 | 2070 | 1424 |
 | 2026-11-24 | 0.9.3 | 66 | 15678 | 12184 | 2070 | 1424 |
 
 ---
@@ -2666,7 +2667,7 @@ kaj la lasta estas la eldono mem kun la versio `1.0.0`.
 | 1 | `0.9.0` | `PaĝaTablo`-abstrakcio kaj pruvoj | la «Parte»-ero de M18 fermita; novaj pruvoj verde |
 | 2 | `0.9.1` | ABI-frosto: kontrakto pri grandezo kaj unu referenca tabelo | `const`-asertoj kaj unu-testoj verde; ABI 2 frostigita |
 | 3 | `0.9.2` | Pruvokatalogo kaj plena pordega revizio | katalogo kongruas kun la `#[kani::proof]`-atributoj; DI kaj kvin QEMU-kombinaĵoj verde |
-| 4 | `0.9.3` | Eldonkandidato: anonco, ISO-oj, haketoj | ambaŭ ISO-oj praŝarĝitaj; SHA-256 kaj akceptaj linioj registritaj |
+| 4 | `0.9.3` | Eldonkandidato por `1.0.0`: anonco, ISO-oj, haketoj | antaŭeldono kun ambaŭ ISO-oj; DI verda; SHA-256 kaj akceptaj linioj registritaj |
 | 5 | `1.0.0` | Etikedo kaj publikigo | Eldono `v1.0.0` kun ambaŭ ISO-oj; la kerno presas `v1.0.0` |
 
 **Fazo 1 (0.9.0) — `PaĝaTablo`-abstrakcio kaj pruvoj.**
@@ -2924,24 +2925,26 @@ la kandidata eldono estas en `docs/ELDONO-0.9.3.md`.
 
 **Loka pordego kaj ISO-oj.** `just kontroli` sukcesis: 83 host-testoj,
 20 sistemvokoj kaj 52 katalogitaj pruvoj kongruas; formato, ĉiuj tri Clippy-
-kontroloj kaj la tuta laborloka konstruo pasis. `just iso` kaj `just iso-arm`
-konstruis kandidatajn bildojn el la loka arbo. La serialaj QEMU-praŝarĝoj per
-`tools/kontroli-qemu.sh` sukcesis sen `MALBONE`:
+kontroloj kaj la tuta laborloka konstruo pasis. La puŝita DI
+([run 45392220055](https://github.com/makoto-lernanto/mikerno/actions/runs/45392220055))
+sukcesis kun 62 verdaj taskoj. `just iso` kaj `just iso-arm` rekonstruis
+kandidatojn el la puŝita koda komitero `fda45d9`. La serialaj QEMU-praŝarĝoj
+per `tools/kontroli-qemu.sh` sukcesis sen `MALBONE`:
 
 La rekta PVH-praŝarĝo (`tools/run-qemu.sh release`) atingis la finan staton
 post 1018 tikoj; la rekta arm64 `Image`-praŝarĝo
 (`tools/run-qemu-arm.sh release`) atingis ĝin post 1013 tikoj. Ambaŭ same
 sukcesis per `tools/kontroli-qemu.sh` sen `MALBONE`.
 
-| ISO | SHA-256 (loka kandidato) | Akceptaj linioj |
+| ISO | SHA-256 (antaŭeldono) | Akceptaj linioj |
 | --- | --- | --- |
-| `mikerno.iso` (`x86_64`) | `6e7d6acc3ed2beded8a5e3369a1f694d6f113309dda87a9ce4e12422f4a1b95d` | `MiKerno v0.9.3`; `Ligo 0.1 — objekta ŝelo de Horizonto · ABI 2`; fina stato `7 mortintaj, 0 pretaj, 0 blokitaj; 1022 tikoj`; piksela haketo `0xecf1f6dbe1421575` |
-| `mikerno-arm.iso` (`arm64`) | `a32a35e1e4791737fdc57d683e8035a615d8fd0b27667fd4590237c6abfba965` | `MiKerno v0.9.3`; `Ligo 0.1 — objekta ŝelo de Horizonto · ABI 2`; fina stato `7 mortintaj, 0 pretaj, 0 blokitaj; 1006 tikoj`; piksela haketo `0xecf1f6dbe1421575` |
+| `mikerno.iso` (`x86_64`) | `41f79d17ee44206beb4fe7bcb05d8326fad4cf340821a70f5bad2f3e56c55a48` | `MiKerno v0.9.3`; `Ligo 0.1 — objekta ŝelo de Horizonto · ABI 2`; fina stato `7 mortintaj, 0 pretaj, 0 blokitaj; 1020 tikoj`; piksela haketo `0xecf1f6dbe1421575` |
+| `mikerno-arm.iso` (`arm64`) | `eefab95b908d152adf51f772e35055c2749428b3ebfe2d9dab28b382cb2beccb` | `MiKerno v0.9.3`; `Ligo 0.1 — objekta ŝelo de Horizonto · ABI 2`; fina stato `7 mortintaj, 0 pretaj, 0 blokitaj; 1017 tikoj`; piksela haketo `0xecf1f6dbe1421575` |
 
-**Stato de la akcepto.** Ĉi tiuj estas lokaj, nepuŝitaj konstruaĵoj. La plena
-DI de `0.9.3` ankoraŭ ne ruliĝis; laŭ la eldonreguloj la ISO-oj devas esti
-rekonstruitaj el la puŝita, DI-verda komitero, kaj la tiamaj haketoj anstataŭu
-la lokajn valorojn antaŭ alŝuto aŭ publikigo. Tial Fazo 4 restas nefinita.
+**Stato de la akcepto.** La kandidataj ISO-oj estis rekonstruataj el puŝita,
+DI-verda koda komitero kaj la haketoj supre kongruas kun la alŝotaj aktivaĵoj.
+La `v0.9.3`-Eldono estas antaŭeldono por testado antaŭ `v1.0.0`; Fazo 5 restas
+la fina, stabila publikigo.
 
 ---
 

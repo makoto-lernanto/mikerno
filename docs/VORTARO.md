@@ -16,7 +16,7 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `kontrolilo de QEMU` | QEMU harness | `tools/kontroli-qemu.sh`: atendas `ligo:~>`, sendas `fini` kaj validigas `[kerno] fina stato` sen `MALBONE`. |
 | `dokumenta kontrolilo` | documentation checker | `tools/dokumentaro.sh --kontroli`: komparas la `SYS_*`-numerojn en `libmikerno` kun `README.md` kaj ĉi tiu vortaro. |
 | `anonco` | announcement | `docs/ANONCO-1.0.md`: preparita teksto por la eldono 1.0; `tools/versio.sh` kontrolas ĝian kongruan version. |
-| `eldonkandidato` | release candidate | `0.9.3` estas la loka M19 Fazo 4-kandidato; ĝi ne estas publika Eldono ĝis la puŝita DI kaj ISO-kontroloj sukcesas. |
+| `eldonkandidato` | release candidate | `0.9.3` estas M19 Fazo 4 antaŭeldono por testado antaŭ la fina `v1.0.0`; ĝi ne estas la stabila eldono. |
 | `KI` | command-line interface (CLI) | Komandliniaj Iloj; en Versio la dosierujo `versio-ki`. |
 | `EAS` | content-addressable storage (CAS) | Enhavadresita Stokado; en Versio `libversio::stokado`. |
 | `dosiera objekto` | blob | La kruda enhavo de unu dosiero; la tipo estas `Dosiero`. Neniam uzu `blob` en tekstoj aŭ identigiloj. |

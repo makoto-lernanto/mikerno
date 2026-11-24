@@ -44,11 +44,10 @@ sistemvoka ABI, kaj ne povu legi la kernon aŭ alian procezon.
 
 ## Provu la nunan eldonon
 
-La plej lasta publika eldono estas `v0.9.2`; M19 Fazo 4 preparas la
-eldonkandidaton `0.9.3`, kiu ne estas publikigita. La ISO-oj de la publika
-eldono estas elŝuteblaj de la
-[GitHub-Eldonoj](https://github.com/makoto-lernanto/mikerno/releases), aŭ
-konstruu kandidatajn ISO-ojn loke per `just iso` kaj `just iso-arm`. La ŝelo Ligo startas en
+La plej lasta stabila eldono estas `v0.9.2`; M19 Fazo 4 publikigas `v0.9.3`
+kiel antaŭeldonon por testado antaŭ la fina `v1.0.0`. La ISO-oj estas
+elŝuteblaj de la [GitHub-Eldonoj](https://github.com/makoto-lernanto/mikerno/releases),
+aŭ rekonstrueblaj per `just iso` kaj `just iso-arm`. La ŝelo Ligo startas en
 `/hejmo` kaj atendas la prompton `ligo:~>`; `helpu` montras la komandojn,
 `listi` la SNDS-dosierojn, `iri` kaj `kie` moviĝas tra la arbo (relativaj
 vojoj kaj `~` inkluzive) kaj `fini` finas la sesion.
