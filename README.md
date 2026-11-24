@@ -17,7 +17,7 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IK kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.9.0 (Cargo-laborloko)
+- **Versio:** 0.9.1 (Cargo-laborloko)
 - **Arkitekturo:** `x86_64` kaj `arm64` (AArch64), unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -571,12 +571,7 @@ distribuo de kapabloj venas en la sekvaj fazoj (M17).
 
 - `Mesago` (`#[repr(C)]`, 64-bajta datumaro, `tipo`, `sendinto`, `ricevonto`),
 - `FinaPunkto`, `Kapablo`, `Permesoj`, `Tenilo`, `KOMENCA_TENILO`,
-- sistemvokaj numeroj: `SYS_SENDI = 1`, `SYS_RICEVI = 2`, `SYS_SKRIBI = 3`,
-  `SYS_FINI = 4`, `SYS_CEDI = 5`, `SYS_KREI_FINPUNKTON = 6`, `SYS_DONI = 7`,
-  `SYS_REVOKI = 8`, `SYS_RICEVI_TEMPO = 9`, `SYS_SENDI_TEMPO = 10`,
-  `SYS_FERMI = 11`, `SYS_DORMI = 12`, `SYS_BRK = 13`, `SYS_EXEC = 14`,
-  `SYS_ENIGI = 15`, `SYS_LISTI = 16`, `SYS_LEGI = 17`, `SYS_PROCEZOJ = 18`,
-  `SYS_MORTIGI = 19`, `SYS_LANĜI = 20`,
+- la dudek sistemvokaj numeroj de ABI 2 (vidu la referencan tabelon sube),
 - `Tenilo` — 32-bita kapabla tenilo (8 bitoj da indekso + 24 bitoj da
   generacio, generacio ekde `1`); la novaj erar-kodoj estas `-9`, `-11`, `-28`,
   `-32`, `-90` kaj `-110`,
@@ -586,6 +581,60 @@ distribuo de kapabloj venas en la sekvaj fazoj (M17).
   transdonas la reĝimon en `RDI` (`REĜIMO_SEKRETO = 2`, `REĜIMO_SPIONO = 3`,
   `REĜIMO_EXEC = 4`, `REĜIMO_FONO = 5`, `REĜIMO_ŜELO = 6`,
   `REĜIMO_NEVALIDA = 7`) kaj la procezan identigilon en `RSI`.
+
+#### Referenca tabelo de ABI 2
+
+La dudek voknumeroj, iliaj argumentoj, rezultoj kaj erar-kodoj. Ĉiuj numeroj
+venas el `libmikerno::syscall` kaj estas kontrolataj kontraŭ la konstantoj per
+`tools/dokumentaro.sh`. La kvar argumentoj `a0`–`a3` mapiĝas al
+`rdi`/`rsi`/`rdx`/`r10` sur `x86_64` kaj al `x0`–`x3` sur `arm64`.
+
+**ABI 2 estas frostigita ekde 0.9.1 (M19 Fazo 2):** post 1.0 ajna nekongrua
+ŝanĝo — nova numero, argumento aŭ erar-kodo — postulas `ABI_VERSIO = 3`.
+
+| N-ro | Konstanto | Argumentoj (`a0`–`a3`) | Rezulto | Eraroj |
+| --- | --- | --- | --- | --- |
+| 1 | `SYS_SENDI` = 1 | `tenilo`, `mesaĝo` | `0` | `-1`, `-3`, `-9`, `-32`, `-90` |
+| 2 | `SYS_RICEVI` = 2 | `tenilo`, `celo` | `0` | `-1`, `-9`, `-32` |
+| 3 | `SYS_SKRIBI` = 3 | `bufro` (UTF-8), `longo` | `0` | `-1` |
+| 4 | `SYS_FINI` = 4 | `elirkodo` | neniam revenas | — |
+| 5 | `SYS_CEDI` = 5 | — | `0` | — |
+| 6 | `SYS_KREI_FINPUNKTON` = 6 | `permesoj` | tenilo (> 0) | `-1`, `-28` |
+| 7 | `SYS_DONI` = 7 | `fonto`, `celo` (procezo), `permesoj` | tenilo (> 0) | `-1`, `-3`, `-9`, `-28` |
+| 8 | `SYS_REVOKI` = 8 | `tenilo`, `0` (rezervita) | `0` | `-1`, `-9` |
+| 9 | `SYS_RICEVI_TEMPO` = 9 | `tenilo`, `celo`, `fonto` (`0` = ajna), `tempolimo` (ms; `SENFINA_TEMPOLIMO`) | `0` | `-1`, `-9`, `-11`, `-32`, `-110` |
+| 10 | `SYS_SENDI_TEMPO` = 10 | `tenilo`, `mesaĝo`, `0` (rezervita), `tempolimo` (ms) | `0` | `-1`, `-9`, `-11`, `-32`, `-90`, `-110` |
+| 11 | `SYS_FERMI` = 11 | `tenilo` | `0` | `-9` |
+| 12 | `SYS_DORMI` = 12 | `daŭro` (ms) | `0` | `-1` |
+| 13 | `SYS_BRK` = 13 | `nova limo` (`0` = demandi) | kupo-limo | `-1` |
+| 14 | `SYS_EXEC` = 14 | `vojo`, `longo` | neniam revenas (sukceso) | `-1` |
+| 15 | `SYS_ENIGI` = 15 | — | bajto (0–255) | `-1` |
+| 16 | `SYS_LISTI` = 16 | `vojo`, `longo`, `celo`, `grando` | nombro da `Dosierero`-j | `-1`, `-17`, `-28` |
+| 17 | `SYS_LEGI` = 17 | `vojo`, `longo`, `celo`, `grando` | nombro da bajtoj | `-1`, `-17`, `-28` |
+| 18 | `SYS_PROCEZOJ` = 18 | `celo`, `grando` | nombro da `ProcezoRekordo`-j | `-1` |
+| 19 | `SYS_MORTIGI` = 19 | `pid` | `0` | `-1`, `-13`, `-17` |
+| 20 | `SYS_LANĜI` = 20 | `vojo`, `longo` | nova `pid` (> 0) | `-1`, `-17`, `-28` |
+
+| Kodo | Konstanto | Signifo |
+| --- | --- | --- |
+| `-1` | — | malĝusta argumento, mankanta permeso aŭ malsukcesa operacio |
+| `-2` | — | nekonata voknumero |
+| `-3` | — | nevalida celloko: la celo de mesaĝo aŭ kapablo ne estas valida fadeno aŭ procezo |
+| `-4` | — | la mesaĝujo plenas sur la neblokebla kerna vojo |
+| `-9` | `NEVALIDA_TENILO` | la tenilo ne validas, la generacio malakordas aŭ la kapablo revokiĝis |
+| `-11` | `PROVU_DENOVE` | nebloka voko trovis malplenan vicon aŭ plenan mesaĝujon |
+| `-13` | `NEPERMITITA` | la operacio estas malpermesata; la nukleo kaj la ŝelo ne mortigeblas |
+| `-17` | `NE_TROVITA` | la petita dosiero aŭ procezo ne ekzistas |
+| `-28` | `TABELO_PLENA` | la finpunkta aŭ kapabla tabelo plenas; ankaŭ la cel-bufro estas tro malgranda |
+| `-32` | `FINPUNKTO_REVOKITA` | la finpunkto revokiĝis aŭ ĝia posedanto finiĝis |
+| `-90` | `TRO_LONGA_MESAGO` | la mesaĝa longo superas `MAKSA_MESAGA_LONGO` |
+| `-110` | `TEMPOLIMO` | la tempolimo pasis antaŭ ol la operacio eblis |
+
+La kvar unuaj kodoj havas konstanton nur en la kerna dispetĉo
+(`MALĜUSTA_ARG`, `NEKONATA_VOKO`, `NEVALIDA_CELLOKO`, `MESAGUJO_PLENA`); la
+ceteraj estas re-eksportitaj de `libmikerno::syscall`. La kompila tempo fiksas
+ankaŭ la aranĝon: `size_of::<Tenilo>() == 4`, `size_of::<Mesago>() == 96` kaj
+`ABI_VERSIO == 2`, kaj `kernologiko` ripetas tiun kontrolon per unu-testoj.
 
 ### Uzanta fenestro
 
@@ -853,7 +902,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.9.0!
+[MiKerno] Saluton, mi estas MiKerno v0.9.1!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes

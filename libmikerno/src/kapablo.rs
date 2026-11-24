@@ -91,6 +91,11 @@ impl Tenilo {
     }
 }
 
+const _: () = {
+    assert!(core::mem::size_of::<Tenilo>() == 4);
+    assert!(core::mem::align_of::<Tenilo>() == 4);
+};
+
 /// La defaŭlta kapablo de ĉiu procezo: fendo `0`, unua generacio (`0x100`).
 ///
 /// La kerno instalas ĝin ĉe la proceza registrado (`registri_fadenon`), do

@@ -245,7 +245,9 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `fonta filtro` | source filter | `RICEVI_TEMPO.rdx`: fadena id aŭ `0` (ajna); `ricevi_mesagon_atenda(fonto, atendo)` preterlasas fremdajn sendintojn. |
 | `ricevi kun tempolimo` / `sendi kun tempolimo` | receive / send with timeout | `ricevi_kun_tempolimo(tenilo, celo, fonto, ms)`, `sendi_kun_tempolimo(tenilo, mesago, ms)`. |
 | `restarigi procezon` | reset process tables | `inicialigi_procezon(id)`: la kapablotabelo estas statika laŭ identigilo, do `krei` restarigas ĝin por ke `KOMENCA_TENILO` validu ankaŭ post reuzo. |
-| `ABI-versio` | ABI version | `ABI_VERSIO = 2` ekde M14 Fazo 1. |
+| `ABI-versio` | ABI version | `ABI_VERSIO = 2` ekde M14 Fazo 1; frostigita en M19 Fazo 2 (0.9.1). |
+| `ABI-frosto` | ABI freeze | La komuna aranĝo de ABI 2 — `Tenilo` (4 bajtoj), `Mesago` (96 bajtoj), la dudek voknumeroj kaj la erar-kodoj — fiksiĝis en 0.9.1; `libmikerno` asertas la grandezojn kaj la version dum la kompilado, kaj `kernologiko::abi` ripetas la kontrolon per unu-testoj. |
+| `referenca tabelo de ABI 2` | ABI 2 reference table | La tabelo en README §«Referenca tabelo de ABI 2» kun la numeroj `1`–`20`, argumentoj, rezultoj kaj eraroj; `tools/dokumentaro.sh` komparas la numerojn kun la konstantoj de `libmikerno::syscall`. |
 | `versio de la pakaĵo` | package version | `env!("CARGO_PKG_VERSION")`: la saluta linio legas ĝin dum kompilado. |
 | `kontroli version` / `ĝisdatigi version` | check / update the version | `tools/versio.sh --kontroli` / `--ĝisdatigi`; la sola fonto estas `Cargo.toml`. |
 | `nevalida tenilo` | invalid handle (`EBADF`) | `NEVALIDA_TENILO = -9`. |
@@ -572,3 +574,5 @@ eksteraj protokolaj nomoj:
 14. Prozo, konzolaj mesaĝoj kaj montrataj tekstoj uzu la angulajn citilojn
     «…» kaj ‹…›. La ASKIA `"` restas nur en la sintakso de programlingvoj kaj
     dosierformatoj (ankaŭ la angla mapado de la retejo).
+15. La komuna aranĝo de ABI 2 estas frostigita: post 1.0 ajna nekongrua ŝanĝo
+    de la voknumeroj, argumentoj aŭ erar-kodoj postulas `ABI_VERSIO = 3`.

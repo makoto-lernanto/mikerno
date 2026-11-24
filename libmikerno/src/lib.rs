@@ -16,7 +16,14 @@ pub mod syscall;
 /// erar-kodojn `-9/-11/-28/-32/-90/-110` kaj la sistemvokojn 6–11.
 /// Vokoj 15–20 (`enigi`, `listi`, `legi`, `procezoj`, `mortigi`, `ruli`) estas
 /// kongrua etendo de ABI `2`; la malnovaj numeroj restas netuŝitaj.
+///
+/// ABI `2` estas frostigita ekde 0.9.1 (M19 Fazo 2): post 1.0 ajna nekongrua
+/// ŝanĝo — nova numero, argumento aŭ erar-kodo — postulas `ABI_VERSIO = 3`.
 pub const ABI_VERSIO: u32 = 2;
+
+const _: () = {
+    assert!(ABI_VERSIO == 2);
+};
 
 pub use kapablo::{FinaPunkto, KOMENCA_TENILO, Kapablo, Permesoj, Tenilo};
 pub use mesago::{MAKSA_MESAGA_LONGO, Mesago};

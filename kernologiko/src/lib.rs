@@ -26,6 +26,9 @@ pub mod snds;
 pub mod vekotemporizilo;
 pub mod vojo;
 
+#[cfg(test)]
+mod abi;
+
 /// Fadena identigilo; `0` estas la ripoza kunteksto de la planisto.
 pub type FadenoId = u64;
 

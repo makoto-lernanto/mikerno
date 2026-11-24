@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-22 · Versio de la Cargo-laborloko: 0.9.0
+> Stato: 2026-11-24 · Versio de la Cargo-laborloko: 0.9.1
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -31,7 +31,7 @@
 | M16 | Dormantaj temporiziloj kaj prioritatoj | Plenumita | dormo 100 ms = 10 tikoj; prioritatoj 1:2:4; specimenoj sumo == horloĝo; arm64-stabileco |
 | M17 | Konservado, dosiersistemo, ŝelo | Plenumita | `virtio-blk` legas/skribas 64 sektorojn; SNDS (6 dosieroj, 1 dosierujo; PCI kaj MMIO); `SYS_BRK`, `SYS_EXEC` kaj `SYS_LANĜI` en Ring 3; Ligo kun `listi`, `procezoj`, `mortigi`, `ruli`; `virtio-blk` MMIO-vojo funkcias sur `arm64`; `#[allow]`-purgado por M17 plenigita |
 | M18 | DI, testoj, plena pruvaro | Plenumita | GitHub Actions verde (fmt, clippy, 71 host-testoj, konstruo, Miri, 43 Kani-pruvoj); ses fazoj 0.8.0–0.8.5, ĉiu kun verda DI kaj ISO el la Eldono |
-| M19 | Plena pruvaro kaj 1.0 | Daŭranta | Fazo 1 (0.9.0): la `PaĝaTablo`-reguloj en `kernologiko`, 52 Kani-pruvoj; identa ISO-haketo sur ambaŭ arkoj |
+| M19 | Plena pruvaro kaj 1.0 | Daŭranta | Fazo 2 (0.9.1): ABI 2 frostigita, la dudek-numera referenca tabelo kaj la grandezo-asertoj; 83 host-testoj |
 | M20 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 | M21 | SMP, afineco kaj IPI | Post 1.0 | — |
 
@@ -181,6 +181,7 @@ eniras la kernan bildon.
 | 2026-11-21 | 0.8.5 | 64 | 15347 | 11925 | 2034 | 1388 |
 | 2026-11-22 | 0.9.0 | 65 | 15646 | 12155 | 2068 | 1423 |
 | 2026-11-22 | 0.9.0 | 65 | 15648 | 12155 | 2070 | 1423 |
+| 2026-11-24 | 0.9.1 | 66 | 15678 | 12184 | 2070 | 1424 |
 
 ---
 
@@ -2753,6 +2754,35 @@ ambaŭ presis `[MiKerno] Saluton, mi estas MiKerno v0.9.0!` kaj
 `[ekrano] piksela fiksaĵo 1280x800, 32 bitoj/pikselo, tiparo 12x24; haketo
 0xecf1f6dbe1421575`, sen `MALBONE`.
 
+#### 2. Fazo 2 — efektivigita (0.9.1)
+
+**Kompilaj asertoj en `libmikerno`.** La kontrakto pri grandezo fiksiĝis dum
+la kompilado: `kapablo.rs` asertas `size_of::<Tenilo>() == 4` kaj
+`align_of::<Tenilo>() == 4`, `lib.rs` asertas `ABI_VERSIO == 2`; `mesago.rs`
+jam asertis `size_of::<Mesago>() == 96` (kun la devenoj de la kampoj). La
+dokumento de `ABI_VERSIO` deklaras la froston: post 1.0 ajna nekongrua ŝanĝo
+postulas `ABI_VERSIO = 3`.
+
+**Unu-testoj.** Nova testa modulo `kernologiko::abi`
+(`kernologiko/src/abi.rs`) legas la produktajn konstantojn:
+`la_komuna_aranĝo_estas_fiksita` kontrolas `Tenilo` (4 bajtoj, aliniiĝo 4),
+`Mesago` (96 bajtoj) kaj `ABI_VERSIO == 2`;
+`la_dudek_numeroj_estas_unikaj_kaj_kontinuaj` ordigas la dudek `SYS_*`-valorojn
+kaj komparas ilin kun `1..=20`, kio pruvas unikecon kaj kontinuecon sen fidi la
+deklaran ordon. Entute 83 host-testoj (81 antaŭe).
+
+**Referenca tabelo.** README §«Referenca tabelo de ABI 2» listigas la dudek
+voknumerojn kun la konstantoj (`SYS_SENDI = 1` … `SYS_LANĜI = 20`), la kvar
+argumentojn, la rezulton kaj la erar-kodojn, plus apartan tabelon de la dek du
+erar-kodoj; `tools/dokumentaro.sh --kontroli` komparas la numerojn kun
+`libmikerno::syscall` senŝanĝe. La semantiko de ĉiu voko restis netuŝita: la
+ŝanĝo tuŝas nur la dokumentaron, la testojn kaj la kompilajn asertojn.
+
+**Lokaj rezultoj (2026-11-24, versio 0.9.1).** `just kontroli` finiĝis sen
+eraro: 83 host-testoj, `fmt`, tri `clippy`-vokoj (la laborloko, `mikerno` por
+`aarch64-unknown-none`, kaj `horizonto`/`saluto` por la sama celo), la versia
+kaj dokumentara kontroloj kaj `cargo build --workspace --release`.
+
 ---
 
 ### M20 — Aparata izolado (post 1.0)
@@ -2812,11 +2842,11 @@ venos kun M19, kiu finigas la plenan pruvaron.
 | # | Kriterio | Stato | Pruvo |
 | --- | --- | --- | --- |
 | 1 | `horizonto` (aŭ alia uzanta procezo) ruliĝas en Ring 3 kun propra adresa spaco, sen povoj legi la kernon aŭ alian procezon. | Plenumita | Privataj `PML4`/`PDPT`-oj por ĉiu procezo; la scenaro «viktimo kaj spiono» montras la saman sekretan virtualan adreson super malsamaj kadroj kaj `#PF` (`erarkodo=0x4`) por la spiono. La suma kontrolo `[memoro] izolado (bone)` komparas la liberajn kadrojn antaŭ/post la scenaro. |
-| 2 | Sistemvokoj `SKRIBI`, `FINI`, `CEDI`, `SENDI` kaj `RICEVI` funkcias kaj estas dokumentitaj en `libmikerno`. | Plenumita | `libmikerno/src/syscall.rs` fiksas la numerojn `1`–`20`; `README.md` kaj `docs/VORTARO.md` priskribas ilin, kaj `tools/dokumentaro.sh --kontroli` certigas la kongruon. La Ring 3-scenaroj kaj `horizonto`/`saluto` uzas la vokojn. |
+| 2 | Sistemvokoj `SKRIBI`, `FINI`, `CEDI`, `SENDI` kaj `RICEVI` funkcias kaj estas dokumentitaj en `libmikerno`. | Plenumita | `libmikerno/src/syscall.rs` fiksas la numerojn `1`–`20`; `README.md` kaj `docs/VORTARO.md` priskribas ilin, kaj `tools/dokumentaro.sh --kontroli` certigas la kongruon. Ekde 0.9.1 la referenca tabelo de ABI 2 en README listigas ĉiujn dudek numerojn kun argumentoj, rezultoj kaj erar-kodoj. La Ring 3-scenaroj kaj `horizonto`/`saluto` uzas la vokojn. |
 | 3 | IK havas apartajn finpunktajn objektojn, rajtojn kaj tempolimojn. | Plenumita | ABI 2: `FinaPunkto`, `Kapablo`, `Tenilo` kun du-nivela generacia kontrolo, `KREI_FINPUNKTON`/`DONI`/`REVOKI`/`FERMI`, revokaj vekoj (`-32`), sendblokado (`-11`), tro longa mesaĝo (`-90`), tempolimoj (`-110`, `SENFINA_TEMPOLIMO`), `IkStatistiko` kaj purigo ĉe proceza detruo. |
 | 4 | Kadroj kaj paĝtabeloj estas liberigeblaj; longa testado ne elĉerpas memoron. | Plenumita | `detrui` liberigas la privatajn paĝtabelojn kaj la procezajn kadrojn (raporto `[procezo] N detruita: … kadroj liberigitaj`); la reuzoprovo kreas kaj detruas procezojn dekfoje kaj postulas saman nombron da liberaj kadroj antaŭ/post. La kvin QEMU-kombinaĵoj ripetas la kontrolon sen `MALBONE`. |
 | 5 | La ISO estas konstruata de DI, kaj `fmt`, `clippy`, `konstruo`, `kani` kaj QEMU-smoka testo estas devigaj. | Plenumita | `.github/workflows/di.yml`: `kontroli-kaj-konstrui` rulas `just kontroli` kaj `just konstrui-arm`; `paki-iso` konstruas ambaŭ ISO-ojn; `miri-kontroli`, la 43-taskoj `kani-kontroli` kaj la kvin `qemu-kontroli` estas devigaj por verda pordego. La runo de 0.8.3 havis 53 verdajn taskojn. |
-| 6 | La dokumentaro (README, ĉi tiu dokumento, sistemvoka referenco) estas kompleta kaj kongrua kun la kodo. | Plenumita | `tools/dokumentaro.sh --kontroli` komparas ĉiun `SYS_*`-numeron kun `README.md` kaj `docs/VORTARO.md`; `tools/versio.sh --kontroli` kovras README, ĉi tiun dokumenton, `AGENTS.md`, la retejon kaj la anoncon. La Ligo-komandoj kaj la startaj reĝimoj estas listigitaj en README, FLUOU §8 kaj la vortaro. |
+| 6 | La dokumentaro (README, ĉi tiu dokumento, sistemvoka referenco) estas kompleta kaj kongrua kun la kodo. | Plenumita | `tools/dokumentaro.sh --kontroli` komparas ĉiun `SYS_*`-numeron kun `README.md` kaj `docs/VORTARO.md`, inkluzive la referencan tabelon de ABI 2; `tools/versio.sh --kontroli` kovras README, ĉi tiun dokumenton, `AGENTS.md`, la retejon kaj la anoncon. La Ligo-komandoj kaj la startaj reĝimoj estas listigitaj en README, FLUOU §8 kaj la vortaro. |
 
 ---
 
