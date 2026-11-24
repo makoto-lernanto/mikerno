@@ -2783,6 +2783,23 @@ eraro: 83 host-testoj, `fmt`, tri `clippy`-vokoj (la laborloko, `mikerno` por
 `aarch64-unknown-none`, kaj `horizonto`/`saluto` por la sama celo), la versia
 kaj dokumentara kontroloj kaj `cargo build --workspace --release`.
 
+**Nuba DI (2026-11-24).** La runo
+[#45351799416](https://github.com/makoto-lernanto/mikerno/actions/runs/45351799416)
+ĉe `8567b05` estis verda: 62 el 62 taskoj, inkluzive la tutan matricon
+`kani-kontroli` (52 pruvoj), `miri-kontroli`, `permesiloj-kontroli` kaj la
+ISO-konstruon.
+
+**Eldono.** [`v0.9.1`](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.9.1)
+(etikedo ĉe `8567b05`) enhavas `mikerno.iso` (SHA-256
+`1aa32e24d945e150ca43de24a1293c66d00b8fc31938bd9c0e476cda36e0562b`) kaj
+`mikerno-arm.iso` (SHA-256
+`9f67c0db6a8c00a748eedabcfd725f5af4e78b329c710498b7de50c9df4ab88d`). La du
+ISO-oj estis konstruitaj el la puŝita kodo kaj praŝarĝitaj antaŭ la alŝuto:
+ambaŭ presis `[MiKerno] Saluton, mi estas MiKerno v0.9.1!`, atingis la ŝelon
+`Ligo 0.1 — objekta ŝelo de Horizonto · ABI 2` kaj finis per
+`[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj` (1405 tikoj sur
+`x86_64`, 1004 sur `arm64`), sen `MALBONE`.
+
 ---
 
 ### M20 — Aparata izolado (post 1.0)
