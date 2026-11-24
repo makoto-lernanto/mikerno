@@ -1,10 +1,10 @@
 # MiKerno 1.0 — anonco (preparo)
 
-> **Stato:** prepara teksto por la eldono 1.0. La eldono venos kun la mejloŝtono
-> M19 (plena pruvaro); ĝis tiam la nuna eldono estas 0.8.5. Ĉi tiu dokumento
-> ne estas publikigita anonco.
+> **Stato:** prepara teksto por la eldono 1.0. M19 kompletigas la plenan
+> pruvaron kaj la eldonkontrolojn; la nuna publika eldono estas `v0.9.2`.
+> Ĉi tiu dokumento ne estas publikigita anonco.
 >
-> Ĝisdatigita por versio: 0.9.2 (Cargo-laborloko)
+> Ĝisdatigita por versio: 0.9.3 (Cargo-laborloko)
 
 ## Malgranda kerno, plena kontrolo
 
@@ -36,7 +36,7 @@ sistemvoka ABI, kaj ne povu legi la kernon aŭ alian procezon.
   detruo; la reuzoprovo komparas la liberajn kadrojn antaŭ kaj post dek
   cikloj kaj postulas saman nombron.
 - **Ripetebla pordego.** GitHub Actions konstruas la ISO-ojn, rulas `fmt`,
-  `clippy`, la laborlokan konstruon, Miri, 43 Kani-pruvojn kaj kvin
+  `clippy`, la laborlokan konstruon, Miri, 52 Kani-pruvojn kaj kvin
   QEMU-praŝarĝojn (BIOS/UEFI, du memorgrandoj, ambaŭ arkoj).
 - **Kompleta dokumentaro.** `README.md`, `docs/MEJLOSTONOJ.md`,
   `docs/VORTARO.md` kaj la sistemvoka referenco spegulas la kodon; la
@@ -44,10 +44,11 @@ sistemvoka ABI, kaj ne povu legi la kernon aŭ alian procezon.
 
 ## Provu la nunan eldonon
 
-La nuna eldono 0.8.5 enhavas ĉion supre escepte la lastan formalan pruvaron.
-Elŝutu `mikerno.iso` aŭ `mikerno-arm.iso` el la
-[GitHub-Eldono](https://github.com/makoto-lernanto/mikerno/releases), aŭ
-konstruu loke per `just iso` kaj `just iso-arm`. La ŝelo Ligo startas en
+La plej lasta publika eldono estas `v0.9.2`; M19 Fazo 4 preparas la
+eldonkandidaton `0.9.3`, kiu ne estas publikigita. La ISO-oj de la publika
+eldono estas elŝuteblaj de la
+[GitHub-Eldonoj](https://github.com/makoto-lernanto/mikerno/releases), aŭ
+konstruu kandidatajn ISO-ojn loke per `just iso` kaj `just iso-arm`. La ŝelo Ligo startas en
 `/hejmo` kaj atendas la prompton `ligo:~>`; `helpu` montras la komandojn,
 `listi` la SNDS-dosierojn, `iri` kaj `kie` moviĝas tra la arbo (relativaj
 vojoj kaj `~` inkluzive) kaj `fini` finas la sesion.

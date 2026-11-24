@@ -6,7 +6,8 @@
 > li difinas la celojn, la arĥitekturon kaj la inĝenieran pensmanieron. La tuta
 > efektiva kodo — same kiel la dokumentaro kaj la testoj — estis verkita de
 > **Qoder**, la AI-programada asistanto, kaj ankaŭ kunlabore kun **OpenCode**
-> (modeloj **DeepSeek V4.1 Flash Free** kaj **MiMo-V2.6-Flash Free**). La homa
+> (modeloj **DeepSeek V4.1 Flash Free** kaj **MiMo-V2.6-Flash Free**) kaj
+> **GitHub Copilot**. La homa
 > kontribuo estas la ideo, ne la klavoj.
 
 MiKerno estas eta, memstara x86_64-kerno verkita tute en Rust (`#![no_std]`,
@@ -17,7 +18,9 @@ La celo de la projekto estas fari legeblan, hobleblan kaj pruveblan
 demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IK kaj uzanta procezo en Ring 3.
 
-- **Versio:** 0.9.2 (Cargo-laborloko)
+- **Versio:** 0.9.3 (Cargo-laborloko)
+- **Eldonkandidato:** 0.9.3 (nepublikigita; la plej nova publika eldono estas
+  `v0.9.2`)
 - **Arkitekturo:** `x86_64` kaj `arm64` (AArch64), unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`
@@ -902,7 +905,7 @@ KASLR-vojo same funkcias (`0x8c00000`) kaj nur SMEP/SMAP estas preterlasitaj.
 Ĉe sukcesa starto la seriala konzolo montras (mallongigite):
 
 ```text
-[MiKerno] Saluton, mi estas MiKerno v0.9.2!
+[MiKerno] Saluton, mi estas MiKerno v0.9.3!
 [kerno] KASLR: kerna bazo 0x… (deŝovo 0x…); la bildo venis de 0x100000
 [kerno] SMEP subtenata: jes
 [kerno] SMAP subtenata: jes
