@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Kontrolu, ke la sistemvokaj numeroj en `libmikerno` kongruas kun la
-# dokumentaro (README.md kaj docs/VORTARO.md).
+# Kontrolu, ke la sistemvokaj numeroj en `libmikerno` kaj la pruvokatalogo
+# kongruas kun la dokumentaro.
 #
 # Uzado:
 #   tools/dokumentaro.sh --kontroli
@@ -8,12 +8,15 @@
 # La skripto eltiras ĉiun `pub const SYS_*: usize = N;` el
 # `libmikerno/src/syscall.rs` kaj serĉas la parojn `SYS_X = N` aŭ
 # `SYS_X` (N) en la dokumentoj. Malkongrua aŭ mankanta numero estas eraro.
+# Poste ĝi komparas la nombron da vicoj en la pruvokatalogo de
+# `docs/MEJLOSTONOJ.md` kun la nombro da `#[kani::proof]`-atributoj.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SYSCALL="$ROOT/libmikerno/src/syscall.rs"
 DOKUMENTOJ=("$ROOT/README.md" "$ROOT/docs/VORTARO.md")
+KATALOGO="$ROOT/docs/MEJLOSTONOJ.md"
 
 if [[ "${1:-}" != "--kontroli" ]]; then
     echo "uzado: $0 --kontroli" >&2
@@ -74,4 +77,28 @@ if [[ "$eraro" -ne 0 ]]; then
     exit 1
 fi
 
+# La pruvokatalogo estas la regiono inter la markiloj; ĉiu vico komenciĝas per
+# sia numero. `git grep` legas nur la spuritajn fontojn, do `target/` ne
+# duobligas la atributojn.
+atributoj=$(git -C "$ROOT" grep -F '#[kani::proof]' -- '*.rs' | wc -l)
+katalogo=$(
+    awk '
+        /<!-- pruvokatalogo: komenco -->/ { ene = 1; next }
+        /<!-- pruvokatalogo: fino -->/ { ene = 0; next }
+        ene && /^\| [0-9]+ \|/ { nombro++ }
+        END { print nombro + 0 }
+    ' "$KATALOGO"
+)
+
+if [[ "$katalogo" -eq 0 ]]; then
+    echo "dokumentaro: la pruvokatalogo mankas en ${KATALOGO#"$ROOT"/}" >&2
+    exit 1
+fi
+if [[ "$katalogo" -ne "$atributoj" ]]; then
+    printf 'dokumentaro: la katalogo havas %s vicojn, sed la deponejo havas %s `#[kani::proof]`-atributojn\n' \
+        "$katalogo" "$atributoj" >&2
+    exit 1
+fi
+
 echo "dokumentaro: ${#kodo[@]} sistemvokoj kongruas kun README.md kaj docs/VORTARO.md"
+echo "dokumentaro: $atributoj Kani-pruvoj kongruas kun la katalogo en docs/MEJLOSTONOJ.md"

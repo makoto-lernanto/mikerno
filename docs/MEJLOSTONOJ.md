@@ -1,6 +1,6 @@
 # Mejloŝtonoj de MiKerno
 
-> Stato: 2026-11-24 · Versio de la Cargo-laborloko: 0.9.1
+> Stato: 2026-11-24 · Versio de la Cargo-laborloko: 0.9.2
 >
 > Ĉi tiu dokumento registras kion MiKerno jam atingis, per kio tio estas
 > pruvita, kaj kio venas poste. Ĝi estas la inĝeniera taglibro de la projekto,
@@ -31,7 +31,7 @@
 | M16 | Dormantaj temporiziloj kaj prioritatoj | Plenumita | dormo 100 ms = 10 tikoj; prioritatoj 1:2:4; specimenoj sumo == horloĝo; arm64-stabileco |
 | M17 | Konservado, dosiersistemo, ŝelo | Plenumita | `virtio-blk` legas/skribas 64 sektorojn; SNDS (6 dosieroj, 1 dosierujo; PCI kaj MMIO); `SYS_BRK`, `SYS_EXEC` kaj `SYS_LANĜI` en Ring 3; Ligo kun `listi`, `procezoj`, `mortigi`, `ruli`; `virtio-blk` MMIO-vojo funkcias sur `arm64`; `#[allow]`-purgado por M17 plenigita |
 | M18 | DI, testoj, plena pruvaro | Plenumita | GitHub Actions verde (fmt, clippy, 71 host-testoj, konstruo, Miri, 43 Kani-pruvoj); ses fazoj 0.8.0–0.8.5, ĉiu kun verda DI kaj ISO el la Eldono |
-| M19 | Plena pruvaro kaj 1.0 | Daŭranta | Fazo 2 (0.9.1): ABI 2 frostigita, la dudek-numera referenca tabelo kaj la grandezo-asertoj; 83 host-testoj |
+| M19 | Plena pruvaro kaj 1.0 | Daŭranta | Fazo 3 (0.9.2): pruvokatalogo de 52 pruvoj, kontrolata de `tools/dokumentaro.sh`, kaj reviziita DI-pordego; 83 host-testoj |
 | M20 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 | M21 | SMP, afineco kaj IPI | Post 1.0 | — |
 
@@ -182,6 +182,7 @@ eniras la kernan bildon.
 | 2026-11-22 | 0.9.0 | 65 | 15646 | 12155 | 2068 | 1423 |
 | 2026-11-22 | 0.9.0 | 65 | 15648 | 12155 | 2070 | 1423 |
 | 2026-11-24 | 0.9.1 | 66 | 15678 | 12184 | 2070 | 1424 |
+| 2026-11-24 | 0.9.2 | 66 | 15678 | 12184 | 2070 | 1424 |
 
 ---
 
@@ -770,6 +771,9 @@ signifas la defaŭltan `unwind`-valoron.
 | `arkitekturo/x86_64/pagado.rs` | `CR3`-radiko: aliniiĝo kaj masko | — |
 | `interrompo/mod.rs` | `EOI` nur por APIC-vektoroj | — |
 
+Tiu tabelo resumas la staton de M9. La nuna, plena katalogo (52 pruvoj, unu
+vico por ĉiu `#[kani::proof]`) estas en §3.1.
+
 **Mankanta.** Nenio el la origina celo. La pruvoj ankoraŭ ne kovras la
 1M-kadran instancon, sed tio estas limo de la pruvilo, ne duobligo de la
 logiko.
@@ -788,6 +792,71 @@ loke. `miri-kontroli` kovras la unu-testojn de `kernologiko`; `loom` restas
 neuzata, ĉar la kerno estas unuprocesora kaj protektas la kritikajn sekciojn
 per malŝaltitaj interrompoj. M19 plu pritraktas la `PaĝaTablo`-abstrakcion kaj
 la 1.0-eldonon.
+
+### 3.1. Pruvokatalogo (M19 Fazo 3)
+
+La katalogo listigas unu vicon por ĉiu `#[kani::proof]` en la deponejo. La
+DI-tasko de ĉiu vico nomiĝas `Formala kontrolo per Kani (<pruvo>)`, kie
+`<pruvo>` estas la plena nomo en la dua kolumno. `tools/dokumentaro.sh
+--kontroli` komparas la nombron da vicoj kun la nombro da
+`#[kani::proof]`-atributoj.
+
+<!-- pruvokatalogo: komenco -->
+| # | Pruvo (DI-tasko) | Dosiero | Invarianto |
+| --- | --- | --- | --- |
+| 1 | `memoro::kadro::kani_proofs::aloki_preterpasas_uzatajn_kadrojn` | `mikerno/src/memoro/kadro.rs` | `aloki` redonas kadron en limoj, preterlasas okupatajn kaj ne redonas la saman kadron dufoje. |
+| 2 | `memoro::kadro::kani_proofs::neniom_da_duobla_alokado` | `mikerno/src/memoro/kadro.rs` | Kun unu libera kadro `aloki` redonas ĝin unufoje, poste `None`, kaj `sekva` montras plenan bitaron. |
+| 3 | `memoro::kadro::kani_proofs::liberigo_lasas_la_kadron_reuzebla` | `mikerno/src/memoro/kadro.rs` | Liberigo malmarkas nur la celon, retreatigas `sekva` kaj la sekva `aloki` tuj reuzas la kadron. |
+| 4 | `memoro::kadro::kani_proofs::duobla_liberigo_estas_senefika` | `mikerno/src/memoro/kadro.rs` | Dua liberigo ne ŝanĝas la bitaron nek `sekva`. |
+| 5 | `memoro::kadro::kani_proofs::marki_kaj_malmarki_sen_paniko` | `mikerno/src/memoro/kadro.rs` | `marki` kaj ĝia malo sekurigas la biton sen eliri la bitaron. |
+| 6 | `memoro::kadro::kani_proofs::agordi_intervalon_sen_paniko` | `mikerno/src/memoro/kadro.rs` | Arbitraj 64-bitaj limoj ne eliras la bitaron; ĉiu kadro en la intervalo ricevas la petitan staton. |
+| 7 | `kerno::ik::kani_proofs::mesaĝa_enhavo_en_limoj` | `mikerno/src/kerno/ik.rs` | `longo()` egalas la longon de `enhavo()` kaj restas sub `MAKSA_MESAGA_LONGO`. |
+| 8 | `kerno::ik::kani_proofs::plena_mesagujo_rifuzas` | `mikerno/src/kerno/ik.rs` | Plena mesaĝujo rifuzas per `Plena` sen ŝanĝi `nombro`. |
+| 9 | `kerno::ik::kani_proofs::fifo_ordo` | `mikerno/src/kerno/ik.rs` | De la sama fonto la unue sendita mesaĝo unue revenas. |
+| 10 | `kerno::ik::kani_proofs::fifo_ordo_inter_fontoj` | `mikerno/src/kerno/ik.rs` | Forpreno de unu fonto ne renversas la ordon de la aliaj fontoj. |
+| 11 | `kerno::ik::kani_proofs::fonta_filtro_konservas_fremdajn` | `mikerno/src/kerno/ik.rs` | Filtrila preno forprenas nur kongruan mesaĝon; fremdaj restas kaj revenas sen filtri. |
+| 12 | `kerno::ik::kani_proofs::malplena_mesagujo_ricevas_nenion` | `mikerno/src/kerno/ik.rs` | Malplena mesaĝujo redonas `None` sen subtrahi de nulo. |
+| 13 | `kerno::ik::kani_proofs::preno_konservas_la_invarianton` | `mikerno/src/kerno/ik.rs` | Post preno `nombro` restas en limoj kaj ĉiuj fendoj ekster ĝi restas malplenaj. |
+| 14 | `kerno::ik::kani_tenilo::tenilo_kodigo_roundtrip` | `mikerno/src/kerno/ik.rs` | Valida paro (indekso, generacio) revenas senŝanĝe; generacio `0` kaj indekso super `15` estas rifuzataj. |
+| 15 | `kerno::ik::kani_finpunktoj::senda_bito_unuuma` | `mikerno/src/kerno/ik.rs` | La senda bito havas ekzakte unu biton kaj bildigas fadenon `n` al bito `n−1`. |
+| 16 | `kerno::ik::kani_finpunktoj::premrego_postulas_plenan_vicon` | `mikerno/src/kerno/ik.rs` | La politiko enmetas dum loko restas, atendigas blokeblan sendanton kaj rifuzas alie nur plenan vicon. |
+| 17 | `kerno::ik::kani_finpunktoj::generacio_emeritigas` | `mikerno/src/kerno/ik.rs` | La sekva generacio estas strikte pli granda kaj neniam nula; la fendo emeritiĝas ĉe la 24-bita eluziĝo. |
+| 18 | `kerno::ik::kani_finpunktoj::referenco_saturigas` | `mikerno/src/kerno/ik.rs` | La referenckalkulo malaltiĝas per unu kaj saturiĝas ĉe nulo. |
+| 19 | `kerno::ik::kani_finpunktoj::revoko_malvalidigas_tenilojn` | `mikerno/src/kerno/ik.rs` | Revoko altigas la generacion, do malnovaj kapabloj ne plu kongruas; neaktiva finpunkto ankaŭ ne kongruas. |
+| 20 | `kerno::ik::kani_finpunktoj::libera_fendo_elektita` | `mikerno/src/kerno/ik.rs` | La elekto redonas la unuan liberan fendon; `None` aperas nur kiam neniu fendo estas libera. |
+| 21 | `kerno::ik::kani_tempolimoj::tempolima_politiko` | `mikerno/src/kerno/ik.rs` | Ĉiu `u64` havas ekzakte unu signifon; `Tempa` estas nenegativa, suprenrondigita kaj limigita per `u32::MAX`. |
+| 22 | `kerno::ik::kani_tempolimoj::tempolimo_ne_nuligas` | `mikerno/src/kerno/ik.rs` | Pozitiva tempolimo sub `u32::MAX` fariĝas `Tempa` kun almenaŭ unu tiko. |
+| 23 | `kerno::ik::kani_kapabloj::rajtoj_devigas_sendon` | `mikerno/src/kerno/ik.rs` | Sen `SENDI` la kapablo redonas `NesufiĉajPermesoj`. |
+| 24 | `kerno::ik::kani_kapabloj::rajtoj_devigas_ricevon` | `mikerno/src/kerno/ik.rs` | Sen `RICEVI` la kapablo redonas `NesufiĉajPermesoj`. |
+| 25 | `kerno::ik::kani_kapabloj::dono_nur_malpligrandigas_rajtajn` | `mikerno/src/kerno/ik.rs` | `DONI` akceptas nur subaron de la fontaj permesoj; la plena aro ĉiam estas donebla. |
+| 26 | `kerno::ik::kani_kapabloj::transproceza_tenilo_nevalidas` | `mikerno/src/kerno/ik.rs` | Tenilo el alia proceza tabelo aŭ kun malnova generacio redonas `NevalidaTenilo`. |
+| 27 | `kerno::planisto::kani_plenumtempo::tempopecoj_konservas_plenumtikojn` | `mikerno/src/kerno/planisto.rs` | La plenumtikoj sekvas la tempopecojn `1:2:4` (`[0, 2, 4, 8, …]`). |
+| 28 | `kerno::planisto::kani_plenumtempo::cedo_ne_kreas_tempon` | `mikerno/src/kerno/planisto.rs` | Cedo ne aldonas plenumtikojn; nur la nuna fadeno havas konton. |
+| 29 | `kerno::planisto::kani_plenumtempo::ripozo_kaj_blokado_apartigas_tempon` | `mikerno/src/kerno/planisto.rs` | Ripozo, blokado kaj morto ne akumulas plenumtikojn. |
+| 30 | `kerno::planisto::kani_plenumtempo::nur_la_nuna_nombrigilo_ŝanĝiĝas_kaj_saturiĝas` | `mikerno/src/kerno/planisto.rs` | Dum tiko nur la nuna fadeno pliiĝas kaj saturiĝas; la ceteraj restas senŝanĝaj. |
+| 31 | `kerno::planisto::kani_prioritatoj::pezaj_tempopecoj_sen_malsatigo` | `mikerno/src/kerno/planisto.rs` | Alta prioritato ricevas duoble de normala kaj kvaroble de malalta sen malsatigi. |
+| 32 | `kerno::planisto::kani_prioritatoj::malalta_prioritato_atendas_maksimume_unu_rondon` | `mikerno/src/kerno/planisto.rs` | Malalta prioritato atendas maksimume `MAKSA_PRETA_ATENDO` da tikoj. |
+| 33 | `kerno::planisto::kani_prioritatoj::egalprioritataj_rotacias` | `mikerno/src/kerno/planisto.rs` | Egalprioritataj fadenoj rotacias laŭvice kaj determinisme. |
+| 34 | `kerno::planisto::kani_prioritatoj::cedo_liberigas_tempopecon` | `mikerno/src/kerno/planisto.rs` | Tuja cedo liberigas la restan tempopecon kaj ne aldonas plenumtikojn. |
+| 35 | `kerno::planisto::kani_prioritatoj::blokitaj_ne_kuras_kaj_veko_ne_duobligas` | `mikerno/src/kerno/planisto.rs` | Blokitaj fadenoj ne elektiĝas; veko ne duobligas la pretan eron. |
+| 36 | `kerno::vekotemporizilo::kani_proofs::pinto_estas_minimumo` | `mikerno/src/kerno/vekotemporizilo.rs` | Arbitra reenmeto konservas koheran kupon kaj lasas la pinton ĉe la fiksa minimumo `0`. |
+| 37 | `kerno::vekotemporizilo::kani_proofs::elpreni_ordonas` | `mikerno/src/kerno/vekotemporizilo.rs` | `elpreni` redonas ĉiujn erojn laŭ ne-malpliiĝanta limdato kaj lasas la kupon kohera kaj malplena. |
+| 38 | `kerno::vekotemporizilo::kani_proofs::reenmeto_konservas_la_kupon` | `mikerno/src/kerno/vekotemporizilo.rs` | Reenmeto ĝisdatigas la limdaton sen duobligi la eron; `nombro` restas sama kaj la kupo kohera. |
+| 39 | `kerno::vekotemporizilo::kani_proofs::forigo_konservas_la_kupon` | `mikerno/src/kerno/vekotemporizilo.rs` | Forigo redonas la limdaton de la celo kaj lasas la kupon kohera; dua forigo redonas `None`. |
+| 40 | `kerno::vekotemporizilo::kani_proofs::forigo_redonas_la_novan_limdaton` | `mikerno/src/kerno/vekotemporizilo.rs` | Forigo post reenmeto redonas la novan limdaton. |
+| 41 | `interrompo::kani_proofs::eoi_nur_por_apic_vektoroj` | `mikerno/src/interrompo/mod.rs` | EOI apartenas nur al vektoroj `0x20..0x80`; esceptoj, la sistemvoka vektoro kaj `0xFF` ne estas APIC-vektoroj. |
+| 42 | `arkitekturo::x86_64::pagado::kani_proofs::cr3_radiko_estas_paĝe_aliniita` | `mikerno/src/arkitekturo/x86_64/pagado.rs` | La `CR3`-radiko estas paĝe aliniita, maskita kaj ne superas la adresan maskon. |
+| 43 | `arkitekturo::x86_64::pagado::kani_proofs::cr3_radiko_forprenas_nur_la_malaltajn_bitojn` | `mikerno/src/arkitekturo/x86_64/pagado.rs` | Por fizika `CR3` sub `2^52` la radiko forprenas nur la malaltajn 12 bitojn kaj konservas la suprajn. |
+| 44 | `arkitekturo::x86_64::pagado::kani_proofs::adreso_malkomponiĝas_en_kvar_nivelojn` | `mikerno/src/arkitekturo/x86_64/pagado.rs` | 48-bita adreso malkomponiĝas en kvar 9-bitajn indeksojn; ĉiu indekso estas sub `512` kaj la fenestra kunmeto estas ekzakta. |
+| 45 | `arkitekturo::x86_64::pagado::kani_proofs::indekso_kaj_bazo_estas_inversaj` | `mikerno/src/arkitekturo/x86_64/pagado.rs` | Por ĉiuj kvar niveloj `paĝa_indekso(indeksa_bazo(nivelo, i), nivelo) = i`. |
+| 46 | `arkitekturo::x86_64::pagado::kani_proofs::permesoj_kaj_eroj_estas_reverseblaj` | `mikerno/src/arkitekturo/x86_64/pagado.rs` | La PTE-bitoj kodas kaj malkodas ĉiujn kvar permesojn, kaj la `W^X`-bitoj kongruas. |
+| 47 | `arkitekturo::x86_64::pagado::kani_proofs::politikaj_permesoj_respektas_wx` | `mikerno/src/arkitekturo/x86_64/pagado.rs` | Neniu politika permesaro estas skribebla kaj plenumebla, nek en la permesoj nek en la PTE-bitoj. |
+| 48 | `arkitekturo::x86_64::pagado::kani_proofs::ero_konservas_la_aliniiĝon_de_la_fizika_adreso` | `mikerno/src/arkitekturo/x86_64/pagado.rs` | La adresa kampo de PTE konservas 52-bitan aliniitan fizikan adreson. |
+| 49 | `arkitekturo::x86_64::pagado::kani_proofs::privataj_subtabeloj_estas_plene_liberigitaj` | `mikerno/src/arkitekturo/x86_64/pagado.rs` | Registrado estas senefika duoble, `nombro` estas `1`, malregistrado malplenigas la registron. |
+| 50 | `arkitekturo::komuna::kani_proofs::arm_permesoj_kaj_priskriboj_estas_reverseblaj` | `mikerno/src/arkitekturo/komuna.rs` | La priskriba kodigo kaj malkodigo konservas ĉiujn kvar permesojn kun la paĝa tipo. |
+| 51 | `arkitekturo::komuna::kani_proofs::arm_politikaj_permesoj_respektas_wx` | `mikerno/src/arkitekturo/komuna.rs` | Post kodigo kaj malkodigo neniu politika permesaro estas skribebla kaj plenumebla. |
+| 52 | `arkitekturo::komuna::kani_proofs::arm_folio_konservas_la_aliniiĝon` | `mikerno/src/arkitekturo/komuna.rs` | arm64-folia priskribo konservas 48-bitan aliniitan fizikan adreson. |
+<!-- pruvokatalogo: fino -->
 
 ---
 
@@ -2799,6 +2868,33 @@ ambaŭ presis `[MiKerno] Saluton, mi estas MiKerno v0.9.1!`, atingis la ŝelon
 `Ligo 0.1 — objekta ŝelo de Horizonto · ABI 2` kaj finis per
 `[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj` (1405 tikoj sur
 `x86_64`, 1004 sur `arm64`), sen `MALBONE`.
+
+#### 3. Fazo 3 — efektivigita (0.9.2)
+
+**Pruvokatalogo.** La nova §3.1 listigas unu vicon por ĉiu `#[kani::proof]`:
+la plenan DI-nomon (`Formala kontrolo per Kani (<pruvo>)`), la modulan
+dosieron kaj la pruvatan invarianton. La historia resuma tabelo de M9 restas
+kiel tiama stato. La katalogo estas inter la markiloj `pruvokatalogo: komenco`
+kaj `pruvokatalogo: fino` (la HTML-komentaj krampoj estas en la fonto).
+
+**Dokumentara kontrolo.** `tools/dokumentaro.sh --kontroli` nun legas tiujn
+markilojn, kalkulas la vicojn kaj komparas ilin kun la nombro da
+`#[kani::proof]`-atributoj en la spuritaj `*.rs`-dosieroj. La kontrolo
+malakceptas mankantan aŭ malkongruan katalogon; la sistemvokaj kontroloj
+restas senŝanĝaj.
+
+**DI-revizio.** Ĉiuj DI-taskoj restis: `kontroli-kaj-konstrui`,
+`miri-kontroli`, `permesiloj-kontroli`, `kani-pretigi`/`kani-kontroli`,
+`paki-iso` kaj la kvin `qemu-kontroli`. Por eviti la nuligon, kiun malrapida
+apt-spegulo kaŭzis en la antaŭa dokumenta runo, la limo de `qemu-kontroli`
+kreskis de 15 al 30 minutoj; la ceteraj limoj kaj `fail-fast: false` restas.
+
+**Lokaj rezultoj (2026-11-24, versio 0.9.2).** `just kontroli` finiĝis sen
+eraro: 83 host-testoj, `fmt`, la tri `clippy`-vokoj, la versia kontrolo, la
+dokumentara kontrolo (20 sistemvokoj kaj 52 pruvoj) kaj
+`cargo build --workspace --release`. La du ISO-oj konstruitaj el la laborarbo
+praŝarĝiĝis per `tools/kontroli-qemu.sh`: `x86_64` atingis la finan staton kun
+1010 tikoj kaj `arm64` kun 1012, ambaŭ sen `MALBONE`.
 
 ---
 

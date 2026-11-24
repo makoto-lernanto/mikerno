@@ -39,6 +39,7 @@ komentoj kaj protokolaj nomoj de ambaŭ projektoj sekvu ĝin.
 | `gastiganto` | host | La maŝino, sur kiu la unu-testoj ruliĝas, kontraste al la barela celo. |
 | `simulaĵo` | mock | Anstataŭaĵo por aparatara aŭ stata tavolo; la plano nomas ĝin «mock». |
 | `pruvo` | Kani harness / proof | Unu funkcio markita per `#[kani::proof]`; la matrico `kani-kontroli`. |
+| `pruvokatalogo` | proof catalog | La regiono §3.1 de `docs/MEJLOSTONOJ.md` kun unu vico por ĉiu `#[kani::proof]`: dosiero, invarianto kaj DI-tasko; `tools/dokumentaro.sh --kontroli` komparas la nombrojn. |
 | `Miri` | Miri | La interpretilo de MIR; kaptas nedifinitan konduton en la gastigantaj unu-testoj (`just miri`). |
 | `nedifinita konduto` | undefined behaviour (UB) | Konduto, kiun Rust ne difinas; Miri kaj la sekurec-kontraktoj celas ĝin preventi. |
 | `sekurec-kontrakto` | safety contract | La `/// # Sekureco`-sekso de `unsafe fn` aŭ la `// SAFETY:`-komento de `unsafe impl`; ĝi listigas la antaŭkondiĉojn de la alvokanto. En publikaj bibliotekoj la titolo restas `# Safety`, ĉar Clippy postulas ĝin. |
@@ -576,3 +577,6 @@ eksteraj protokolaj nomoj:
     dosierformatoj (ankaŭ la angla mapado de la retejo).
 15. La komuna aranĝo de ABI 2 estas frostigita: post 1.0 ajna nekongrua ŝanĝo
     de la voknumeroj, argumentoj aŭ erar-kodoj postulas `ABI_VERSIO = 3`.
+16. La pruvokatalogo enhavu unu vicon por ĉiu `#[kani::proof]`, kun la plena
+    pruvonomo, la dosiero kaj la invarianto; `tools/dokumentaro.sh --kontroli`
+    malakceptas malkongruan nombron.
