@@ -2896,6 +2896,24 @@ dokumentara kontrolo (20 sistemvokoj kaj 52 pruvoj) kaj
 praŝarĝiĝis per `tools/kontroli-qemu.sh`: `x86_64` atingis la finan staton kun
 1010 tikoj kaj `arm64` kun 1012, ambaŭ sen `MALBONE`.
 
+**Nuba DI (2026-11-24).** La runo
+[#45362171569](https://github.com/makoto-lernanto/mikerno/actions/runs/45362171569)
+ĉe `53f591f` malsukcesis nur ĉe la instalado de Kani por unu pruvo: `curl`
+ricevis HTTP 403 por la oficiala Kani-pakaĵo, do la pruvo mem ne ekrulis. Rerulo
+de la malsukcesa tasko sukcesis ĉe ĉiuj paŝoj, inkluzive `Ruli unu pruvon`, kaj
+la runo finiĝis kun 62 el 62 verdaj taskoj.
+
+**Eldono.** [`v0.9.2`](https://github.com/makoto-lernanto/mikerno/releases/tag/v0.9.2)
+(etikedo ĉe `53f591f`) enhavas `mikerno.iso` (SHA-256
+`057fa57765e512273a331b97d02b4398702fa1b19e4a64f0a2c11037361d6cbd`) kaj
+`mikerno-arm.iso` (SHA-256
+`9d8d0ca4d0fa76529db68a83286a0510bb58b69951fdb1e4c4dd70e906522478`). La du
+ISO-oj estis konstruitaj el la puŝita kodo kaj praŝarĝitaj antaŭ la alŝuto:
+ambaŭ presis `[MiKerno] Saluton, mi estas MiKerno v0.9.2!`, atingis la ŝelon
+`Ligo 0.1 — objekta ŝelo de Horizonto · ABI 2` kaj finis per
+`[kerno] fina stato: 7 mortintaj, 0 pretaj, 0 blokitaj` (1009 tikoj sur
+`x86_64`, 1023 sur `arm64`), sen `MALBONE`.
+
 ---
 
 ### M20 — Aparata izolado (post 1.0)
