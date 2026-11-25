@@ -31,7 +31,7 @@ window.TRADUKOJ_ANGLA = {
   "hero.teksto":
     "A tiny, self-contained uniprocessor kernel written entirely in Rust — no external dependencies, no C in the kernel, and identical behaviour on x86_64 and arm64. Readable, hackable, provable.",
   "hero.principo1": "no dependencies",
-  "hero.principo4": "41 proofs",
+  "hero.principo4": "52 proofs",
   "hero.butono.elŝuti": "Download",
   "hero.butono.fonto": "View the source",
   "hero.butono.gvidilo": "Read the guide",
@@ -46,7 +46,7 @@ window.TRADUKOJ_ANGLA = {
   "pri.konservado": "Storage",
   "pri.pruvoj": "Proofs",
   "pri.verda": "green",
-  "pri.di": "DI green: 53/53 jobs",
+  "pri.di": "DI green: 62/62 jobs",
   "fenestro.regiloj": "Window controls",
   "fenestro.kaŝita": "Window hidden",
   "fenestro.kaŝita.teksto": "The window is waiting on the desktop.",
@@ -69,10 +69,10 @@ window.TRADUKOJ_ANGLA = {
     "The same IK scenario and the same framebuffer hash on x86_64 and arm64. One backend, two platforms.",
   "kapabloj.k3.titolo": "Ring 3 and capabilities",
   "kapabloj.k3.teksto":
-    "Eleven syscalls, ABI 2, Handle and Message. Every access to memory, files and the screen goes through an explicit capability.",
+    "Twenty syscalls, ABI 2, Handle and Message. Every access to memory, files and the screen goes through an explicit capability.",
   "kapabloj.k4.titolo": "Formal verification",
   "kapabloj.k4.teksto":
-    "Kani proves the frame allocator and the IK core in DI: 41 proofs, one job per proof, with a 10-minute limit.",
+    "Kani proves the frame allocator and the IK core in DI: 52 proofs, one job per proof, with a 10-minute limit.",
   "kapabloj.k5.teksto":
     "The mandatory visual language of Horizonto: three materials, six accents, Windows-model windows and no accidental colours.",
   "kapabloj.k6.titolo": "Storage",
