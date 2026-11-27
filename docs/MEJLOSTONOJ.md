@@ -31,7 +31,7 @@
 | M16 | Dormantaj temporiziloj kaj prioritatoj | Plenumita | dormo 100 ms = 10 tikoj; prioritatoj 1:2:4; specimenoj sumo == horloĝo; arm64-stabileco |
 | M17 | Konservado, dosiersistemo, ŝelo | Plenumita | `virtio-blk` legas/skribas 64 sektorojn; SNDS (6 dosieroj, 1 dosierujo; PCI kaj MMIO); `SYS_BRK`, `SYS_EXEC` kaj `SYS_LANĜI` en Ring 3; Ligo kun `listi`, `procezoj`, `mortigi`, `ruli`; `virtio-blk` MMIO-vojo funkcias sur `arm64`; `#[allow]`-purgado por M17 plenigita |
 | M18 | DI, testoj, plena pruvaro | Plenumita | GitHub Actions verde (fmt, clippy, 71 host-testoj, konstruo, Miri, 43 Kani-pruvoj); ses fazoj 0.8.0–0.8.5, ĉiu kun verda DI kaj ISO el la Eldono |
-| M19 | Plena pruvaro kaj 1.0 | Daŭranta | Fazo 5 (1.0.0): loka pordego kaj kvar praŝarĝoj sukcesis; puŝita DI kaj stabila eldono restas |
+| M19 | Plena pruvaro kaj 1.0 | Plenumita | Fazo 5: verda DI, kvar validigitaj praŝarĝoj kaj stabila Eldono `v1.0.0` |
 | M20 | Aparata izolado: IOMMU, PCI/DMA | Post 1.0 | — |
 | M21 | SMP, afineco kaj IPI | Post 1.0 | — |
 
@@ -187,6 +187,7 @@ eniras la kernan bildon.
 | 2026-11-24 | 0.9.3 | 66 | 15678 | 12184 | 2070 | 1424 |
 | 2026-11-25 | 0.9.3 | 66 | 15678 | 12184 | 2070 | 1424 |
 | 2026-11-25 | 0.9.3 | 66 | 15678 | 12184 | 2070 | 1424 |
+| 2026-11-27 | 1.0.0 | 66 | 15678 | 12184 | 2070 | 1424 |
 | 2026-11-27 | 1.0.0 | 66 | 15678 | 12184 | 2070 | 1424 |
 
 ---
@@ -2671,7 +2672,7 @@ kaj la lasta estas la eldono mem kun la versio `1.0.0`.
 | 2 | `0.9.1` | ABI-frosto: kontrakto pri grandezo kaj unu referenca tabelo | `const`-asertoj kaj unu-testoj verde; ABI 2 frostigita |
 | 3 | `0.9.2` | Pruvokatalogo kaj plena pordega revizio | katalogo kongruas kun la `#[kani::proof]`-atributoj; DI kaj kvin QEMU-kombinaĵoj verde |
 | 4 | `0.9.3` | Eldonkandidato por `1.0.0`: anonco, ISO-oj, haketoj | antaŭeldono kun ambaŭ ISO-oj; DI verda; SHA-256 kaj akceptaj linioj registritaj |
-| 5 | `1.0.0` | Etikedo kaj publikigo | Eldono `v1.0.0` kun ambaŭ ISO-oj; la kerno presas `v1.0.0` |
+| 5 | `1.0.0` | Etikedo kaj publikigo | Plenumita: stabila Eldono `v1.0.0` kun ambaŭ ISO-oj; ambaŭ arkoj presas `v1.0.0` |
 
 **Fazo 1 (0.9.0) — `PaĝaTablo`-abstrakcio kaj pruvoj.**
 
@@ -2752,18 +2753,25 @@ donus la mapado, ĉar 1.0 estas la cellinio; la fazoj 1–4 sekvas la regulon.
 verda, ambaŭ ISO-oj praŝarĝitaj sen `MALBONE`, la valoroj registritaj kaj la
 etikedo `v1.0.0` publikigita. La ses kriterioj de §8 estas jam plenumitaj.
 
-**Loka stato de Fazo 5 (2026-11-27).** `just kontroli` sukcesis (83
+**Fazo 5 — efektivigita (1.0.0, 2026-11-27).** `just kontroli` sukcesis (83
 host-testoj, 20 sistemvokoj, 52 Kani-pruvoj, formato, Clippy kaj konstruo).
-Ambaŭ ISO-oj kaj ambaŭ rektaj praŝarĝaj vojoj montris
+La puŝita komitero `80c68b5` ricevis verdan DI
+([run 45966362011](https://github.com/makoto-lernanto/mikerno/actions/runs/45966362011)):
+62 el 62 taskoj sukcesis. El tiu komitero estis rekonstruitaj la ISO-oj; ĉiuj
+kvar QEMU-praŝarĝoj montris
 `MiKerno v1.0.0`, atingis Ligo kaj la finan staton sen `MALBONE`; la ISO-oj
-havis saman piksela haketon `0xecf1f6dbe1421575`. La rezultoj kaj haketoj estas
-lokaj ĝis DI sukcesos por la puŝita komitero, kiam la ISO-oj estos
-rekonstruitaj kaj revalidigitaj antaŭ la stabila publikigo.
+havis la saman pikselan haketon `0xecf1f6dbe1421575`.
+La ISO-oj estis rekonstruitaj el la puŝita, DI-verda komitero kaj
+revalidigitaj antaŭ la stabila publikigo; la Eldono `v1.0.0` enhavas ambaŭ.
 
-| ISO | SHA-256 (loka konstruo) | Fina stato |
+| ISO | SHA-256 | Fina stato |
 | --- | --- | --- |
-| `mikerno.iso` (`x86_64`) | `c73307e1a196124f99d41b41f0d8cfa7b5fafc44c1ae9d741944f8ee3ef0b075` | `7 mortintaj, 0 pretaj, 0 blokitaj; 1011 tikoj` |
-| `mikerno-arm.iso` (`arm64`) | `b2ae2f63b3fa60dd286aea0d51b4a6b78e3a0fe9939ecb46981a2ef0dd7a1d30` | `7 mortintaj, 0 pretaj, 0 blokitaj; 1018 tikoj` |
+| `mikerno.iso` (`x86_64`) | `096cbde4bc8a5790bb4455455d80d3ceae626655deba758ddd0de0f73a66aff8` | `7 mortintaj, 0 pretaj, 0 blokitaj; 1017 tikoj` |
+| `mikerno-arm.iso` (`arm64`) | `721038a2bf0351c718c3dcd47495d4667f7a8988cfd2242ac1e3b495ad9e87d9` | `7 mortintaj, 0 pretaj, 0 blokitaj; 1020 tikoj` |
+
+La rekta PVH-praŝarĝo atingis la finan staton post 1024 tikoj; la rekta
+arm64 `Image`-praŝarĝo post 1021 tikoj. La anonco estas publikigita kaj M19
+estas plenumita.
 
 #### 1. Fazo 1 — efektivigita (0.9.0)
 

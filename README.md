@@ -19,8 +19,7 @@ demonstration de kompleta unuprocesora kerno: de la unua instrukcio en 32-bita
 reĝimo ĝis antaŭokupa planisto, mesaĝa IK kaj uzanta procezo en Ring 3.
 
 - **Versio:** 1.0.0 (Cargo-laborloko)
-- **Eldonpreparo:** `v1.0.0` (fina M19-fazo; la plej nova stabila eldono estas
-  `v0.9.2`, kaj `v0.9.3` estas ĝia antaŭeldono)
+- **Eldono:** `v1.0.0` (stabila; `v0.9.3` estis la antaŭeldono)
 - **Arkitekturo:** `x86_64` kaj `arm64` (AArch64), unuprocesora
 - **Cela triopo:** `x86_64-unknown-none`
 - **Eldono de Rust:** 2024, `rust-version = 1.100`

@@ -1,7 +1,6 @@
 # MiKerno 1.0 — anonco
 
-> Eldona teksto por `v1.0.0`; la stabila publikigo okazos post la puŝita DI,
-> rekonstruitaj ISO-oj kaj ilia QEMU-validigo.
+> Stabila eldono publikigita la 2026-11-27 kiel `v1.0.0`.
 >
 > Ĝisdatigita por versio: 1.0.0 (Cargo-laborloko)
 
@@ -43,44 +42,39 @@ sistemvoka ABI, kaj ne povu legi la kernon aŭ alian procezon.
 
 ## Provu la nunan eldonon
 
-La plej lasta stabila eldono antaŭ `v1.0.0` estas `v0.9.2`; `v0.9.3` estis
-antaŭeldono por testado. La ISO-oj estos elŝuteblaj de la
-[GitHub-Eldonoj](https://github.com/makoto-lernanto/mikerno/releases), aŭ
-rekonstrueblaj per `just iso` kaj `just iso-arm`. La ŝelo Ligo startas en
+La plej lasta stabila eldono estas `v1.0.0`; `v0.9.3` estis ĝia antaŭeldono
+por testado. La ISO-oj estas elŝuteblaj de la
+[GitHub-Eldono v1.0.0](https://github.com/makoto-lernanto/mikerno/releases/tag/v1.0.0),
+aŭ rekonstrueblaj per `just iso` kaj `just iso-arm`. La ŝelo Ligo startas en
 `/hejmo` kaj atendas la prompton `ligo:~>`; `helpu` montras la komandojn,
 `listi` la SNDS-dosierojn, `iri` kaj `kie` moviĝas tra la arbo (relativaj
 vojoj kaj `~` inkluzive) kaj `fini` finas la sesion.
 
-## Vojo al la eldono
+## Eldona kontrolo
 
-M19 finigas la formalan pruvaron kaj etikedas 1.0. M20 (IOMMU kaj aparata
-izolado) restas post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo.
+M19 finiĝis per la stabila `v1.0.0`. M20 (IOMMU kaj aparata izolado) restas
+post 1.0, ĉar ĝi dependas de la PCI/aparata tavolo.
 
-**Eldona kontrolo por 1.0:**
+La loka pordego, la kompleta DI-matrico kaj la kvar QEMU-praŝarĝoj sukcesis.
+La ISO-oj estis rekonstruitaj el la DI-verda komitero; iliaj SHA-256-valoroj
+kaj la akceptaj linioj estas registritaj ĉi tie kaj en
+`docs/MEJLOSTONOJ.md`. Ĉi tiu anonco kaj ambaŭ ISO-oj estas en la stabila
+Eldono `v1.0.0`.
 
-1. `just kontroli` verda loke (versio, dokumentaj sistemvokoj, unu-testoj,
-   `fmt`, ambaŭ `clippy`-vokoj, konstruo).
-2. La tuta DI-matrico verda: `kontroli-kaj-konstrui`, `permesiloj-kontroli`,
-   `miri-kontroli`, `kani-kontroli`, `paki-iso` kaj la kvin `qemu-kontroli`.
-3. Ambaŭ ISO-oj konstruitaj el la puŝita komitero kaj praŝarĝitaj sen
-   `MALBONE`.
-4. La SHA-256-valoroj kaj la akceptaj linioj registritaj en
-   `docs/MEJLOSTONOJ.md` kaj en la Eldono.
-5. Ĉi tiu anonco reviziita, datita kaj publikigita kun la etikedo `v1.0.0`.
+## Akcepto de v1.0.0
 
-## Loka akcepto por la kandidata konstruo
+- La puŝita DI ĉe `80c68b5` sukcesis: 62 el 62 taskoj verdaj.
+- `just kontroli`: 83 host-testoj; dokumenta kontrolo de 20 sistemvokoj kaj
+  52 pruvoj; formato, Clippy kaj la laborloka konstruo sukcesis.
+- La `x86_64` ISO finiĝis post 1017 tikoj; la rekta PVH-praŝarĝo post 1024.
+- La `arm64` ISO finiĝis post 1020 tikoj; la rekta `Image`-praŝarĝo post 1021.
+- Ambaŭ ISO-praŝarĝoj montris Ligon, atingis la finan staton sen `MALBONE`
+  kaj havis la saman pikselan haketon `0xecf1f6dbe1421575`.
 
-- `just kontroli`: sukcesis; 83 host-testoj, 20 dokumentitaj sistemvokoj kaj
-  52 Kani-pruvoj, kun formato, Clippy kaj la laborloka konstruo.
-- La `x86_64` ISO finiĝis post 1011 tikoj; la rekta PVH-praŝarĝo post 1018.
-- La `arm64` ISO finiĝis post 1018 tikoj; la rekta `Image`-praŝarĝo post 1008.
-- La ISO-praŝarĝoj montris la ŝelon Ligo, la finan staton sen `MALBONE` kaj la
-  saman piksela haketon `0xecf1f6dbe1421575`.
-
-| ISO | SHA-256 (loka konstruo) |
+| ISO | SHA-256 |
 | --- | --- |
-| `mikerno.iso` (`x86_64`) | `c73307e1a196124f99d41b41f0d8cfa7b5fafc44c1ae9d741944f8ee3ef0b075` |
-| `mikerno-arm.iso` (`arm64`) | `b2ae2f63b3fa60dd286aea0d51b4a6b78e3a0fe9939ecb46981a2ef0dd7a1d30` |
+| `mikerno.iso` (`x86_64`) | `096cbde4bc8a5790bb4455455d80d3ceae626655deba758ddd0de0f73a66aff8` |
+| `mikerno-arm.iso` (`arm64`) | `721038a2bf0351c718c3dcd47495d4667f7a8988cfd2242ac1e3b495ad9e87d9` |
 
 ## Konataj limigoj
 
